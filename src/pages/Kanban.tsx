@@ -185,6 +185,12 @@ export default function Kanban() {
       </div>
       <NewLeadForm open={showNewLead} onOpenChange={setShowNewLead} onSubmit={addLead} />
       <EditLeadForm lead={editingLead} open={!!editingLead} onOpenChange={(open) => !open && setEditingLead(null)} onSubmit={updateLead} onDelete={deleteLead} />
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onConfirm={() => { if (deleteTarget) { deleteLead(deleteTarget); setDeleteTarget(null); } }}
+        itemName="este lead"
+      />
     </AppLayout>
   );
 }
