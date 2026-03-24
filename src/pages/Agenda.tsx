@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { Phone, MessageCircle, Mail, MapPin, CheckCircle2, Clock, Plus, CalendarDays } from "lucide-react";
+import { Phone, MessageCircle, Mail, MapPin, CheckCircle2, Clock, Plus, CalendarDays, Pencil } from "lucide-react";
 import { motion } from "framer-motion";
 import { NewFollowUpForm } from "@/components/forms/NewFollowUpForm";
+import { EditFollowUpForm } from "@/components/forms/EditFollowUpForm";
 
 const typeConfig: Record<FollowUp["type"], { icon: typeof Phone; label: string; color: string }> = {
   call: { icon: Phone, label: "Ligação", color: "bg-kanban-attending/10 text-kanban-attending" },
@@ -25,8 +26,11 @@ export default function Agenda() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<"all" | "pending" | "completed">("all");
   const [showNewFollowUp, setShowNewFollowUp] = useState(false);
+  const [editingFollowUp, setEditingFollowUp] = useState<FollowUp | null>(null);
 
   const addFollowUp = (f: FollowUp) => setFollowUps((prev) => [f, ...prev]);
+  const updateFollowUp = (f: FollowUp) => setFollowUps((prev) => prev.map((item) => (item.id === f.id ? f : item)));
+  const deleteFollowUp = (id: string) => setFollowUps((prev) => prev.filter((f) => f.id !== id));
 
   const toggleComplete = (id: string) => {
     setFollowUps((prev) => prev.map((f) => (f.id === id ? { ...f, completed: !f.completed } : f)));
@@ -53,7 +57,6 @@ export default function Agenda() {
   return (
     <AppLayout title="Agenda & Follow-ups">
       <div className="space-y-4">
-        {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
             <CardContent className="flex items-center gap-3 p-4">
@@ -91,7 +94,6 @@ export default function Agenda() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Calendar */}
           <Card className="lg:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-bold">Calendário</CardTitle>
@@ -101,17 +103,11 @@ export default function Agenda() {
             </CardContent>
           </Card>
 
-          {/* Follow-up list */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex gap-2">
                 {(["all", "pending", "completed"] as const).map((v) => (
-                  <Button
-                    key={v}
-                    size="sm"
-                    variant={view === v ? "default" : "outline"}
-                    onClick={() => setView(v)}
-                  >
+                  <Button key={v} size="sm" variant={view === v ? "default" : "outline"} onClick={() => setView(v)}>
                     {v === "all" ? "Todos" : v === "pending" ? "Pendentes" : "Concluídos"}
                   </Button>
                 ))}
@@ -129,7 +125,7 @@ export default function Agenda() {
 
                 return (
                   <motion.div key={f.id} variants={item}>
-                    <Card className={`transition-all ${f.completed ? "opacity-60" : ""} ${isOverdue ? "border-destructive/50" : ""}`}>
+                    <Card className={`transition-all group ${f.completed ? "opacity-60" : ""} ${isOverdue ? "border-destructive/50" : ""}`}>
                       <CardContent className="flex items-center gap-4 p-4">
                         <button
                           onClick={() => toggleComplete(f.id)}
@@ -144,24 +140,29 @@ export default function Agenda() {
                           <div className="flex items-center gap-2">
                             <p className={`text-sm font-bold ${f.completed ? "line-through" : ""}`}>{f.clientName}</p>
                             <Badge variant="secondary" className={`text-[10px] ${config.color}`}>
-                              <Icon className="h-2.5 w-2.5 mr-0.5" />
-                              {config.label}
+                              <Icon className="h-2.5 w-2.5 mr-0.5" />{config.label}
                             </Badge>
-                            {isOverdue && (
-                              <Badge variant="destructive" className="text-[10px]">Atrasado</Badge>
-                            )}
+                            {isOverdue && <Badge variant="destructive" className="text-[10px]">Atrasado</Badge>}
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">{f.description}</p>
                           <p className="text-xs text-muted-foreground mt-1">📞 {f.clientPhone}</p>
                         </div>
 
-                        <div className="text-right shrink-0">
-                          <p className="text-xs font-semibold">
-                            {new Date(f.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(f.scheduledAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                          </p>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right shrink-0">
+                            <p className="text-xs font-semibold">
+                              {new Date(f.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(f.scheduledAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setEditingFollowUp(f)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-muted"
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
                         </div>
                       </CardContent>
                     </Card>
@@ -173,6 +174,7 @@ export default function Agenda() {
         </div>
       </div>
       <NewFollowUpForm open={showNewFollowUp} onOpenChange={setShowNewFollowUp} onSubmit={addFollowUp} />
+      <EditFollowUpForm followUp={editingFollowUp} open={!!editingFollowUp} onOpenChange={(open) => !open && setEditingFollowUp(null)} onSubmit={updateFollowUp} onDelete={deleteFollowUp} />
     </AppLayout>
   );
 }
