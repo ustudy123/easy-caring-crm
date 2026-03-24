@@ -24,13 +24,14 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { mockLeads, mockFollowUps } from "@/data/mockData";
 
 const menuItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Kanban", url: "/kanban", icon: Columns3 },
-  { title: "Clientes", url: "/clientes", icon: Users },
-  { title: "Agenda", url: "/agenda", icon: CalendarDays },
-  { title: "Campanhas", url: "/campanhas", icon: Megaphone },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, badge: 0 },
+  { title: "Kanban", url: "/kanban", icon: Columns3, badge: mockLeads.filter(l => l.stage === 'novo_lead').length },
+  { title: "Clientes", url: "/clientes", icon: Users, badge: 0 },
+  { title: "Agenda", url: "/agenda", icon: CalendarDays, badge: mockFollowUps.filter(f => !f.completed).length },
+  { title: "Campanhas", url: "/campanhas", icon: Megaphone, badge: mockLeads.filter(l => l.stage === 'negociacao').length },
 ];
 
 export function AppSidebar() {
