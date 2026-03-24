@@ -43,9 +43,19 @@ export default function Kanban() {
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
   const addLead = (lead: Lead) => setLeads((prev) => [lead, ...prev]);
   const updateLead = (lead: Lead) => setLeads((prev) => prev.map((l) => (l.id === lead.id ? lead : l)));
   const deleteLead = (id: string) => setLeads((prev) => prev.filter((l) => l.id !== id));
+
+  const moveToNextStage = (lead: Lead) => {
+    const stageKeys = KANBAN_STAGES.map(s => s.key);
+    const idx = stageKeys.indexOf(lead.stage);
+    if (idx < stageKeys.length - 1) {
+      updateLead({ ...lead, stage: stageKeys[idx + 1] });
+    }
+  };
 
   const filteredLeads = leads.filter((l) =>
     l.clientName.toLowerCase().includes(search.toLowerCase())
