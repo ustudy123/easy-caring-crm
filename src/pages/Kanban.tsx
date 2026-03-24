@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { mockLeads } from "@/data/mockData";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil } from "lucide-react";
+import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,8 @@ import { NewLeadForm } from "@/components/forms/NewLeadForm";
 import { EditLeadForm } from "@/components/forms/EditLeadForm";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { getUrgencyLevel, getUrgencyConfig, formatIdleTime } from "@/lib/leadUrgency";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const stageColorMap: Record<KanbanStage, string> = {
   novo_lead: "border-t-kanban-new",
@@ -93,6 +95,11 @@ export default function Kanban() {
               const stageLeads = filteredLeads.filter((l) => l.stage === stage.key);
               const totalValue = stageLeads.reduce((s, l) => s + l.value, 0);
 
+              const alertCount = stageLeads.filter(l => {
+                const u = getUrgencyLevel(l);
+                return u === "critical" || u === "warning";
+              }).length;
+
               return (
                 <div key={stage.key} className="flex-shrink-0 w-[280px] sm:w-72 snap-start">
                   <div className={`flex items-center justify-between rounded-t-xl p-3 ${stageBgMap[stage.key]}`}>
@@ -100,7 +107,14 @@ export default function Kanban() {
                       <div className={`h-2.5 w-2.5 rounded-full ${stageDotMap[stage.key]}`} />
                       <span className="text-sm font-bold">{stage.label}</span>
                     </div>
-                    <Badge variant="secondary" className="text-[10px] font-bold">{stageLeads.length}</Badge>
+                    <div className="flex items-center gap-1.5">
+                      {alertCount > 0 && (
+                        <Badge variant="destructive" className="text-[10px] font-bold px-1.5 py-0 animate-urgency-pulse">
+                          <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />{alertCount}
+                        </Badge>
+                      )}
+                      <Badge variant="secondary" className="text-[10px] font-bold">{stageLeads.length}</Badge>
+                    </div>
                   </div>
                   <div className="text-[10px] font-semibold text-muted-foreground px-3 py-1.5 bg-muted/50">
                     Total: R$ {totalValue.toLocaleString("pt-BR")}
@@ -121,20 +135,41 @@ export default function Kanban() {
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
                               >
+                                {(() => {
+                                  const urgency = getUrgencyLevel(lead);
+                                  const config = getUrgencyConfig(urgency);
+                                  const idleTime = formatIdleTime(lead);
+                                  return (
                                 <SwipeableCard
                                   onEdit={() => setEditingLead(lead)}
                                   onDelete={() => setPendingDeleteId(lead.id)}
                                   onMoveNext={stage.key !== "fechado" ? () => moveToNextStage(lead) : undefined}
                                 >
-                                  <div className={`rounded-lg border-t-[3px] p-3 shadow-sm transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing group ${stageColorMap[stage.key]} ${snapshot.isDragging ? "shadow-lg rotate-1" : ""}`}>
+                                  <div className={`rounded-lg border-t-[3px] p-3 shadow-sm transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing group bg-card ${stageColorMap[stage.key]} ${config.borderClass} ${config.pulse ? "animate-urgency-pulse" : ""} ${snapshot.isDragging ? "shadow-lg rotate-1" : ""}`}>
                                     <div className="flex items-start justify-between">
                                       <p className="text-sm font-bold text-foreground leading-tight">{lead.clientName}</p>
+                                      <div className="flex items-center gap-1">
+                                        {urgency !== "ok" && (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${config.badgeClass}`}>
+                                                  <Clock className="h-2.5 w-2.5" />{idleTime}
+                                                </span>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>Parado há {idleTime} — {config.label}</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        )}
                                       <button
                                         onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
                                         className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-1.5 -mr-1 -mt-1 rounded hover:bg-muted"
                                       >
                                         <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                                       </button>
+                                      </div>
                                     </div>
                                     <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                                       <Phone className="h-3 w-3" />
@@ -169,6 +204,8 @@ export default function Kanban() {
                                     )}
                                   </div>
                                 </SwipeableCard>
+                                  );
+                                })()}
                               </div>
                             )}
                           </Draggable>
