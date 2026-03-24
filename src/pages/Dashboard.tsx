@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { mockLeads, mockFollowUps, mockSellers, mockCampaigns } from "@/data/mockData";
+import { useCrm } from "@/contexts/CrmContext";
+import { mockSellers, mockCampaigns } from "@/data/mockData";
 import { KANBAN_STAGES } from "@/types/crm";
 import { TrendingUp, Users, DollarSign, Target, ArrowUpRight, ArrowDownRight, Phone, MessageCircle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -10,12 +11,13 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } 
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 export default function Dashboard() {
-  const totalLeads = mockLeads.length;
-  const closedLeads = mockLeads.filter((l) => l.stage === "fechado").length;
+  const { leads, followUps } = useCrm();
+  const totalLeads = leads.length;
+  const closedLeads = leads.filter((l) => l.stage === "fechado").length;
   const conversionRate = Math.round((closedLeads / totalLeads) * 100);
-  const totalValue = mockLeads.reduce((sum, l) => sum + l.value, 0);
+  const totalValue = leads.reduce((sum, l) => sum + l.value, 0);
   const avgTicket = Math.round(totalValue / totalLeads);
-  const pendingFollowUps = mockFollowUps.filter((f) => !f.completed).length;
+  const pendingFollowUps = followUps.filter((f) => !f.completed).length;
 
   const kpis = [
     { label: "Leads Ativos", value: totalLeads - closedLeads, icon: Users, change: "+12%", positive: true, color: "bg-primary" },

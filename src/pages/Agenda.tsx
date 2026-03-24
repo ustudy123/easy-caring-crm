@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
-import { mockFollowUps } from "@/data/mockData";
+import { useCrm } from "@/contexts/CrmContext";
 import { FollowUp } from "@/types/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } 
 const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
 
 export default function Agenda() {
-  const [followUps, setFollowUps] = useState<FollowUp[]>(mockFollowUps);
+  const { followUps, setFollowUps, addFollowUp, updateFollowUp } = useCrm();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<"all" | "pending" | "completed">("all");
   const [showNewFollowUp, setShowNewFollowUp] = useState(false);

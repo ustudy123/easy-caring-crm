@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
-import { mockLeads } from "@/data/mockData";
+import { useCrm } from "@/contexts/CrmContext";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle } from "lucide-react";
@@ -40,7 +40,7 @@ const stageDotMap: Record<KanbanStage, string> = {
 };
 
 export default function Kanban() {
-  const [leads, setLeads] = useState<Lead[]>(mockLeads);
+  const { leads, setLeads, addLead, updateLead, deleteLead } = useCrm();
   const [search, setSearch] = useState("");
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
