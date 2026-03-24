@@ -43,7 +43,7 @@ export default function Kanban() {
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const addLead = (lead: Lead) => setLeads((prev) => [lead, ...prev]);
   const updateLead = (lead: Lead) => setLeads((prev) => prev.map((l) => (l.id === lead.id ? lead : l)));
