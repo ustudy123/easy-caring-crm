@@ -3,24 +3,36 @@ import { AppLayout } from "@/components/AppLayout";
 import { mockClients } from "@/data/mockData";
 import { Client } from "@/types/crm";
 import { NewClientForm } from "@/components/forms/NewClientForm";
+import { EditClientForm } from "@/components/forms/EditClientForm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
 
 export default function Clientes() {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clients, setClients] = useState<Client[]>(mockClients);
   const [showNewClient, setShowNewClient] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   const addClient = (client: Client) => setClients((prev) => [client, ...prev]);
+  const updateClient = (client: Client) => {
+    setClients((prev) => prev.map((c) => (c.id === client.id ? client : c)));
+    setSelectedClient(null);
+  };
+  const deleteClient = (id: string) => {
+    setClients((prev) => prev.filter((c) => c.id !== id));
+    setSelectedClient(null);
+  };
 
   const filtered = clients.filter(
     (c) =>
@@ -32,7 +44,6 @@ export default function Clientes() {
   return (
     <AppLayout title="Clientes">
       <div className="space-y-4">
-        {/* Toolbar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -43,7 +54,6 @@ export default function Clientes() {
           </Button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
             <CardContent className="flex items-center gap-3 p-4">
@@ -80,7 +90,6 @@ export default function Clientes() {
           </Card>
         </div>
 
-        {/* Client list */}
         <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((client) => (
             <motion.div key={client.id} variants={item}>
@@ -94,14 +103,12 @@ export default function Clientes() {
                       <div>
                         <p className="font-bold text-foreground">{client.name}</p>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Phone className="h-3 w-3" />
-                          {client.phone}
+                          <Phone className="h-3 w-3" />{client.phone}
                         </div>
                       </div>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-
                   {client.email && (
                     <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Mail className="h-3 w-3" /> {client.email}
@@ -112,7 +119,6 @@ export default function Clientes() {
                       <MapPin className="h-3 w-3" /> {client.city}
                     </div>
                   )}
-
                   <div className="mt-3 flex items-center justify-between">
                     <div className="flex items-center gap-1 text-sm font-bold text-foreground">
                       <DollarSign className="h-3.5 w-3.5" />
@@ -124,12 +130,9 @@ export default function Clientes() {
                       </span>
                     )}
                   </div>
-
                   <div className="mt-2 flex flex-wrap gap-1">
                     {client.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-[10px] px-2 py-0">
-                        {tag}
-                      </Badge>
+                      <Badge key={tag} variant="secondary" className="text-[10px] px-2 py-0">{tag}</Badge>
                     ))}
                   </div>
                 </CardContent>
@@ -139,7 +142,7 @@ export default function Clientes() {
         </motion.div>
       </div>
 
-      {/* Client detail dialog */}
+      {/* Client detail dialog with edit/delete */}
       <Dialog open={!!selectedClient} onOpenChange={(open) => !open && setSelectedClient(null)}>
         <DialogContent className="max-w-lg">
           {selectedClient && (
@@ -188,12 +191,35 @@ export default function Clientes() {
                     <Badge key={tag} className="bg-primary/10 text-primary hover:bg-primary/20">{tag}</Badge>
                   ))}
                 </div>
+                <div className="flex justify-between pt-2 border-t">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      deleteClient(selectedClient.id);
+                      toast({ title: "Cliente excluído", description: `${selectedClient.name} foi removido.`, variant: "destructive" });
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditingClient(selectedClient);
+                      setSelectedClient(null);
+                    }}
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
+                  </Button>
+                </div>
               </div>
             </>
           )}
         </DialogContent>
       </Dialog>
+
       <NewClientForm open={showNewClient} onOpenChange={setShowNewClient} onSubmit={addClient} />
+      <EditClientForm client={editingClient} open={!!editingClient} onOpenChange={(open) => !open && setEditingClient(null)} onSubmit={updateClient} onDelete={deleteClient} />
     </AppLayout>
   );
 }
