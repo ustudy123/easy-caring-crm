@@ -10,6 +10,7 @@ import { Lead, KanbanStage } from "@/types/crm";
 import { mockSellers } from "@/data/mockData";
 import { isValidPhone, isValidEmail } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 
 interface EditLeadFormProps {
   lead: Lead | null;
@@ -161,7 +162,10 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
             </div>
           </div>
           <div className="flex justify-between pt-2">
-            <Button type="button" variant="destructive" size="sm" onClick={handleDelete}>Excluir Lead</Button>
+            <ConfirmDeleteDialog
+              trigger={<Button type="button" variant="destructive" size="sm">Excluir Lead</Button>}
+              onConfirm={handleDelete}
+            />
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
               <Button type="submit">Salvar</Button>
