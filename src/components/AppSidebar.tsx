@@ -101,14 +101,14 @@ export function AppSidebar() {
                         <div className="relative shrink-0">
                           <item.icon className="h-5 w-5" />
                           {collapsed && item.badge > 0 && (
-                            <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground">
+                            <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground animate-pulse">
                               {item.badge}
                             </span>
                           )}
                         </div>
                         {!collapsed && <span className="text-sm">{item.title}</span>}
                         {!collapsed && item.badge > 0 && (
-                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] font-bold text-accent-foreground">
+                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] font-bold text-accent-foreground animate-pulse">
                             {item.badge}
                           </span>
                         )}
