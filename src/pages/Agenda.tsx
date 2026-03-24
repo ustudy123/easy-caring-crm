@@ -104,10 +104,10 @@ export default function Agenda() {
           </Card>
 
           <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div className="flex gap-1.5 sm:gap-2 flex-wrap">
                 {(["all", "pending", "completed"] as const).map((v) => (
-                  <Button key={v} size="sm" variant={view === v ? "default" : "outline"} onClick={() => setView(v)}>
+                  <Button key={v} size="sm" variant={view === v ? "default" : "outline"} onClick={() => setView(v)} className="text-xs sm:text-sm">
                     {v === "all" ? "Todos" : v === "pending" ? "Pendentes" : "Concluídos"}
                   </Button>
                 ))}
@@ -126,10 +126,10 @@ export default function Agenda() {
                 return (
                   <motion.div key={f.id} variants={item}>
                     <Card className={`transition-all group ${f.completed ? "opacity-60" : ""} ${isOverdue ? "border-destructive/50" : ""}`}>
-                      <CardContent className="flex items-center gap-4 p-4">
+                      <CardContent className="flex items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4">
                         <button
                           onClick={() => toggleComplete(f.id)}
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+                          className={`flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full transition-colors mt-0.5 sm:mt-0 ${
                             f.completed ? "bg-kanban-closed text-white" : "border-2 border-muted-foreground/30 hover:border-primary"
                           }`}
                         >
@@ -137,18 +137,28 @@ export default function Agenda() {
                         </button>
 
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                             <p className={`text-sm font-bold ${f.completed ? "line-through" : ""}`}>{f.clientName}</p>
                             <Badge variant="secondary" className={`text-[10px] ${config.color}`}>
                               <Icon className="h-2.5 w-2.5 mr-0.5" />{config.label}
                             </Badge>
                             {isOverdue && <Badge variant="destructive" className="text-[10px]">Atrasado</Badge>}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">{f.description}</p>
-                          <p className="text-xs text-muted-foreground mt-1">📞 {f.clientPhone}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{f.description}</p>
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-xs text-muted-foreground">📞 {f.clientPhone}</p>
+                            <div className="flex items-center gap-2 sm:hidden">
+                              <span className="text-[10px] font-semibold text-muted-foreground">
+                                {new Date(f.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} {new Date(f.scheduledAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                              <button onClick={() => setEditingFollowUp(f)} className="p-1 rounded hover:bg-muted">
+                                <Pencil className="h-3 w-3 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="hidden sm:flex items-center gap-2">
                           <div className="text-right shrink-0">
                             <p className="text-xs font-semibold">
                               {new Date(f.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}

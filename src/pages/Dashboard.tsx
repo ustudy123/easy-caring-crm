@@ -175,9 +175,9 @@ export default function Dashboard() {
                   .filter((f) => !f.completed)
                   .slice(0, 5)
                   .map((f) => (
-                    <div key={f.id} className="flex items-center justify-between rounded-lg border p-3">
+                    <div key={f.id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3 gap-2">
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                           f.type === 'call' ? 'bg-kanban-attending/20 text-kanban-attending' :
                           f.type === 'whatsapp' ? 'bg-kanban-new/20 text-kanban-new' :
                           f.type === 'visit' ? 'bg-kanban-negotiation/20 text-kanban-negotiation' :
@@ -190,7 +190,7 @@ export default function Dashboard() {
                           <p className="text-xs text-muted-foreground">{f.description}</p>
                         </div>
                       </div>
-                      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap sm:text-right pl-11 sm:pl-0">
                         {new Date(f.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
