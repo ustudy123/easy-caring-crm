@@ -15,6 +15,7 @@ import { FollowUp } from "@/types/crm";
 import { mockSellers } from "@/data/mockData";
 import { isValidPhone } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 
 interface EditFollowUpFormProps {
   followUp: FollowUp | null;
@@ -158,7 +159,10 @@ export function EditFollowUpForm({ followUp, open, onOpenChange, onSubmit, onDel
             </div>
           </div>
           <div className="flex justify-between pt-2">
-            <Button type="button" variant="destructive" size="sm" onClick={handleDelete}>Excluir</Button>
+            <ConfirmDeleteDialog
+              trigger={<Button type="button" variant="destructive" size="sm">Excluir</Button>}
+              onConfirm={handleDelete}
+            />
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
               <Button type="submit">Salvar</Button>

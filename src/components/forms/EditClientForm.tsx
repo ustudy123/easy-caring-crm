@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -121,7 +121,10 @@ export function EditClientForm({ client, open, onOpenChange, onSubmit, onDelete 
             </div>
           </div>
           <div className="flex justify-between pt-2">
-            <Button type="button" variant="destructive" size="sm" onClick={handleDelete}>Excluir Cliente</Button>
+            <ConfirmDeleteDialog
+              trigger={<Button type="button" variant="destructive" size="sm">Excluir Cliente</Button>}
+              onConfirm={handleDelete}
+            />
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
               <Button type="submit">Salvar</Button>
