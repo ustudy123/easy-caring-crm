@@ -24,20 +24,32 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { mockLeads, mockFollowUps } from "@/data/mockData";
+import { useCrm } from "@/contexts/CrmContext";
 
-const menuItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard, badge: 0 },
-  { title: "Kanban", url: "/kanban", icon: Columns3, badge: mockLeads.filter(l => l.stage === 'novo_lead').length },
-  { title: "Clientes", url: "/clientes", icon: Users, badge: 0 },
-  { title: "Agenda", url: "/agenda", icon: CalendarDays, badge: mockFollowUps.filter(f => !f.completed).length },
-  { title: "Campanhas", url: "/campanhas", icon: Megaphone, badge: mockLeads.filter(l => l.stage === 'negociacao').length },
+const menuItemsDef = [
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, badgeKey: null as null },
+  { title: "Kanban", url: "/kanban", icon: Columns3, badgeKey: "newLeads" as const },
+  { title: "Clientes", url: "/clientes", icon: Users, badgeKey: null as null },
+  { title: "Agenda", url: "/agenda", icon: CalendarDays, badgeKey: "pendingFollowUps" as const },
+  { title: "Campanhas", url: "/campanhas", icon: Megaphone, badgeKey: "negotiation" as const },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { newLeadsCount, pendingFollowUpsCount, negotiationCount } = useCrm();
+
+  const badgeMap: Record<string, number> = {
+    newLeads: newLeadsCount,
+    pendingFollowUps: pendingFollowUpsCount,
+    negotiation: negotiationCount,
+  };
+
+  const menuItems = menuItemsDef.map((item) => ({
+    ...item,
+    badge: item.badgeKey ? badgeMap[item.badgeKey] : 0,
+  }));
 
   return (
     <Sidebar collapsible="icon">

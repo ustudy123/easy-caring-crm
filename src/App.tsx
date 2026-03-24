@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { CrmProvider } from "@/contexts/CrmContext";
 import Dashboard from "./pages/Dashboard";
 import Kanban from "./pages/Kanban";
 import Clientes from "./pages/Clientes";
@@ -15,18 +16,20 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/kanban" element={<Kanban />} />
-          <Route path="/clientes" element={<Clientes />} />
-          <Route path="/agenda" element={<Agenda />} />
-          <Route path="/campanhas" element={<Campanhas />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <CrmProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/kanban" element={<Kanban />} />
+            <Route path="/clientes" element={<Clientes />} />
+            <Route path="/agenda" element={<Agenda />} />
+            <Route path="/campanhas" element={<Campanhas />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </CrmProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
