@@ -76,13 +76,13 @@ export default function Kanban() {
         </div>
 
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none">
             {KANBAN_STAGES.map((stage) => {
               const stageLeads = filteredLeads.filter((l) => l.stage === stage.key);
               const totalValue = stageLeads.reduce((s, l) => s + l.value, 0);
 
               return (
-                <div key={stage.key} className="flex-shrink-0 w-72">
+                <div key={stage.key} className="flex-shrink-0 w-[280px] sm:w-72 snap-start">
                   <div className={`flex items-center justify-between rounded-t-xl p-3 ${stageBgMap[stage.key]}`}>
                     <div className="flex items-center gap-2">
                       <div className={`h-2.5 w-2.5 rounded-full ${stageDotMap[stage.key]}`} />
@@ -111,12 +111,12 @@ export default function Kanban() {
                                 className={`rounded-lg border-t-[3px] bg-card p-3 shadow-sm transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing group ${stageColorMap[stage.key]} ${snapshot.isDragging ? "shadow-lg rotate-1" : ""}`}
                               >
                                 <div className="flex items-start justify-between">
-                                  <p className="text-sm font-bold text-foreground">{lead.clientName}</p>
+                                  <p className="text-sm font-bold text-foreground leading-tight">{lead.clientName}</p>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted"
+                                    className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-1.5 -mr-1 -mt-1 rounded hover:bg-muted"
                                   >
-                                    <Pencil className="h-3 w-3 text-muted-foreground" />
+                                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                                   </button>
                                 </div>
                                 <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">

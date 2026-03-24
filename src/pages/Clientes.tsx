@@ -144,7 +144,7 @@ export default function Clientes() {
 
       {/* Client detail dialog with edit/delete */}
       <Dialog open={!!selectedClient} onOpenChange={(open) => !open && setSelectedClient(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg mx-3 sm:mx-auto max-h-[90vh] overflow-y-auto">
           {selectedClient && (
             <>
               <DialogHeader>
@@ -156,7 +156,7 @@ export default function Clientes() {
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="rounded-lg bg-muted p-3">
                     <p className="text-xs text-muted-foreground">Telefone</p>
                     <p className="text-sm font-semibold">{selectedClient.phone}</p>
