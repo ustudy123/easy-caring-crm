@@ -14,15 +14,17 @@ export function useSkipDeleteConfirm() {
   return skip;
 }
 
-interface ConfirmDeleteDialogProps {
-  trigger: React.ReactNode;
+export interface ConfirmDeleteDialogProps {
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   title?: string;
   description?: string;
   onConfirm: () => void;
 }
 
 export function ConfirmDeleteDialog({
-  trigger, title = "Tem certeza?", description = "Esta ação não pode ser desfeita. O registro será excluído permanentemente.",
+  trigger, open, onOpenChange, title = "Tem certeza?", description = "Esta ação não pode ser desfeita. O registro será excluído permanentemente.",
   onConfirm,
 }: ConfirmDeleteDialogProps) {
   const [dontAskAgain, setDontAskAgain] = useState(false);
@@ -36,13 +38,19 @@ export function ConfirmDeleteDialog({
   };
 
   // If user previously chose to skip, execute directly
-  if (skipConfirm) {
+  if (skipConfirm && trigger) {
     return <span onClick={onConfirm}>{trigger}</span>;
   }
 
+  if (skipConfirm && open) {
+    onConfirm();
+    onOpenChange?.(false);
+    return null;
+  }
+
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      {trigger && <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>

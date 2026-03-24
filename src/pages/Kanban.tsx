@@ -123,7 +123,7 @@ export default function Kanban() {
                               >
                                 <SwipeableCard
                                   onEdit={() => setEditingLead(lead)}
-                                  onDelete={() => setDeleteTarget(lead.id)}
+                                  onDelete={() => setPendingDeleteId(lead.id)}
                                   onMoveNext={stage.key !== "fechado" ? () => moveToNextStage(lead) : undefined}
                                 >
                                   <div className={`rounded-lg border-t-[3px] p-3 shadow-sm transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing group ${stageColorMap[stage.key]} ${snapshot.isDragging ? "shadow-lg rotate-1" : ""}`}>
@@ -186,10 +186,9 @@ export default function Kanban() {
       <NewLeadForm open={showNewLead} onOpenChange={setShowNewLead} onSubmit={addLead} />
       <EditLeadForm lead={editingLead} open={!!editingLead} onOpenChange={(open) => !open && setEditingLead(null)} onSubmit={updateLead} onDelete={deleteLead} />
       <ConfirmDeleteDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        onConfirm={() => { if (deleteTarget) { deleteLead(deleteTarget); setDeleteTarget(null); } }}
-        itemName="este lead"
+        open={!!pendingDeleteId}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+        onConfirm={() => { if (pendingDeleteId) { deleteLead(pendingDeleteId); setPendingDeleteId(null); } }}
       />
     </AppLayout>
   );
