@@ -22,7 +22,7 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } 
 const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
 
 export default function Agenda() {
-  const { followUps, setFollowUps, addFollowUp, updateFollowUp } = useCrm();
+  const { followUps, setFollowUps, addFollowUp, updateFollowUp, deleteFollowUp } = useCrm();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<"all" | "pending" | "completed">("all");
   const [showNewFollowUp, setShowNewFollowUp] = useState(false);
