@@ -24,13 +24,14 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { mockLeads, mockFollowUps } from "@/data/mockData";
 
 const menuItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Kanban", url: "/kanban", icon: Columns3 },
-  { title: "Clientes", url: "/clientes", icon: Users },
-  { title: "Agenda", url: "/agenda", icon: CalendarDays },
-  { title: "Campanhas", url: "/campanhas", icon: Megaphone },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, badge: 0 },
+  { title: "Kanban", url: "/kanban", icon: Columns3, badge: mockLeads.filter(l => l.stage === 'novo_lead').length },
+  { title: "Clientes", url: "/clientes", icon: Users, badge: 0 },
+  { title: "Agenda", url: "/agenda", icon: CalendarDays, badge: mockFollowUps.filter(f => !f.completed).length },
+  { title: "Campanhas", url: "/campanhas", icon: Megaphone, badge: mockLeads.filter(l => l.stage === 'negociacao').length },
 ];
 
 export function AppSidebar() {
@@ -85,9 +86,21 @@ export function AppSidebar() {
                         {isActive && (
                           <div className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
                         )}
-                        <item.icon className="h-5 w-5 shrink-0" />
+                        <div className="relative shrink-0">
+                          <item.icon className="h-5 w-5" />
+                          {collapsed && item.badge > 0 && (
+                            <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground">
+                              {item.badge}
+                            </span>
+                          )}
+                        </div>
                         {!collapsed && <span className="text-sm">{item.title}</span>}
-                        {!collapsed && isActive && (
+                        {!collapsed && item.badge > 0 && (
+                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] font-bold text-accent-foreground">
+                            {item.badge}
+                          </span>
+                        )}
+                        {!collapsed && isActive && item.badge === 0 && (
                           <ChevronRight className="ml-auto h-3.5 w-3.5 text-sidebar-primary/60" />
                         )}
                       </NavLink>
