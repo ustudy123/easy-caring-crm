@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { NewLeadForm } from "@/components/forms/NewLeadForm";
 import { EditLeadForm } from "@/components/forms/EditLeadForm";
+import { SwipeableCard } from "@/components/SwipeableCard";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 
 const stageColorMap: Record<KanbanStage, string> = {
   novo_lead: "border-t-kanban-new",
@@ -41,9 +43,19 @@ export default function Kanban() {
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
   const addLead = (lead: Lead) => setLeads((prev) => [lead, ...prev]);
   const updateLead = (lead: Lead) => setLeads((prev) => prev.map((l) => (l.id === lead.id ? lead : l)));
   const deleteLead = (id: string) => setLeads((prev) => prev.filter((l) => l.id !== id));
+
+  const moveToNextStage = (lead: Lead) => {
+    const stageKeys = KANBAN_STAGES.map(s => s.key);
+    const idx = stageKeys.indexOf(lead.stage);
+    if (idx < stageKeys.length - 1) {
+      updateLead({ ...lead, stage: stageKeys[idx + 1] });
+    }
+  };
 
   const filteredLeads = leads.filter((l) =>
     l.clientName.toLowerCase().includes(search.toLowerCase())
@@ -108,48 +120,55 @@ export default function Kanban() {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                className={`rounded-lg border-t-[3px] bg-card p-3 shadow-sm transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing group ${stageColorMap[stage.key]} ${snapshot.isDragging ? "shadow-lg rotate-1" : ""}`}
                               >
-                                <div className="flex items-start justify-between">
-                                  <p className="text-sm font-bold text-foreground leading-tight">{lead.clientName}</p>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
-                                    className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-1.5 -mr-1 -mt-1 rounded hover:bg-muted"
-                                  >
-                                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                                  </button>
-                                </div>
-                                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                  <Phone className="h-3 w-3" />
-                                  <span>{lead.clientPhone}</span>
-                                </div>
-                                {lead.clientEmail && (
-                                  <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                    <Mail className="h-3 w-3" />
-                                    <span className="truncate">{lead.clientEmail}</span>
+                                <SwipeableCard
+                                  onEdit={() => setEditingLead(lead)}
+                                  onDelete={() => setPendingDeleteId(lead.id)}
+                                  onMoveNext={stage.key !== "fechado" ? () => moveToNextStage(lead) : undefined}
+                                >
+                                  <div className={`rounded-lg border-t-[3px] p-3 shadow-sm transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing group ${stageColorMap[stage.key]} ${snapshot.isDragging ? "shadow-lg rotate-1" : ""}`}>
+                                    <div className="flex items-start justify-between">
+                                      <p className="text-sm font-bold text-foreground leading-tight">{lead.clientName}</p>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
+                                        className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-1.5 -mr-1 -mt-1 rounded hover:bg-muted"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                                      </button>
+                                    </div>
+                                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                      <Phone className="h-3 w-3" />
+                                      <span>{lead.clientPhone}</span>
+                                    </div>
+                                    {lead.clientEmail && (
+                                      <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <Mail className="h-3 w-3" />
+                                        <span className="truncate">{lead.clientEmail}</span>
+                                      </div>
+                                    )}
+                                    <div className="mt-2 flex items-center justify-between">
+                                      <div className="flex items-center gap-1 text-xs font-bold text-foreground">
+                                        <DollarSign className="h-3 w-3" />
+                                        R$ {lead.value.toLocaleString("pt-BR")}
+                                      </div>
+                                      <span className="text-[10px] text-muted-foreground">{lead.source}</span>
+                                    </div>
+                                    {lead.tags.length > 0 && (
+                                      <div className="mt-2 flex flex-wrap gap-1">
+                                        {lead.tags.map((tag) => (
+                                          <span key={tag} className="inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                                            <Tag className="h-2.5 w-2.5" />{tag}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {lead.nextFollowUp && (
+                                      <div className="mt-2 rounded bg-warning/10 px-2 py-1 text-[10px] font-semibold text-warning">
+                                        📅 Follow-up: {new Date(lead.nextFollowUp).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-                                <div className="mt-2 flex items-center justify-between">
-                                  <div className="flex items-center gap-1 text-xs font-bold text-foreground">
-                                    <DollarSign className="h-3 w-3" />
-                                    R$ {lead.value.toLocaleString("pt-BR")}
-                                  </div>
-                                  <span className="text-[10px] text-muted-foreground">{lead.source}</span>
-                                </div>
-                                {lead.tags.length > 0 && (
-                                  <div className="mt-2 flex flex-wrap gap-1">
-                                    {lead.tags.map((tag) => (
-                                      <span key={tag} className="inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                                        <Tag className="h-2.5 w-2.5" />{tag}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                                {lead.nextFollowUp && (
-                                  <div className="mt-2 rounded bg-warning/10 px-2 py-1 text-[10px] font-semibold text-warning">
-                                    📅 Follow-up: {new Date(lead.nextFollowUp).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                                  </div>
-                                )}
+                                </SwipeableCard>
                               </div>
                             )}
                           </Draggable>
@@ -166,6 +185,11 @@ export default function Kanban() {
       </div>
       <NewLeadForm open={showNewLead} onOpenChange={setShowNewLead} onSubmit={addLead} />
       <EditLeadForm lead={editingLead} open={!!editingLead} onOpenChange={(open) => !open && setEditingLead(null)} onSubmit={updateLead} onDelete={deleteLead} />
+      <ConfirmDeleteDialog
+        open={!!pendingDeleteId}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+        onConfirm={() => { if (pendingDeleteId) { deleteLead(pendingDeleteId); setPendingDeleteId(null); } }}
+      />
     </AppLayout>
   );
 }
