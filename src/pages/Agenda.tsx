@@ -28,9 +28,6 @@ export default function Agenda() {
   const [showNewFollowUp, setShowNewFollowUp] = useState(false);
   const [editingFollowUp, setEditingFollowUp] = useState<FollowUp | null>(null);
 
-  const addFollowUp = (f: FollowUp) => setFollowUps((prev) => [f, ...prev]);
-  const updateFollowUp = (f: FollowUp) => setFollowUps((prev) => prev.map((item) => (item.id === f.id ? f : item)));
-  const deleteFollowUp = (id: string) => setFollowUps((prev) => prev.filter((f) => f.id !== id));
 
   const toggleComplete = (id: string) => {
     setFollowUps((prev) => prev.map((f) => (f.id === id ? { ...f, completed: !f.completed } : f)));

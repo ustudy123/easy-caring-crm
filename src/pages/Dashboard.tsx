@@ -28,8 +28,8 @@ export default function Dashboard() {
 
   const funnelData = KANBAN_STAGES.map((stage) => ({
     name: stage.label,
-    leads: mockLeads.filter((l) => l.stage === stage.key).length,
-    valor: mockLeads.filter((l) => l.stage === stage.key).reduce((s, l) => s + l.value, 0),
+    leads: leads.filter((l) => l.stage === stage.key).length,
+    valor: leads.filter((l) => l.stage === stage.key).reduce((s, l) => s + l.value, 0),
   }));
 
   const sellerData = mockSellers.map((s) => ({
@@ -39,11 +39,11 @@ export default function Dashboard() {
   }));
 
   const sourceData = [
-    { name: "WhatsApp", value: mockLeads.filter((l) => l.source === "whatsapp").length },
-    { name: "Instagram", value: mockLeads.filter((l) => l.source === "instagram").length },
-    { name: "Meta Ads", value: mockLeads.filter((l) => l.source === "meta").length },
-    { name: "Google", value: mockLeads.filter((l) => l.source === "google").length },
-    { name: "Indicação", value: mockLeads.filter((l) => l.source === "indicacao").length },
+    { name: "WhatsApp", value: leads.filter((l) => l.source === "whatsapp").length },
+    { name: "Instagram", value: leads.filter((l) => l.source === "instagram").length },
+    { name: "Meta Ads", value: leads.filter((l) => l.source === "meta").length },
+    { name: "Google", value: leads.filter((l) => l.source === "google").length },
+    { name: "Indicação", value: leads.filter((l) => l.source === "indicacao").length },
   ];
 
   const COLORS = ["hsl(142,71%,45%)", "hsl(340,82%,52%)", "hsl(220,90%,56%)", "hsl(32,95%,50%)", "hsl(271,81%,56%)"];
@@ -173,7 +173,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {mockFollowUps
+                {followUps
                   .filter((f) => !f.completed)
                   .slice(0, 5)
                   .map((f) => (

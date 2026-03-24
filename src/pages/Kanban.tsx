@@ -47,9 +47,6 @@ export default function Kanban() {
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  const addLead = (lead: Lead) => setLeads((prev) => [lead, ...prev]);
-  const updateLead = (lead: Lead) => setLeads((prev) => prev.map((l) => (l.id === lead.id ? lead : l)));
-  const deleteLead = (id: string) => setLeads((prev) => prev.filter((l) => l.id !== id));
 
   const moveToNextStage = (lead: Lead) => {
     const stageKeys = KANBAN_STAGES.map(s => s.key);
