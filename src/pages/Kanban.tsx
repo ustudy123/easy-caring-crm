@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { NewLeadForm } from "@/components/forms/NewLeadForm";
 
 const stageColorMap: Record<KanbanStage, string> = {
   novo_lead: "border-t-kanban-new",
@@ -36,6 +37,9 @@ const stageDotMap: Record<KanbanStage, string> = {
 export default function Kanban() {
   const [leads, setLeads] = useState<Lead[]>(mockLeads);
   const [search, setSearch] = useState("");
+  const [showNewLead, setShowNewLead] = useState(false);
+
+  const addLead = (lead: Lead) => setLeads((prev) => [lead, ...prev]);
 
   const filteredLeads = leads.filter((l) =>
     l.clientName.toLowerCase().includes(search.toLowerCase())
@@ -67,7 +71,7 @@ export default function Kanban() {
             <Button variant="outline" size="sm">
               <Filter className="h-3.5 w-3.5 mr-1" /> Filtros
             </Button>
-            <Button size="sm" className="bg-primary">
+            <Button size="sm" className="bg-primary" onClick={() => setShowNewLead(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Novo Lead
             </Button>
           </div>
@@ -173,6 +177,7 @@ export default function Kanban() {
           </div>
         </DragDropContext>
       </div>
+      <NewLeadForm open={showNewLead} onOpenChange={setShowNewLead} onSubmit={addLead} />
     </AppLayout>
   );
 }
