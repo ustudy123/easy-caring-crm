@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { Client } from "@/types/crm";
+import { isValidPhone, isValidEmail } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 
 interface NewClientFormProps {
@@ -16,23 +18,28 @@ interface NewClientFormProps {
 export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormProps) {
   const { toast } = useToast();
   const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    address: "",
-    city: "",
-    tags: "",
-    notes: "",
+    name: "", phone: "", email: "", address: "", city: "", tags: "", notes: "",
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const update = (field: string, value: string) => setForm((p) => ({ ...p, [field]: value }));
+  const update = (field: string, value: string) => {
+    setForm((p) => ({ ...p, [field]: value }));
+    setErrors((p) => ({ ...p, [field]: "" }));
+  };
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = "Nome é obrigatório";
+    if (!form.phone.trim()) e.phone = "Telefone é obrigatório";
+    else if (!isValidPhone(form.phone)) e.phone = "Telefone inválido (10 ou 11 dígitos)";
+    if (form.email && !isValidEmail(form.email)) e.email = "E-mail inválido";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.phone.trim()) {
-      toast({ title: "Campos obrigatórios", description: "Nome e telefone são obrigatórios.", variant: "destructive" });
-      return;
-    }
+    if (!validate()) return;
     const newClient: Client = {
       id: `c-${Date.now()}`,
       name: form.name.trim(),
@@ -48,6 +55,7 @@ export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormPro
     onSubmit(newClient);
     toast({ title: "Cliente cadastrado!", description: `${newClient.name} adicionado com sucesso.` });
     setForm({ name: "", phone: "", email: "", address: "", city: "", tags: "", notes: "" });
+    setErrors({});
     onOpenChange(false);
   };
 
@@ -62,14 +70,17 @@ export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormPro
             <div className="col-span-2 space-y-1.5">
               <Label>Nome *</Label>
               <Input value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Nome completo" maxLength={100} />
+              {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Telefone *</Label>
-              <Input value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="(11) 99999-0000" maxLength={20} />
+              <MaskedInput mask="phone" value={form.phone} onValueChange={(_, masked) => update("phone", masked)} placeholder="(11) 99999-0000" />
+              {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>E-mail</Label>
               <Input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="email@exemplo.com" maxLength={255} />
+              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Endereço</Label>

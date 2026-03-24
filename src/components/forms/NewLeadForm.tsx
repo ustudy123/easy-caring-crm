@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { Lead, KanbanStage } from "@/types/crm";
 import { mockSellers } from "@/data/mockData";
+import { isValidPhone, isValidEmail } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 
 interface NewLeadFormProps {
@@ -18,25 +20,29 @@ interface NewLeadFormProps {
 export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) {
   const { toast } = useToast();
   const [form, setForm] = useState({
-    clientName: "",
-    clientPhone: "",
-    clientEmail: "",
-    value: "",
-    source: "whatsapp",
-    assignedTo: "",
-    tags: "",
-    notes: "",
-    stage: "novo_lead" as KanbanStage,
+    clientName: "", clientPhone: "", clientEmail: "", value: "",
+    source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "novo_lead" as KanbanStage,
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const update = (field: string, value: string) => setForm((p) => ({ ...p, [field]: value }));
+  const update = (field: string, value: string) => {
+    setForm((p) => ({ ...p, [field]: value }));
+    setErrors((p) => ({ ...p, [field]: "" }));
+  };
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.clientName.trim()) e.clientName = "Nome é obrigatório";
+    if (!form.clientPhone.trim()) e.clientPhone = "Telefone é obrigatório";
+    else if (!isValidPhone(form.clientPhone)) e.clientPhone = "Telefone inválido (10 ou 11 dígitos)";
+    if (form.clientEmail && !isValidEmail(form.clientEmail)) e.clientEmail = "E-mail inválido";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.clientName.trim() || !form.clientPhone.trim()) {
-      toast({ title: "Campos obrigatórios", description: "Nome e telefone são obrigatórios.", variant: "destructive" });
-      return;
-    }
+    if (!validate()) return;
     const now = new Date().toISOString();
     const newLead: Lead = {
       id: `l-${Date.now()}`,
@@ -55,6 +61,7 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
     onSubmit(newLead);
     toast({ title: "Lead criado!", description: `${newLead.clientName} adicionado ao Kanban.` });
     setForm({ clientName: "", clientPhone: "", clientEmail: "", value: "", source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "novo_lead" });
+    setErrors({});
     onOpenChange(false);
   };
 
@@ -69,14 +76,17 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
             <div className="col-span-2 space-y-1.5">
               <Label>Nome do cliente *</Label>
               <Input value={form.clientName} onChange={(e) => update("clientName", e.target.value)} placeholder="Ex: João Pereira" maxLength={100} />
+              {errors.clientName && <p className="text-xs text-destructive">{errors.clientName}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Telefone *</Label>
-              <Input value={form.clientPhone} onChange={(e) => update("clientPhone", e.target.value)} placeholder="(11) 99999-0000" maxLength={20} />
+              <MaskedInput mask="phone" value={form.clientPhone} onValueChange={(_, masked) => update("clientPhone", masked)} placeholder="(11) 99999-0000" />
+              {errors.clientPhone && <p className="text-xs text-destructive">{errors.clientPhone}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>E-mail</Label>
               <Input type="email" value={form.clientEmail} onChange={(e) => update("clientEmail", e.target.value)} placeholder="email@exemplo.com" maxLength={255} />
+              {errors.clientEmail && <p className="text-xs text-destructive">{errors.clientEmail}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Valor estimado (R$)</Label>

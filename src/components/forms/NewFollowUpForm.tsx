@@ -10,8 +10,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { FollowUp } from "@/types/crm";
 import { mockSellers } from "@/data/mockData";
+import { isValidPhone } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 
 interface NewFollowUpFormProps {
@@ -23,25 +25,32 @@ interface NewFollowUpFormProps {
 export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFormProps) {
   const { toast } = useToast();
   const [form, setForm] = useState({
-    clientName: "",
-    clientPhone: "",
-    description: "",
-    type: "whatsapp" as FollowUp["type"],
-    assignedTo: "",
-    time: "10:00",
+    clientName: "", clientPhone: "", description: "",
+    type: "whatsapp" as FollowUp["type"], assignedTo: "", time: "10:00",
   });
   const [date, setDate] = useState<Date | undefined>(undefined);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const update = (field: string, value: string) => setForm((p) => ({ ...p, [field]: value }));
+  const update = (field: string, value: string) => {
+    setForm((p) => ({ ...p, [field]: value }));
+    setErrors((p) => ({ ...p, [field]: "" }));
+  };
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.clientName.trim()) e.clientName = "Nome é obrigatório";
+    if (!form.clientPhone.trim()) e.clientPhone = "Telefone é obrigatório";
+    else if (!isValidPhone(form.clientPhone)) e.clientPhone = "Telefone inválido (10 ou 11 dígitos)";
+    if (!date) e.date = "Data é obrigatória";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.clientName.trim() || !form.clientPhone.trim() || !date) {
-      toast({ title: "Campos obrigatórios", description: "Nome, telefone e data são obrigatórios.", variant: "destructive" });
-      return;
-    }
+    if (!validate()) return;
     const [hours, minutes] = form.time.split(":").map(Number);
-    const scheduledDate = new Date(date);
+    const scheduledDate = new Date(date!);
     scheduledDate.setHours(hours, minutes, 0, 0);
 
     const newFollowUp: FollowUp = {
@@ -59,6 +68,7 @@ export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFor
     toast({ title: "Follow-up agendado!", description: `${newFollowUp.clientName} — ${format(scheduledDate, "dd/MM/yyyy HH:mm")}` });
     setForm({ clientName: "", clientPhone: "", description: "", type: "whatsapp", assignedTo: "", time: "10:00" });
     setDate(undefined);
+    setErrors({});
     onOpenChange(false);
   };
 
@@ -73,10 +83,12 @@ export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFor
             <div className="col-span-2 space-y-1.5">
               <Label>Nome do cliente *</Label>
               <Input value={form.clientName} onChange={(e) => update("clientName", e.target.value)} placeholder="Ex: João Pereira" maxLength={100} />
+              {errors.clientName && <p className="text-xs text-destructive">{errors.clientName}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Telefone *</Label>
-              <Input value={form.clientPhone} onChange={(e) => update("clientPhone", e.target.value)} placeholder="(11) 99999-0000" maxLength={20} />
+              <MaskedInput mask="phone" value={form.clientPhone} onValueChange={(_, masked) => update("clientPhone", masked)} placeholder="(11) 99999-0000" />
+              {errors.clientPhone && <p className="text-xs text-destructive">{errors.clientPhone}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Tipo</Label>
@@ -100,9 +112,10 @@ export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFor
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={date} onSelect={setDate} initialFocus className={cn("p-3 pointer-events-auto")} />
+                  <Calendar mode="single" selected={date} onSelect={(d) => { setDate(d); setErrors((p) => ({ ...p, date: "" })); }} initialFocus className={cn("p-3 pointer-events-auto")} />
                 </PopoverContent>
               </Popover>
+              {errors.date && <p className="text-xs text-destructive">{errors.date}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Horário</Label>
