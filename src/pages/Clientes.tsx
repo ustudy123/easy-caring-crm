@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { mockClients } from "@/data/mockData";
 import { Client } from "@/types/crm";
+import { NewClientForm } from "@/components/forms/NewClientForm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,8 +17,12 @@ const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
 export default function Clientes() {
   const [search, setSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [clients, setClients] = useState<Client[]>(mockClients);
+  const [showNewClient, setShowNewClient] = useState(false);
 
-  const filtered = mockClients.filter(
+  const addClient = (client: Client) => setClients((prev) => [client, ...prev]);
+
+  const filtered = clients.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.phone.includes(search) ||
@@ -33,7 +38,7 @@ export default function Clientes() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar por nome, telefone ou tag..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
-          <Button size="sm" className="bg-primary">
+          <Button size="sm" className="bg-primary" onClick={() => setShowNewClient(true)}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Novo Cliente
           </Button>
         </div>
@@ -47,7 +52,7 @@ export default function Clientes() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Total de Clientes</p>
-                <p className="text-xl font-extrabold">{mockClients.length}</p>
+                <p className="text-xl font-extrabold">{clients.length}</p>
               </div>
             </CardContent>
           </Card>
@@ -58,7 +63,7 @@ export default function Clientes() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Volume Total</p>
-                <p className="text-xl font-extrabold">R$ {mockClients.reduce((s, c) => s + c.totalPurchases, 0).toLocaleString("pt-BR")}</p>
+                <p className="text-xl font-extrabold">R$ {clients.reduce((s, c) => s + c.totalPurchases, 0).toLocaleString("pt-BR")}</p>
               </div>
             </CardContent>
           </Card>
@@ -69,7 +74,7 @@ export default function Clientes() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Fidelizados</p>
-                <p className="text-xl font-extrabold">{mockClients.filter((c) => c.tags.includes("fidelizado")).length}</p>
+                <p className="text-xl font-extrabold">{clients.filter((c) => c.tags.includes("fidelizado")).length}</p>
               </div>
             </CardContent>
           </Card>
@@ -188,6 +193,7 @@ export default function Clientes() {
           )}
         </DialogContent>
       </Dialog>
+      <NewClientForm open={showNewClient} onOpenChange={setShowNewClient} onSubmit={addClient} />
     </AppLayout>
   );
 }

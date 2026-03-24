@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Phone, MessageCircle, Mail, MapPin, CheckCircle2, Clock, Plus, CalendarDays } from "lucide-react";
 import { motion } from "framer-motion";
+import { NewFollowUpForm } from "@/components/forms/NewFollowUpForm";
 
 const typeConfig: Record<FollowUp["type"], { icon: typeof Phone; label: string; color: string }> = {
   call: { icon: Phone, label: "Ligação", color: "bg-kanban-attending/10 text-kanban-attending" },
@@ -23,6 +24,9 @@ export default function Agenda() {
   const [followUps, setFollowUps] = useState<FollowUp[]>(mockFollowUps);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<"all" | "pending" | "completed">("all");
+  const [showNewFollowUp, setShowNewFollowUp] = useState(false);
+
+  const addFollowUp = (f: FollowUp) => setFollowUps((prev) => [f, ...prev]);
 
   const toggleComplete = (id: string) => {
     setFollowUps((prev) => prev.map((f) => (f.id === id ? { ...f, completed: !f.completed } : f)));
@@ -112,7 +116,7 @@ export default function Agenda() {
                   </Button>
                 ))}
               </div>
-              <Button size="sm" className="bg-primary">
+              <Button size="sm" className="bg-primary" onClick={() => setShowNewFollowUp(true)}>
                 <Plus className="h-3.5 w-3.5 mr-1" /> Novo Follow-up
               </Button>
             </div>
@@ -168,6 +172,7 @@ export default function Agenda() {
           </div>
         </div>
       </div>
+      <NewFollowUpForm open={showNewFollowUp} onOpenChange={setShowNewFollowUp} onSubmit={addFollowUp} />
     </AppLayout>
   );
 }
