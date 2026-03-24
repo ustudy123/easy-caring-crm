@@ -38,6 +38,18 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { newLeadsCount, pendingFollowUpsCount, negotiationCount } = useCrm();
+
+  const badgeMap: Record<string, number> = {
+    newLeads: newLeadsCount,
+    pendingFollowUps: pendingFollowUpsCount,
+    negotiation: negotiationCount,
+  };
+
+  const menuItems = menuItemsDef.map((item) => ({
+    ...item,
+    badge: item.badgeKey ? badgeMap[item.badgeKey] : 0,
+  }));
 
   return (
     <Sidebar collapsible="icon">
