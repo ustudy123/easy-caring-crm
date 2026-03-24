@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { NewLeadForm } from "@/components/forms/NewLeadForm";
 import { EditLeadForm } from "@/components/forms/EditLeadForm";
+import { SwipeableCard } from "@/components/SwipeableCard";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 
 const stageColorMap: Record<KanbanStage, string> = {
   novo_lead: "border-t-kanban-new",
