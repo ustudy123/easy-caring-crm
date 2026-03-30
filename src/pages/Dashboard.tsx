@@ -15,9 +15,9 @@ export default function Dashboard() {
   const sellers = useSellers();
   const totalLeads = leads.length;
   const closedLeads = leads.filter((l) => l.stage === "fechado").length;
-  const conversionRate = Math.round((closedLeads / totalLeads) * 100);
+  const conversionRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
   const totalValue = leads.reduce((sum, l) => sum + l.value, 0);
-  const avgTicket = Math.round(totalValue / totalLeads);
+  const avgTicket = totalLeads > 0 ? Math.round(totalValue / totalLeads) : 0;
   const pendingFollowUps = followUps.filter((f) => !f.completed).length;
 
   const kpis = [
