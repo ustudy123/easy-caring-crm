@@ -1,0 +1,315 @@
+import { useState, useEffect, useRef } from "react";
+import { AppLayout } from "@/components/AppLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Search, MessageSquare, ArrowLeft, Send, Phone, User } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format, isToday, isYesterday } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+interface WhatsAppMessage {
+  id: string;
+  message_id: string;
+  phone: string;
+  body: string | null;
+  is_from_me: boolean | null;
+  timestamp: string | null;
+  created_at: string | null;
+}
+
+interface Conversation {
+  phone: string;
+  lastMessage: string;
+  lastTimestamp: string;
+  unreadCount: number;
+  messages: WhatsAppMessage[];
+}
+
+function formatMessageDate(dateStr: string) {
+  const date = new Date(dateStr);
+  if (isToday(date)) return format(date, "HH:mm");
+  if (isYesterday(date)) return "Ontem";
+  return format(date, "dd/MM/yy");
+}
+
+function formatFullDate(dateStr: string) {
+  const date = new Date(dateStr);
+  if (isToday(date)) return "Hoje";
+  if (isYesterday(date)) return "Ontem";
+  return format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+}
+
+function groupMessagesByDate(messages: WhatsAppMessage[]) {
+  const groups: Record<string, WhatsAppMessage[]> = {};
+  messages.forEach((msg) => {
+    const dateKey = format(new Date(msg.timestamp || msg.created_at || ""), "yyyy-MM-dd");
+    if (!groups[dateKey]) groups[dateKey] = [];
+    groups[dateKey].push(msg);
+  });
+  return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+}
+
+function formatPhone(phone: string) {
+  const clean = phone.replace(/\D/g, "");
+  if (clean.length === 13) {
+    return `+${clean.slice(0, 2)} (${clean.slice(2, 4)}) ${clean.slice(4, 9)}-${clean.slice(9)}`;
+  }
+  if (clean.length === 12) {
+    return `+${clean.slice(0, 2)} (${clean.slice(2, 4)}) ${clean.slice(4, 8)}-${clean.slice(8)}`;
+  }
+  return phone;
+}
+
+export default function Conversas() {
+  const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [showMobileChat, setShowMobileChat] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      const { data } = await supabase
+        .from("whatsapp_messages")
+        .select("*")
+        .order("timestamp", { ascending: true });
+      if (data) setMessages(data as WhatsAppMessage[]);
+      setLoading(false);
+    };
+    fetchMessages();
+  }, []);
+
+  // Real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel("whatsapp-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "whatsapp_messages" }, (payload) => {
+        setMessages((prev) => [...prev, payload.new as WhatsAppMessage]);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  // Scroll to bottom when selected conversation changes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [selectedPhone, messages]);
+
+  // Build conversations from messages
+  const conversations: Conversation[] = (() => {
+    const map = new Map<string, Conversation>();
+    messages.forEach((msg) => {
+      const phone = msg.phone;
+      if (!map.has(phone)) {
+        map.set(phone, { phone, lastMessage: "", lastTimestamp: "", unreadCount: 0, messages: [] });
+      }
+      const conv = map.get(phone)!;
+      conv.messages.push(msg);
+      const ts = msg.timestamp || msg.created_at || "";
+      if (!conv.lastTimestamp || ts > conv.lastTimestamp) {
+        conv.lastTimestamp = ts;
+        conv.lastMessage = msg.body || "";
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
+  })();
+
+  const filteredConversations = conversations.filter((c) =>
+    c.phone.includes(search) || c.lastMessage.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selectedConversation = conversations.find((c) => c.phone === selectedPhone);
+
+  const handleSelectConversation = (phone: string) => {
+    setSelectedPhone(phone);
+    setShowMobileChat(true);
+  };
+
+  // Check if lead exists for this phone
+  const [contactName, setContactName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!selectedPhone) { setContactName(null); return; }
+    const fetchName = async () => {
+      const { data } = await supabase
+        .from("leads")
+        .select("client_name")
+        .eq("client_phone", selectedPhone)
+        .limit(1);
+      if (data && data.length > 0) {
+        setContactName(data[0].client_name);
+      } else {
+        const { data: clientData } = await supabase
+          .from("clients")
+          .select("name")
+          .eq("phone", selectedPhone)
+          .limit(1);
+        setContactName(clientData && clientData.length > 0 ? clientData[0].name : null);
+      }
+    };
+    fetchName();
+  }, [selectedPhone]);
+
+  return (
+    <AppLayout title="Conversas">
+      <div className="flex h-[calc(100vh-8rem)] rounded-xl border bg-card overflow-hidden">
+        {/* Sidebar - Lista de conversas */}
+        <div className={cn(
+          "w-full md:w-96 border-r flex flex-col bg-card shrink-0",
+          showMobileChat && "hidden md:flex"
+        )}>
+          {/* Search */}
+          <div className="p-3 border-b">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar conversa..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 h-9 bg-muted/50"
+              />
+            </div>
+          </div>
+
+          {/* Conversations list */}
+          <ScrollArea className="flex-1">
+            {loading ? (
+              <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
+                Carregando conversas...
+              </div>
+            ) : filteredConversations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground">
+                <MessageSquare className="h-8 w-8 opacity-50" />
+                <span className="text-sm">Nenhuma conversa encontrada</span>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {filteredConversations.map((conv) => (
+                  <button
+                    key={conv.phone}
+                    onClick={() => handleSelectConversation(conv.phone)}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-3 text-left hover:bg-muted/50 transition-colors",
+                      selectedPhone === conv.phone && "bg-muted"
+                    )}
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <User className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium text-foreground truncate">
+                          {formatPhone(conv.phone)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">
+                          {conv.lastTimestamp && formatMessageDate(conv.lastTimestamp)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {conv.lastMessage || "Sem mensagem"}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+
+        {/* Main - Chat area */}
+        <div className={cn(
+          "flex-1 flex flex-col min-w-0",
+          !showMobileChat && "hidden md:flex"
+        )}>
+          {selectedConversation ? (
+            <>
+              {/* Chat header */}
+              <div className="h-14 flex items-center gap-3 px-4 border-b bg-card shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden h-8 w-8"
+                  onClick={() => setShowMobileChat(false)}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <User className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">
+                    {contactName || formatPhone(selectedConversation.phone)}
+                  </p>
+                  {contactName && (
+                    <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {formatPhone(selectedConversation.phone)}
+                    </p>
+                  )}
+                </div>
+                <Badge variant="outline" className="text-[10px]">
+                  {selectedConversation.messages.length} msgs
+                </Badge>
+              </div>
+
+              {/* Messages */}
+              <ScrollArea className="flex-1 p-4">
+                <div className="max-w-2xl mx-auto space-y-4">
+                  {groupMessagesByDate(selectedConversation.messages).map(([dateKey, msgs]) => (
+                    <div key={dateKey}>
+                      <div className="flex justify-center my-3">
+                        <span className="text-[10px] bg-muted px-3 py-1 rounded-full text-muted-foreground font-medium">
+                          {formatFullDate(msgs[0].timestamp || msgs[0].created_at || "")}
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {msgs.map((msg) => (
+                          <div
+                            key={msg.id}
+                            className={cn(
+                              "flex",
+                              msg.is_from_me ? "justify-end" : "justify-start"
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "max-w-[75%] rounded-2xl px-3.5 py-2 text-sm shadow-sm",
+                                msg.is_from_me
+                                  ? "bg-primary text-primary-foreground rounded-br-md"
+                                  : "bg-muted text-foreground rounded-bl-md"
+                              )}
+                            >
+                              <p className="whitespace-pre-wrap break-words">{msg.body || ""}</p>
+                              <p className={cn(
+                                "text-[10px] mt-1 text-right",
+                                msg.is_from_me ? "text-primary-foreground/70" : "text-muted-foreground"
+                              )}>
+                                {msg.timestamp && format(new Date(msg.timestamp), "HH:mm")}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                <MessageSquare className="h-8 w-8" />
+              </div>
+              <p className="text-sm font-medium">Selecione uma conversa</p>
+              <p className="text-xs">Escolha um contato para ver o histórico de mensagens</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
