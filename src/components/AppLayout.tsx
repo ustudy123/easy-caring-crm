@@ -17,6 +17,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, title }: AppLayoutProps) {
   const { newLeadsCount, pendingFollowUpsCount, negotiationCount } = useCrm();
+  const navigate = useNavigate();
   const totalNotifications = newLeadsCount + pendingFollowUpsCount + negotiationCount;
   return (
     <SidebarProvider>
