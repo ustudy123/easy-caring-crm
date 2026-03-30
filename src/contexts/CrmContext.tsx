@@ -16,6 +16,7 @@ interface CrmContextType {
   newLeadsCount: number;
   pendingFollowUpsCount: number;
   negotiationCount: number;
+  unreadWhatsAppCount: number;
   loading: boolean;
 }
 
