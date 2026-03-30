@@ -27,6 +27,7 @@ interface EditFollowUpFormProps {
 
 export function EditFollowUpForm({ followUp, open, onOpenChange, onSubmit, onDelete }: EditFollowUpFormProps) {
   const { toast } = useToast();
+  const sellers = useSellers();
   const [form, setForm] = useState({
     clientName: "", clientPhone: "", description: "",
     type: "whatsapp" as FollowUp["type"], assignedTo: "", time: "10:00",
