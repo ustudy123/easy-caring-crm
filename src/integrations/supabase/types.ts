@@ -104,7 +104,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
-          lead_id: string
+          lead_id: string | null
           scheduled_at: string
           type: Database["public"]["Enums"]["follow_up_type"]
         }
@@ -116,7 +116,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
-          lead_id: string
+          lead_id?: string | null
           scheduled_at: string
           type?: Database["public"]["Enums"]["follow_up_type"]
         }
@@ -128,7 +128,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
-          lead_id?: string
+          lead_id?: string | null
           scheduled_at?: string
           type?: Database["public"]["Enums"]["follow_up_type"]
         }
