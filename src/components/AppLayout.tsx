@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Bell, Columns3, CalendarDays, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCrm } from "@/contexts/CrmContext";
+import { useNavigate } from "react-router-dom";
 import {
   Popover,
   PopoverContent,
@@ -16,6 +17,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, title }: AppLayoutProps) {
   const { newLeadsCount, pendingFollowUpsCount, negotiationCount } = useCrm();
+  const navigate = useNavigate();
   const totalNotifications = newLeadsCount + pendingFollowUpsCount + negotiationCount;
   return (
     <SidebarProvider>
@@ -45,7 +47,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                   </div>
                   <div className="divide-y">
                     {newLeadsCount > 0 && (
-                      <div className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
+                      <div onClick={() => navigate("/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                           <Columns3 className="h-4 w-4" />
                         </div>
@@ -56,7 +58,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                       </div>
                     )}
                     {pendingFollowUpsCount > 0 && (
-                      <div className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
+                      <div onClick={() => navigate("/agenda")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-secondary">
                           <CalendarDays className="h-4 w-4" />
                         </div>
@@ -67,7 +69,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                       </div>
                     )}
                     {negotiationCount > 0 && (
-                      <div className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
+                      <div onClick={() => navigate("/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
                           <Megaphone className="h-4 w-4" />
                         </div>
