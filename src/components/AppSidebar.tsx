@@ -9,6 +9,7 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
