@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Bell, Columns3, CalendarDays, Megaphone } from "lucide-react";
+import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCrm } from "@/contexts/CrmContext";
 import { useNavigate } from "react-router-dom";
@@ -17,10 +17,10 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, title }: AppLayoutProps) {
-  const { newLeadsCount, pendingFollowUpsCount, negotiationCount } = useCrm();
+  const { newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount } = useCrm();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const [lastCounts, setLastCounts] = useState({ leads: 0, followUps: 0, negotiations: 0 });
+  const [lastCounts, setLastCounts] = useState({ leads: 0, followUps: 0, negotiations: 0, whatsapp: 0 });
 
   // Reset dismissed when counts increase (new notifications arrived)
   useEffect(() => {
@@ -28,14 +28,16 @@ export function AppLayout({ children, title }: AppLayoutProps) {
     if (newLeadsCount > lastCounts.leads) newDismissed.delete("leads");
     if (pendingFollowUpsCount > lastCounts.followUps) newDismissed.delete("followUps");
     if (negotiationCount > lastCounts.negotiations) newDismissed.delete("negotiations");
+    if (unreadWhatsAppCount > lastCounts.whatsapp) newDismissed.delete("whatsapp");
     if (newDismissed.size !== dismissed.size) setDismissed(newDismissed);
-    setLastCounts({ leads: newLeadsCount, followUps: pendingFollowUpsCount, negotiations: negotiationCount });
-  }, [newLeadsCount, pendingFollowUpsCount, negotiationCount]);
+    setLastCounts({ leads: newLeadsCount, followUps: pendingFollowUpsCount, negotiations: negotiationCount, whatsapp: unreadWhatsAppCount });
+  }, [newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount]);
 
   const visibleLeads = dismissed.has("leads") ? 0 : newLeadsCount;
   const visibleFollowUps = dismissed.has("followUps") ? 0 : pendingFollowUpsCount;
   const visibleNegotiations = dismissed.has("negotiations") ? 0 : negotiationCount;
-  const totalNotifications = visibleLeads + visibleFollowUps + visibleNegotiations;
+  const visibleWhatsApp = dismissed.has("whatsapp") ? 0 : unreadWhatsAppCount;
+  const totalNotifications = visibleLeads + visibleFollowUps + visibleNegotiations + visibleWhatsApp;
 
   const handleNotificationClick = (type: string, route: string) => {
     setDismissed((prev) => new Set(prev).add(type));
@@ -98,6 +100,17 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground">{visibleNegotiations} em negociação</p>
                           <p className="text-xs text-muted-foreground">Leads em fase final</p>
+                        </div>
+                      </div>
+                    )}
+                    {visibleWhatsApp > 0 && (
+                      <div onClick={() => handleNotificationClick("whatsapp", "/conversas")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-500">
+                          <MessageCircle className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground">{visibleWhatsApp} mensagem(ns)</p>
+                          <p className="text-xs text-muted-foreground">Novas no WhatsApp</p>
                         </div>
                       </div>
                     )}

@@ -16,6 +16,7 @@ interface CrmContextType {
   newLeadsCount: number;
   pendingFollowUpsCount: number;
   negotiationCount: number;
+  unreadWhatsAppCount: number;
   loading: boolean;
 }
 
@@ -56,17 +57,20 @@ function mapFollowUpFromDb(row: any): FollowUp {
 export function CrmProvider({ children }: { children: ReactNode }) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+  const [unreadWhatsAppCount, setUnreadWhatsAppCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
-      const [leadsRes, followUpsRes] = await Promise.all([
+      const [leadsRes, followUpsRes, whatsappRes] = await Promise.all([
         supabase.from("leads").select("*").order("created_at", { ascending: false }),
         supabase.from("follow_ups").select("*").order("scheduled_at"),
+        supabase.from("whatsapp_messages").select("phone", { count: "exact", head: true }).eq("is_from_me", false),
       ]);
       if (leadsRes.data) setLeads(leadsRes.data.map(mapLeadFromDb));
       if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
+      if (whatsappRes.count != null) setUnreadWhatsAppCount(whatsappRes.count);
       setLoading(false);
     };
     fetchData();
@@ -100,9 +104,19 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       })
       .subscribe();
 
+    const whatsappChannel = supabase
+      .channel("whatsapp-changes")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "whatsapp_messages" }, (payload) => {
+        if (!payload.new.is_from_me) {
+          setUnreadWhatsAppCount((prev) => prev + 1);
+        }
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(leadsChannel);
       supabase.removeChannel(followUpsChannel);
+      supabase.removeChannel(whatsappChannel);
     };
   }, []);
 
@@ -199,7 +213,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       value={{
         leads, setLeads, addLead, updateLead, deleteLead,
         followUps, setFollowUps, addFollowUp, updateFollowUp, deleteFollowUp,
-        newLeadsCount, pendingFollowUpsCount, negotiationCount, loading,
+        newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount, loading,
       }}
     >
       {children}
