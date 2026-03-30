@@ -12,6 +12,7 @@ const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 export default function Dashboard() {
   const { leads, followUps } = useCrm();
+  const sellers = useSellers();
   const totalLeads = leads.length;
   const closedLeads = leads.filter((l) => l.stage === "fechado").length;
   const conversionRate = Math.round((closedLeads / totalLeads) * 100);
