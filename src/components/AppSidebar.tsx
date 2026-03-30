@@ -64,7 +64,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="flex flex-col">
               <span className="text-sm font-extrabold tracking-tight text-sidebar-foreground">
-                CRM Tintas
+                CRM Taeco
               </span>
               <span className="text-[11px] font-medium text-sidebar-foreground/50">
                 Gestão Comercial
