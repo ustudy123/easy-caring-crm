@@ -19,6 +19,7 @@ interface NewLeadFormProps {
 
 export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) {
   const { toast } = useToast();
+  const sellers = useSellers();
   const [form, setForm] = useState({
     clientName: "", clientPhone: "", clientEmail: "", value: "",
     source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "novo_lead" as KanbanStage,
