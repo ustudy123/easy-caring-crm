@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
-import { mockClients } from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
 import { Client } from "@/types/crm";
 import { NewClientForm } from "@/components/forms/NewClientForm";
 import { EditClientForm } from "@/components/forms/EditClientForm";
@@ -16,22 +16,71 @@ import { useToast } from "@/hooks/use-toast";
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
 
+function mapClientFromDb(row: any): Client {
+  return {
+    id: row.id,
+    name: row.name,
+    phone: row.phone,
+    email: row.email || undefined,
+    address: row.address || undefined,
+    city: row.city || undefined,
+    tags: row.tags || [],
+    totalPurchases: Number(row.total_purchases),
+    lastContact: row.last_contact || undefined,
+    createdAt: row.created_at,
+    notes: row.notes || undefined,
+  };
+}
+
 export default function Clientes() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const [clients, setClients] = useState<Client[]>([]);
   const [showNewClient, setShowNewClient] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
-  const addClient = (client: Client) => setClients((prev) => [client, ...prev]);
-  const updateClient = (client: Client) => {
+  useEffect(() => {
+    const fetchClients = async () => {
+      const { data } = await supabase.from("clients").select("*").order("created_at", { ascending: false });
+      if (data) setClients(data.map(mapClientFromDb));
+    };
+    fetchClients();
+  }, []);
+
+  const addClient = async (client: Client) => {
+    setClients((prev) => [client, ...prev]);
+    await supabase.from("clients").insert({
+      id: client.id,
+      name: client.name,
+      phone: client.phone,
+      email: client.email || null,
+      address: client.address || null,
+      city: client.city || null,
+      tags: client.tags,
+      total_purchases: client.totalPurchases,
+      notes: client.notes || null,
+    });
+  };
+
+  const updateClient = async (client: Client) => {
     setClients((prev) => prev.map((c) => (c.id === client.id ? client : c)));
     setSelectedClient(null);
+    await supabase.from("clients").update({
+      name: client.name,
+      phone: client.phone,
+      email: client.email || null,
+      address: client.address || null,
+      city: client.city || null,
+      tags: client.tags,
+      notes: client.notes || null,
+    }).eq("id", client.id);
   };
-  const deleteClient = (id: string) => {
+
+  const deleteClient = async (id: string) => {
     setClients((prev) => prev.filter((c) => c.id !== id));
     setSelectedClient(null);
+    await supabase.from("clients").delete().eq("id", id);
   };
 
   const filtered = clients.filter(
@@ -142,7 +191,6 @@ export default function Clientes() {
         </motion.div>
       </div>
 
-      {/* Client detail dialog with edit/delete */}
       <Dialog open={!!selectedClient} onOpenChange={(open) => !open && setSelectedClient(null)}>
         <DialogContent className="max-w-lg mx-3 sm:mx-auto max-h-[90vh] overflow-y-auto">
           {selectedClient && (
