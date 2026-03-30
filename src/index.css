@@ -52,6 +52,16 @@
     --warning: 32 95% 50%;
     --info: 217 91% 60%;
 
+    /* WhatsApp theme */
+    --wa-green: 142 70% 40%;
+    --wa-green-dark: 142 70% 32%;
+    --wa-teal: 174 62% 38%;
+    --wa-light: 120 20% 95%;
+    --wa-outgoing: 120 28% 86%;
+    --wa-incoming: 0 0% 100%;
+    --wa-chat-bg: 30 15% 90%;
+    --wa-header: 174 62% 38%;
+
     --sidebar-background: 220 25% 12%;
     --sidebar-foreground: 220 14% 92%;
     --sidebar-primary: 220 90% 56%;
