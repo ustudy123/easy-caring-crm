@@ -12,7 +12,7 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { FollowUp } from "@/types/crm";
-import { mockSellers } from "@/data/mockData";
+import { useSellers } from "@/hooks/useSellers";
 import { isValidPhone } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 

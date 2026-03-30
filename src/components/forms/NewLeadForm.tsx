@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { Lead, KanbanStage } from "@/types/crm";
-import { mockSellers } from "@/data/mockData";
+import { useSellers } from "@/hooks/useSellers";
 import { isValidPhone, isValidEmail } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 
