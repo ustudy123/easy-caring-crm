@@ -67,6 +67,10 @@ export default function Kanban() {
     setLeads((prev) =>
       prev.map((l) => (l.id === result.draggableId ? { ...l, stage: newStage } : l))
     );
+    // Persist stage change to Supabase
+    supabase.from("leads").update({ stage: newStage }).eq("id", result.draggableId).then(({ error }) => {
+      if (error) console.error("Error updating lead stage:", error);
+    });
   };
 
   return (
