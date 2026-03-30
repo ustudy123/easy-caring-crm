@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCrm } from "@/contexts/CrmContext";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle } from "lucide-react";
+import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,8 @@ import { SwipeableCard } from "@/components/SwipeableCard";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { getUrgencyLevel, getUrgencyConfig, formatIdleTime } from "@/lib/leadUrgency";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const stageColorMap: Record<KanbanStage, string> = {
   novo_lead: "border-t-kanban-new",
@@ -45,8 +47,17 @@ export default function Kanban() {
   const [search, setSearch] = useState("");
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
-
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [filterSource, setFilterSource] = useState<string>("all");
+  const [filterUrgency, setFilterUrgency] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
+
+  const hasActiveFilters = filterSource !== "all" || filterUrgency !== "all";
+
+  const clearFilters = () => {
+    setFilterSource("all");
+    setFilterUrgency("all");
+  };
 
 
   const moveToNextStage = (lead: Lead) => {
