@@ -9,6 +9,7 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -53,8 +54,8 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-5">
-        <div className="flex items-center gap-3">
+      <SidebarHeader className={cn("p-5", collapsed && "flex items-center justify-center p-3")}>
+        <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-secondary to-accent shadow-lg shadow-primary/20">
             <Palette className="h-5 w-5 text-white" />
           </div>
@@ -83,7 +84,7 @@ export function AppSidebar() {
             </span>
           )}
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-1 px-2">
+            <SidebarMenu className={cn("space-y-1", collapsed ? "px-0.5" : "px-2")}>
               {menuItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 return (
@@ -92,7 +93,10 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/"}
-                        className="group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                        className={cn(
+                          "group relative flex items-center rounded-lg text-sidebar-foreground/70 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                          collapsed ? "justify-center px-2 py-2.5 gap-0" : "gap-3 px-3 py-2.5"
+                        )}
                         activeClassName="!bg-sidebar-accent !text-sidebar-primary font-semibold"
                       >
                         {isActive && (
@@ -125,17 +129,22 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-3">
-        <div className="px-2">
-          <Separator className="mb-3 bg-sidebar-border/60" />
-        </div>
+      <SidebarFooter className={cn("p-3", collapsed && "p-2")}>
+        {!collapsed && (
+          <div className="px-2">
+            <Separator className="mb-3 bg-sidebar-border/60" />
+          </div>
+        )}
 
-        <SidebarMenu className="space-y-1 px-2">
+        <SidebarMenu className={cn("space-y-1", collapsed ? "px-0.5" : "px-2")}>
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="h-auto p-0">
               <NavLink
                 to="/configuracoes"
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                className={cn(
+                  "flex items-center rounded-lg text-sidebar-foreground/70 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                  collapsed ? "justify-center px-2 py-2.5 gap-0" : "gap-3 px-3 py-2.5"
+                )}
                 activeClassName="!bg-sidebar-accent !text-sidebar-primary font-semibold"
               >
                 <Settings className="h-5 w-5 shrink-0" />
@@ -159,6 +168,14 @@ export function AppSidebar() {
             <button className="rounded-md p-1.5 text-sidebar-foreground/40 transition-colors hover:bg-sidebar-border hover:text-sidebar-foreground/70">
               <LogOut className="h-4 w-4" />
             </button>
+          </div>
+        )}
+
+        {collapsed && (
+          <div className="mt-1 flex justify-center">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-xs font-bold text-white shadow-md">
+              CS
+            </div>
           </div>
         )}
       </SidebarFooter>
