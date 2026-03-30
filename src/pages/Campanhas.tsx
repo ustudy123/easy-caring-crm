@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
-import { mockCampaigns } from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
+import { Campaign } from "@/types/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,12 +27,34 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function Campanhas() {
-  const totalLeads = mockCampaigns.reduce((s, c) => s + c.leadsGenerated, 0);
-  const totalConversions = mockCampaigns.reduce((s, c) => s + c.conversions, 0);
-  const totalBudget = mockCampaigns.reduce((s, c) => s + c.budget, 0);
-  const avgCPL = Math.round(totalBudget / totalLeads);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
-  const chartData = mockCampaigns.map((c) => ({
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase.from("campaigns").select("*").order("created_at", { ascending: false });
+      if (data) {
+        setCampaigns(data.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          channel: c.channel,
+          startDate: c.start_date,
+          endDate: c.end_date || undefined,
+          budget: Number(c.budget),
+          leadsGenerated: c.leads_generated,
+          conversions: c.conversions,
+          status: c.status,
+        })));
+      }
+    };
+    fetch();
+  }, []);
+
+  const totalLeads = campaigns.reduce((s, c) => s + c.leadsGenerated, 0);
+  const totalConversions = campaigns.reduce((s, c) => s + c.conversions, 0);
+  const totalBudget = campaigns.reduce((s, c) => s + c.budget, 0);
+  const avgCPL = totalLeads > 0 ? Math.round(totalBudget / totalLeads) : 0;
+
+  const chartData = campaigns.map((c) => ({
     name: c.name.length > 15 ? c.name.slice(0, 15) + "…" : c.name,
     leads: c.leadsGenerated,
     conversoes: c.conversions,
@@ -88,7 +112,7 @@ export default function Campanhas() {
 
         {/* Campaign Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {mockCampaigns.map((campaign) => {
+          {campaigns.map((campaign) => {
             const config = channelConfig[campaign.channel];
             const status = statusConfig[campaign.status];
             const convRate = campaign.leadsGenerated > 0 ? Math.round((campaign.conversions / campaign.leadsGenerated) * 100) : 0;
