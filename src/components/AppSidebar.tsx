@@ -53,8 +53,8 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-5">
-        <div className="flex items-center gap-3">
+      <SidebarHeader className={cn("p-5", collapsed && "flex items-center justify-center p-3")}>
+        <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-secondary to-accent shadow-lg shadow-primary/20">
             <Palette className="h-5 w-5 text-white" />
           </div>
