@@ -57,6 +57,7 @@ function mapFollowUpFromDb(row: any): FollowUp {
 export function CrmProvider({ children }: { children: ReactNode }) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+  const [unreadWhatsAppCount, setUnreadWhatsAppCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Fetch initial data
