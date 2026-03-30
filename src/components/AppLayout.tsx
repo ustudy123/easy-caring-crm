@@ -36,7 +36,8 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   const visibleLeads = dismissed.has("leads") ? 0 : newLeadsCount;
   const visibleFollowUps = dismissed.has("followUps") ? 0 : pendingFollowUpsCount;
   const visibleNegotiations = dismissed.has("negotiations") ? 0 : negotiationCount;
-  const totalNotifications = visibleLeads + visibleFollowUps + visibleNegotiations;
+  const visibleWhatsApp = dismissed.has("whatsapp") ? 0 : unreadWhatsAppCount;
+  const totalNotifications = visibleLeads + visibleFollowUps + visibleNegotiations + visibleWhatsApp;
 
   const handleNotificationClick = (type: string, route: string) => {
     setDismissed((prev) => new Set(prev).add(type));
