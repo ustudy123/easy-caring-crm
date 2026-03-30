@@ -4,6 +4,7 @@ import {
   Users,
   CalendarDays,
   Megaphone,
+  MessageSquare,
   Settings,
   Palette,
   ChevronRight,
