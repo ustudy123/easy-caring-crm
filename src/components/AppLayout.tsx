@@ -2,6 +2,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCrm } from "@/contexts/CrmContext";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -9,6 +10,8 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, title }: AppLayoutProps) {
+  const { newLeadsCount, pendingFollowUpsCount, negotiationCount } = useCrm();
+  const totalNotifications = newLeadsCount + pendingFollowUpsCount + negotiationCount;
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
