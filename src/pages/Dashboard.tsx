@@ -33,7 +33,7 @@ export default function Dashboard() {
     valor: leads.filter((l) => l.stage === stage.key).reduce((s, l) => s + l.value, 0),
   }));
 
-  const sellerData = mockSellers.map((s) => ({
+  const sellerData = sellers.map((s) => ({
     name: s.name.split(" ")[0],
     leads: s.leadsCount,
     conversoes: s.conversions,
