@@ -213,7 +213,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       value={{
         leads, setLeads, addLead, updateLead, deleteLead,
         followUps, setFollowUps, addFollowUp, updateFollowUp, deleteFollowUp,
-        newLeadsCount, pendingFollowUpsCount, negotiationCount, loading,
+        newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount, loading,
       }}
     >
       {children}
