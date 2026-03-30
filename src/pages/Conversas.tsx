@@ -183,7 +183,6 @@ export default function Conversas() {
   };
 
   // Contact name resolution
-  const [contactNames, setContactNames] = useState<Record<string, string>>({});
   useEffect(() => {
     if (useMock) {
       setContactNames(mockContactNames);
