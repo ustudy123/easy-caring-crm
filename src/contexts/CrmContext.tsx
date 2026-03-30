@@ -63,12 +63,14 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
-      const [leadsRes, followUpsRes] = await Promise.all([
+      const [leadsRes, followUpsRes, whatsappRes] = await Promise.all([
         supabase.from("leads").select("*").order("created_at", { ascending: false }),
         supabase.from("follow_ups").select("*").order("scheduled_at"),
+        supabase.from("whatsapp_messages").select("phone", { count: "exact", head: true }).eq("is_from_me", false),
       ]);
       if (leadsRes.data) setLeads(leadsRes.data.map(mapLeadFromDb));
       if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
+      if (whatsappRes.count != null) setUnreadWhatsAppCount(whatsappRes.count);
       setLoading(false);
     };
     fetchData();
