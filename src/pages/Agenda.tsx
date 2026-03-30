@@ -38,7 +38,6 @@ export default function Agenda() {
       if (error) console.error("Error toggling follow-up:", error);
     });
   };
-  };
 
   const filtered = followUps
     .filter((f) => {
