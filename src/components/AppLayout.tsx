@@ -18,7 +18,28 @@ interface AppLayoutProps {
 export function AppLayout({ children, title }: AppLayoutProps) {
   const { newLeadsCount, pendingFollowUpsCount, negotiationCount } = useCrm();
   const navigate = useNavigate();
-  const totalNotifications = newLeadsCount + pendingFollowUpsCount + negotiationCount;
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [lastCounts, setLastCounts] = useState({ leads: 0, followUps: 0, negotiations: 0 });
+
+  // Reset dismissed when counts increase (new notifications arrived)
+  useEffect(() => {
+    const newDismissed = new Set(dismissed);
+    if (newLeadsCount > lastCounts.leads) newDismissed.delete("leads");
+    if (pendingFollowUpsCount > lastCounts.followUps) newDismissed.delete("followUps");
+    if (negotiationCount > lastCounts.negotiations) newDismissed.delete("negotiations");
+    if (newDismissed.size !== dismissed.size) setDismissed(newDismissed);
+    setLastCounts({ leads: newLeadsCount, followUps: pendingFollowUpsCount, negotiations: negotiationCount });
+  }, [newLeadsCount, pendingFollowUpsCount, negotiationCount]);
+
+  const visibleLeads = dismissed.has("leads") ? 0 : newLeadsCount;
+  const visibleFollowUps = dismissed.has("followUps") ? 0 : pendingFollowUpsCount;
+  const visibleNegotiations = dismissed.has("negotiations") ? 0 : negotiationCount;
+  const totalNotifications = visibleLeads + visibleFollowUps + visibleNegotiations;
+
+  const handleNotificationClick = (type: string, route: string) => {
+    setDismissed((prev) => new Set(prev).add(type));
+    navigate(route);
+  };
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
