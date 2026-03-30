@@ -46,7 +46,7 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
     if (!validate()) return;
     const now = new Date().toISOString();
     const newLead: Lead = {
-      id: `l-${Date.now()}`,
+      id: crypto.randomUUID(),
       clientName: form.clientName.trim(),
       clientPhone: form.clientPhone.trim(),
       clientEmail: form.clientEmail.trim() || undefined,

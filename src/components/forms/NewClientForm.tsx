@@ -41,7 +41,7 @@ export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormPro
     e.preventDefault();
     if (!validate()) return;
     const newClient: Client = {
-      id: `c-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: form.name.trim(),
       phone: form.phone.trim(),
       email: form.email.trim() || undefined,

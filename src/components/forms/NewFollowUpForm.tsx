@@ -55,7 +55,7 @@ export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFor
     scheduledDate.setHours(hours, minutes, 0, 0);
 
     const newFollowUp: FollowUp = {
-      id: `f-${Date.now()}`,
+      id: crypto.randomUUID(),
       leadId: "",
       clientName: form.clientName.trim(),
       clientPhone: form.clientPhone.trim(),
