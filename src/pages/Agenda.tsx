@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useCrm } from "@/contexts/CrmContext";
+import { supabase } from "@/integrations/supabase/client";
 import { FollowUp } from "@/types/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
