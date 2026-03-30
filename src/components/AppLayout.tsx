@@ -1,8 +1,13 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Bell } from "lucide-react";
+import { Bell, Columns3, CalendarDays, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCrm } from "@/contexts/CrmContext";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface AppLayoutProps {
   children: React.ReactNode;
