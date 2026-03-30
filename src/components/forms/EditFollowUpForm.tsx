@@ -148,7 +148,7 @@ export function EditFollowUpForm({ followUp, open, onOpenChange, onSubmit, onDel
               <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                 <SelectContent>
-                  {mockSellers.map((s) => (
+                  {sellers.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
