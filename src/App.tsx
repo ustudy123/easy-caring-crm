@@ -9,6 +9,7 @@ import Kanban from "./pages/Kanban";
 import Clientes from "./pages/Clientes";
 import Agenda from "./pages/Agenda";
 import Campanhas from "./pages/Campanhas";
+import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/campanhas" element={<Campanhas />} />
+            <Route path="/configuracoes" element={<Configuracoes />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

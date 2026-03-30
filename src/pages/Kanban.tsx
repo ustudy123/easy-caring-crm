@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCrm } from "@/contexts/CrmContext";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle } from "lucide-react";
+import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,8 @@ import { SwipeableCard } from "@/components/SwipeableCard";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { getUrgencyLevel, getUrgencyConfig, formatIdleTime } from "@/lib/leadUrgency";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const stageColorMap: Record<KanbanStage, string> = {
   novo_lead: "border-t-kanban-new",
@@ -45,8 +47,17 @@ export default function Kanban() {
   const [search, setSearch] = useState("");
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
-
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [filterSource, setFilterSource] = useState<string>("all");
+  const [filterUrgency, setFilterUrgency] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
+
+  const hasActiveFilters = filterSource !== "all" || filterUrgency !== "all";
+
+  const clearFilters = () => {
+    setFilterSource("all");
+    setFilterUrgency("all");
+  };
 
 
   const moveToNextStage = (lead: Lead) => {
@@ -57,9 +68,17 @@ export default function Kanban() {
     }
   };
 
-  const filteredLeads = leads.filter((l) =>
-    l.clientName.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredLeads = leads.filter((l) => {
+    if (!l.clientName.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterSource !== "all" && l.source !== filterSource) return false;
+    if (filterUrgency !== "all") {
+      const u = getUrgencyLevel(l);
+      if (filterUrgency === "critical" && u !== "critical") return false;
+      if (filterUrgency === "warning" && u !== "warning") return false;
+      if (filterUrgency === "ok" && u !== "ok") return false;
+    }
+    return true;
+  });
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -81,10 +100,48 @@ export default function Kanban() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar lead..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Filter className="h-3.5 w-3.5 mr-1" /> Filtros
-            </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Popover open={showFilters} onOpenChange={setShowFilters}>
+              <PopoverTrigger asChild>
+                <Button variant={hasActiveFilters ? "default" : "outline"} size="sm">
+                  <Filter className="h-3.5 w-3.5 mr-1" /> Filtros
+                  {hasActiveFilters && <span className="ml-1 text-[10px]">●</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 space-y-3" align="start">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Origem</label>
+                  <Select value={filterSource} onValueChange={setFilterSource}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                      <SelectItem value="meta">Meta Ads</SelectItem>
+                      <SelectItem value="google">Google</SelectItem>
+                      <SelectItem value="indicacao">Indicação</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Urgência</label>
+                  <Select value={filterUrgency} onValueChange={setFilterUrgency}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      <SelectItem value="critical">Crítico</SelectItem>
+                      <SelectItem value="warning">Atenção</SelectItem>
+                      <SelectItem value="ok">Normal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" className="w-full text-xs" onClick={clearFilters}>
+                    <X className="h-3 w-3 mr-1" /> Limpar filtros
+                  </Button>
+                )}
+              </PopoverContent>
+            </Popover>
             <Button size="sm" className="bg-primary" onClick={() => setShowNewLead(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Novo Lead
             </Button>
