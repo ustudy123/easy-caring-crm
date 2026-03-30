@@ -68,9 +68,17 @@ export default function Kanban() {
     }
   };
 
-  const filteredLeads = leads.filter((l) =>
-    l.clientName.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredLeads = leads.filter((l) => {
+    if (!l.clientName.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterSource !== "all" && l.source !== filterSource) return false;
+    if (filterUrgency !== "all") {
+      const u = getUrgencyLevel(l);
+      if (filterUrgency === "critical" && u !== "critical") return false;
+      if (filterUrgency === "warning" && u !== "warning") return false;
+      if (filterUrgency === "ok" && u !== "ok") return false;
+    }
+    return true;
+  });
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
