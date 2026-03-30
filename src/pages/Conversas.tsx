@@ -174,6 +174,10 @@ export default function Conversas() {
   const [contactName, setContactName] = useState<string | null>(null);
   useEffect(() => {
     if (!selectedPhone) { setContactName(null); return; }
+    if (useMock) {
+      setContactName(mockContactNames[selectedPhone] || null);
+      return;
+    }
     const fetchName = async () => {
       const { data } = await supabase
         .from("leads")
@@ -192,7 +196,7 @@ export default function Conversas() {
       }
     };
     fetchName();
-  }, [selectedPhone]);
+  }, [selectedPhone, useMock]);
 
   return (
     <AppLayout title="Conversas">
