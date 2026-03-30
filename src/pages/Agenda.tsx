@@ -31,7 +31,13 @@ export default function Agenda() {
 
 
   const toggleComplete = (id: string) => {
-    setFollowUps((prev) => prev.map((f) => (f.id === id ? { ...f, completed: !f.completed } : f)));
+    const fu = followUps.find(f => f.id === id);
+    const newCompleted = fu ? !fu.completed : true;
+    setFollowUps((prev) => prev.map((f) => (f.id === id ? { ...f, completed: newCompleted } : f)));
+    supabase.from("follow_ups").update({ completed: newCompleted }).eq("id", id).then(({ error }) => {
+      if (error) console.error("Error toggling follow-up:", error);
+    });
+  };
   };
 
   const filtered = followUps
