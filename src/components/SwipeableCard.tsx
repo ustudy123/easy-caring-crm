@@ -70,7 +70,7 @@ export function SwipeableCard({ children, onEdit, onDelete, onMoveNext }: Swipea
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="relative z-10 bg-card transition-transform sm:!transform-none"
+        className="relative z-10 transition-transform sm:!transform-none"
         style={{
           transform: `translateX(${offset}px)`,
           transition: swiping ? "none" : "transform 0.3s ease-out",
