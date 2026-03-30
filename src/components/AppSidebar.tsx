@@ -84,7 +84,7 @@ export function AppSidebar() {
             </span>
           )}
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-1 px-2">
+            <SidebarMenu className={cn("space-y-1", collapsed ? "px-0.5" : "px-2")}>
               {menuItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 return (
@@ -93,7 +93,10 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/"}
-                        className="group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                        className={cn(
+                          "group relative flex items-center rounded-lg text-sidebar-foreground/70 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                          collapsed ? "justify-center px-2 py-2.5 gap-0" : "gap-3 px-3 py-2.5"
+                        )}
                         activeClassName="!bg-sidebar-accent !text-sidebar-primary font-semibold"
                       >
                         {isActive && (
