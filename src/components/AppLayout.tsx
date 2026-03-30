@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Bell, Columns3, CalendarDays, Megaphone } from "lucide-react";
@@ -18,7 +19,28 @@ interface AppLayoutProps {
 export function AppLayout({ children, title }: AppLayoutProps) {
   const { newLeadsCount, pendingFollowUpsCount, negotiationCount } = useCrm();
   const navigate = useNavigate();
-  const totalNotifications = newLeadsCount + pendingFollowUpsCount + negotiationCount;
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [lastCounts, setLastCounts] = useState({ leads: 0, followUps: 0, negotiations: 0 });
+
+  // Reset dismissed when counts increase (new notifications arrived)
+  useEffect(() => {
+    const newDismissed = new Set(dismissed);
+    if (newLeadsCount > lastCounts.leads) newDismissed.delete("leads");
+    if (pendingFollowUpsCount > lastCounts.followUps) newDismissed.delete("followUps");
+    if (negotiationCount > lastCounts.negotiations) newDismissed.delete("negotiations");
+    if (newDismissed.size !== dismissed.size) setDismissed(newDismissed);
+    setLastCounts({ leads: newLeadsCount, followUps: pendingFollowUpsCount, negotiations: negotiationCount });
+  }, [newLeadsCount, pendingFollowUpsCount, negotiationCount]);
+
+  const visibleLeads = dismissed.has("leads") ? 0 : newLeadsCount;
+  const visibleFollowUps = dismissed.has("followUps") ? 0 : pendingFollowUpsCount;
+  const visibleNegotiations = dismissed.has("negotiations") ? 0 : negotiationCount;
+  const totalNotifications = visibleLeads + visibleFollowUps + visibleNegotiations;
+
+  const handleNotificationClick = (type: string, route: string) => {
+    setDismissed((prev) => new Set(prev).add(type));
+    navigate(route);
+  };
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -46,35 +68,35 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                     <h4 className="text-sm font-semibold text-foreground">Notificações</h4>
                   </div>
                   <div className="divide-y">
-                    {newLeadsCount > 0 && (
-                      <div onClick={() => navigate("/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                    {visibleLeads > 0 && (
+                      <div onClick={() => handleNotificationClick("leads", "/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                           <Columns3 className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground">{newLeadsCount} novo(s) lead(s)</p>
+                          <p className="text-sm font-medium text-foreground">{visibleLeads} novo(s) lead(s)</p>
                           <p className="text-xs text-muted-foreground">Aguardando atendimento</p>
                         </div>
                       </div>
                     )}
-                    {pendingFollowUpsCount > 0 && (
-                      <div onClick={() => navigate("/agenda")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                    {visibleFollowUps > 0 && (
+                      <div onClick={() => handleNotificationClick("followUps", "/agenda")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-secondary">
                           <CalendarDays className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground">{pendingFollowUpsCount} follow-up(s)</p>
+                          <p className="text-sm font-medium text-foreground">{visibleFollowUps} follow-up(s)</p>
                           <p className="text-xs text-muted-foreground">Pendentes na agenda</p>
                         </div>
                       </div>
                     )}
-                    {negotiationCount > 0 && (
-                      <div onClick={() => navigate("/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                    {visibleNegotiations > 0 && (
+                      <div onClick={() => handleNotificationClick("negotiations", "/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
                           <Megaphone className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground">{negotiationCount} em negociação</p>
+                          <p className="text-sm font-medium text-foreground">{visibleNegotiations} em negociação</p>
                           <p className="text-xs text-muted-foreground">Leads em fase final</p>
                         </div>
                       </div>
