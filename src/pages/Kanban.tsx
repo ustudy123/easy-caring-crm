@@ -100,10 +100,48 @@ export default function Kanban() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar lead..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Filter className="h-3.5 w-3.5 mr-1" /> Filtros
-            </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Popover open={showFilters} onOpenChange={setShowFilters}>
+              <PopoverTrigger asChild>
+                <Button variant={hasActiveFilters ? "default" : "outline"} size="sm">
+                  <Filter className="h-3.5 w-3.5 mr-1" /> Filtros
+                  {hasActiveFilters && <span className="ml-1 text-[10px]">●</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 space-y-3" align="start">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Origem</label>
+                  <Select value={filterSource} onValueChange={setFilterSource}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                      <SelectItem value="meta">Meta Ads</SelectItem>
+                      <SelectItem value="google">Google</SelectItem>
+                      <SelectItem value="indicacao">Indicação</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground">Urgência</label>
+                  <Select value={filterUrgency} onValueChange={setFilterUrgency}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      <SelectItem value="critical">Crítico</SelectItem>
+                      <SelectItem value="warning">Atenção</SelectItem>
+                      <SelectItem value="ok">Normal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" className="w-full text-xs" onClick={clearFilters}>
+                    <X className="h-3 w-3 mr-1" /> Limpar filtros
+                  </Button>
+                )}
+              </PopoverContent>
+            </Popover>
             <Button size="sm" className="bg-primary" onClick={() => setShowNewLead(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Novo Lead
             </Button>
