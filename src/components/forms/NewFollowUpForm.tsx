@@ -12,7 +12,7 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { FollowUp } from "@/types/crm";
-import { mockSellers } from "@/data/mockData";
+import { useSellers } from "@/hooks/useSellers";
 import { isValidPhone } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,6 +24,7 @@ interface NewFollowUpFormProps {
 
 export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFormProps) {
   const { toast } = useToast();
+  const sellers = useSellers();
   const [form, setForm] = useState({
     clientName: "", clientPhone: "", description: "",
     type: "whatsapp" as FollowUp["type"], assignedTo: "", time: "10:00",
@@ -54,7 +55,7 @@ export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFor
     scheduledDate.setHours(hours, minutes, 0, 0);
 
     const newFollowUp: FollowUp = {
-      id: `f-${Date.now()}`,
+      id: crypto.randomUUID(),
       leadId: "",
       clientName: form.clientName.trim(),
       clientPhone: form.clientPhone.trim(),
@@ -126,7 +127,7 @@ export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFor
               <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                 <SelectContent>
-                  {mockSellers.map((s) => (
+                  {sellers.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>

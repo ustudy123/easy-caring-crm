@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { Lead, KanbanStage } from "@/types/crm";
-import { mockSellers } from "@/data/mockData";
+import { useSellers } from "@/hooks/useSellers";
 import { isValidPhone, isValidEmail } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,6 +19,7 @@ interface NewLeadFormProps {
 
 export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) {
   const { toast } = useToast();
+  const sellers = useSellers();
   const [form, setForm] = useState({
     clientName: "", clientPhone: "", clientEmail: "", value: "",
     source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "novo_lead" as KanbanStage,
@@ -45,7 +46,7 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
     if (!validate()) return;
     const now = new Date().toISOString();
     const newLead: Lead = {
-      id: `l-${Date.now()}`,
+      id: crypto.randomUUID(),
       clientName: form.clientName.trim(),
       clientPhone: form.clientPhone.trim(),
       clientEmail: form.clientEmail.trim() || undefined,
@@ -123,7 +124,7 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
               <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                 <SelectContent>
-                  {mockSellers.map((s) => (
+                  {sellers.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>

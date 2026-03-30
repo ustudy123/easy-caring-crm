@@ -1,7 +1,7 @@
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCrm } from "@/contexts/CrmContext";
-import { mockSellers, mockCampaigns } from "@/data/mockData";
+import { useSellers } from "@/hooks/useSellers";
 import { KANBAN_STAGES } from "@/types/crm";
 import { TrendingUp, Users, DollarSign, Target, ArrowUpRight, ArrowDownRight, Phone, MessageCircle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -12,6 +12,7 @@ const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 export default function Dashboard() {
   const { leads, followUps } = useCrm();
+  const sellers = useSellers();
   const totalLeads = leads.length;
   const closedLeads = leads.filter((l) => l.stage === "fechado").length;
   const conversionRate = Math.round((closedLeads / totalLeads) * 100);
@@ -32,7 +33,7 @@ export default function Dashboard() {
     valor: leads.filter((l) => l.stage === stage.key).reduce((s, l) => s + l.value, 0),
   }));
 
-  const sellerData = mockSellers.map((s) => ({
+  const sellerData = sellers.map((s) => ({
     name: s.name.split(" ")[0],
     leads: s.leadsCount,
     conversoes: s.conversions,

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { Lead, KanbanStage } from "@/types/crm";
-import { mockSellers } from "@/data/mockData";
+import { useSellers } from "@/hooks/useSellers";
 import { isValidPhone, isValidEmail } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -22,6 +22,7 @@ interface EditLeadFormProps {
 
 export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: EditLeadFormProps) {
   const { toast } = useToast();
+  const sellers = useSellers();
   const [form, setForm] = useState({
     clientName: "", clientPhone: "", clientEmail: "", value: "",
     source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "novo_lead" as KanbanStage,
@@ -146,7 +147,7 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
               <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                 <SelectContent>
-                  {mockSellers.map((s) => (
+                  {sellers.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>

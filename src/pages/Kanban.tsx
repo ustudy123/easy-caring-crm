@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
+import { supabase } from "@/integrations/supabase/client";
 import { useCrm } from "@/contexts/CrmContext";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
@@ -66,6 +67,10 @@ export default function Kanban() {
     setLeads((prev) =>
       prev.map((l) => (l.id === result.draggableId ? { ...l, stage: newStage } : l))
     );
+    // Persist stage change to Supabase
+    supabase.from("leads").update({ stage: newStage }).eq("id", result.draggableId).then(({ error }) => {
+      if (error) console.error("Error updating lead stage:", error);
+    });
   };
 
   return (
