@@ -17,7 +17,7 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, title }: AppLayoutProps) {
-  const { newLeadsCount, pendingFollowUpsCount, negotiationCount } = useCrm();
+  const { newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount } = useCrm();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [lastCounts, setLastCounts] = useState({ leads: 0, followUps: 0, negotiations: 0 });
