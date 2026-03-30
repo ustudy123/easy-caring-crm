@@ -116,6 +116,7 @@ export default function Conversas() {
   const [messageInput, setMessageInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [useMock, setUseMock] = useState(false);
+  const [contactNames, setContactNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -182,7 +183,6 @@ export default function Conversas() {
   };
 
   // Contact name resolution
-  const [contactNames, setContactNames] = useState<Record<string, string>>({});
   useEffect(() => {
     if (useMock) {
       setContactNames(mockContactNames);
