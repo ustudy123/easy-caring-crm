@@ -104,9 +104,19 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       })
       .subscribe();
 
+    const whatsappChannel = supabase
+      .channel("whatsapp-changes")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "whatsapp_messages" }, (payload) => {
+        if (!payload.new.is_from_me) {
+          setUnreadWhatsAppCount((prev) => prev + 1);
+        }
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(leadsChannel);
       supabase.removeChannel(followUpsChannel);
+      supabase.removeChannel(whatsappChannel);
     };
   }, []);
 
