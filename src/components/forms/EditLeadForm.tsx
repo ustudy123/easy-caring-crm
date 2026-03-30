@@ -71,7 +71,7 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
       clientEmail: form.clientEmail.trim() || undefined,
       stage: form.stage,
       value: Number(form.value) || 0,
-      assignedTo: form.assignedTo || "1",
+      assignedTo: form.assignedTo || "",
       source: form.source,
       tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
       notes: form.notes.trim(),
