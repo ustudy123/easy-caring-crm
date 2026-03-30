@@ -28,9 +28,10 @@ export function AppLayout({ children, title }: AppLayoutProps) {
     if (newLeadsCount > lastCounts.leads) newDismissed.delete("leads");
     if (pendingFollowUpsCount > lastCounts.followUps) newDismissed.delete("followUps");
     if (negotiationCount > lastCounts.negotiations) newDismissed.delete("negotiations");
+    if (unreadWhatsAppCount > lastCounts.whatsapp) newDismissed.delete("whatsapp");
     if (newDismissed.size !== dismissed.size) setDismissed(newDismissed);
-    setLastCounts({ leads: newLeadsCount, followUps: pendingFollowUpsCount, negotiations: negotiationCount });
-  }, [newLeadsCount, pendingFollowUpsCount, negotiationCount]);
+    setLastCounts({ leads: newLeadsCount, followUps: pendingFollowUpsCount, negotiations: negotiationCount, whatsapp: unreadWhatsAppCount });
+  }, [newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount]);
 
   const visibleLeads = dismissed.has("leads") ? 0 : newLeadsCount;
   const visibleFollowUps = dismissed.has("followUps") ? 0 : pendingFollowUpsCount;
