@@ -24,6 +24,7 @@ interface NewFollowUpFormProps {
 
 export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFormProps) {
   const { toast } = useToast();
+  const sellers = useSellers();
   const [form, setForm] = useState({
     clientName: "", clientPhone: "", description: "",
     type: "whatsapp" as FollowUp["type"], assignedTo: "", time: "10:00",
