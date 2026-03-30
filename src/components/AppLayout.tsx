@@ -103,6 +103,17 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                         </div>
                       </div>
                     )}
+                    {visibleWhatsApp > 0 && (
+                      <div onClick={() => handleNotificationClick("whatsapp", "/conversas")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-500">
+                          <MessageCircle className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground">{visibleWhatsApp} mensagem(ns)</p>
+                          <p className="text-xs text-muted-foreground">Novas no WhatsApp</p>
+                        </div>
+                      </div>
+                    )}
                     {totalNotifications === 0 && (
                       <div className="p-6 text-center text-sm text-muted-foreground">
                         Nenhuma notificação
