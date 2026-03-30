@@ -4,6 +4,7 @@ import {
   Users,
   CalendarDays,
   Megaphone,
+  MessageSquare,
   Settings,
   Palette,
   ChevronRight,
@@ -33,6 +34,7 @@ const menuItemsDef = [
   { title: "Clientes", url: "/clientes", icon: Users, badgeKey: null as null },
   { title: "Agenda", url: "/agenda", icon: CalendarDays, badgeKey: "pendingFollowUps" as const },
   { title: "Campanhas", url: "/campanhas", icon: Megaphone, badgeKey: "negotiation" as const },
+  { title: "Conversas", url: "/conversas", icon: MessageSquare, badgeKey: null as null },
 ];
 
 export function AppSidebar() {
