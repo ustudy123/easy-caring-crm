@@ -30,14 +30,15 @@ export function AppLayout({ children, title }: AppLayoutProps) {
     localStorage.setItem("crm-dismissed-notifs", JSON.stringify(dismissed));
   }, [dismissed]);
 
-  const visibleLeads = dismissed.has("leads") ? 0 : newLeadsCount;
-  const visibleFollowUps = dismissed.has("followUps") ? 0 : pendingFollowUpsCount;
-  const visibleNegotiations = dismissed.has("negotiations") ? 0 : negotiationCount;
-  const visibleWhatsApp = dismissed.has("whatsapp") ? 0 : unreadWhatsAppCount;
+  // A notification is visible only if the current count exceeds the dismissed count
+  const visibleLeads = Math.max(0, newLeadsCount - (dismissed.leads || 0));
+  const visibleFollowUps = Math.max(0, pendingFollowUpsCount - (dismissed.followUps || 0));
+  const visibleNegotiations = Math.max(0, negotiationCount - (dismissed.negotiations || 0));
+  const visibleWhatsApp = Math.max(0, unreadWhatsAppCount - (dismissed.whatsapp || 0));
   const totalNotifications = visibleLeads + visibleFollowUps + visibleNegotiations + visibleWhatsApp;
 
-  const handleNotificationClick = (type: string, route: string) => {
-    setDismissed((prev) => new Set(prev).add(type));
+  const handleNotificationClick = (type: string, count: number, route: string) => {
+    setDismissed((prev) => ({ ...prev, [type]: (prev[type] || 0) + count }));
     navigate(route);
   };
   return (
