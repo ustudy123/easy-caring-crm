@@ -1,0 +1,1 @@
+ALTER TYPE public.kanban_stage ADD VALUE 'precificacao_especial' BEFORE 'orcamento_enviado';
