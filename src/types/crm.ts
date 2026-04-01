@@ -1,4 +1,4 @@
-export type KanbanStage = 'novo_lead' | 'em_atendimento' | 'orcamento_enviado' | 'negociacao' | 'fechado';
+export type KanbanStage = 'novo_lead' | 'em_atendimento' | 'precificacao_especial' | 'orcamento_enviado' | 'negociacao' | 'fechado';
 
 export interface Lead {
   id: string;
