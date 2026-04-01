@@ -63,6 +63,7 @@ export default {
         kanban: {
           new: "hsl(var(--kanban-new))",
           attending: "hsl(var(--kanban-attending))",
+          pricing: "hsl(var(--kanban-pricing))",
           quote: "hsl(var(--kanban-quote))",
           negotiation: "hsl(var(--kanban-negotiation))",
           closed: "hsl(var(--kanban-closed))",
