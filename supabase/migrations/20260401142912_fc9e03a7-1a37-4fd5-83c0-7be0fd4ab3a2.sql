@@ -1,0 +1,1 @@
+UPDATE leads SET stage = 'precificacao_especial' WHERE id = 'c1b2c3d4-0001-4000-8000-000000000001';
