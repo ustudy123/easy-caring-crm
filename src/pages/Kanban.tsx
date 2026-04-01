@@ -47,6 +47,7 @@ const stageDotMap: Record<KanbanStage, string> = {
 };
 
 export default function Kanban() {
+  const navigate = useNavigate();
   const { leads, setLeads, addLead, updateLead, deleteLead } = useCrm();
   const [search, setSearch] = useState("");
   const [showNewLead, setShowNewLead] = useState(false);
