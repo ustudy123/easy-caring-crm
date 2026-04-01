@@ -102,7 +102,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                       </div>
                     )}
                     {visibleWhatsApp > 0 && (
-                      <div onClick={() => handleNotificationClick("whatsapp", "/conversas")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                      <div onClick={() => handleNotificationClick("whatsapp", visibleWhatsApp, "/conversas")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-500">
                           <MessageCircle className="h-4 w-4" />
                         </div>
