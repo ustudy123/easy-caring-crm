@@ -19,28 +19,26 @@ interface AppLayoutProps {
 export function AppLayout({ children, title }: AppLayoutProps) {
   const { newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount } = useCrm();
   const navigate = useNavigate();
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const [lastCounts, setLastCounts] = useState({ leads: 0, followUps: 0, negotiations: 0, whatsapp: 0 });
+  const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("crm-dismissed-notifs") || "{}");
+    } catch { return {}; }
+  });
 
-  // Reset dismissed when counts increase (new notifications arrived)
+  // Persist dismissed to localStorage
   useEffect(() => {
-    const newDismissed = new Set(dismissed);
-    if (newLeadsCount > lastCounts.leads) newDismissed.delete("leads");
-    if (pendingFollowUpsCount > lastCounts.followUps) newDismissed.delete("followUps");
-    if (negotiationCount > lastCounts.negotiations) newDismissed.delete("negotiations");
-    if (unreadWhatsAppCount > lastCounts.whatsapp) newDismissed.delete("whatsapp");
-    if (newDismissed.size !== dismissed.size) setDismissed(newDismissed);
-    setLastCounts({ leads: newLeadsCount, followUps: pendingFollowUpsCount, negotiations: negotiationCount, whatsapp: unreadWhatsAppCount });
-  }, [newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount]);
+    localStorage.setItem("crm-dismissed-notifs", JSON.stringify(dismissed));
+  }, [dismissed]);
 
-  const visibleLeads = dismissed.has("leads") ? 0 : newLeadsCount;
-  const visibleFollowUps = dismissed.has("followUps") ? 0 : pendingFollowUpsCount;
-  const visibleNegotiations = dismissed.has("negotiations") ? 0 : negotiationCount;
-  const visibleWhatsApp = dismissed.has("whatsapp") ? 0 : unreadWhatsAppCount;
+  // A notification is visible only if the current count exceeds the dismissed count
+  const visibleLeads = Math.max(0, newLeadsCount - (dismissed.leads || 0));
+  const visibleFollowUps = Math.max(0, pendingFollowUpsCount - (dismissed.followUps || 0));
+  const visibleNegotiations = Math.max(0, negotiationCount - (dismissed.negotiations || 0));
+  const visibleWhatsApp = Math.max(0, unreadWhatsAppCount - (dismissed.whatsapp || 0));
   const totalNotifications = visibleLeads + visibleFollowUps + visibleNegotiations + visibleWhatsApp;
 
-  const handleNotificationClick = (type: string, route: string) => {
-    setDismissed((prev) => new Set(prev).add(type));
+  const handleNotificationClick = (type: string, count: number, route: string) => {
+    setDismissed((prev) => ({ ...prev, [type]: (prev[type] || 0) + count }));
     navigate(route);
   };
   return (
@@ -71,7 +69,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                   </div>
                   <div className="divide-y">
                     {visibleLeads > 0 && (
-                      <div onClick={() => handleNotificationClick("leads", "/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                      <div onClick={() => handleNotificationClick("leads", visibleLeads, "/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                           <Columns3 className="h-4 w-4" />
                         </div>
@@ -82,7 +80,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                       </div>
                     )}
                     {visibleFollowUps > 0 && (
-                      <div onClick={() => handleNotificationClick("followUps", "/agenda")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                      <div onClick={() => handleNotificationClick("followUps", visibleFollowUps, "/agenda")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-secondary">
                           <CalendarDays className="h-4 w-4" />
                         </div>
@@ -93,7 +91,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                       </div>
                     )}
                     {visibleNegotiations > 0 && (
-                      <div onClick={() => handleNotificationClick("negotiations", "/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                      <div onClick={() => handleNotificationClick("negotiations", visibleNegotiations, "/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
                           <Megaphone className="h-4 w-4" />
                         </div>
@@ -104,7 +102,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                       </div>
                     )}
                     {visibleWhatsApp > 0 && (
-                      <div onClick={() => handleNotificationClick("whatsapp", "/conversas")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                      <div onClick={() => handleNotificationClick("whatsapp", visibleWhatsApp, "/conversas")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-500">
                           <MessageCircle className="h-4 w-4" />
                         </div>
