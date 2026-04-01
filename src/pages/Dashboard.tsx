@@ -3,27 +3,68 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCrm } from "@/contexts/CrmContext";
 import { useSellers } from "@/hooks/useSellers";
 import { KANBAN_STAGES } from "@/types/crm";
-import { TrendingUp, Users, DollarSign, Target, ArrowUpRight, ArrowDownRight, Phone, MessageCircle } from "lucide-react";
+import { TrendingUp, Users, Clock, Target, ArrowUpRight, ArrowDownRight, Phone, MessageCircle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
+function useAvgResponseTime() {
+  const [avgMinutes, setAvgMinutes] = useState<number | null>(null);
+
+  useEffect(() => {
+    const calc = async () => {
+      const { data } = await supabase
+        .from("whatsapp_messages")
+        .select("phone, is_from_me, timestamp")
+        .order("timestamp", { ascending: true });
+
+      if (!data || data.length === 0) { setAvgMinutes(0); return; }
+
+      const byPhone: Record<string, typeof data> = {};
+      data.forEach((m) => {
+        if (!byPhone[m.phone]) byPhone[m.phone] = [];
+        byPhone[m.phone].push(m);
+      });
+
+      const responseTimes: number[] = [];
+      Object.values(byPhone).forEach((msgs) => {
+        for (let i = 0; i < msgs.length - 1; i++) {
+          if (!msgs[i].is_from_me && msgs[i + 1].is_from_me && msgs[i].timestamp && msgs[i + 1].timestamp) {
+            const diff = new Date(msgs[i + 1].timestamp!).getTime() - new Date(msgs[i].timestamp!).getTime();
+            if (diff > 0 && diff < 24 * 60 * 60 * 1000) {
+              responseTimes.push(diff / 60000);
+            }
+          }
+        }
+      });
+
+      setAvgMinutes(responseTimes.length > 0 ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) : 0);
+    };
+    calc();
+  }, []);
+
+  return avgMinutes;
+}
+
 export default function Dashboard() {
   const { leads, followUps } = useCrm();
   const sellers = useSellers();
+  const avgResponseMin = useAvgResponseTime();
   const totalLeads = leads.length;
   const closedLeads = leads.filter((l) => l.stage === "fechado").length;
   const conversionRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
-  const totalValue = leads.reduce((sum, l) => sum + l.value, 0);
-  const avgTicket = totalLeads > 0 ? Math.round(totalValue / totalLeads) : 0;
   const pendingFollowUps = followUps.filter((f) => !f.completed).length;
+
+  const responseLabel = avgResponseMin !== null ? `${avgResponseMin} min` : "...";
 
   const kpis = [
     { label: "Leads Ativos", value: totalLeads - closedLeads, icon: Users, change: "+12%", positive: true, color: "bg-primary" },
     { label: "Taxa de Conversão", value: `${conversionRate}%`, icon: Target, change: "+3%", positive: true, color: "bg-kanban-closed" },
-    { label: "Ticket Médio", value: `R$ ${avgTicket.toLocaleString("pt-BR")}`, icon: DollarSign, change: "+8%", positive: true, color: "bg-kanban-quote" },
+    { label: "Tempo Médio Resposta", value: responseLabel, icon: Clock, change: "", positive: true, color: "bg-kanban-quote" },
     { label: "Follow-ups Pendentes", value: pendingFollowUps, icon: Phone, change: `${pendingFollowUps}`, positive: false, color: "bg-accent" },
   ];
 
