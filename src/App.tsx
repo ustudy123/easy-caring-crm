@@ -31,6 +31,7 @@ const App = () => (
             <Route path="/campanhas" element={<Campanhas />} />
             <Route path="/conversas" element={<Conversas />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/suporte-orcamento" element={<SuporteOrcamento />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
