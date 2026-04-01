@@ -44,10 +44,27 @@ export function AppSidebar() {
   const location = useLocation();
   const { newLeadsCount, pendingFollowUpsCount, negotiationCount } = useCrm();
 
+  const STORAGE_KEY = "crm-sidebar-dismissed";
+  const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; }
+  });
+
+  // Auto-dismiss when visiting corresponding pages
+  useEffect(() => {
+    const next = { ...dismissed };
+    if (location.pathname === "/kanban") next.newLeads = newLeadsCount;
+    if (location.pathname === "/agenda") next.pendingFollowUps = pendingFollowUpsCount;
+    if (location.pathname === "/campanhas") next.negotiation = negotiationCount;
+    if (JSON.stringify(next) !== JSON.stringify(dismissed)) {
+      setDismissed(next);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    }
+  }, [location.pathname, newLeadsCount, pendingFollowUpsCount, negotiationCount]);
+
   const badgeMap: Record<string, number> = {
-    newLeads: newLeadsCount,
-    pendingFollowUps: pendingFollowUpsCount,
-    negotiation: negotiationCount,
+    newLeads: Math.max(0, newLeadsCount - (dismissed.newLeads ?? 0)),
+    pendingFollowUps: Math.max(0, pendingFollowUpsCount - (dismissed.pendingFollowUps ?? 0)),
+    negotiation: Math.max(0, negotiationCount - (dismissed.negotiation ?? 0)),
   };
 
   const menuItems = menuItemsDef.map((item) => ({
