@@ -11,6 +11,7 @@ import Agenda from "./pages/Agenda";
 import Campanhas from "./pages/Campanhas";
 import Configuracoes from "./pages/Configuracoes";
 import Conversas from "./pages/Conversas";
+import SuporteOrcamento from "./pages/SuporteOrcamento";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
