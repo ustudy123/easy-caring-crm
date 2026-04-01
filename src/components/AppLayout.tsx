@@ -69,7 +69,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                   </div>
                   <div className="divide-y">
                     {visibleLeads > 0 && (
-                      <div onClick={() => handleNotificationClick("leads", "/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                      <div onClick={() => handleNotificationClick("leads", visibleLeads, "/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                           <Columns3 className="h-4 w-4" />
                         </div>
