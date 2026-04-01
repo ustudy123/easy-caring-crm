@@ -19,19 +19,16 @@ interface AppLayoutProps {
 export function AppLayout({ children, title }: AppLayoutProps) {
   const { newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount } = useCrm();
   const navigate = useNavigate();
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const [lastCounts, setLastCounts] = useState({ leads: 0, followUps: 0, negotiations: 0, whatsapp: 0 });
+  const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("crm-dismissed-notifs") || "{}");
+    } catch { return {}; }
+  });
 
-  // Reset dismissed when counts increase (new notifications arrived)
+  // Persist dismissed to localStorage
   useEffect(() => {
-    const newDismissed = new Set(dismissed);
-    if (newLeadsCount > lastCounts.leads) newDismissed.delete("leads");
-    if (pendingFollowUpsCount > lastCounts.followUps) newDismissed.delete("followUps");
-    if (negotiationCount > lastCounts.negotiations) newDismissed.delete("negotiations");
-    if (unreadWhatsAppCount > lastCounts.whatsapp) newDismissed.delete("whatsapp");
-    if (newDismissed.size !== dismissed.size) setDismissed(newDismissed);
-    setLastCounts({ leads: newLeadsCount, followUps: pendingFollowUpsCount, negotiations: negotiationCount, whatsapp: unreadWhatsAppCount });
-  }, [newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount]);
+    localStorage.setItem("crm-dismissed-notifs", JSON.stringify(dismissed));
+  }, [dismissed]);
 
   const visibleLeads = dismissed.has("leads") ? 0 : newLeadsCount;
   const visibleFollowUps = dismissed.has("followUps") ? 0 : pendingFollowUpsCount;
