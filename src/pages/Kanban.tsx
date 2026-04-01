@@ -207,7 +207,7 @@ export default function Kanban() {
                                   onDelete={() => setPendingDeleteId(lead.id)}
                                   onMoveNext={stage.key !== "fechado" ? () => moveToNextStage(lead) : undefined}
                                 >
-                                  <div className={`rounded-lg border-t-[3px] p-3 shadow-sm transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing group bg-card ${stageColorMap[stage.key]} ${config.borderClass} ${config.pulse ? "animate-urgency-pulse" : ""} ${snapshot.isDragging ? "shadow-lg rotate-1" : ""}`}>
+                                  <div className={`rounded-lg border-t-[3px] p-3 shadow-sm transition-shadow hover:shadow-md hover:bg-card hover:text-card-foreground hover:border-primary/40 cursor-grab active:cursor-grabbing group bg-card text-card-foreground ${stageColorMap[stage.key]} ${config.borderClass} ${config.pulse ? "animate-urgency-pulse" : ""} ${snapshot.isDragging ? "shadow-lg rotate-1" : ""}`}>
                                     <div className="flex items-start justify-between">
                                       <p className="text-sm font-bold text-foreground leading-tight">{lead.clientName}</p>
                                       <div className="flex items-center gap-1">
