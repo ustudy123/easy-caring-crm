@@ -9,6 +9,7 @@ import {
   Palette,
   ChevronRight,
   LogOut,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
