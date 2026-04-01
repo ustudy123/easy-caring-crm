@@ -6,6 +6,7 @@ export type UrgencyLevel = "ok" | "attention" | "warning" | "critical";
 const STAGE_THRESHOLDS: Record<KanbanStage, { attention: number; warning: number; critical: number }> = {
   novo_lead: { attention: 2, warning: 6, critical: 24 },
   em_atendimento: { attention: 12, warning: 24, critical: 48 },
+  precificacao_especial: { attention: 24, warning: 48, critical: 72 },
   orcamento_enviado: { attention: 24, warning: 48, critical: 72 },
   negociacao: { attention: 24, warning: 48, critical: 96 },
   fechado: { attention: Infinity, warning: Infinity, critical: Infinity },

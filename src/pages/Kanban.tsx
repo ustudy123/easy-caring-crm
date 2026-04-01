@@ -21,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 const stageColorMap: Record<KanbanStage, string> = {
   novo_lead: "border-t-kanban-new",
   em_atendimento: "border-t-kanban-attending",
+  precificacao_especial: "border-t-kanban-pricing",
   orcamento_enviado: "border-t-kanban-quote",
   negociacao: "border-t-kanban-negotiation",
   fechado: "border-t-kanban-closed",
@@ -29,6 +30,7 @@ const stageColorMap: Record<KanbanStage, string> = {
 const stageBgMap: Record<KanbanStage, string> = {
   novo_lead: "bg-kanban-new/10 text-kanban-new",
   em_atendimento: "bg-kanban-attending/10 text-kanban-attending",
+  precificacao_especial: "bg-kanban-pricing/10 text-kanban-pricing",
   orcamento_enviado: "bg-kanban-quote/10 text-kanban-quote",
   negociacao: "bg-kanban-negotiation/10 text-kanban-negotiation",
   fechado: "bg-kanban-closed/10 text-kanban-closed",
@@ -37,6 +39,7 @@ const stageBgMap: Record<KanbanStage, string> = {
 const stageDotMap: Record<KanbanStage, string> = {
   novo_lead: "bg-kanban-new",
   em_atendimento: "bg-kanban-attending",
+  precificacao_especial: "bg-kanban-pricing",
   orcamento_enviado: "bg-kanban-quote",
   negociacao: "bg-kanban-negotiation",
   fechado: "bg-kanban-closed",
