@@ -91,7 +91,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                       </div>
                     )}
                     {visibleNegotiations > 0 && (
-                      <div onClick={() => handleNotificationClick("negotiations", "/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                      <div onClick={() => handleNotificationClick("negotiations", visibleNegotiations, "/kanban")} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
                           <Megaphone className="h-4 w-4" />
                         </div>
