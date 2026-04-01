@@ -9,6 +9,7 @@ import {
   Palette,
   ChevronRight,
   LogOut,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -36,6 +37,7 @@ const menuItemsDef = [
   { title: "Agenda", url: "/agenda", icon: CalendarDays, badgeKey: "pendingFollowUps" as const },
   { title: "Campanhas", url: "/campanhas", icon: Megaphone, badgeKey: "negotiation" as const },
   { title: "Conversas", url: "/conversas", icon: MessageSquare, badgeKey: null as null },
+  { title: "Suporte Orçamento", url: "/suporte-orcamento", icon: FileText, badgeKey: null as null },
 ];
 
 export function AppSidebar() {
