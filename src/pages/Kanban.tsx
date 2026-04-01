@@ -147,6 +147,10 @@ export default function Kanban() {
                 )}
               </PopoverContent>
             </Popover>
+            <Button size="sm" variant="outline" className="border-kanban-pricing text-kanban-pricing hover:bg-kanban-pricing/10"
+              onClick={() => navigate("/suporte-orcamento")}>
+              <FileText className="h-3.5 w-3.5 mr-1" /> Suporte Orçamento
+            </Button>
             <Button size="sm" className="bg-primary" onClick={() => setShowNewLead(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Novo Lead
             </Button>
