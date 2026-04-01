@@ -340,6 +340,7 @@ export type Database = {
       kanban_stage:
         | "novo_lead"
         | "em_atendimento"
+        | "precificacao_especial"
         | "orcamento_enviado"
         | "negociacao"
         | "fechado"
@@ -484,6 +485,7 @@ export const Constants = {
       kanban_stage: [
         "novo_lead",
         "em_atendimento",
+        "precificacao_especial",
         "orcamento_enviado",
         "negociacao",
         "fechado",

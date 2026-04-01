@@ -1,4 +1,4 @@
-export type KanbanStage = 'novo_lead' | 'em_atendimento' | 'orcamento_enviado' | 'negociacao' | 'fechado';
+export type KanbanStage = 'novo_lead' | 'em_atendimento' | 'precificacao_especial' | 'orcamento_enviado' | 'negociacao' | 'fechado';
 
 export interface Lead {
   id: string;
@@ -76,6 +76,7 @@ export interface Seller {
 export const KANBAN_STAGES: { key: KanbanStage; label: string; color: string }[] = [
   { key: 'novo_lead', label: 'Novo Lead', color: 'kanban-new' },
   { key: 'em_atendimento', label: 'Em Atendimento', color: 'kanban-attending' },
+  { key: 'precificacao_especial', label: 'Precificação Especial', color: 'kanban-pricing' },
   { key: 'orcamento_enviado', label: 'Orçamento Enviado', color: 'kanban-quote' },
   { key: 'negociacao', label: 'Negociação', color: 'kanban-negotiation' },
   { key: 'fechado', label: 'Fechado', color: 'kanban-closed' },

@@ -43,6 +43,7 @@
     /* Kanban stage colors */
     --kanban-new: 142 71% 45%;
     --kanban-attending: 217 91% 60%;
+    --kanban-pricing: 340 82% 52%;
     --kanban-quote: 32 95% 50%;
     --kanban-negotiation: 271 81% 56%;
     --kanban-closed: 160 84% 39%;
