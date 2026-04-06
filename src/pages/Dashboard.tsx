@@ -4,7 +4,7 @@ import { useCrm } from "@/contexts/CrmContext";
 import { useSellers } from "@/hooks/useSellers";
 import { KANBAN_STAGES } from "@/types/crm";
 import { TrendingUp, Users, Clock, Target, ArrowUpRight, ArrowDownRight, Phone, MessageCircle, ArrowDown } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, FunnelChart, Funnel, LabelList } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
