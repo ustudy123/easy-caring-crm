@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCrm } from "@/contexts/CrmContext";
 import { useSellers } from "@/hooks/useSellers";
 import { KANBAN_STAGES } from "@/types/crm";
-import { TrendingUp, Users, Clock, Target, ArrowUpRight, ArrowDownRight, Phone, MessageCircle } from "lucide-react";
+import { TrendingUp, Users, Clock, Target, ArrowUpRight, ArrowDownRight, Phone, MessageCircle, ArrowDown } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -125,15 +125,91 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* Funnel conversion visual */}
+        <motion.div variants={item}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                Funil de Conversão por Etapa
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row items-stretch gap-0">
+                {funnelData.map((stage, i) => {
+                  const prevCount = i > 0 ? funnelData[i - 1].leads : null;
+                  const convRate = prevCount && prevCount > 0 ? Math.round((stage.leads / prevCount) * 100) : null;
+                  const maxLeads = Math.max(...funnelData.map(s => s.leads), 1);
+                  const widthPct = Math.max(30, Math.round((stage.leads / maxLeads) * 100));
+                  const FUNNEL_COLORS = [
+                    "hsl(var(--kanban-new))",
+                    "hsl(var(--kanban-attending))",
+                    "hsl(var(--kanban-pricing))",
+                    "hsl(var(--kanban-quote))",
+                    "hsl(var(--kanban-negotiation))",
+                    "hsl(var(--kanban-closed))",
+                  ];
+                  const bgColor = FUNNEL_COLORS[i] || "hsl(var(--primary))";
+
+                  return (
+                    <div key={stage.name} className="flex flex-col items-center flex-1">
+                      {i > 0 && (
+                        <div className="flex flex-col items-center my-1 md:my-0 md:mb-2">
+                          <ArrowDown className="h-4 w-4 text-muted-foreground" />
+                          <span className={`text-xs font-bold ${convRate && convRate >= 50 ? 'text-success' : 'text-destructive'}`}>
+                            {convRate !== null ? `${convRate}%` : '—'}
+                          </span>
+                        </div>
+                      )}
+                      {i === 0 && <div className="h-6" />}
+                      <div
+                        className="rounded-lg flex flex-col items-center justify-center py-3 px-2 transition-all min-h-[70px]"
+                        style={{
+                          backgroundColor: bgColor,
+                          width: `${widthPct}%`,
+                          minWidth: '80px',
+                        }}
+                      >
+                        <span className="text-white text-lg font-extrabold">{stage.leads}</span>
+                        <span className="text-white/80 text-[10px] font-medium text-center leading-tight">{stage.name}</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground mt-1">
+                        R$ {stage.valor.toLocaleString("pt-BR")}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Summary */}
+              <div className="mt-4 flex flex-wrap gap-4 justify-center border-t pt-3">
+                <div className="text-center">
+                  <p className="text-lg font-extrabold text-foreground">
+                    {funnelData[0]?.leads || 0} → {funnelData[funnelData.length - 1]?.leads || 0}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Início → Fechado</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-extrabold text-foreground">
+                    {funnelData[0]?.leads > 0
+                      ? `${Math.round((funnelData[funnelData.length - 1]?.leads / funnelData[0]?.leads) * 100)}%`
+                      : '0%'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Conversão Total</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Funnel */}
+          {/* Bar chart */}
           <motion.div variants={item} className="lg:col-span-2">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-bold flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-primary" />
-                  Funil de Vendas
+                  Leads e Valor por Etapa
                 </CardTitle>
               </CardHeader>
               <CardContent>
