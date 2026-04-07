@@ -3,11 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCrm } from "@/contexts/CrmContext";
 import { useSellers } from "@/hooks/useSellers";
 import { KANBAN_STAGES } from "@/types/crm";
-import { TrendingUp, Users, Clock, Target, ArrowUpRight, ArrowDownRight, Phone, MessageCircle, ArrowDown } from "lucide-react";
+import { TrendingUp, Users, Clock, Target, ArrowUpRight, ArrowDownRight, Phone, MessageCircle, ArrowDown, CalendarDays } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { subDays, subMonths, startOfDay, isAfter } from "date-fns";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
