@@ -52,14 +52,47 @@ function useAvgResponseTime() {
   return avgMinutes;
 }
 
+type PeriodKey = "week" | "month" | "quarter" | "all";
+
+const PERIOD_OPTIONS: { value: PeriodKey; label: string }[] = [
+  { value: "week", label: "7 dias" },
+  { value: "month", label: "30 dias" },
+  { value: "quarter", label: "90 dias" },
+  { value: "all", label: "Tudo" },
+];
+
+function getStartDate(period: PeriodKey): Date | null {
+  const now = new Date();
+  switch (period) {
+    case "week": return startOfDay(subDays(now, 7));
+    case "month": return startOfDay(subMonths(now, 1));
+    case "quarter": return startOfDay(subMonths(now, 3));
+    default: return null;
+  }
+}
+
 export default function Dashboard() {
   const { leads, followUps } = useCrm();
   const sellers = useSellers();
   const avgResponseMin = useAvgResponseTime();
-  const totalLeads = leads.length;
-  const closedLeads = leads.filter((l) => l.stage === "fechado").length;
+  const [period, setPeriod] = useState<PeriodKey>("all");
+
+  const startDate = getStartDate(period);
+
+  const filteredLeads = useMemo(() => {
+    if (!startDate) return leads;
+    return leads.filter((l) => isAfter(new Date(l.createdAt), startDate));
+  }, [leads, period]);
+
+  const filteredFollowUps = useMemo(() => {
+    if (!startDate) return followUps;
+    return followUps.filter((f) => isAfter(new Date(f.scheduledAt), startDate));
+  }, [followUps, period]);
+
+  const totalLeads = filteredLeads.length;
+  const closedLeads = filteredLeads.filter((l) => l.stage === "fechado").length;
   const conversionRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
-  const pendingFollowUps = followUps.filter((f) => !f.completed).length;
+  const pendingFollowUps = filteredFollowUps.filter((f) => !f.completed).length;
 
   const responseLabel = avgResponseMin !== null ? `${avgResponseMin} min` : "...";
 
@@ -72,8 +105,8 @@ export default function Dashboard() {
 
   const funnelData = KANBAN_STAGES.map((stage) => ({
     name: stage.label,
-    leads: leads.filter((l) => l.stage === stage.key).length,
-    valor: leads.filter((l) => l.stage === stage.key).reduce((s, l) => s + l.value, 0),
+    leads: filteredLeads.filter((l) => l.stage === stage.key).length,
+    valor: filteredLeads.filter((l) => l.stage === stage.key).reduce((s, l) => s + l.value, 0),
   }));
 
   const sellerData = sellers.map((s) => ({
@@ -83,11 +116,11 @@ export default function Dashboard() {
   }));
 
   const sourceData = [
-    { name: "WhatsApp", value: leads.filter((l) => l.source === "whatsapp").length },
-    { name: "Instagram", value: leads.filter((l) => l.source === "instagram").length },
-    { name: "Meta Ads", value: leads.filter((l) => l.source === "meta").length },
-    { name: "Google", value: leads.filter((l) => l.source === "google").length },
-    { name: "Indicação", value: leads.filter((l) => l.source === "indicacao").length },
+    { name: "WhatsApp", value: filteredLeads.filter((l) => l.source === "whatsapp").length },
+    { name: "Instagram", value: filteredLeads.filter((l) => l.source === "instagram").length },
+    { name: "Meta Ads", value: filteredLeads.filter((l) => l.source === "meta").length },
+    { name: "Google", value: filteredLeads.filter((l) => l.source === "google").length },
+    { name: "Indicação", value: filteredLeads.filter((l) => l.source === "indicacao").length },
   ];
 
   const COLORS = ["hsl(142,71%,45%)", "hsl(340,82%,52%)", "hsl(220,90%,56%)", "hsl(32,95%,50%)", "hsl(271,81%,56%)"];
