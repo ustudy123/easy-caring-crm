@@ -125,6 +125,34 @@ export default function Dashboard() {
 
   const COLORS = ["hsl(142,71%,45%)", "hsl(340,82%,52%)", "hsl(220,90%,56%)", "hsl(32,95%,50%)", "hsl(271,81%,56%)"];
 
+  // Temporal evolution data – group leads by week or month
+  const timelineData = useMemo(() => {
+    const useWeeks = period === "week" || period === "month";
+    const grouped: Record<string, number> = {};
+
+    filteredLeads.forEach((l) => {
+      const d = new Date(l.createdAt);
+      const key = useWeeks
+        ? format(startOfWeek(d, { weekStartsOn: 1 }), "dd/MM")
+        : format(startOfMonth(d), "MMM/yy");
+      grouped[key] = (grouped[key] || 0) + 1;
+    });
+
+    return Object.entries(grouped)
+      .sort(([a], [b]) => {
+        // parse back for sorting
+        const parseKey = (k: string) => {
+          if (useWeeks) {
+            const [dd, mm] = k.split("/");
+            return new Date(2026, parseInt(mm) - 1, parseInt(dd)).getTime();
+          }
+          return new Date(k.replace("/", " 20")).getTime();
+        };
+        return parseKey(a) - parseKey(b);
+      })
+      .map(([key, count]) => ({ periodo: key, leads: count }));
+  }, [filteredLeads, period]);
+
   return (
     <AppLayout title="Dashboard">
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
