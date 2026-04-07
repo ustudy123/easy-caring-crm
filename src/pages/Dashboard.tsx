@@ -128,6 +128,22 @@ export default function Dashboard() {
   return (
     <AppLayout title="Dashboard">
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+        {/* Period filter */}
+        <div className="flex items-center gap-3">
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          <ToggleGroup type="single" value={period} onValueChange={(v) => v && setPeriod(v as PeriodKey)} className="bg-muted rounded-lg p-0.5">
+            {PERIOD_OPTIONS.map((opt) => (
+              <ToggleGroupItem
+                key={opt.value}
+                value={opt.value}
+                className="text-xs px-3 py-1.5 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md"
+              >
+                {opt.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {kpis.map((kpi) => (
