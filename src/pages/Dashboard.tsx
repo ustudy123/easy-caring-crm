@@ -280,6 +280,41 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
+        {/* Temporal evolution chart */}
+        <motion.div variants={item}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-primary" />
+                Evolução de Leads ao Longo do Tempo
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {timelineData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <LineChart data={timelineData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="periodo" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                    <Tooltip />
+                    <Line
+                      type="monotone"
+                      dataKey="leads"
+                      stroke="hsl(220,90%,56%)"
+                      strokeWidth={2.5}
+                      dot={{ r: 4, fill: "hsl(220,90%,56%)" }}
+                      activeDot={{ r: 6 }}
+                      name="Leads criados"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhum lead no período selecionado.</p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Bar chart */}
