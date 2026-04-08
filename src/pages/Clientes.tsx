@@ -8,13 +8,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2, TrendingUp } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
-const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
-const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
+const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
+const item = { hidden: { opacity: 0, y: 16, scale: 0.97 }, show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 300, damping: 24 } } };
+const fadeIn = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { duration: 0.4 } } };
 
 function mapClientFromDb(row: any): Client {
   return {
@@ -51,15 +52,10 @@ export default function Clientes() {
   const addClient = async (client: Client) => {
     setClients((prev) => [client, ...prev]);
     await supabase.from("clients").insert({
-      id: client.id,
-      name: client.name,
-      phone: client.phone,
-      email: client.email || null,
-      address: client.address || null,
-      city: client.city || null,
-      tags: client.tags,
-      total_purchases: client.totalPurchases,
-      notes: client.notes || null,
+      id: client.id, name: client.name, phone: client.phone,
+      email: client.email || null, address: client.address || null,
+      city: client.city || null, tags: client.tags,
+      total_purchases: client.totalPurchases, notes: client.notes || null,
     });
   };
 
@@ -67,13 +63,9 @@ export default function Clientes() {
     setClients((prev) => prev.map((c) => (c.id === client.id ? client : c)));
     setSelectedClient(null);
     await supabase.from("clients").update({
-      name: client.name,
-      phone: client.phone,
-      email: client.email || null,
-      address: client.address || null,
-      city: client.city || null,
-      tags: client.tags,
-      notes: client.notes || null,
+      name: client.name, phone: client.phone, email: client.email || null,
+      address: client.address || null, city: client.city || null,
+      tags: client.tags, notes: client.notes || null,
     }).eq("id", client.id);
   };
 
@@ -90,159 +82,185 @@ export default function Clientes() {
       c.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const totalVolume = clients.reduce((s, c) => s + c.totalPurchases, 0);
+  const fidelizados = clients.filter((c) => c.tags.includes("fidelizado")).length;
+
+  const kpis = [
+    { label: "Total de Clientes", value: clients.length, icon: Users, gradient: "from-[hsl(224,76%,48%)] to-[hsl(262,60%,55%)]" },
+    { label: "Volume Total", value: `R$ ${totalVolume.toLocaleString("pt-BR")}`, icon: DollarSign, gradient: "from-[hsl(152,60%,42%)] to-[hsl(174,62%,38%)]" },
+    { label: "Fidelizados", value: fidelizados, icon: TrendingUp, gradient: "from-[hsl(338,76%,52%)] to-[hsl(28,86%,52%)]" },
+  ];
+
   return (
     <AppLayout title="Clientes">
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+      <div className="space-y-5">
+        {/* Header */}
+        <motion.div variants={fadeIn} initial="hidden" animate="show" className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar por nome, telefone ou tag..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            <Input placeholder="Buscar por nome, telefone ou tag..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-card/80 backdrop-blur-sm border-border/60 focus:border-primary/40" />
           </div>
-          <Button size="sm" className="bg-primary" onClick={() => setShowNewClient(true)}>
+          <Button size="sm" className="bg-gradient-to-r from-primary to-[hsl(262,60%,55%)] hover:opacity-90 text-primary-foreground shadow-md" onClick={() => setShowNewClient(true)}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Novo Cliente
           </Button>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                <Users className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total de Clientes</p>
-                <p className="text-xl font-extrabold">{clients.length}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-kanban-new/10">
-                <DollarSign className="h-5 w-5 text-kanban-new" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Volume Total</p>
-                <p className="text-xl font-extrabold">R$ {clients.reduce((s, c) => s + c.totalPurchases, 0).toLocaleString("pt-BR")}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/10">
-                <Tag className="h-5 w-5 text-secondary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Fidelizados</p>
-                <p className="text-xl font-extrabold">{clients.filter((c) => c.tags.includes("fidelizado")).length}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((client) => (
-            <motion.div key={client.id} variants={item}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer group" onClick={() => setSelectedClient(client)}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-                        {client.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                      </div>
-                      <div>
-                        <p className="font-bold text-foreground">{client.name}</p>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Phone className="h-3 w-3" />{client.phone}
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        {/* KPI Cards */}
+        <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {kpis.map((kpi) => (
+            <motion.div key={kpi.label} variants={item}>
+              <Card className="relative overflow-hidden border-border/40 bg-card/80 backdrop-blur-sm hover:shadow-lg transition-all duration-300 group">
+                <div className={`absolute inset-0 bg-gradient-to-br ${kpi.gradient} opacity-[0.04] group-hover:opacity-[0.08] transition-opacity`} />
+                <CardContent className="flex items-center gap-4 p-5 relative">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${kpi.gradient} shadow-lg`}>
+                    <kpi.icon className="h-5 w-5 text-primary-foreground" />
                   </div>
-                  {client.email && (
-                    <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Mail className="h-3 w-3" /> {client.email}
-                    </div>
-                  )}
-                  {client.city && (
-                    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <MapPin className="h-3 w-3" /> {client.city}
-                    </div>
-                  )}
-                  <div className="mt-3 flex items-center justify-between">
-                    <div className="flex items-center gap-1 text-sm font-bold text-foreground">
-                      <DollarSign className="h-3.5 w-3.5" />
-                      R$ {client.totalPurchases.toLocaleString("pt-BR")}
-                    </div>
-                    {client.lastContact && (
-                      <span className="text-[10px] text-muted-foreground">
-                        Último contato: {new Date(client.lastContact).toLocaleDateString("pt-BR")}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {client.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-[10px] px-2 py-0">{tag}</Badge>
-                    ))}
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{kpi.label}</p>
+                    <p className="text-2xl font-extrabold text-foreground">{kpi.value}</p>
                   </div>
                 </CardContent>
               </Card>
             </motion.div>
           ))}
         </motion.div>
+
+        {/* Client Cards */}
+        <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filtered.map((client) => (
+            <motion.div key={client.id} variants={item}>
+              <Card
+                className="relative overflow-hidden border-border/40 bg-card/80 backdrop-blur-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group"
+                onClick={() => setSelectedClient(client)}
+              >
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-[hsl(262,60%,55%)] opacity-60 group-hover:opacity-100 transition-opacity" />
+                <CardContent className="p-5 pl-6">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-[hsl(262,60%,55%)] text-sm font-bold text-primary-foreground shadow-md">
+                        {client.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-foreground leading-tight">{client.name}</p>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                          <Phone className="h-3 w-3" />{client.phone}
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                  </div>
+
+                  <div className="space-y-1.5 mb-3">
+                    {client.email && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Mail className="h-3 w-3 shrink-0" /> <span className="truncate">{client.email}</span>
+                      </div>
+                    )}
+                    {client.city && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3 shrink-0" /> {client.city}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-border/40">
+                    <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                      <DollarSign className="h-3.5 w-3.5 text-[hsl(var(--success))]" />
+                      R$ {client.totalPurchases.toLocaleString("pt-BR")}
+                    </div>
+                    {client.lastContact && (
+                      <span className="text-[10px] text-muted-foreground/70 bg-muted/50 px-2 py-0.5 rounded-full">
+                        {new Date(client.lastContact).toLocaleDateString("pt-BR")}
+                      </span>
+                    )}
+                  </div>
+
+                  {client.tags.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      {client.tags.map((tag) => (
+                        <Badge key={tag} variant="secondary" className="text-[10px] px-2 py-0.5 bg-primary/8 text-primary border-primary/15 hover:bg-primary/15 font-medium">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+
+          {filtered.length === 0 && (
+            <motion.div variants={fadeIn} className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <Users className="h-12 w-12 mb-3 opacity-30" />
+              <p className="text-sm font-medium">Nenhum cliente encontrado</p>
+              <p className="text-xs mt-1">Tente ajustar sua busca ou adicione um novo cliente</p>
+            </motion.div>
+          )}
+        </motion.div>
       </div>
 
+      {/* Detail Dialog */}
       <Dialog open={!!selectedClient} onOpenChange={(open) => !open && setSelectedClient(null)}>
-        <DialogContent className="max-w-lg mx-3 sm:mx-auto max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg mx-3 sm:mx-auto max-h-[90vh] overflow-y-auto border-border/40 bg-card/95 backdrop-blur-xl">
           {selectedClient && (
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-[hsl(262,60%,55%)] text-base font-bold text-primary-foreground shadow-lg">
                     {selectedClient.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                   </div>
-                  {selectedClient.name}
+                  <div>
+                    <span className="text-foreground">{selectedClient.name}</span>
+                    <p className="text-xs font-normal text-muted-foreground mt-0.5">
+                      Cliente desde {new Date(selectedClient.createdAt).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
                 </DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="space-y-4 mt-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-muted p-3">
-                    <p className="text-xs text-muted-foreground">Telefone</p>
-                    <p className="text-sm font-semibold">{selectedClient.phone}</p>
-                  </div>
-                  <div className="rounded-lg bg-muted p-3">
-                    <p className="text-xs text-muted-foreground">E-mail</p>
-                    <p className="text-sm font-semibold">{selectedClient.email || "—"}</p>
-                  </div>
-                  <div className="rounded-lg bg-muted p-3">
-                    <p className="text-xs text-muted-foreground">Cidade</p>
-                    <p className="text-sm font-semibold">{selectedClient.city || "—"}</p>
-                  </div>
-                  <div className="rounded-lg bg-muted p-3">
-                    <p className="text-xs text-muted-foreground">Total Compras</p>
-                    <p className="text-sm font-bold text-primary">R$ {selectedClient.totalPurchases.toLocaleString("pt-BR")}</p>
-                  </div>
+                  {[
+                    { label: "Telefone", value: selectedClient.phone, icon: Phone },
+                    { label: "E-mail", value: selectedClient.email || "—", icon: Mail },
+                    { label: "Cidade", value: selectedClient.city || "—", icon: MapPin },
+                    { label: "Total Compras", value: `R$ ${selectedClient.totalPurchases.toLocaleString("pt-BR")}`, icon: DollarSign, highlight: true },
+                  ].map((field) => (
+                    <div key={field.label} className="rounded-xl bg-muted/50 border border-border/30 p-3.5 group hover:border-primary/20 transition-colors">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <field.icon className="h-3 w-3 text-muted-foreground" />
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{field.label}</p>
+                      </div>
+                      <p className={`text-sm font-semibold ${field.highlight ? "text-primary" : "text-foreground"}`}>{field.value}</p>
+                    </div>
+                  ))}
                 </div>
                 {selectedClient.address && (
-                  <div className="rounded-lg bg-muted p-3">
-                    <p className="text-xs text-muted-foreground">Endereço</p>
-                    <p className="text-sm font-semibold">{selectedClient.address}</p>
+                  <div className="rounded-xl bg-muted/50 border border-border/30 p-3.5">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <MapPin className="h-3 w-3 text-muted-foreground" />
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Endereço</p>
+                    </div>
+                    <p className="text-sm font-semibold text-foreground">{selectedClient.address}</p>
                   </div>
                 )}
                 {selectedClient.notes && (
-                  <div className="rounded-lg bg-muted p-3">
-                    <p className="text-xs text-muted-foreground">Observações</p>
-                    <p className="text-sm">{selectedClient.notes}</p>
+                  <div className="rounded-xl bg-muted/50 border border-border/30 p-3.5">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Observações</p>
+                    <p className="text-sm text-foreground">{selectedClient.notes}</p>
                   </div>
                 )}
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedClient.tags.map((tag) => (
-                    <Badge key={tag} className="bg-primary/10 text-primary hover:bg-primary/20">{tag}</Badge>
-                  ))}
-                </div>
-                <div className="flex justify-between pt-2 border-t">
+                {selectedClient.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedClient.tags.map((tag) => (
+                      <Badge key={tag} className="bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20">{tag}</Badge>
+                    ))}
+                  </div>
+                )}
+                <div className="flex justify-between pt-3 border-t border-border/40">
                   <Button
                     variant="destructive"
                     size="sm"
+                    className="shadow-sm"
                     onClick={() => {
                       deleteClient(selectedClient.id);
                       toast({ title: "Cliente excluído", description: `${selectedClient.name} foi removido.`, variant: "destructive" });
@@ -252,10 +270,8 @@ export default function Clientes() {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => {
-                      setEditingClient(selectedClient);
-                      setSelectedClient(null);
-                    }}
+                    className="bg-gradient-to-r from-primary to-[hsl(262,60%,55%)] hover:opacity-90 shadow-sm"
+                    onClick={() => { setEditingClient(selectedClient); setSelectedClient(null); }}
                   >
                     <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
                   </Button>
