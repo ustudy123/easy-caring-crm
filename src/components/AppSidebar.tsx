@@ -51,7 +51,6 @@ export function AppSidebar() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; }
   });
 
-  // Auto-dismiss when visiting corresponding pages
   useEffect(() => {
     const next = { ...dismissed };
     if (location.pathname === "/kanban") next.newLeads = newLeadsCount;
@@ -80,15 +79,15 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className={cn("p-5", collapsed && "flex items-center justify-center p-3")}>
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-secondary to-accent shadow-lg shadow-primary/20">
-            <Palette className="h-5 w-5 text-white" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-secondary to-accent shadow-lg shadow-primary/25 ring-1 ring-white/10">
+            <Palette className="h-5 w-5 text-primary-foreground" />
           </div>
           {!collapsed && (
             <div className="flex flex-col">
               <span className="text-sm font-extrabold tracking-tight text-sidebar-foreground">
                 CRM Taeco
               </span>
-              <span className="text-[11px] font-medium text-sidebar-foreground/50">
+              <span className="text-[10px] font-medium text-sidebar-foreground/40">
                 Gestão Comercial
               </span>
             </div>
@@ -97,18 +96,18 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <div className="px-4">
-        <Separator className="bg-sidebar-border/60" />
+        <Separator className="bg-sidebar-border/40" />
       </div>
 
       <SidebarContent className="pt-4">
         <SidebarGroup>
           {!collapsed && (
-            <span className="mb-2 px-5 text-[10px] font-semibold uppercase tracking-[0.15em] text-sidebar-foreground/30">
+            <span className="mb-2 px-5 text-[10px] font-semibold uppercase tracking-[0.15em] text-sidebar-foreground/25">
               Menu
             </span>
           )}
           <SidebarGroupContent>
-            <SidebarMenu className={cn("space-y-1", collapsed ? "px-0.5" : "px-2")}>
+            <SidebarMenu className={cn("space-y-0.5", collapsed ? "px-0.5" : "px-2")}>
               {menuItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 return (
@@ -118,30 +117,30 @@ export function AppSidebar() {
                         to={item.url}
                         end={item.url === "/"}
                         className={cn(
-                          "group relative flex items-center rounded-lg text-sidebar-foreground/70 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                          "group relative flex items-center rounded-xl text-sidebar-foreground/60 transition-all duration-200 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground",
                           collapsed ? "justify-center px-2 py-2.5 gap-0" : "gap-3 px-3 py-2.5"
                         )}
-                        activeClassName="!bg-sidebar-accent !text-sidebar-primary font-semibold"
+                        activeClassName="!bg-sidebar-primary/15 !text-sidebar-primary font-semibold"
                       >
                         {isActive && (
-                          <div className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
+                          <div className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-sidebar-primary shadow-[0_0_8px_hsl(var(--sidebar-primary)/0.5)]" />
                         )}
                         <div className="relative shrink-0">
-                          <item.icon className="h-5 w-5" />
+                          <item.icon className={cn("h-[18px] w-[18px] transition-colors", isActive && "text-sidebar-primary")} />
                           {collapsed && item.badge > 0 && (
-                            <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground animate-pulse">
+                            <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground shadow-sm animate-pulse">
                               {item.badge}
                             </span>
                           )}
                         </div>
-                        {!collapsed && <span className="text-sm">{item.title}</span>}
+                        {!collapsed && <span className="text-[13px]">{item.title}</span>}
                         {!collapsed && item.badge > 0 && (
-                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] font-bold text-accent-foreground animate-pulse">
+                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] font-bold text-accent-foreground shadow-sm animate-pulse">
                             {item.badge}
                           </span>
                         )}
                         {!collapsed && isActive && item.badge === 0 && (
-                          <ChevronRight className="ml-auto h-3.5 w-3.5 text-sidebar-primary/60" />
+                          <ChevronRight className="ml-auto h-3.5 w-3.5 text-sidebar-primary/50" />
                         )}
                       </NavLink>
                     </SidebarMenuButton>
@@ -156,40 +155,40 @@ export function AppSidebar() {
       <SidebarFooter className={cn("p-3", collapsed && "p-2")}>
         {!collapsed && (
           <div className="px-2">
-            <Separator className="mb-3 bg-sidebar-border/60" />
+            <Separator className="mb-3 bg-sidebar-border/40" />
           </div>
         )}
 
-        <SidebarMenu className={cn("space-y-1", collapsed ? "px-0.5" : "px-2")}>
+        <SidebarMenu className={cn("space-y-0.5", collapsed ? "px-0.5" : "px-2")}>
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="h-auto p-0">
               <NavLink
                 to="/configuracoes"
                 className={cn(
-                  "flex items-center rounded-lg text-sidebar-foreground/70 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                  "flex items-center rounded-xl text-sidebar-foreground/60 transition-all duration-200 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground",
                   collapsed ? "justify-center px-2 py-2.5 gap-0" : "gap-3 px-3 py-2.5"
                 )}
-                activeClassName="!bg-sidebar-accent !text-sidebar-primary font-semibold"
+                activeClassName="!bg-sidebar-primary/15 !text-sidebar-primary font-semibold"
               >
-                <Settings className="h-5 w-5 shrink-0" />
-                {!collapsed && <span className="text-sm">Configurações</span>}
+                <Settings className="h-[18px] w-[18px] shrink-0" />
+                {!collapsed && <span className="text-[13px]">Configurações</span>}
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
 
         {!collapsed && (
-          <div className="mt-2 flex items-center gap-3 rounded-xl bg-sidebar-accent/80 p-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-xs font-bold text-white shadow-md">
+          <div className="mt-2 flex items-center gap-3 rounded-xl bg-sidebar-accent/60 p-3 border border-sidebar-border/30">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-xs font-bold text-primary-foreground shadow-md ring-2 ring-sidebar-accent">
               CS
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-xs font-semibold text-sidebar-foreground">
                 Carlos Silva
               </span>
-              <span className="text-[10px] text-sidebar-foreground/45">Vendedor</span>
+              <span className="text-[10px] text-sidebar-foreground/40">Vendedor</span>
             </div>
-            <button className="rounded-md p-1.5 text-sidebar-foreground/40 transition-colors hover:bg-sidebar-border hover:text-sidebar-foreground/70">
+            <button className="rounded-lg p-1.5 text-sidebar-foreground/35 transition-colors hover:bg-sidebar-border/50 hover:text-sidebar-foreground/70">
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -197,7 +196,7 @@ export function AppSidebar() {
 
         {collapsed && (
           <div className="mt-1 flex justify-center">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-xs font-bold text-white shadow-md">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-xs font-bold text-primary-foreground shadow-md ring-2 ring-sidebar-accent">
               CS
             </div>
           </div>

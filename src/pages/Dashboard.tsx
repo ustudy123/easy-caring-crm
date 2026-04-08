@@ -3,16 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCrm } from "@/contexts/CrmContext";
 import { useSellers } from "@/hooks/useSellers";
 import { KANBAN_STAGES } from "@/types/crm";
-import { TrendingUp, Users, Clock, Target, ArrowUpRight, ArrowDownRight, Phone, MessageCircle, ArrowDown, CalendarDays } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid } from "recharts";
+import { TrendingUp, Users, Clock, Target, ArrowUpRight, ArrowDownRight, Phone, MessageCircle, ArrowDown, CalendarDays, Sparkles } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Area, AreaChart } from "recharts";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { subDays, subMonths, startOfDay, isAfter, format, startOfWeek, startOfMonth } from "date-fns";
 
-const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
-const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
+const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
+const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
 
 function useAvgResponseTime() {
   const [avgMinutes, setAvgMinutes] = useState<number | null>(null);
@@ -71,6 +71,13 @@ function getStartDate(period: PeriodKey): Date | null {
   }
 }
 
+const KPI_GRADIENTS = [
+  "from-primary/90 to-info/80",
+  "from-kanban-closed/90 to-success/80",
+  "from-kanban-quote/90 to-warning/80",
+  "from-accent/90 to-secondary/80",
+];
+
 export default function Dashboard() {
   const { leads, followUps } = useCrm();
   const sellers = useSellers();
@@ -96,7 +103,6 @@ export default function Dashboard() {
 
   const responseLabel = avgResponseMin !== null ? `${avgResponseMin} min` : "...";
 
-  // Calculate previous period for comparison
   const prevPeriodLeads = useMemo(() => {
     if (!startDate) return [];
     const periodMs = Date.now() - startDate.getTime();
@@ -124,10 +130,10 @@ export default function Dashboard() {
   const convChange = formatChange(conversionDiff);
 
   const kpis = [
-    { label: "Leads Ativos", value: activeLeads, icon: Users, change: activeChange.text, positive: activeChange.positive, color: "bg-primary" },
-    { label: "Taxa de Conversão", value: `${conversionRate}%`, icon: Target, change: convChange.text, positive: convChange.positive, color: "bg-kanban-closed" },
-    { label: "Tempo Médio Resposta", value: responseLabel, icon: Clock, change: "", positive: true, color: "bg-kanban-quote" },
-    { label: "Follow-ups Pendentes", value: pendingFollowUps, icon: Phone, change: `${pendingFollowUps}`, positive: false, color: "bg-accent" },
+    { label: "Leads Ativos", value: activeLeads, icon: Users, change: activeChange.text, positive: activeChange.positive },
+    { label: "Taxa de Conversão", value: `${conversionRate}%`, icon: Target, change: convChange.text, positive: convChange.positive },
+    { label: "Tempo Médio Resposta", value: responseLabel, icon: Clock, change: "", positive: true },
+    { label: "Follow-ups Pendentes", value: pendingFollowUps, icon: Phone, change: `${pendingFollowUps}`, positive: false },
   ];
 
   const funnelData = KANBAN_STAGES.map((stage) => ({
@@ -150,9 +156,8 @@ export default function Dashboard() {
     { name: "Indicação", value: filteredLeads.filter((l) => l.source === "indicacao").length },
   ];
 
-  const COLORS = ["hsl(142,71%,45%)", "hsl(340,82%,52%)", "hsl(220,90%,56%)", "hsl(32,95%,50%)", "hsl(271,81%,56%)"];
+  const COLORS = ["hsl(152,60%,42%)", "hsl(338,76%,52%)", "hsl(224,76%,48%)", "hsl(28,86%,52%)", "hsl(262,60%,55%)"];
 
-  // Temporal evolution data – group leads by week or month
   const timelineData = useMemo(() => {
     const useWeeks = period === "week" || period === "month";
     const grouped: Record<string, number> = {};
@@ -165,9 +170,6 @@ export default function Dashboard() {
       grouped[key] = (grouped[key] || 0) + 1;
     });
 
-    // Sort by actual date stored alongside
-    const entries = Object.entries(grouped);
-    // Re-derive sort keys from filtered leads dates
     const sortKeys: Record<string, number> = {};
     filteredLeads.forEach((l) => {
       const d = new Date(l.createdAt);
@@ -181,55 +183,75 @@ export default function Dashboard() {
       }
     });
 
-    return entries
+    return Object.entries(grouped)
       .sort(([a], [b]) => (sortKeys[a] || 0) - (sortKeys[b] || 0))
       .map(([key, count]) => ({ periodo: key, leads: count }));
   }, [filteredLeads, period]);
 
+  const greetingHour = new Date().getHours();
+  const greeting = greetingHour < 12 ? "Bom dia" : greetingHour < 18 ? "Boa tarde" : "Boa noite";
+
   return (
     <AppLayout title="Dashboard">
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
-        {/* Period filter */}
-        <div className="flex items-center gap-3">
-          <CalendarDays className="h-4 w-4 text-muted-foreground" />
-          <ToggleGroup type="single" value={period} onValueChange={(v) => v && setPeriod(v as PeriodKey)} className="bg-muted rounded-lg p-0.5">
-            {PERIOD_OPTIONS.map((opt) => (
-              <ToggleGroupItem
-                key={opt.value}
-                value={opt.value}
-                className="text-xs px-3 py-1.5 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md"
-              >
-                {opt.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
+        {/* Welcome + Period filter */}
+        <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-foreground flex items-center gap-2">
+              {greeting} <span className="text-lg">👋</span>
+            </h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Aqui está o resumo do seu CRM</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            <ToggleGroup type="single" value={period} onValueChange={(v) => v && setPeriod(v as PeriodKey)} className="bg-card border rounded-xl p-1 shadow-sm">
+              {PERIOD_OPTIONS.map((opt) => (
+                <ToggleGroupItem
+                  key={opt.value}
+                  value={opt.value}
+                  className="text-xs px-3 py-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm rounded-lg transition-all"
+                >
+                  {opt.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
+        </motion.div>
 
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {kpis.map((kpi) => (
+          {kpis.map((kpi, idx) => (
             <motion.div key={kpi.label} variants={item}>
-              <Card className="overflow-hidden">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{kpi.label}</p>
-                      <p className="mt-1 text-2xl font-extrabold text-foreground">{kpi.value}</p>
+              <Card className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-all duration-300 group">
+                <CardContent className="p-0">
+                  <div className="flex items-stretch">
+                    {/* Gradient accent strip */}
+                    <div className={`w-1.5 bg-gradient-to-b ${KPI_GRADIENTS[idx]} rounded-l-lg`} />
+                    <div className="flex-1 p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{kpi.label}</p>
+                          <p className="mt-1.5 text-2xl font-extrabold text-foreground tracking-tight">{kpi.value}</p>
+                        </div>
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${KPI_GRADIENTS[idx]} shadow-lg group-hover:scale-105 transition-transform`}>
+                          <kpi.icon className="h-5 w-5 text-primary-foreground" />
+                        </div>
+                      </div>
+                      {kpi.change && (
+                        <div className="mt-2.5 flex items-center gap-1.5">
+                          {kpi.positive ? (
+                            <span className="flex items-center gap-0.5 text-xs font-bold text-success">
+                              <ArrowUpRight className="h-3 w-3" />{kpi.change}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-0.5 text-xs font-bold text-accent">
+                              <ArrowDownRight className="h-3 w-3" />{kpi.change}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-muted-foreground">vs anterior</span>
+                        </div>
+                      )}
                     </div>
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${kpi.color}`}>
-                      <kpi.icon className="h-5 w-5 text-white" />
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center gap-1">
-                    {kpi.positive ? (
-                      <ArrowUpRight className="h-3 w-3 text-success" />
-                    ) : (
-                      <ArrowDownRight className="h-3 w-3 text-accent" />
-                    )}
-                    <span className={`text-xs font-semibold ${kpi.positive ? "text-success" : "text-accent"}`}>
-                      {kpi.change}
-                    </span>
-                    <span className="text-xs text-muted-foreground">vs período anterior</span>
                   </div>
                 </CardContent>
               </Card>
@@ -239,10 +261,12 @@ export default function Dashboard() {
 
         {/* Funnel conversion visual */}
         <motion.div variants={item}>
-          <Card>
+          <Card className="border-0 shadow-sm overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                </div>
                 Funil de Conversão por Etapa
               </CardTitle>
             </CardHeader>
@@ -267,7 +291,7 @@ export default function Dashboard() {
                     <div key={stage.name} className="flex flex-col items-center flex-1">
                       {i > 0 && (
                         <div className="flex flex-col items-center my-1 md:my-0 md:mb-2">
-                          <ArrowDown className="h-4 w-4 text-muted-foreground" />
+                          <ArrowDown className="h-4 w-4 text-muted-foreground/50" />
                           <span className={`text-xs font-bold ${convRate && convRate >= 50 ? 'text-success' : 'text-destructive'}`}>
                             {convRate !== null ? `${convRate}%` : '—'}
                           </span>
@@ -275,15 +299,15 @@ export default function Dashboard() {
                       )}
                       {i === 0 && <div className="h-6" />}
                       <div
-                        className="rounded-lg flex flex-col items-center justify-center py-3 px-2 transition-all min-h-[70px]"
+                        className="rounded-xl flex flex-col items-center justify-center py-3 px-2 transition-all min-h-[70px] shadow-sm hover:shadow-md hover:scale-[1.02]"
                         style={{
                           backgroundColor: bgColor,
                           width: `${widthPct}%`,
                           minWidth: '80px',
                         }}
                       >
-                        <span className="text-white text-lg font-extrabold">{stage.leads}</span>
-                        <span className="text-white/80 text-[10px] font-medium text-center leading-tight">{stage.name}</span>
+                        <span className="text-primary-foreground text-lg font-extrabold">{stage.leads}</span>
+                        <span className="text-primary-foreground/80 text-[10px] font-medium text-center leading-tight">{stage.name}</span>
                       </div>
                       <span className="text-[10px] text-muted-foreground mt-1">
                         R$ {stage.valor.toLocaleString("pt-BR")}
@@ -292,8 +316,7 @@ export default function Dashboard() {
                   );
                 })}
               </div>
-              {/* Summary */}
-              <div className="mt-4 flex flex-wrap gap-4 justify-center border-t pt-3">
+              <div className="mt-4 flex flex-wrap gap-6 justify-center border-t pt-3">
                 <div className="text-center">
                   <p className="text-lg font-extrabold text-foreground">
                     {funnelData[0]?.leads || 0} → {funnelData[funnelData.length - 1]?.leads || 0}
@@ -301,7 +324,7 @@ export default function Dashboard() {
                   <p className="text-xs text-muted-foreground">Início → Fechado</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-extrabold text-foreground">
+                  <p className="text-lg font-extrabold gradient-text">
                     {funnelData[0]?.leads > 0
                       ? `${Math.round((funnelData[funnelData.length - 1]?.leads / funnelData[0]?.leads) * 100)}%`
                       : '0%'}
@@ -313,36 +336,56 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
-        {/* Temporal evolution chart */}
+        {/* Timeline area chart */}
         <motion.div variants={item}>
-          <Card>
+          <Card className="border-0 shadow-sm overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-info/10">
+                  <CalendarDays className="h-3.5 w-3.5 text-info" />
+                </div>
                 Evolução de Leads ao Longo do Tempo
               </CardTitle>
             </CardHeader>
             <CardContent>
               {timelineData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={260}>
-                  <LineChart data={timelineData}>
+                  <AreaChart data={timelineData}>
+                    <defs>
+                      <linearGradient id="leadGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(224,76%,48%)" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="hsl(224,76%,48%)" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="periodo" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                    <Tooltip />
-                    <Line
+                    <XAxis dataKey="periodo" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{
+                        background: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "0.75rem",
+                        fontSize: "12px",
+                        boxShadow: "var(--shadow-elevated)",
+                      }}
+                    />
+                    <Area
                       type="monotone"
                       dataKey="leads"
-                      stroke="hsl(220,90%,56%)"
+                      stroke="hsl(224,76%,48%)"
                       strokeWidth={2.5}
-                      dot={{ r: 4, fill: "hsl(220,90%,56%)" }}
+                      fill="url(#leadGradient)"
+                      dot={{ r: 4, fill: "hsl(224,76%,48%)", strokeWidth: 2, stroke: "hsl(var(--card))" }}
                       activeDot={{ r: 6 }}
                       name="Leads criados"
                     />
-                  </LineChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">Nenhum lead no período selecionado.</p>
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <Sparkles className="h-8 w-8 mb-2 opacity-30" />
+                  <p className="text-sm">Nenhum lead no período selecionado.</p>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -350,58 +393,75 @@ export default function Dashboard() {
 
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Bar chart */}
           <motion.div variants={item} className="lg:col-span-2">
-            <Card>
+            <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary/10">
+                    <TrendingUp className="h-3.5 w-3.5 text-secondary" />
+                  </div>
                   Leads e Valor por Etapa
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={funnelData}>
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                     <Tooltip
                       formatter={(value: number, name: string) =>
                         name === "valor" ? `R$ ${value.toLocaleString("pt-BR")}` : value
                       }
+                      contentStyle={{
+                        background: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "0.75rem",
+                        fontSize: "12px",
+                      }}
                     />
-                    <Bar dataKey="leads" fill="hsl(220,90%,56%)" radius={[6, 6, 0, 0]} name="Leads" />
-                    <Bar dataKey="valor" fill="hsl(280,65%,60%)" radius={[6, 6, 0, 0]} name="valor" />
+                    <Bar dataKey="leads" fill="hsl(224,76%,48%)" radius={[8, 8, 0, 0]} name="Leads" />
+                    <Bar dataKey="valor" fill="hsl(262,60%,55%)" radius={[8, 8, 0, 0]} name="valor" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Source pie */}
           <motion.div variants={item}>
-            <Card>
+            <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4 text-kanban-new" />
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-success/10">
+                    <MessageCircle className="h-3.5 w-3.5 text-success" />
+                  </div>
                   Origem dos Leads
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie data={sourceData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3}>
+                    <Pie data={sourceData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} strokeWidth={0}>
                       {sourceData.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip
+                      contentStyle={{
+                        background: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "0.75rem",
+                        fontSize: "12px",
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2 justify-center">
                   {sourceData.map((s, i) => (
                     <div key={s.name} className="flex items-center gap-1.5 text-xs">
-                      <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: COLORS[i] }} />
+                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[i] }} />
                       <span className="text-muted-foreground">{s.name}</span>
+                      <span className="font-semibold text-foreground">{s.value}</span>
                     </div>
                   ))}
                 </div>
@@ -412,18 +472,31 @@ export default function Dashboard() {
 
         {/* Sellers performance */}
         <motion.div variants={item}>
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold">Desempenho por Vendedor</CardTitle>
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-kanban-attending/10">
+                  <Users className="h-3.5 w-3.5 text-kanban-attending" />
+                </div>
+                Desempenho por Vendedor
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={sellerData} layout="vertical">
-                  <XAxis type="number" tick={{ fontSize: 11 }} />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={70} />
-                  <Tooltip />
-                  <Bar dataKey="leads" fill="hsl(217,91%,60%)" radius={[0, 6, 6, 0]} name="Leads" />
-                  <Bar dataKey="conversoes" fill="hsl(142,71%,45%)" radius={[0, 6, 6, 0]} name="Conversões" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={70} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "0.75rem",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <Bar dataKey="leads" fill="hsl(217,78%,52%)" radius={[0, 8, 8, 0]} name="Leads" />
+                  <Bar dataKey="conversoes" fill="hsl(152,60%,42%)" radius={[0, 8, 8, 0]} name="Conversões" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -432,36 +505,47 @@ export default function Dashboard() {
 
         {/* Upcoming follow-ups */}
         <motion.div variants={item}>
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold">Próximos Follow-ups</CardTitle>
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10">
+                  <CalendarDays className="h-3.5 w-3.5 text-accent" />
+                </div>
+                Próximos Follow-ups
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {followUps
                   .filter((f) => !f.completed)
                   .slice(0, 5)
                   .map((f) => (
-                    <div key={f.id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3 gap-2">
+                    <div key={f.id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-border/60 p-3 gap-2 hover:bg-muted/30 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                          f.type === 'call' ? 'bg-kanban-attending/20 text-kanban-attending' :
-                          f.type === 'whatsapp' ? 'bg-kanban-new/20 text-kanban-new' :
-                          f.type === 'visit' ? 'bg-kanban-negotiation/20 text-kanban-negotiation' :
-                          'bg-kanban-quote/20 text-kanban-quote'
+                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                          f.type === 'call' ? 'bg-kanban-attending/15 text-kanban-attending' :
+                          f.type === 'whatsapp' ? 'bg-kanban-new/15 text-kanban-new' :
+                          f.type === 'visit' ? 'bg-kanban-negotiation/15 text-kanban-negotiation' :
+                          'bg-kanban-quote/15 text-kanban-quote'
                         }`}>
-                          {f.type === 'call' ? <Phone className="h-3.5 w-3.5" /> : <MessageCircle className="h-3.5 w-3.5" />}
+                          {f.type === 'call' ? <Phone className="h-4 w-4" /> : <MessageCircle className="h-4 w-4" />}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold">{f.clientName}</p>
-                          <p className="text-xs text-muted-foreground">{f.description}</p>
+                          <p className="text-sm font-semibold text-foreground">{f.clientName}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">{f.description}</p>
                         </div>
                       </div>
-                      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap sm:text-right pl-11 sm:pl-0">
+                      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap sm:text-right pl-12 sm:pl-0">
                         {new Date(f.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
                   ))}
+                {followUps.filter((f) => !f.completed).length === 0 && (
+                  <div className="flex flex-col items-center py-8 text-muted-foreground">
+                    <CalendarDays className="h-8 w-8 mb-2 opacity-30" />
+                    <p className="text-sm">Nenhum follow-up pendente</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
