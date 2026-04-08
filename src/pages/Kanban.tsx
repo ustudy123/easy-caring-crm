@@ -5,11 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCrm } from "@/contexts/CrmContext";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle, X, FileText } from "lucide-react";
+import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle, X, FileText, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
 import { NewLeadForm } from "@/components/forms/NewLeadForm";
 import { EditLeadForm } from "@/components/forms/EditLeadForm";
 import { SwipeableCard } from "@/components/SwipeableCard";
@@ -20,21 +19,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const stageColorMap: Record<KanbanStage, string> = {
-  novo_lead: "border-t-kanban-new",
-  em_atendimento: "border-t-kanban-attending",
-  precificacao_especial: "border-t-kanban-pricing",
-  orcamento_enviado: "border-t-kanban-quote",
-  negociacao: "border-t-kanban-negotiation",
-  fechado: "border-t-kanban-closed",
+  novo_lead: "border-l-kanban-new",
+  em_atendimento: "border-l-kanban-attending",
+  precificacao_especial: "border-l-kanban-pricing",
+  orcamento_enviado: "border-l-kanban-quote",
+  negociacao: "border-l-kanban-negotiation",
+  fechado: "border-l-kanban-closed",
 };
 
 const stageBgMap: Record<KanbanStage, string> = {
-  novo_lead: "bg-kanban-new/10 text-kanban-new",
-  em_atendimento: "bg-kanban-attending/10 text-kanban-attending",
-  precificacao_especial: "bg-kanban-pricing/10 text-kanban-pricing",
-  orcamento_enviado: "bg-kanban-quote/10 text-kanban-quote",
-  negociacao: "bg-kanban-negotiation/10 text-kanban-negotiation",
-  fechado: "bg-kanban-closed/10 text-kanban-closed",
+  novo_lead: "bg-kanban-new/8 text-kanban-new",
+  em_atendimento: "bg-kanban-attending/8 text-kanban-attending",
+  precificacao_especial: "bg-kanban-pricing/8 text-kanban-pricing",
+  orcamento_enviado: "bg-kanban-quote/8 text-kanban-quote",
+  negociacao: "bg-kanban-negotiation/8 text-kanban-negotiation",
+  fechado: "bg-kanban-closed/8 text-kanban-closed",
 };
 
 const stageDotMap: Record<KanbanStage, string> = {
@@ -44,6 +43,15 @@ const stageDotMap: Record<KanbanStage, string> = {
   orcamento_enviado: "bg-kanban-quote",
   negociacao: "bg-kanban-negotiation",
   fechado: "bg-kanban-closed",
+};
+
+const stageHeaderGradient: Record<KanbanStage, string> = {
+  novo_lead: "from-kanban-new/15 to-kanban-new/5",
+  em_atendimento: "from-kanban-attending/15 to-kanban-attending/5",
+  precificacao_especial: "from-kanban-pricing/15 to-kanban-pricing/5",
+  orcamento_enviado: "from-kanban-quote/15 to-kanban-quote/5",
+  negociacao: "from-kanban-negotiation/15 to-kanban-negotiation/5",
+  fechado: "from-kanban-closed/15 to-kanban-closed/5",
 };
 
 export default function Kanban() {
@@ -63,7 +71,6 @@ export default function Kanban() {
     setFilterSource("all");
     setFilterUrgency("all");
   };
-
 
   const moveToNextStage = (lead: Lead) => {
     const stageKeys = KANBAN_STAGES.map(s => s.key);
@@ -91,7 +98,6 @@ export default function Kanban() {
     setLeads((prev) =>
       prev.map((l) => (l.id === result.draggableId ? { ...l, stage: newStage } : l))
     );
-    // Persist stage change to Supabase
     supabase.from("leads").update({ stage: newStage }).eq("id", result.draggableId).then(({ error }) => {
       if (error) console.error("Error updating lead stage:", error);
     });
@@ -100,24 +106,25 @@ export default function Kanban() {
   return (
     <AppLayout title="Kanban Comercial">
       <div className="space-y-4">
+        {/* Toolbar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar lead..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            <Input placeholder="Buscar lead..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 rounded-xl border-border/60 bg-card shadow-sm" />
           </div>
           <div className="flex gap-2 flex-wrap">
             <Popover open={showFilters} onOpenChange={setShowFilters}>
               <PopoverTrigger asChild>
-                <Button variant={hasActiveFilters ? "default" : "outline"} size="sm">
+                <Button variant={hasActiveFilters ? "default" : "outline"} size="sm" className="rounded-xl">
                   <Filter className="h-3.5 w-3.5 mr-1" /> Filtros
                   {hasActiveFilters && <span className="ml-1 text-[10px]">●</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-64 space-y-3" align="start">
+              <PopoverContent className="w-64 space-y-3 rounded-xl" align="start">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-muted-foreground">Origem</label>
                   <Select value={filterSource} onValueChange={setFilterSource}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs rounded-lg"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas</SelectItem>
                       <SelectItem value="whatsapp">WhatsApp</SelectItem>
@@ -131,7 +138,7 @@ export default function Kanban() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-muted-foreground">Urgência</label>
                   <Select value={filterUrgency} onValueChange={setFilterUrgency}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs rounded-lg"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas</SelectItem>
                       <SelectItem value="critical">Crítico</SelectItem>
@@ -147,18 +154,19 @@ export default function Kanban() {
                 )}
               </PopoverContent>
             </Popover>
-            <Button size="sm" variant="outline" className="border-kanban-pricing text-kanban-pricing hover:bg-kanban-pricing/10"
+            <Button size="sm" variant="outline" className="rounded-xl border-kanban-pricing/40 text-kanban-pricing hover:bg-kanban-pricing/10"
               onClick={() => navigate("/suporte-orcamento")}>
               <FileText className="h-3.5 w-3.5 mr-1" /> Suporte Orçamento
             </Button>
-            <Button size="sm" className="bg-primary" onClick={() => setShowNewLead(true)}>
+            <Button size="sm" className="rounded-xl bg-primary shadow-sm shadow-primary/20" onClick={() => setShowNewLead(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Novo Lead
             </Button>
           </div>
         </div>
 
+        {/* Board */}
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none">
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none">
             {KANBAN_STAGES.map((stage) => {
               const stageLeads = filteredLeads.filter((l) => l.stage === stage.key);
               const totalValue = stageLeads.reduce((s, l) => s + l.value, 0);
@@ -169,31 +177,38 @@ export default function Kanban() {
               }).length;
 
               return (
-                <div key={stage.key} className="flex-shrink-0 w-[280px] sm:w-72 snap-start">
-                  <div className={`flex items-center justify-between rounded-t-xl p-3 ${stageBgMap[stage.key]}`}>
-                    <div className="flex items-center gap-2">
-                      <div className={`h-2.5 w-2.5 rounded-full ${stageDotMap[stage.key]}`} />
-                      <span className="text-sm font-bold">{stage.label}</span>
+                <div key={stage.key} className="flex-shrink-0 w-[280px] sm:w-[276px] flex flex-col snap-start">
+                  {/* Column header */}
+                  <div className={`flex items-center justify-between rounded-t-2xl p-3.5 bg-gradient-to-b ${stageHeaderGradient[stage.key]} border border-b-0 border-border/40`}>
+                    <div className="flex items-center gap-2.5">
+                      <div className={`h-2.5 w-2.5 rounded-full ${stageDotMap[stage.key]} ring-2 ring-background shadow-sm`} />
+                      <span className="text-[13px] font-bold">{stage.label}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {alertCount > 0 && (
-                        <Badge variant="destructive" className="text-[10px] font-bold px-1.5 py-0 animate-urgency-pulse">
+                        <Badge variant="destructive" className="text-[9px] font-bold px-1.5 py-0 h-5 animate-urgency-pulse rounded-full">
                           <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />{alertCount}
                         </Badge>
                       )}
-                      <Badge variant="secondary" className="text-[10px] font-bold">{stageLeads.length}</Badge>
+                      <Badge variant="secondary" className="text-[10px] font-bold h-5 rounded-full">{stageLeads.length}</Badge>
                     </div>
                   </div>
-                  <div className="text-[10px] font-semibold text-muted-foreground px-3 py-1.5 bg-muted/50">
-                    Total: R$ {totalValue.toLocaleString("pt-BR")}
+                  {/* Value summary */}
+                  <div className="text-[10px] font-semibold text-muted-foreground px-3.5 py-1.5 bg-muted/40 border-x border-border/40">
+                    R$ {totalValue.toLocaleString("pt-BR")}
                   </div>
 
+                  {/* Droppable area */}
                   <Droppable droppableId={stage.key}>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`min-h-[400px] space-y-2 rounded-b-xl p-2 transition-colors ${snapshot.isDraggingOver ? "bg-primary/5" : "bg-muted/30"}`}
+                        className={`min-h-[420px] flex-1 space-y-2.5 rounded-b-2xl p-2.5 transition-all duration-200 border border-t-0 border-border/40 ${
+                          snapshot.isDraggingOver
+                            ? "bg-primary/[0.04] border-primary/20"
+                            : "bg-muted/20"
+                        }`}
                       >
                         {stageLeads.map((lead, index) => (
                           <Draggable key={lead.id} draggableId={lead.id} index={index}>
@@ -208,76 +223,114 @@ export default function Kanban() {
                                   const config = getUrgencyConfig(urgency);
                                   const idleTime = formatIdleTime(lead);
                                   return (
-                                <SwipeableCard
-                                  onEdit={() => setEditingLead(lead)}
-                                  onDelete={() => setPendingDeleteId(lead.id)}
-                                  onMoveNext={stage.key !== "fechado" ? () => moveToNextStage(lead) : undefined}
-                                >
-                                  <div className={`rounded-lg border-t-[3px] p-3 shadow-sm transition-shadow hover:shadow-md hover:bg-card hover:text-card-foreground hover:border-primary/40 cursor-grab active:cursor-grabbing group bg-card text-card-foreground ${stageColorMap[stage.key]} ${config.borderClass} ${config.pulse ? "animate-urgency-pulse" : ""} ${snapshot.isDragging ? "shadow-lg rotate-1" : ""}`}>
-                                    <div className="flex items-start justify-between">
-                                      <p className="text-sm font-bold text-foreground leading-tight">{lead.clientName}</p>
-                                      <div className="flex items-center gap-1">
-                                        {urgency !== "ok" && (
-                                          <TooltipProvider>
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <span className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${config.badgeClass}`}>
-                                                  <Clock className="h-2.5 w-2.5" />{idleTime}
-                                                </span>
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                <p>Parado há {idleTime} — {config.label}</p>
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
+                                    <SwipeableCard
+                                      onEdit={() => setEditingLead(lead)}
+                                      onDelete={() => setPendingDeleteId(lead.id)}
+                                      onMoveNext={stage.key !== "fechado" ? () => moveToNextStage(lead) : undefined}
+                                    >
+                                      <div className={`
+                                        rounded-xl border-l-[3px] p-3.5 
+                                        bg-card text-card-foreground
+                                        border border-border/30 border-l-0
+                                        shadow-sm
+                                        transition-all duration-200
+                                        hover:shadow-md hover:border-border/60
+                                        cursor-grab active:cursor-grabbing
+                                        group
+                                        ${stageColorMap[stage.key]} 
+                                        ${config.borderClass} 
+                                        ${config.pulse ? "animate-urgency-pulse" : ""} 
+                                        ${snapshot.isDragging ? "shadow-xl ring-2 ring-primary/20 rotate-[1.5deg] scale-[1.02]" : ""}
+                                      `}>
+                                        {/* Header row */}
+                                        <div className="flex items-start justify-between gap-2">
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stageBgMap[stage.key]} text-[10px] font-extrabold`}>
+                                              {lead.clientName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                            </div>
+                                            <p className="text-[13px] font-bold text-foreground leading-tight truncate">{lead.clientName}</p>
+                                          </div>
+                                          <div className="flex items-center gap-1 shrink-0">
+                                            {urgency !== "ok" && (
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <span className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${config.badgeClass}`}>
+                                                      <Clock className="h-2.5 w-2.5" />{idleTime}
+                                                    </span>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>
+                                                    <p>Parado há {idleTime} — {config.label}</p>
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            )}
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
+                                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-muted"
+                                            >
+                                              <Pencil className="h-3 w-3 text-muted-foreground" />
+                                            </button>
+                                          </div>
+                                        </div>
+
+                                        {/* Contact info */}
+                                        <div className="mt-2 space-y-1">
+                                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                            <Phone className="h-3 w-3 shrink-0" />
+                                            <span>{lead.clientPhone}</span>
+                                          </div>
+                                          {lead.clientEmail && (
+                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                              <Mail className="h-3 w-3 shrink-0" />
+                                              <span className="truncate">{lead.clientEmail}</span>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Value + Source */}
+                                        <div className="mt-2.5 flex items-center justify-between">
+                                          <div className="flex items-center gap-1 text-xs font-bold text-foreground">
+                                            <DollarSign className="h-3 w-3 text-success" />
+                                            R$ {lead.value.toLocaleString("pt-BR")}
+                                          </div>
+                                          <span className="text-[10px] font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">{lead.source}</span>
+                                        </div>
+
+                                        {/* Tags */}
+                                        {lead.tags.length > 0 && (
+                                          <div className="mt-2 flex flex-wrap gap-1">
+                                            {lead.tags.map((tag) => (
+                                              <span key={tag} className="inline-flex items-center gap-0.5 rounded-full bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary border border-primary/10">
+                                                <Tag className="h-2.5 w-2.5" />{tag}
+                                              </span>
+                                            ))}
+                                          </div>
                                         )}
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
-                                        className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-1.5 -mr-1 -mt-1 rounded hover:bg-muted"
-                                      >
-                                        <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                                      </button>
+
+                                        {/* Follow-up reminder */}
+                                        {lead.nextFollowUp && (
+                                          <div className="mt-2.5 rounded-lg bg-warning/8 border border-warning/15 px-2.5 py-1.5 text-[10px] font-semibold text-warning flex items-center gap-1.5">
+                                            <Clock className="h-3 w-3" />
+                                            Follow-up: {new Date(lead.nextFollowUp).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                                          </div>
+                                        )}
                                       </div>
-                                    </div>
-                                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                      <Phone className="h-3 w-3" />
-                                      <span>{lead.clientPhone}</span>
-                                    </div>
-                                    {lead.clientEmail && (
-                                      <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                        <Mail className="h-3 w-3" />
-                                        <span className="truncate">{lead.clientEmail}</span>
-                                      </div>
-                                    )}
-                                    <div className="mt-2 flex items-center justify-between">
-                                      <div className="flex items-center gap-1 text-xs font-bold text-foreground">
-                                        <DollarSign className="h-3 w-3" />
-                                        R$ {lead.value.toLocaleString("pt-BR")}
-                                      </div>
-                                      <span className="text-[10px] text-muted-foreground">{lead.source}</span>
-                                    </div>
-                                    {lead.tags.length > 0 && (
-                                      <div className="mt-2 flex flex-wrap gap-1">
-                                        {lead.tags.map((tag) => (
-                                          <span key={tag} className="inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                                            <Tag className="h-2.5 w-2.5" />{tag}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    )}
-                                    {lead.nextFollowUp && (
-                                      <div className="mt-2 rounded bg-warning/10 px-2 py-1 text-[10px] font-semibold text-warning">
-                                        📅 Follow-up: {new Date(lead.nextFollowUp).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                                      </div>
-                                    )}
-                                  </div>
-                                </SwipeableCard>
+                                    </SwipeableCard>
                                   );
                                 })()}
                               </div>
                             )}
                           </Draggable>
                         ))}
+                        {stageLeads.length === 0 && (
+                          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground/40">
+                            <div className={`h-10 w-10 rounded-full ${stageBgMap[stage.key]} flex items-center justify-center mb-2 opacity-40`}>
+                              <Plus className="h-4 w-4" />
+                            </div>
+                            <p className="text-[11px]">Sem leads</p>
+                          </div>
+                        )}
                         {provided.placeholder}
                       </div>
                     )}
