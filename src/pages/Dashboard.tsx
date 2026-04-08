@@ -82,12 +82,12 @@ export default function Dashboard() {
   const filteredLeads = useMemo(() => {
     if (!startDate) return leads;
     return leads.filter((l) => isAfter(new Date(l.createdAt), startDate));
-  }, [leads, period]);
+  }, [leads, startDate]);
 
   const filteredFollowUps = useMemo(() => {
     if (!startDate) return followUps;
     return followUps.filter((f) => isAfter(new Date(f.scheduledAt), startDate));
-  }, [followUps, period]);
+  }, [followUps, startDate]);
 
   const totalLeads = filteredLeads.length;
   const closedLeads = filteredLeads.filter((l) => l.stage === "fechado").length;
@@ -96,9 +96,36 @@ export default function Dashboard() {
 
   const responseLabel = avgResponseMin !== null ? `${avgResponseMin} min` : "...";
 
+  // Calculate previous period for comparison
+  const prevPeriodLeads = useMemo(() => {
+    if (!startDate) return [];
+    const periodMs = Date.now() - startDate.getTime();
+    const prevStart = new Date(startDate.getTime() - periodMs);
+    return leads.filter((l) => {
+      const d = new Date(l.createdAt);
+      return isAfter(d, prevStart) && !isAfter(d, startDate);
+    });
+  }, [leads, startDate]);
+
+  const prevActiveLeads = startDate ? prevPeriodLeads.filter((l) => l.stage !== "fechado").length : 0;
+  const prevClosedLeads = startDate ? prevPeriodLeads.filter((l) => l.stage === "fechado").length : 0;
+  const prevConversionRate = startDate && prevPeriodLeads.length > 0 ? Math.round((prevClosedLeads / prevPeriodLeads.length) * 100) : 0;
+
+  const activeLeads = totalLeads - closedLeads;
+  const activeLeadsDiff = startDate && prevActiveLeads > 0 ? Math.round(((activeLeads - prevActiveLeads) / prevActiveLeads) * 100) : null;
+  const conversionDiff = startDate && prevConversionRate > 0 ? conversionRate - prevConversionRate : null;
+
+  const formatChange = (diff: number | null) => {
+    if (diff === null) return { text: "—", positive: true };
+    return { text: `${diff >= 0 ? "+" : ""}${diff}%`, positive: diff >= 0 };
+  };
+
+  const activeChange = formatChange(activeLeadsDiff);
+  const convChange = formatChange(conversionDiff);
+
   const kpis = [
-    { label: "Leads Ativos", value: totalLeads - closedLeads, icon: Users, change: "+12%", positive: true, color: "bg-primary" },
-    { label: "Taxa de Conversão", value: `${conversionRate}%`, icon: Target, change: "+3%", positive: true, color: "bg-kanban-closed" },
+    { label: "Leads Ativos", value: activeLeads, icon: Users, change: activeChange.text, positive: activeChange.positive, color: "bg-primary" },
+    { label: "Taxa de Conversão", value: `${conversionRate}%`, icon: Target, change: convChange.text, positive: convChange.positive, color: "bg-kanban-closed" },
     { label: "Tempo Médio Resposta", value: responseLabel, icon: Clock, change: "", positive: true, color: "bg-kanban-quote" },
     { label: "Follow-ups Pendentes", value: pendingFollowUps, icon: Phone, change: `${pendingFollowUps}`, positive: false, color: "bg-accent" },
   ];
@@ -138,18 +165,24 @@ export default function Dashboard() {
       grouped[key] = (grouped[key] || 0) + 1;
     });
 
-    return Object.entries(grouped)
-      .sort(([a], [b]) => {
-        // parse back for sorting
-        const parseKey = (k: string) => {
-          if (useWeeks) {
-            const [dd, mm] = k.split("/");
-            return new Date(2026, parseInt(mm) - 1, parseInt(dd)).getTime();
-          }
-          return new Date(k.replace("/", " 20")).getTime();
-        };
-        return parseKey(a) - parseKey(b);
-      })
+    // Sort by actual date stored alongside
+    const entries = Object.entries(grouped);
+    // Re-derive sort keys from filtered leads dates
+    const sortKeys: Record<string, number> = {};
+    filteredLeads.forEach((l) => {
+      const d = new Date(l.createdAt);
+      const key = useWeeks
+        ? format(startOfWeek(d, { weekStartsOn: 1 }), "dd/MM")
+        : format(startOfMonth(d), "MMM/yy");
+      if (!sortKeys[key]) {
+        sortKeys[key] = useWeeks
+          ? startOfWeek(d, { weekStartsOn: 1 }).getTime()
+          : startOfMonth(d).getTime();
+      }
+    });
+
+    return entries
+      .sort(([a], [b]) => (sortKeys[a] || 0) - (sortKeys[b] || 0))
       .map(([key, count]) => ({ periodo: key, leads: count }));
   }, [filteredLeads, period]);
 
@@ -196,7 +229,7 @@ export default function Dashboard() {
                     <span className={`text-xs font-semibold ${kpi.positive ? "text-success" : "text-accent"}`}>
                       {kpi.change}
                     </span>
-                    <span className="text-xs text-muted-foreground">vs mês anterior</span>
+                    <span className="text-xs text-muted-foreground">vs período anterior</span>
                   </div>
                 </CardContent>
               </Card>
