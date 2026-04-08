@@ -4,11 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, ArrowLeft, Send, Phone, User, Check, CheckCheck, Smile, Paperclip, Mic, MoreVertical } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Search, MessageSquare, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { motion, AnimatePresence } from "framer-motion";
 
+// ── Types ──
 interface WhatsAppMessage {
   id: string;
   message_id: string;
@@ -27,6 +30,7 @@ interface Conversation {
   messages: WhatsAppMessage[];
 }
 
+// ── Helpers ──
 function formatMessageDate(dateStr: string) {
   const date = new Date(dateStr);
   if (isToday(date)) return format(date, "HH:mm");
@@ -53,12 +57,10 @@ function groupMessagesByDate(messages: WhatsAppMessage[]) {
 
 function formatPhone(phone: string) {
   const clean = phone.replace(/\D/g, "");
-  if (clean.length === 13) {
+  if (clean.length === 13)
     return `+${clean.slice(0, 2)} (${clean.slice(2, 4)}) ${clean.slice(4, 9)}-${clean.slice(9)}`;
-  }
-  if (clean.length === 12) {
+  if (clean.length === 12)
     return `+${clean.slice(0, 2)} (${clean.slice(2, 4)}) ${clean.slice(4, 8)}-${clean.slice(8)}`;
-  }
   return phone;
 }
 
@@ -66,6 +68,25 @@ function getInitials(name: string) {
   return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 }
 
+// ── Avatar colors using design tokens ──
+const avatarGradients = [
+  "from-emerald-500 to-teal-600",
+  "from-sky-500 to-blue-600",
+  "from-violet-500 to-purple-600",
+  "from-amber-500 to-orange-600",
+  "from-rose-500 to-pink-600",
+  "from-teal-500 to-cyan-600",
+  "from-indigo-500 to-blue-700",
+  "from-orange-500 to-red-500",
+];
+
+function getAvatarGradient(phone: string) {
+  let hash = 0;
+  for (let i = 0; i < phone.length; i++) hash = phone.charCodeAt(i) + ((hash << 5) - hash);
+  return avatarGradients[Math.abs(hash) % avatarGradients.length];
+}
+
+// ── Mock data ──
 const now = new Date();
 const mockMessages: WhatsAppMessage[] = [
   { id: "m1", message_id: "mock1", phone: "5511999887766", body: "Olá, gostaria de saber o preço da tinta acrílica Suvinil 18L", is_from_me: false, timestamp: new Date(now.getTime() - 3600000 * 3).toISOString(), created_at: null },
@@ -95,18 +116,7 @@ const mockContactNames: Record<string, string> = {
   "5511955443322": "Roberto Pintor",
 };
 
-// Avatar color palette
-const avatarColors = [
-  "bg-emerald-500", "bg-sky-500", "bg-violet-500", "bg-amber-500", "bg-rose-500",
-  "bg-teal-500", "bg-indigo-500", "bg-orange-500",
-];
-
-function getAvatarColor(phone: string) {
-  let hash = 0;
-  for (let i = 0; i < phone.length; i++) hash = phone.charCodeAt(i) + ((hash << 5) - hash);
-  return avatarColors[Math.abs(hash) % avatarColors.length];
-}
-
+// ── Component ──
 export default function Conversas() {
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,7 +174,6 @@ export default function Conversas() {
         conv.lastTimestamp = ts;
         conv.lastMessage = msg.body || "";
       }
-      // Count unread (incoming messages)
       if (!msg.is_from_me) conv.unreadCount++;
     });
     return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
@@ -182,7 +191,6 @@ export default function Conversas() {
     setShowMobileChat(true);
   };
 
-  // Contact name resolution
   useEffect(() => {
     if (useMock) {
       setContactNames(mockContactNames);
@@ -205,31 +213,36 @@ export default function Conversas() {
 
   return (
     <AppLayout title="Conversas">
-      <div className="flex h-[calc(100vh-8rem)] rounded-xl overflow-hidden border border-border shadow-lg">
-        {/* Left panel - Conversation list */}
+      <div className="flex h-[calc(100vh-8rem)] rounded-2xl overflow-hidden border border-border/60 bg-card" style={{ boxShadow: "var(--shadow-elevated)" }}>
+        {/* ── Left panel ── */}
         <div className={cn(
-          "w-full md:w-[380px] flex flex-col shrink-0 border-r border-border",
+          "w-full md:w-[380px] flex flex-col shrink-0 border-r border-border/40",
           showMobileChat && "hidden md:flex"
         )}>
           {/* Header */}
-          <div className="h-14 flex items-center justify-between px-4 bg-[hsl(var(--wa-teal))] shrink-0">
-            <h2 className="text-white font-semibold text-base">Conversas</h2>
+          <div className="h-16 flex items-center justify-between px-4 bg-gradient-to-r from-primary to-primary/80 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-primary-foreground/15 flex items-center justify-center">
+                <MessageCircle className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <h2 className="text-primary-foreground font-bold text-base tracking-tight">Conversas</h2>
+            </div>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/10">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
+              <Badge variant="secondary" className="bg-primary-foreground/15 text-primary-foreground border-0 text-xs font-semibold">
+                {conversations.length}
+              </Badge>
             </div>
           </div>
 
           {/* Search */}
-          <div className="p-2 bg-card">
+          <div className="p-3 bg-card border-b border-border/30">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Pesquisar ou começar uma nova conversa"
+                placeholder="Pesquisar conversa..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-9 rounded-lg bg-muted/60 border-0 text-sm placeholder:text-muted-foreground/70 focus-visible:ring-0"
+                className="pl-9 h-10 rounded-xl bg-muted/50 border-border/40 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-1 focus-visible:ring-primary/30"
               />
             </div>
           </div>
@@ -237,125 +250,146 @@ export default function Conversas() {
           {/* Conversations list */}
           <ScrollArea className="flex-1 bg-card">
             {loading ? (
-              <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
+              <div className="flex items-center justify-center h-32 text-sm text-muted-foreground gap-2">
+                <Clock className="h-4 w-4 animate-spin" />
                 Carregando conversas...
               </div>
             ) : filteredConversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground">
-                <MessageSquare className="h-8 w-8 opacity-50" />
+              <div className="flex flex-col items-center justify-center h-40 gap-3 text-muted-foreground">
+                <div className="h-14 w-14 rounded-2xl bg-muted/60 flex items-center justify-center">
+                  <MessageSquare className="h-7 w-7 text-muted-foreground/50" />
+                </div>
                 <span className="text-sm">Nenhuma conversa encontrada</span>
               </div>
             ) : (
-              <div>
-                {filteredConversations.map((conv) => {
-                  const name = contactNames[conv.phone] || formatPhone(conv.phone);
-                  const lastMsgIsFromMe = conv.messages[conv.messages.length - 1]?.is_from_me;
-                  return (
-                    <button
-                      key={conv.phone}
-                      onClick={() => handleSelectConversation(conv.phone)}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/50",
-                        selectedPhone === conv.phone && "bg-muted"
-                      )}
-                    >
-                      {/* Avatar */}
-                      <div className={cn(
-                        "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white font-semibold text-sm",
-                        getAvatarColor(conv.phone)
-                      )}>
-                        {contactNames[conv.phone] ? getInitials(contactNames[conv.phone]) : <User className="h-5 w-5" />}
-                      </div>
+              <div className="py-1">
+                <AnimatePresence>
+                  {filteredConversations.map((conv, idx) => {
+                    const name = contactNames[conv.phone] || formatPhone(conv.phone);
+                    const lastMsgIsFromMe = conv.messages[conv.messages.length - 1]?.is_from_me;
+                    const isSelected = selectedPhone === conv.phone;
+                    return (
+                      <motion.button
+                        key={conv.phone}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.03, duration: 0.2 }}
+                        onClick={() => handleSelectConversation(conv.phone)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-3 text-left transition-all duration-200",
+                          isSelected
+                            ? "bg-primary/8 border-l-3 border-l-primary"
+                            : "hover:bg-muted/40 border-l-3 border-l-transparent"
+                        )}
+                      >
+                        {/* Avatar */}
+                        <div className={cn(
+                          "flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-white font-bold text-sm shadow-sm",
+                          getAvatarGradient(conv.phone)
+                        )}>
+                          {contactNames[conv.phone] ? getInitials(contactNames[conv.phone]) : <User className="h-5 w-5" />}
+                        </div>
 
-                      <div className="flex-1 min-w-0 border-b border-border/40 pb-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[15px] font-medium text-foreground truncate">
-                            {name}
-                          </span>
-                          <span className={cn(
-                            "text-xs shrink-0",
-                            conv.unreadCount > 0 ? "text-[hsl(var(--wa-green))] font-medium" : "text-muted-foreground"
-                          )}>
-                            {conv.lastTimestamp && formatMessageDate(conv.lastTimestamp)}
-                          </span>
+                        <div className="flex-1 min-w-0 py-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={cn(
+                              "text-[15px] truncate",
+                              isSelected ? "font-bold text-foreground" : "font-medium text-foreground"
+                            )}>
+                              {name}
+                            </span>
+                            <span className={cn(
+                              "text-[11px] shrink-0 font-medium",
+                              conv.unreadCount > 0 ? "text-primary" : "text-muted-foreground"
+                            )}>
+                              {conv.lastTimestamp && formatMessageDate(conv.lastTimestamp)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {lastMsgIsFromMe && (
+                              <CheckCheck className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+                            )}
+                            <p className="text-[13px] text-muted-foreground truncate flex-1">
+                              {conv.lastMessage || "Sem mensagem"}
+                            </p>
+                            {conv.unreadCount > 0 && (
+                              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1.5">
+                                {conv.unreadCount}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          {lastMsgIsFromMe && (
-                            <CheckCheck className="h-4 w-4 shrink-0 text-sky-500" />
-                          )}
-                          <p className="text-sm text-muted-foreground truncate">
-                            {conv.lastMessage || "Sem mensagem"}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                      </motion.button>
+                    );
+                  })}
+                </AnimatePresence>
               </div>
             )}
           </ScrollArea>
         </div>
 
-        {/* Right panel - Chat area */}
+        {/* ── Right panel - Chat ── */}
         <div className={cn(
-          "flex-1 flex flex-col min-w-0",
+          "flex-1 flex flex-col min-w-0 bg-muted/20",
           !showMobileChat && "hidden md:flex"
         )}>
           {selectedConversation ? (
             <>
               {/* Chat header */}
-              <div className="h-14 flex items-center gap-3 px-3 bg-[hsl(var(--wa-teal))] shrink-0">
+              <div className="h-16 flex items-center gap-3 px-4 bg-gradient-to-r from-primary to-primary/80 shrink-0">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="md:hidden h-8 w-8 text-white/80 hover:text-white hover:bg-white/10"
+                  className="md:hidden h-8 w-8 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
                   onClick={() => setShowMobileChat(false)}
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white font-semibold text-sm",
-                  getAvatarColor(selectedConversation.phone)
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-white font-bold text-sm shadow-sm ring-2 ring-primary-foreground/20",
+                  getAvatarGradient(selectedConversation.phone)
                 )}>
                   {contactName ? getInitials(contactName) : <User className="h-5 w-5" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">
+                  <p className="text-sm font-bold text-primary-foreground truncate">
                     {contactName || formatPhone(selectedConversation.phone)}
                   </p>
                   {contactName && (
-                    <p className="text-[11px] text-white/70 flex items-center gap-1">
+                    <p className="text-[11px] text-primary-foreground/60 flex items-center gap-1">
                       <Phone className="h-3 w-3" />
                       {formatPhone(selectedConversation.phone)}
                     </p>
                   )}
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/10">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </div>
 
-              {/* Messages area with WhatsApp-style background */}
+              {/* Messages area */}
               <div
-                className="flex-1 overflow-y-auto p-3 sm:p-4"
+                className="flex-1 overflow-y-auto p-4 sm:p-6"
                 style={{
-                  backgroundColor: "hsl(var(--wa-chat-bg))",
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 10c-2 0-4 1-4 3s2 3 4 3 4-1 4-3-2-3-4-3zm-15 15c-2 0-4 1-4 3s2 3 4 3 4-1 4-3-2-3-4-3zm30 0c-2 0-4 1-4 3s2 3 4 3 4-1 4-3-2-3-4-3zm-15 15c-2 0-4 1-4 3s2 3 4 3 4-1 4-3-2-3-4-3z' fill='%23000' fill-opacity='.03'/%3E%3C/svg%3E")`,
+                  background: "linear-gradient(180deg, hsl(var(--muted) / 0.3) 0%, hsl(var(--background)) 100%)",
                 }}
               >
                 <div className="max-w-3xl mx-auto space-y-2">
                   {groupMessagesByDate(selectedConversation.messages).map(([dateKey, msgs]) => (
                     <div key={dateKey}>
                       {/* Date separator */}
-                      <div className="flex justify-center my-3">
-                        <span className="text-[11px] bg-white/80 dark:bg-card/80 backdrop-blur-sm px-3 py-1 rounded-lg text-muted-foreground font-medium shadow-sm">
+                      <div className="flex justify-center my-4">
+                        <span className="text-[11px] glass-card px-4 py-1.5 rounded-full text-muted-foreground font-semibold shadow-sm border border-border/30">
                           {formatFullDate(msgs[0].timestamp || msgs[0].created_at || "")}
                         </span>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         {msgs.map((msg) => (
-                          <div
+                          <motion.div
                             key={msg.id}
+                            initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ duration: 0.2 }}
                             className={cn(
                               "flex",
                               msg.is_from_me ? "justify-end" : "justify-start"
@@ -363,35 +397,28 @@ export default function Conversas() {
                           >
                             <div
                               className={cn(
-                                "relative max-w-[80%] sm:max-w-[65%] rounded-lg px-3 py-1.5 text-[14.5px] shadow-sm",
+                                "relative max-w-[80%] sm:max-w-[65%] rounded-2xl px-3.5 py-2 text-[14px] leading-relaxed",
                                 msg.is_from_me
-                                  ? "bg-[hsl(var(--wa-outgoing))] dark:bg-[hsl(142,40%,25%)] rounded-tr-none"
-                                  : "bg-white dark:bg-card rounded-tl-none"
+                                  ? "bg-primary text-primary-foreground rounded-br-md shadow-md"
+                                  : "bg-card text-foreground rounded-bl-md shadow-sm border border-border/40"
                               )}
                             >
-                              {/* Message tail */}
-                              <div className={cn(
-                                "absolute top-0 w-3 h-3",
-                                msg.is_from_me
-                                  ? "-right-1.5 border-l-[6px] border-l-[hsl(var(--wa-outgoing))] dark:border-l-[hsl(142,40%,25%)] border-t-[6px] border-t-[hsl(var(--wa-outgoing))] dark:border-t-[hsl(142,40%,25%)] border-r-[6px] border-r-transparent border-b-[6px] border-b-transparent"
-                                  : "-left-1.5 border-r-[6px] border-r-white dark:border-r-card border-t-[6px] border-t-white dark:border-t-card border-l-[6px] border-l-transparent border-b-[6px] border-b-transparent"
-                              )} />
-
-                              <p className="whitespace-pre-wrap break-words text-foreground leading-[1.35]">
+                              <p className="whitespace-pre-wrap break-words">
                                 {msg.body || ""}
                               </p>
-                              <div className={cn(
-                                "flex items-center justify-end gap-1 -mb-0.5 mt-0.5",
-                              )}>
-                                <span className="text-[10px] text-muted-foreground">
+                              <div className="flex items-center justify-end gap-1 mt-1">
+                                <span className={cn(
+                                  "text-[10px]",
+                                  msg.is_from_me ? "text-primary-foreground/60" : "text-muted-foreground"
+                                )}>
                                   {msg.timestamp && format(new Date(msg.timestamp), "HH:mm")}
                                 </span>
                                 {msg.is_from_me && (
-                                  <CheckCheck className="h-3.5 w-3.5 text-sky-500" />
+                                  <CheckCheck className="h-3.5 w-3.5 text-primary-foreground/60" />
                                 )}
                               </div>
                             </div>
-                          </div>
+                          </motion.div>
                         ))}
                       </div>
                     </div>
@@ -401,28 +428,27 @@ export default function Conversas() {
               </div>
 
               {/* Message input bar */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-t border-border shrink-0">
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground shrink-0">
+              <div className="flex items-center gap-2 px-4 py-3 bg-card border-t border-border/40 shrink-0">
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground shrink-0 rounded-xl">
                   <Smile className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground shrink-0">
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground shrink-0 rounded-xl">
                   <Paperclip className="h-5 w-5" />
                 </Button>
                 <Input
-                  placeholder="Digite uma mensagem"
+                  placeholder="Digite uma mensagem..."
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
-                  className="flex-1 h-10 rounded-lg bg-card border-0 text-sm focus-visible:ring-0"
+                  className="flex-1 h-10 rounded-xl bg-muted/40 border-border/40 text-sm focus-visible:ring-1 focus-visible:ring-primary/30"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
-                      // TODO: Send message via API
                     }
                   }}
                 />
                 <Button
                   size="icon"
-                  className="h-10 w-10 rounded-full bg-[hsl(var(--wa-teal))] hover:bg-[hsl(var(--wa-green-dark))] text-white shrink-0"
+                  className="h-10 w-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 shadow-md transition-all"
                 >
                   {messageInput.trim() ? (
                     <Send className="h-4 w-4" />
@@ -434,16 +460,25 @@ export default function Conversas() {
             </>
           ) : (
             /* Empty state */
-            <div className="flex-1 flex flex-col items-center justify-center gap-4" style={{ backgroundColor: "hsl(var(--wa-chat-bg))" }}>
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted/80">
-                <MessageSquare className="h-10 w-10 text-muted-foreground/60" />
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-light text-foreground/80">CRM Taeco Web</p>
-                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                  Envie e receba mensagens pelo WhatsApp. Selecione uma conversa ao lado para começar.
-                </p>
-              </div>
+            <div className="flex-1 flex flex-col items-center justify-center gap-5"
+              style={{ background: "linear-gradient(180deg, hsl(var(--muted) / 0.2) 0%, hsl(var(--background)) 100%)" }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+                className="flex flex-col items-center gap-4"
+              >
+                <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center shadow-lg">
+                  <MessageSquare className="h-12 w-12 text-primary/50" />
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold text-foreground/80">Central de Atendimento</p>
+                  <p className="text-sm text-muted-foreground mt-1.5 max-w-sm leading-relaxed">
+                    Selecione uma conversa ao lado para visualizar as mensagens e interagir com seus clientes.
+                  </p>
+                </div>
+              </motion.div>
             </div>
           )}
         </div>
