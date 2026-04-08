@@ -41,8 +41,13 @@ export default function Agenda() {
 
   const filtered = followUps
     .filter((f) => {
-      if (view === "pending") return !f.completed;
-      if (view === "completed") return f.completed;
+      if (view === "pending" && f.completed) return false;
+      if (view === "completed" && !f.completed) return false;
+      // Filter by selected date
+      if (selectedDate) {
+        const fDate = new Date(f.scheduledAt).toDateString();
+        if (fDate !== selectedDate.toDateString()) return false;
+      }
       return true;
     })
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());

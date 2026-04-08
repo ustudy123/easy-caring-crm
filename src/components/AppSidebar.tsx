@@ -36,7 +36,7 @@ const menuItemsDef = [
   { title: "Clientes", url: "/clientes", icon: Users, badgeKey: null as null },
   { title: "Agenda", url: "/agenda", icon: CalendarDays, badgeKey: "pendingFollowUps" as const },
   { title: "Campanhas", url: "/campanhas", icon: Megaphone, badgeKey: "negotiation" as const },
-  { title: "Conversas", url: "/conversas", icon: MessageSquare, badgeKey: null as null },
+  { title: "Conversas", url: "/conversas", icon: MessageSquare, badgeKey: "whatsapp" as const },
   { title: "Suporte Orçamento", url: "/suporte-orcamento", icon: FileText, badgeKey: null as null },
 ];
 
@@ -44,7 +44,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { newLeadsCount, pendingFollowUpsCount, negotiationCount } = useCrm();
+  const { newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount } = useCrm();
 
   const STORAGE_KEY = "crm-sidebar-dismissed";
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
@@ -57,16 +57,18 @@ export function AppSidebar() {
     if (location.pathname === "/kanban") next.newLeads = newLeadsCount;
     if (location.pathname === "/agenda") next.pendingFollowUps = pendingFollowUpsCount;
     if (location.pathname === "/campanhas") next.negotiation = negotiationCount;
+    if (location.pathname === "/conversas") next.whatsapp = unreadWhatsAppCount;
     if (JSON.stringify(next) !== JSON.stringify(dismissed)) {
       setDismissed(next);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     }
-  }, [location.pathname, newLeadsCount, pendingFollowUpsCount, negotiationCount]);
+  }, [location.pathname, newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount]);
 
   const badgeMap: Record<string, number> = {
     newLeads: Math.max(0, newLeadsCount - (dismissed.newLeads ?? 0)),
     pendingFollowUps: Math.max(0, pendingFollowUpsCount - (dismissed.pendingFollowUps ?? 0)),
     negotiation: Math.max(0, negotiationCount - (dismissed.negotiation ?? 0)),
+    whatsapp: Math.max(0, unreadWhatsAppCount - (dismissed.whatsapp ?? 0)),
   };
 
   const menuItems = menuItemsDef.map((item) => ({
