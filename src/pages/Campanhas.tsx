@@ -16,10 +16,10 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } 
 const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
 
 const channelConfig: Record<string, { icon: typeof MessageCircle; label: string; color: string }> = {
-  whatsapp: { icon: MessageCircle, label: "WhatsApp", color: "bg-kanban-new text-white" },
+  whatsapp: { icon: MessageCircle, label: "WhatsApp", color: "bg-kanban-approach text-white" },
   instagram: { icon: Instagram, label: "Instagram", color: "bg-accent text-white" },
   meta: { icon: Globe, label: "Meta Ads", color: "bg-primary text-white" },
-  google: { icon: Globe, label: "Google Ads", color: "bg-kanban-quote text-white" },
+  google: { icon: Globe, label: "Google Ads", color: "bg-kanban-demonstration text-white" },
   indicacao: { icon: Share2, label: "Indicação", color: "bg-secondary text-white" },
 };
 
@@ -96,8 +96,8 @@ export default function Campanhas() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { label: "Leads Gerados", value: totalLeads, icon: Users, color: "bg-primary" },
-            { label: "Conversões", value: totalConversions, icon: Target, color: "bg-kanban-closed" },
-            { label: "Investimento", value: `R$ ${totalBudget.toLocaleString("pt-BR")}`, icon: DollarSign, color: "bg-kanban-quote" },
+            { label: "Conversões", value: totalConversions, icon: Target, color: "bg-kanban-closing" },
+            { label: "Investimento", value: `R$ ${totalBudget.toLocaleString("pt-BR")}`, icon: DollarSign, color: "bg-kanban-demonstration" },
             { label: "Custo por Lead", value: `R$ ${avgCPL}`, icon: TrendingUp, color: "bg-secondary" },
           ].map((kpi) => (
             <motion.div key={kpi.label} variants={item}>
@@ -182,7 +182,7 @@ export default function Campanhas() {
                       </div>
                       <div className="rounded-lg bg-muted p-2">
                         <p className="text-[10px] text-muted-foreground">Conversões</p>
-                        <p className="text-sm font-bold text-kanban-closed">{campaign.conversions}</p>
+                        <p className="text-sm font-bold text-kanban-closing">{campaign.conversions}</p>
                       </div>
                       <div className="rounded-lg bg-muted p-2">
                         <p className="text-[10px] text-muted-foreground">CPL</p>

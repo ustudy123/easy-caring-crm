@@ -4,12 +4,14 @@ export type UrgencyLevel = "ok" | "attention" | "warning" | "critical";
 
 // Max idle hours per stage before escalating urgency
 const STAGE_THRESHOLDS: Record<KanbanStage, { attention: number; warning: number; critical: number }> = {
-  novo_lead: { attention: 2, warning: 6, critical: 24 },
-  em_atendimento: { attention: 12, warning: 24, critical: 48 },
-  precificacao_especial: { attention: 24, warning: 48, critical: 72 },
-  orcamento_enviado: { attention: 24, warning: 48, critical: 72 },
-  negociacao: { attention: 24, warning: 48, critical: 96 },
-  fechado: { attention: Infinity, warning: Infinity, critical: Infinity },
+  abordagem: { attention: 2, warning: 6, critical: 24 },
+  sondagem: { attention: 12, warning: 24, critical: 48 },
+  recomendacao_tecnica: { attention: 24, warning: 48, critical: 72 },
+  demonstracao_valor: { attention: 24, warning: 48, critical: 72 },
+  contorno_objecoes: { attention: 24, warning: 48, critical: 96 },
+  cross_sell: { attention: 24, warning: 48, critical: 72 },
+  fechamento: { attention: Infinity, warning: Infinity, critical: Infinity },
+  pos_venda: { attention: Infinity, warning: Infinity, critical: Infinity },
 };
 
 export function getIdleHours(lead: Lead): number {
@@ -19,7 +21,7 @@ export function getIdleHours(lead: Lead): number {
 }
 
 export function getUrgencyLevel(lead: Lead): UrgencyLevel {
-  if (lead.stage === "fechado") return "ok";
+  if (lead.stage === "fechamento" || lead.stage === "pos_venda") return "ok";
   const hours = getIdleHours(lead);
   const thresholds = STAGE_THRESHOLDS[lead.stage];
   if (hours >= thresholds.critical) return "critical";

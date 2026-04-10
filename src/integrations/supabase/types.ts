@@ -338,12 +338,14 @@ export type Database = {
       follow_up_type: "call" | "whatsapp" | "visit" | "email"
       interaction_type: "whatsapp" | "phone" | "email" | "visit" | "note"
       kanban_stage:
-        | "novo_lead"
-        | "em_atendimento"
-        | "precificacao_especial"
-        | "orcamento_enviado"
-        | "negociacao"
-        | "fechado"
+        | "abordagem"
+        | "sondagem"
+        | "recomendacao_tecnica"
+        | "demonstracao_valor"
+        | "contorno_objecoes"
+        | "cross_sell"
+        | "fechamento"
+        | "pos_venda"
       seller_role: "vendedor" | "gerente"
     }
     CompositeTypes: {
@@ -483,12 +485,14 @@ export const Constants = {
       follow_up_type: ["call", "whatsapp", "visit", "email"],
       interaction_type: ["whatsapp", "phone", "email", "visit", "note"],
       kanban_stage: [
-        "novo_lead",
-        "em_atendimento",
-        "precificacao_especial",
-        "orcamento_enviado",
-        "negociacao",
-        "fechado",
+        "abordagem",
+        "sondagem",
+        "recomendacao_tecnica",
+        "demonstracao_valor",
+        "contorno_objecoes",
+        "cross_sell",
+        "fechamento",
+        "pos_venda",
       ],
       seller_role: ["vendedor", "gerente"],
     },

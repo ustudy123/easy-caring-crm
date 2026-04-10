@@ -22,7 +22,7 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
   const sellers = useSellers();
   const [form, setForm] = useState({
     clientName: "", clientPhone: "", clientEmail: "", value: "",
-    source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "novo_lead" as KanbanStage,
+    source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "abordagem" as KanbanStage,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -61,7 +61,7 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
     };
     onSubmit(newLead);
     toast({ title: "Lead criado!", description: `${newLead.clientName} adicionado ao Kanban.` });
-    setForm({ clientName: "", clientPhone: "", clientEmail: "", value: "", source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "novo_lead" });
+    setForm({ clientName: "", clientPhone: "", clientEmail: "", value: "", source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "abordagem" });
     setErrors({});
     onOpenChange(false);
   };
@@ -111,11 +111,14 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
               <Select value={form.stage} onValueChange={(v) => update("stage", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="novo_lead">Novo Lead</SelectItem>
-                  <SelectItem value="em_atendimento">Em Atendimento</SelectItem>
-                  <SelectItem value="orcamento_enviado">Orçamento Enviado</SelectItem>
-                  <SelectItem value="negociacao">Negociação</SelectItem>
-                  <SelectItem value="fechado">Fechado</SelectItem>
+                  <SelectItem value="abordagem">Abordagem</SelectItem>
+                  <SelectItem value="sondagem">Sondagem</SelectItem>
+                  <SelectItem value="recomendacao_tecnica">Recomendação</SelectItem>
+                  <SelectItem value="demonstracao_valor">Demonstração</SelectItem>
+                  <SelectItem value="contorno_objecoes">Objeções</SelectItem>
+                  <SelectItem value="cross_sell">Cross-sell</SelectItem>
+                  <SelectItem value="fechamento">Fechamento</SelectItem>
+                  <SelectItem value="pos_venda">Pós-Venda</SelectItem>
                 </SelectContent>
               </Select>
             </div>
