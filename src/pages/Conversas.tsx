@@ -300,7 +300,7 @@ export default function Conversas() {
                 </AnimatePresence>
               </div>
             )}
-          </ScrollArea>
+          </div>
         </div>
 
         {/* ── Right panel - Chat area ── */}
