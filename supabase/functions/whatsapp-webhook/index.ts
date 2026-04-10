@@ -62,7 +62,7 @@ serve(async (req) => {
             client_name: contactName,
             client_phone: cleanPhone,
             source: "whatsapp",
-            stage: "novo_lead",
+            stage: "abordagem",
             notes: `Mensagem automática: "${text.substring(0, 200)}"`,
             tags: ["whatsapp", "auto"],
             value: 0,

@@ -162,7 +162,7 @@ export default function Kanban() {
                 )}
               </PopoverContent>
             </Popover>
-            <Button size="sm" variant="outline" className="rounded-xl border-kanban-pricing/40 text-kanban-pricing hover:bg-kanban-pricing/10"
+            <Button size="sm" variant="outline" className="rounded-xl border-kanban-objections/40 text-kanban-objections hover:bg-kanban-objections/10"
               onClick={() => navigate("/suporte-orcamento")}>
               <FileText className="h-3.5 w-3.5 mr-1" /> Suporte Orçamento
             </Button>

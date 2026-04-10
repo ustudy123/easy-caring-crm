@@ -73,8 +73,8 @@ function getStartDate(period: PeriodKey): Date | null {
 
 const KPI_GRADIENTS = [
   "from-primary/90 to-info/80",
-  "from-kanban-closed/90 to-success/80",
-  "from-kanban-quote/90 to-warning/80",
+  "from-kanban-closing/90 to-success/80",
+  "from-kanban-demonstration/90 to-warning/80",
   "from-accent/90 to-secondary/80",
 ];
 
@@ -477,8 +477,8 @@ export default function Dashboard() {
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-kanban-attending/10">
-                  <Users className="h-3.5 w-3.5 text-kanban-attending" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-kanban-probing/10">
+                  <Users className="h-3.5 w-3.5 text-kanban-probing" />
                 </div>
                 Desempenho por Vendedor
               </CardTitle>
@@ -525,10 +525,10 @@ export default function Dashboard() {
                     <div key={f.id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-border/60 p-3 gap-2 hover:bg-muted/30 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                          f.type === 'call' ? 'bg-kanban-attending/15 text-kanban-attending' :
-                          f.type === 'whatsapp' ? 'bg-kanban-new/15 text-kanban-new' :
-                          f.type === 'visit' ? 'bg-kanban-negotiation/15 text-kanban-negotiation' :
-                          'bg-kanban-quote/15 text-kanban-quote'
+                          f.type === 'call' ? 'bg-kanban-probing/15 text-kanban-probing' :
+                          f.type === 'whatsapp' ? 'bg-kanban-approach/15 text-kanban-approach' :
+                          f.type === 'visit' ? 'bg-kanban-recommendation/15 text-kanban-recommendation' :
+                          'bg-kanban-demonstration/15 text-kanban-demonstration'
                         }`}>
                           {f.type === 'call' ? <Phone className="h-4 w-4" /> : <MessageCircle className="h-4 w-4" />}
                         </div>

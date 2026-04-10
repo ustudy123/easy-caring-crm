@@ -168,7 +168,7 @@ export default function SuporteOrcamento() {
               onClick={() => { setRequestType("precificacao_especial"); setShowForm(true); }}
               variant="outline"
               size="sm"
-              className="border-kanban-pricing text-kanban-pricing hover:bg-kanban-pricing/10"
+              className="border-kanban-recommendation text-kanban-recommendation hover:bg-kanban-recommendation/10"
             >
               <DollarSign className="h-3.5 w-3.5 mr-1" /> Negociação Especial
             </Button>
