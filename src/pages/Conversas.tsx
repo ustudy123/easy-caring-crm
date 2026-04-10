@@ -108,6 +108,7 @@ export default function Conversas() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [useMock, setUseMock] = useState(false);
   const [contactNames, setContactNames] = useState<Record<string, string>>({});
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     const fetchMessages = async () => {
