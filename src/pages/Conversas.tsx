@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 // ── Types ──
 interface WhatsAppMessage {
@@ -206,10 +207,14 @@ export default function Conversas() {
 
       if (error) {
         console.error("Erro ao enviar mensagem:", error);
-        setMessageInput(text); // restore on error
+        toast.error("Erro ao enviar mensagem. Tente novamente.");
+        setMessageInput(text);
+      } else {
+        toast.success("Mensagem enviada com sucesso!");
       }
     } catch (err) {
       console.error("Erro ao enviar mensagem:", err);
+      toast.error("Falha na conexão. Verifique sua internet.");
       setMessageInput(text);
     } finally {
       setSending(false);
