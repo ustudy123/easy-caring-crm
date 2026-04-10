@@ -33,7 +33,6 @@ serve(async (req) => {
 
     // Send message via uazapi
     const cleanPhone = phone.replace(/\D/g, "");
-    const jid = cleanPhone.includes("@") ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
 
     const apiResponse = await fetch(`${whatsappApiUrl}/message/sendText`, {
       method: "POST",
@@ -42,8 +41,8 @@ serve(async (req) => {
         "Authorization": `Bearer ${whatsappApiKey}`,
       },
       body: JSON.stringify({
-        id: jid,
-        message: message,
+        number: cleanPhone,
+        text: message,
       }),
     });
 
