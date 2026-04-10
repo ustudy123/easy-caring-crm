@@ -13,8 +13,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
   SidebarContent,
@@ -44,7 +45,9 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const navigate = useNavigate();
   const { newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount } = useCrm();
+  const { user, signOut } = useAuth();
 
   const STORAGE_KEY = "crm-sidebar-dismissed";
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
@@ -180,15 +183,18 @@ export function AppSidebar() {
         {!collapsed && (
           <div className="mt-2 flex items-center gap-3 rounded-xl bg-sidebar-accent/60 p-3 border border-sidebar-border/30">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-xs font-bold text-primary-foreground shadow-md ring-2 ring-sidebar-accent">
-              CS
+              {(user?.email?.[0] || "U").toUpperCase()}
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-xs font-semibold text-sidebar-foreground">
-                Carlos Silva
+                {user?.user_metadata?.display_name || user?.email || "Usuário"}
               </span>
-              <span className="text-[10px] text-sidebar-foreground/40">Vendedor</span>
+              <span className="text-[10px] text-sidebar-foreground/40">{user?.email}</span>
             </div>
-            <button className="rounded-lg p-1.5 text-sidebar-foreground/35 transition-colors hover:bg-sidebar-border/50 hover:text-sidebar-foreground/70">
+            <button
+              onClick={async () => { await signOut(); navigate("/login"); }}
+              className="rounded-lg p-1.5 text-sidebar-foreground/35 transition-colors hover:bg-sidebar-border/50 hover:text-sidebar-foreground/70"
+            >
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -196,9 +202,13 @@ export function AppSidebar() {
 
         {collapsed && (
           <div className="mt-1 flex justify-center">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-xs font-bold text-primary-foreground shadow-md ring-2 ring-sidebar-accent">
-              CS
-            </div>
+            <button
+              onClick={async () => { await signOut(); navigate("/login"); }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-xs font-bold text-primary-foreground shadow-md ring-2 ring-sidebar-accent"
+              title="Sair"
+            >
+              {(user?.email?.[0] || "U").toUpperCase()}
+            </button>
           </div>
         )}
       </SidebarFooter>
