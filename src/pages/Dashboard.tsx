@@ -97,7 +97,7 @@ export default function Dashboard() {
   }, [followUps, startDate]);
 
   const totalLeads = filteredLeads.length;
-  const closedLeads = filteredLeads.filter((l) => l.stage === "fechado").length;
+  const closedLeads = filteredLeads.filter((l) => l.stage === "fechamento" || l.stage === "pos_venda").length;
   const conversionRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
   const pendingFollowUps = filteredFollowUps.filter((f) => !f.completed).length;
 
@@ -113,8 +113,8 @@ export default function Dashboard() {
     });
   }, [leads, startDate]);
 
-  const prevActiveLeads = startDate ? prevPeriodLeads.filter((l) => l.stage !== "fechado").length : 0;
-  const prevClosedLeads = startDate ? prevPeriodLeads.filter((l) => l.stage === "fechado").length : 0;
+  const prevActiveLeads = startDate ? prevPeriodLeads.filter((l) => l.stage !== "fechamento" && l.stage !== "pos_venda").length : 0;
+  const prevClosedLeads = startDate ? prevPeriodLeads.filter((l) => l.stage === "fechamento" || l.stage === "pos_venda").length : 0;
   const prevConversionRate = startDate && prevPeriodLeads.length > 0 ? Math.round((prevClosedLeads / prevPeriodLeads.length) * 100) : 0;
 
   const activeLeads = totalLeads - closedLeads;
@@ -278,12 +278,14 @@ export default function Dashboard() {
                   const maxLeads = Math.max(...funnelData.map(s => s.leads), 1);
                   const widthPct = Math.max(30, Math.round((stage.leads / maxLeads) * 100));
                   const FUNNEL_COLORS = [
-                    "hsl(var(--kanban-new))",
-                    "hsl(var(--kanban-attending))",
-                    "hsl(var(--kanban-pricing))",
-                    "hsl(var(--kanban-quote))",
-                    "hsl(var(--kanban-negotiation))",
-                    "hsl(var(--kanban-closed))",
+                    "hsl(var(--kanban-approach))",
+                    "hsl(var(--kanban-probing))",
+                    "hsl(var(--kanban-recommendation))",
+                    "hsl(var(--kanban-demonstration))",
+                    "hsl(var(--kanban-objections))",
+                    "hsl(var(--kanban-crosssell))",
+                    "hsl(var(--kanban-closing))",
+                    "hsl(var(--kanban-postsale))",
                   ];
                   const bgColor = FUNNEL_COLORS[i] || "hsl(var(--primary))";
 

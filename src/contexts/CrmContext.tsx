@@ -204,9 +204,9 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     if (error) console.error("Error deleting follow-up:", error);
   }, []);
 
-  const newLeadsCount = leads.filter((l) => l.stage === "novo_lead").length;
+  const newLeadsCount = leads.filter((l) => l.stage === "abordagem").length;
   const pendingFollowUpsCount = followUps.filter((f) => !f.completed).length;
-  const negotiationCount = leads.filter((l) => l.stage === "negociacao").length;
+  const negotiationCount = leads.filter((l) => l.stage === "contorno_objecoes").length;
 
   return (
     <CrmContext.Provider

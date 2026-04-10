@@ -19,39 +19,47 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const stageColorMap: Record<KanbanStage, string> = {
-  novo_lead: "border-l-kanban-new",
-  em_atendimento: "border-l-kanban-attending",
-  precificacao_especial: "border-l-kanban-pricing",
-  orcamento_enviado: "border-l-kanban-quote",
-  negociacao: "border-l-kanban-negotiation",
-  fechado: "border-l-kanban-closed",
+  abordagem: "border-l-kanban-approach",
+  sondagem: "border-l-kanban-probing",
+  recomendacao_tecnica: "border-l-kanban-recommendation",
+  demonstracao_valor: "border-l-kanban-demonstration",
+  contorno_objecoes: "border-l-kanban-objections",
+  cross_sell: "border-l-kanban-crosssell",
+  fechamento: "border-l-kanban-closing",
+  pos_venda: "border-l-kanban-postsale",
 };
 
 const stageBgMap: Record<KanbanStage, string> = {
-  novo_lead: "bg-kanban-new/8 text-kanban-new",
-  em_atendimento: "bg-kanban-attending/8 text-kanban-attending",
-  precificacao_especial: "bg-kanban-pricing/8 text-kanban-pricing",
-  orcamento_enviado: "bg-kanban-quote/8 text-kanban-quote",
-  negociacao: "bg-kanban-negotiation/8 text-kanban-negotiation",
-  fechado: "bg-kanban-closed/8 text-kanban-closed",
+  abordagem: "bg-kanban-approach/8 text-kanban-approach",
+  sondagem: "bg-kanban-probing/8 text-kanban-probing",
+  recomendacao_tecnica: "bg-kanban-recommendation/8 text-kanban-recommendation",
+  demonstracao_valor: "bg-kanban-demonstration/8 text-kanban-demonstration",
+  contorno_objecoes: "bg-kanban-objections/8 text-kanban-objections",
+  cross_sell: "bg-kanban-crosssell/8 text-kanban-crosssell",
+  fechamento: "bg-kanban-closing/8 text-kanban-closing",
+  pos_venda: "bg-kanban-postsale/8 text-kanban-postsale",
 };
 
 const stageDotMap: Record<KanbanStage, string> = {
-  novo_lead: "bg-kanban-new",
-  em_atendimento: "bg-kanban-attending",
-  precificacao_especial: "bg-kanban-pricing",
-  orcamento_enviado: "bg-kanban-quote",
-  negociacao: "bg-kanban-negotiation",
-  fechado: "bg-kanban-closed",
+  abordagem: "bg-kanban-approach",
+  sondagem: "bg-kanban-probing",
+  recomendacao_tecnica: "bg-kanban-recommendation",
+  demonstracao_valor: "bg-kanban-demonstration",
+  contorno_objecoes: "bg-kanban-objections",
+  cross_sell: "bg-kanban-crosssell",
+  fechamento: "bg-kanban-closing",
+  pos_venda: "bg-kanban-postsale",
 };
 
 const stageHeaderGradient: Record<KanbanStage, string> = {
-  novo_lead: "from-kanban-new/15 to-kanban-new/5",
-  em_atendimento: "from-kanban-attending/15 to-kanban-attending/5",
-  precificacao_especial: "from-kanban-pricing/15 to-kanban-pricing/5",
-  orcamento_enviado: "from-kanban-quote/15 to-kanban-quote/5",
-  negociacao: "from-kanban-negotiation/15 to-kanban-negotiation/5",
-  fechado: "from-kanban-closed/15 to-kanban-closed/5",
+  abordagem: "from-kanban-approach/15 to-kanban-approach/5",
+  sondagem: "from-kanban-probing/15 to-kanban-probing/5",
+  recomendacao_tecnica: "from-kanban-recommendation/15 to-kanban-recommendation/5",
+  demonstracao_valor: "from-kanban-demonstration/15 to-kanban-demonstration/5",
+  contorno_objecoes: "from-kanban-objections/15 to-kanban-objections/5",
+  cross_sell: "from-kanban-crosssell/15 to-kanban-crosssell/5",
+  fechamento: "from-kanban-closing/15 to-kanban-closing/5",
+  pos_venda: "from-kanban-postsale/15 to-kanban-postsale/5",
 };
 
 export default function Kanban() {
@@ -226,7 +234,7 @@ export default function Kanban() {
                                     <SwipeableCard
                                       onEdit={() => setEditingLead(lead)}
                                       onDelete={() => setPendingDeleteId(lead.id)}
-                                      onMoveNext={stage.key !== "fechado" ? () => moveToNextStage(lead) : undefined}
+                                      onMoveNext={stage.key !== "pos_venda" ? () => moveToNextStage(lead) : undefined}
                                     >
                                       <div className={`
                                         rounded-xl border-l-[3px] p-3.5 

@@ -35,7 +35,7 @@ export default function SuporteOrcamento() {
 
   // Leads that are in relevant stages
   const relevantLeads = leads.filter(
-    (l) => ["em_atendimento", "precificacao_especial", "orcamento_enviado", "negociacao"].includes(l.stage)
+    (l) => ["sondagem", "recomendacao_tecnica", "demonstracao_valor", "contorno_objecoes"].includes(l.stage)
   );
 
   const filteredRequests = requests.filter((r) => {
@@ -64,9 +64,9 @@ export default function SuporteOrcamento() {
 
     setRequests((prev) => [newRequest, ...prev]);
 
-    // If special pricing, move lead to precificacao_especial stage
-    if (requestType === "precificacao_especial" && lead.stage !== "precificacao_especial") {
-      updateLead({ ...lead, stage: "precificacao_especial" });
+    // If special pricing, move lead to recomendacao_tecnica stage
+    if (requestType === "precificacao_especial" && lead.stage !== "recomendacao_tecnica") {
+      updateLead({ ...lead, stage: "recomendacao_tecnica" });
     }
 
     toast.success(
