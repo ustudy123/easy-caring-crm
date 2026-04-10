@@ -40,13 +40,15 @@
 
     --radius: 0.75rem;
 
-    /* Kanban stage colors */
-    --kanban-new: 152 60% 42%;
-    --kanban-attending: 217 78% 52%;
-    --kanban-pricing: 338 76% 52%;
-    --kanban-quote: 28 86% 52%;
-    --kanban-negotiation: 262 60% 55%;
-    --kanban-closed: 160 72% 38%;
+    /* Kanban stage colors - 8 etapas do método */
+    --kanban-approach: 152 60% 42%;
+    --kanban-probing: 217 78% 52%;
+    --kanban-recommendation: 262 60% 55%;
+    --kanban-demonstration: 28 86% 52%;
+    --kanban-objections: 338 76% 52%;
+    --kanban-crosssell: 174 62% 38%;
+    --kanban-closing: 160 72% 38%;
+    --kanban-postsale: 45 80% 50%;
 
     /* Extra vibrant accents */
     --success: 152 60% 42%;

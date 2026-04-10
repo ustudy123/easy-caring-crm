@@ -1,4 +1,4 @@
-export type KanbanStage = 'novo_lead' | 'em_atendimento' | 'precificacao_especial' | 'orcamento_enviado' | 'negociacao' | 'fechado';
+export type KanbanStage = 'abordagem' | 'sondagem' | 'recomendacao_tecnica' | 'demonstracao_valor' | 'contorno_objecoes' | 'cross_sell' | 'fechamento' | 'pos_venda';
 
 export interface Lead {
   id: string;
@@ -74,10 +74,12 @@ export interface Seller {
 }
 
 export const KANBAN_STAGES: { key: KanbanStage; label: string; color: string }[] = [
-  { key: 'novo_lead', label: 'Novo Lead', color: 'kanban-new' },
-  { key: 'em_atendimento', label: 'Em Atendimento', color: 'kanban-attending' },
-  { key: 'precificacao_especial', label: 'Precificação Especial', color: 'kanban-pricing' },
-  { key: 'orcamento_enviado', label: 'Orçamento Enviado', color: 'kanban-quote' },
-  { key: 'negociacao', label: 'Negociação', color: 'kanban-negotiation' },
-  { key: 'fechado', label: 'Fechado', color: 'kanban-closed' },
+  { key: 'abordagem', label: 'Abordagem', color: 'kanban-approach' },
+  { key: 'sondagem', label: 'Sondagem', color: 'kanban-probing' },
+  { key: 'recomendacao_tecnica', label: 'Recomendação', color: 'kanban-recommendation' },
+  { key: 'demonstracao_valor', label: 'Demonstração', color: 'kanban-demonstration' },
+  { key: 'contorno_objecoes', label: 'Objeções', color: 'kanban-objections' },
+  { key: 'cross_sell', label: 'Cross-sell', color: 'kanban-crosssell' },
+  { key: 'fechamento', label: 'Fechamento', color: 'kanban-closing' },
+  { key: 'pos_venda', label: 'Pós-Venda', color: 'kanban-postsale' },
 ];
