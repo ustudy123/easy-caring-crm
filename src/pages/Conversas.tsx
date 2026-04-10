@@ -428,6 +428,7 @@ export default function Conversas() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
+                      handleSendMessage();
                     }
                   }}
                 />
@@ -435,6 +436,8 @@ export default function Conversas() {
                   size="icon"
                   className="h-[48px] w-[48px] rounded-full shrink-0 shadow-md transition-all"
                   style={{ backgroundColor: "hsl(var(--wa-green))" }}
+                  disabled={!messageInput.trim() || sending}
+                  onClick={handleSendMessage}
                 >
                   {messageInput.trim() ? (
                     <Send className="h-5 w-5 text-white" />
