@@ -4,8 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Search, MessageSquare, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock } from "lucide-react";
+import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,9 +39,9 @@ function formatMessageDate(dateStr: string) {
 
 function formatFullDate(dateStr: string) {
   const date = new Date(dateStr);
-  if (isToday(date)) return "Hoje";
-  if (isYesterday(date)) return "Ontem";
-  return format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  if (isToday(date)) return "HOJE";
+  if (isYesterday(date)) return "ONTEM";
+  return format(date, "dd/MM/yyyy", { locale: ptBR });
 }
 
 function groupMessagesByDate(messages: WhatsAppMessage[]) {
@@ -66,24 +65,6 @@ function formatPhone(phone: string) {
 
 function getInitials(name: string) {
   return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-}
-
-// ── Avatar colors using design tokens ──
-const avatarGradients = [
-  "from-emerald-500 to-teal-600",
-  "from-sky-500 to-blue-600",
-  "from-violet-500 to-purple-600",
-  "from-amber-500 to-orange-600",
-  "from-rose-500 to-pink-600",
-  "from-teal-500 to-cyan-600",
-  "from-indigo-500 to-blue-700",
-  "from-orange-500 to-red-500",
-];
-
-function getAvatarGradient(phone: string) {
-  let hash = 0;
-  for (let i = 0; i < phone.length; i++) hash = phone.charCodeAt(i) + ((hash << 5) - hash);
-  return avatarGradients[Math.abs(hash) % avatarGradients.length];
 }
 
 // ── Mock data ──
@@ -213,42 +194,41 @@ export default function Conversas() {
 
   return (
     <AppLayout title="Conversas">
-      <div className="flex h-[calc(100vh-8rem)] rounded-2xl overflow-hidden border border-border/60 bg-card" style={{ boxShadow: "var(--shadow-elevated)" }}>
-        {/* ── Left panel ── */}
+      <div className="flex h-[calc(100vh-5rem)] overflow-hidden bg-background">
+        {/* ── Left panel - Contact list ── */}
         <div className={cn(
-          "w-full md:w-[380px] flex flex-col shrink-0 border-r border-border/40",
+          "w-full md:w-[420px] lg:w-[380px] flex flex-col shrink-0 border-r border-border/30 bg-card",
           showMobileChat && "hidden md:flex"
         )}>
-          {/* Header */}
-          <div className="h-16 flex items-center justify-between px-4 bg-gradient-to-r from-primary to-primary/80 shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-primary-foreground/15 flex items-center justify-center">
-                <MessageCircle className="h-4 w-4 text-primary-foreground" />
+          {/* WhatsApp-style header */}
+          <div className="h-14 flex items-center justify-between px-4" style={{ backgroundColor: "hsl(var(--wa-header))" }}>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-white/15 flex items-center justify-center">
+                <MessageCircle className="h-5 w-5 text-white" />
               </div>
-              <h2 className="text-primary-foreground font-bold text-base tracking-tight">Conversas</h2>
             </div>
             <div className="flex items-center gap-1">
-              <Badge variant="secondary" className="bg-primary-foreground/15 text-primary-foreground border-0 text-xs font-semibold">
-                {conversations.length}
-              </Badge>
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-full">
+                <MoreVertical className="h-5 w-5" />
+              </Button>
             </div>
           </div>
 
-          {/* Search */}
-          <div className="p-3 bg-card border-b border-border/30">
+          {/* Search bar */}
+          <div className="px-2 py-2 bg-card">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
               <Input
-                placeholder="Pesquisar conversa..."
+                placeholder="Pesquisar ou começar uma nova conversa"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-10 rounded-xl bg-muted/50 border-border/40 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-1 focus-visible:ring-primary/30"
+                className="pl-10 h-9 rounded-lg bg-muted/50 border-0 text-sm placeholder:text-muted-foreground/50 focus-visible:ring-0 focus-visible:bg-muted/70"
               />
             </div>
           </div>
 
           {/* Conversations list */}
-          <ScrollArea className="flex-1 bg-card">
+          <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center h-32 text-sm text-muted-foreground gap-2">
                 <Clock className="h-4 w-4 animate-spin" />
@@ -256,13 +236,11 @@ export default function Conversas() {
               </div>
             ) : filteredConversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-40 gap-3 text-muted-foreground">
-                <div className="h-14 w-14 rounded-2xl bg-muted/60 flex items-center justify-center">
-                  <MessageSquare className="h-7 w-7 text-muted-foreground/50" />
-                </div>
+                <Search className="h-8 w-8 text-muted-foreground/30" />
                 <span className="text-sm">Nenhuma conversa encontrada</span>
               </div>
             ) : (
-              <div className="py-1">
+              <div>
                 <AnimatePresence>
                   {filteredConversations.map((conv, idx) => {
                     const name = contactNames[conv.phone] || formatPhone(conv.phone);
@@ -271,49 +249,46 @@ export default function Conversas() {
                     return (
                       <motion.button
                         key={conv.phone}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.03, duration: 0.2 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: idx * 0.02, duration: 0.15 }}
                         onClick={() => handleSelectConversation(conv.phone)}
                         className={cn(
-                          "w-full flex items-center gap-3 px-3 py-3 text-left transition-all duration-200",
-                          isSelected
-                            ? "bg-primary/8 border-l-3 border-l-primary"
-                            : "hover:bg-muted/40 border-l-3 border-l-transparent"
+                          "w-full flex items-center gap-3 px-3 py-3 text-left transition-colors duration-100 hover:bg-muted/40",
+                          isSelected && "bg-muted/60"
                         )}
                       >
                         {/* Avatar */}
-                        <div className={cn(
-                          "flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-white font-bold text-sm shadow-sm",
-                          getAvatarGradient(conv.phone)
-                        )}>
-                          {contactNames[conv.phone] ? getInitials(contactNames[conv.phone]) : <User className="h-5 w-5" />}
+                        <div className="flex h-[49px] w-[49px] shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                          {contactNames[conv.phone] ? (
+                            <span className="text-sm font-semibold">{getInitials(contactNames[conv.phone])}</span>
+                          ) : (
+                            <User className="h-6 w-6" />
+                          )}
                         </div>
 
-                        <div className="flex-1 min-w-0 py-1">
+                        <div className="flex-1 min-w-0 border-b border-border/20 pb-3">
                           <div className="flex items-center justify-between gap-2">
-                            <span className={cn(
-                              "text-[15px] truncate",
-                              isSelected ? "font-bold text-foreground" : "font-medium text-foreground"
-                            )}>
+                            <span className="text-[16px] font-normal text-foreground truncate">
                               {name}
                             </span>
                             <span className={cn(
-                              "text-[11px] shrink-0 font-medium",
-                              conv.unreadCount > 0 ? "text-primary" : "text-muted-foreground"
+                              "text-[12px] shrink-0",
+                              conv.unreadCount > 0 ? "text-[hsl(var(--wa-green))]" : "text-muted-foreground"
                             )}>
                               {conv.lastTimestamp && formatMessageDate(conv.lastTimestamp)}
                             </span>
                           </div>
-                          <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="flex items-center gap-1 mt-0.5">
                             {lastMsgIsFromMe && (
-                              <CheckCheck className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+                              <CheckCheck className="h-4 w-4 shrink-0 text-[hsl(var(--wa-green))]/70" />
                             )}
-                            <p className="text-[13px] text-muted-foreground truncate flex-1">
+                            <p className="text-[14px] text-muted-foreground truncate flex-1 leading-snug">
                               {conv.lastMessage || "Sem mensagem"}
                             </p>
                             {conv.unreadCount > 0 && (
-                              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1.5">
+                              <span className="flex h-[20px] min-w-[20px] items-center justify-center rounded-full text-[11px] font-medium px-1.5"
+                                style={{ backgroundColor: "hsl(var(--wa-green))", color: "white" }}>
                                 {conv.unreadCount}
                               </span>
                             )}
@@ -325,71 +300,78 @@ export default function Conversas() {
                 </AnimatePresence>
               </div>
             )}
-          </ScrollArea>
+          </div>
         </div>
 
-        {/* ── Right panel - Chat ── */}
+        {/* ── Right panel - Chat area ── */}
         <div className={cn(
-          "flex-1 flex flex-col min-w-0 bg-muted/20",
+          "flex-1 flex flex-col min-w-0",
           !showMobileChat && "hidden md:flex"
         )}>
           {selectedConversation ? (
             <>
               {/* Chat header */}
-              <div className="h-16 flex items-center gap-3 px-4 bg-gradient-to-r from-primary to-primary/80 shrink-0">
+              <div className="h-14 flex items-center gap-3 px-4 shrink-0 border-b border-border/20"
+                style={{ backgroundColor: "hsl(var(--wa-header))" }}>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="md:hidden h-8 w-8 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                  className="md:hidden h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-full"
                   onClick={() => setShowMobileChat(false)}
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <div className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-white font-bold text-sm shadow-sm ring-2 ring-primary-foreground/20",
-                  getAvatarGradient(selectedConversation.phone)
-                )}>
-                  {contactName ? getInitials(contactName) : <User className="h-5 w-5" />}
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                  {contactName ? (
+                    <span className="text-sm font-semibold text-white">{getInitials(contactName)}</span>
+                  ) : (
+                    <User className="h-5 w-5 text-white" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-primary-foreground truncate">
+                  <p className="text-[16px] font-normal text-white truncate">
                     {contactName || formatPhone(selectedConversation.phone)}
                   </p>
                   {contactName && (
-                    <p className="text-[11px] text-primary-foreground/60 flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
+                    <p className="text-[12px] text-white/60">
                       {formatPhone(selectedConversation.phone)}
                     </p>
                   )}
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full">
+                    <Search className="h-5 w-5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full">
+                    <MoreVertical className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
 
-              {/* Messages area */}
+              {/* Messages area - WhatsApp wallpaper style */}
               <div
-                className="flex-1 overflow-y-auto p-4 sm:p-6"
+                className="flex-1 overflow-y-auto px-4 sm:px-[5%] lg:px-[8%] py-2"
                 style={{
-                  background: "linear-gradient(180deg, hsl(var(--muted) / 0.3) 0%, hsl(var(--background)) 100%)",
+                  backgroundColor: "hsl(var(--wa-chat-bg))",
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
                 }}
               >
-                <div className="max-w-3xl mx-auto space-y-2">
+                <div className="max-w-3xl mx-auto space-y-1">
                   {groupMessagesByDate(selectedConversation.messages).map(([dateKey, msgs]) => (
                     <div key={dateKey}>
-                      {/* Date separator */}
-                      <div className="flex justify-center my-4">
-                        <span className="text-[11px] glass-card px-4 py-1.5 rounded-full text-muted-foreground font-semibold shadow-sm border border-border/30">
+                      {/* Date separator - WhatsApp style */}
+                      <div className="flex justify-center my-3">
+                        <span className="text-[12px] bg-card/90 px-3 py-1 rounded-lg text-muted-foreground shadow-sm">
                           {formatFullDate(msgs[0].timestamp || msgs[0].created_at || "")}
                         </span>
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-[2px]">
                         {msgs.map((msg) => (
                           <motion.div
                             key={msg.id}
-                            initial={{ opacity: 0, y: 8, scale: 0.97 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            transition={{ duration: 0.2 }}
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.15 }}
                             className={cn(
                               "flex",
                               msg.is_from_me ? "justify-end" : "justify-start"
@@ -397,24 +379,26 @@ export default function Conversas() {
                           >
                             <div
                               className={cn(
-                                "relative max-w-[80%] sm:max-w-[65%] rounded-2xl px-3.5 py-2 text-[14px] leading-relaxed",
+                                "relative max-w-[85%] sm:max-w-[65%] px-3 py-1.5 text-[14.2px] leading-[19px] shadow-sm",
                                 msg.is_from_me
-                                  ? "bg-primary text-primary-foreground rounded-br-md shadow-md"
-                                  : "bg-card text-foreground rounded-bl-md shadow-sm border border-border/40"
+                                  ? "rounded-lg rounded-tr-none"
+                                  : "rounded-lg rounded-tl-none"
                               )}
+                              style={{
+                                backgroundColor: msg.is_from_me
+                                  ? "hsl(var(--wa-outgoing))"
+                                  : "hsl(var(--wa-incoming))",
+                              }}
                             >
-                              <p className="whitespace-pre-wrap break-words">
+                              <p className="whitespace-pre-wrap break-words text-foreground">
                                 {msg.body || ""}
                               </p>
-                              <div className="flex items-center justify-end gap-1 mt-1">
-                                <span className={cn(
-                                  "text-[10px]",
-                                  msg.is_from_me ? "text-primary-foreground/60" : "text-muted-foreground"
-                                )}>
+                              <div className="flex items-center justify-end gap-1 -mb-0.5 mt-0.5">
+                                <span className="text-[11px] text-muted-foreground/70">
                                   {msg.timestamp && format(new Date(msg.timestamp), "HH:mm")}
                                 </span>
                                 {msg.is_from_me && (
-                                  <CheckCheck className="h-3.5 w-3.5 text-primary-foreground/60" />
+                                  <CheckCheck className="h-[16px] w-[16px]" style={{ color: "hsl(var(--wa-green))" }} />
                                 )}
                               </div>
                             </div>
@@ -427,19 +411,19 @@ export default function Conversas() {
                 </div>
               </div>
 
-              {/* Message input bar */}
-              <div className="flex items-center gap-2 px-4 py-3 bg-card border-t border-border/40 shrink-0">
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground shrink-0 rounded-xl">
-                  <Smile className="h-5 w-5" />
+              {/* Message input bar - WhatsApp style */}
+              <div className="flex items-center gap-2 px-3 py-2 shrink-0" style={{ backgroundColor: "hsl(var(--wa-light))" }}>
+                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-foreground shrink-0 rounded-full">
+                  <Smile className="h-6 w-6" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground shrink-0 rounded-xl">
-                  <Paperclip className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-foreground shrink-0 rounded-full">
+                  <Paperclip className="h-6 w-6" />
                 </Button>
                 <Input
-                  placeholder="Digite uma mensagem..."
+                  placeholder="Digite uma mensagem"
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
-                  className="flex-1 h-10 rounded-xl bg-muted/40 border-border/40 text-sm focus-visible:ring-1 focus-visible:ring-primary/30"
+                  className="flex-1 h-[42px] rounded-lg bg-card border-0 text-[15px] placeholder:text-muted-foreground/50 focus-visible:ring-0 shadow-sm"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -448,35 +432,42 @@ export default function Conversas() {
                 />
                 <Button
                   size="icon"
-                  className="h-10 w-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 shadow-md transition-all"
+                  className="h-[48px] w-[48px] rounded-full shrink-0 shadow-md transition-all"
+                  style={{ backgroundColor: "hsl(var(--wa-green))" }}
                 >
                   {messageInput.trim() ? (
-                    <Send className="h-4 w-4" />
+                    <Send className="h-5 w-5 text-white" />
                   ) : (
-                    <Mic className="h-5 w-5" />
+                    <Mic className="h-6 w-6 text-white" />
                   )}
                 </Button>
               </div>
             </>
           ) : (
-            /* Empty state */
-            <div className="flex-1 flex flex-col items-center justify-center gap-5"
-              style={{ background: "linear-gradient(180deg, hsl(var(--muted) / 0.2) 0%, hsl(var(--background)) 100%)" }}
-            >
+            /* Empty state - WhatsApp Web style */
+            <div className="flex-1 flex flex-col items-center justify-center bg-muted/10 border-b-[6px]"
+              style={{ borderColor: "hsl(var(--wa-green))" }}>
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4 }}
-                className="flex flex-col items-center gap-4"
+                transition={{ duration: 0.3 }}
+                className="flex flex-col items-center gap-6 max-w-md text-center px-8"
               >
-                <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center shadow-lg">
-                  <MessageSquare className="h-12 w-12 text-primary/50" />
+                <div className="h-[212px] w-[212px] rounded-full bg-muted/30 flex items-center justify-center">
+                  <MessageCircle className="h-24 w-24 text-muted-foreground/20" />
                 </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-foreground/80">Central de Atendimento</p>
-                  <p className="text-sm text-muted-foreground mt-1.5 max-w-sm leading-relaxed">
-                    Selecione uma conversa ao lado para visualizar as mensagens e interagir com seus clientes.
+                <div>
+                  <h2 className="text-[32px] font-light text-foreground/80 mb-3">
+                    CRM Taeco WhatsApp
+                  </h2>
+                  <p className="text-[14px] text-muted-foreground leading-relaxed">
+                    Envie e receba mensagens dos seus clientes diretamente pelo CRM.
+                    Selecione uma conversa ao lado para começar.
                   </p>
+                </div>
+                <div className="flex items-center gap-2 text-[12px] text-muted-foreground/60 mt-4">
+                  <Lock className="h-3 w-3" />
+                  <span>Suas mensagens são sincronizadas em tempo real</span>
                 </div>
               </motion.div>
             </div>
