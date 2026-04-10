@@ -193,6 +193,29 @@ export default function Conversas() {
 
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
 
+  const handleSendMessage = async () => {
+    if (!messageInput.trim() || !selectedPhone || sending) return;
+    const text = messageInput.trim();
+    setMessageInput("");
+    setSending(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+        body: { phone: selectedPhone, message: text },
+      });
+
+      if (error) {
+        console.error("Erro ao enviar mensagem:", error);
+        setMessageInput(text); // restore on error
+      }
+    } catch (err) {
+      console.error("Erro ao enviar mensagem:", err);
+      setMessageInput(text);
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <AppLayout title="Conversas">
       <div className="flex h-[calc(100vh-5rem)] overflow-hidden bg-background">
