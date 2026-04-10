@@ -108,6 +108,7 @@ export default function Conversas() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [useMock, setUseMock] = useState(false);
   const [contactNames, setContactNames] = useState<Record<string, string>>({});
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -191,6 +192,29 @@ export default function Conversas() {
   }, [useMock, conversations.length]);
 
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
+
+  const handleSendMessage = async () => {
+    if (!messageInput.trim() || !selectedPhone || sending) return;
+    const text = messageInput.trim();
+    setMessageInput("");
+    setSending(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+        body: { phone: selectedPhone, message: text },
+      });
+
+      if (error) {
+        console.error("Erro ao enviar mensagem:", error);
+        setMessageInput(text); // restore on error
+      }
+    } catch (err) {
+      console.error("Erro ao enviar mensagem:", err);
+      setMessageInput(text);
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <AppLayout title="Conversas">
@@ -427,6 +451,7 @@ export default function Conversas() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
+                      handleSendMessage();
                     }
                   }}
                 />
@@ -434,6 +459,8 @@ export default function Conversas() {
                   size="icon"
                   className="h-[48px] w-[48px] rounded-full shrink-0 shadow-md transition-all"
                   style={{ backgroundColor: "hsl(var(--wa-green))" }}
+                  disabled={!messageInput.trim() || sending}
+                  onClick={handleSendMessage}
                 >
                   {messageInput.trim() ? (
                     <Send className="h-5 w-5 text-white" />
