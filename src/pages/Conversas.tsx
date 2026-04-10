@@ -228,7 +228,7 @@ export default function Conversas() {
           </div>
 
           {/* Conversations list */}
-          <ScrollArea className="flex-1">
+          <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center h-32 text-sm text-muted-foreground gap-2">
                 <Clock className="h-4 w-4 animate-spin" />
