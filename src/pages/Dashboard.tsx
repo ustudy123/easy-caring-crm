@@ -419,7 +419,7 @@ export default function Dashboard() {
               {!chartsReady ? (
                 <ChartSkeleton />
               ) : timelineData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={260}>
+                <ResponsiveContainer width="100%" height={200}>
                   <AreaChart data={timelineData}>
                     <defs>
                       <linearGradient id="leadGradient" x1="0" y1="0" x2="0" y2="1">
@@ -462,7 +462,7 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Charts row — horizontal bar + donut */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           <motion.div variants={item} className="lg:col-span-2">
             <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
