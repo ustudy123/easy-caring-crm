@@ -243,23 +243,23 @@ export default function Dashboard() {
 
   return (
     <AppLayout title="Dashboard">
-      <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
+      <motion.div variants={container} initial="hidden" animate="show" className="space-y-5 sm:space-y-8">
         {/* Welcome + Period filter */}
-        <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-foreground flex items-center gap-2">
-              {greeting} <span className="text-lg">👋</span>
+            <h2 className="text-lg sm:text-2xl font-extrabold text-foreground flex items-center gap-2">
+              {greeting} <span className="text-base sm:text-lg">👋</span>
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">Aqui está o resumo do seu CRM</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">Aqui está o resumo do seu CRM</p>
           </div>
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            <ToggleGroup type="single" value={period} onValueChange={(v) => v && setPeriod(v as PeriodKey)} className="bg-card border border-border/60 rounded-xl p-1 shadow-sm">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0 hidden sm:block" />
+            <ToggleGroup type="single" value={period} onValueChange={(v) => v && setPeriod(v as PeriodKey)} className="bg-card border border-border/60 rounded-xl p-0.5 sm:p-1 shadow-sm">
               {PERIOD_OPTIONS.map((opt) => (
                 <ToggleGroupItem
                   key={opt.value}
                   value={opt.value}
-                  className="text-xs px-3 py-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm rounded-lg transition-all"
+                  className="text-[11px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm rounded-lg transition-all"
                 >
                   {opt.label}
                 </ToggleGroupItem>
@@ -269,32 +269,32 @@ export default function Dashboard() {
         </motion.div>
 
         {/* KPIs — glassmorphism cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
           {kpis.map((kpi) => (
             <motion.div key={kpi.label} variants={item}>
               <Card className="group relative overflow-hidden border border-border/50 shadow-sm hover:shadow-md hover:border-border transition-all duration-300 glass-card">
-                <CardContent className="p-5">
+                <CardContent className="p-3 sm:p-5">
                   <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.12em]">{kpi.label}</p>
-                      <p className="text-4xl font-extrabold text-foreground tracking-tight tabular-nums leading-none mt-2">{kpi.value}</p>
+                    <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                      <p className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground tracking-[0.12em] truncate">{kpi.label}</p>
+                      <p className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight tabular-nums leading-none mt-1 sm:mt-2">{kpi.value}</p>
                     </div>
-                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${kpi.iconBg} group-hover:scale-105 transition-transform`}>
-                      <kpi.icon className={`h-5 w-5 ${kpi.iconColor}`} />
+                    <div className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-lg sm:rounded-xl ${kpi.iconBg} group-hover:scale-105 transition-transform`}>
+                      <kpi.icon className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${kpi.iconColor}`} />
                     </div>
                   </div>
                   {kpi.change && (
-                    <div className="mt-3 flex items-center gap-1.5">
+                    <div className="mt-2 sm:mt-3 flex items-center gap-1">
                       {kpi.positive ? (
-                        <span className="flex items-center gap-0.5 text-xs font-bold text-success">
-                          <ArrowUpRight className="h-3 w-3" />{kpi.change}
+                        <span className="flex items-center gap-0.5 text-[10px] sm:text-xs font-bold text-success">
+                          <ArrowUpRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />{kpi.change}
                         </span>
                       ) : (
-                        <span className="flex items-center gap-0.5 text-xs font-bold text-destructive">
-                          <ArrowDownRight className="h-3 w-3" />{kpi.change}
+                        <span className="flex items-center gap-0.5 text-[10px] sm:text-xs font-bold text-destructive">
+                          <ArrowDownRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />{kpi.change}
                         </span>
                       )}
-                      <span className="text-[10px] text-muted-foreground">vs período anterior</span>
+                      <span className="text-[9px] sm:text-[10px] text-muted-foreground hidden sm:inline">vs período anterior</span>
                     </div>
                   )}
                   {/* Left accent border */}
