@@ -19,6 +19,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, title }: AppLayoutProps) {
   const { newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount } = useCrm();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
     try {
