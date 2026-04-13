@@ -337,14 +337,14 @@ export default function Dashboard() {
                           onMouseLeave={() => setHoveredFunnel(null)}
                         >
                           {/* Stage label left */}
-                          <div className="w-28 shrink-0 text-right pr-4">
-                            <span className="text-[11px] font-medium text-muted-foreground">{stage.name}</span>
+                          <div className="w-16 sm:w-28 shrink-0 text-right pr-2 sm:pr-4">
+                            <span className="text-[9px] sm:text-[11px] font-medium text-muted-foreground leading-tight">{stage.name}</span>
                           </div>
                           {/* Bar */}
-                          <div className="flex-1 flex items-center gap-3">
+                          <div className="flex-1 flex items-center gap-1.5 sm:gap-3">
                             <div className="flex-1 relative">
                               <motion.div
-                                className="h-9 rounded-lg flex items-center justify-end pr-3 transition-all cursor-pointer"
+                                className="h-7 sm:h-9 rounded-md sm:rounded-lg flex items-center justify-end pr-2 sm:pr-3 transition-all cursor-pointer"
                                 style={{
                                   width: `${widthPct}%`,
                                   backgroundColor: stage.color,
@@ -354,16 +354,16 @@ export default function Dashboard() {
                                 animate={{ width: `${widthPct}%` }}
                                 transition={{ duration: 0.6, delay: i * 0.08, ease: "easeOut" }}
                               >
-                                <span className="text-xs font-bold text-white tabular-nums">{stage.leads}</span>
+                                <span className="text-[10px] sm:text-xs font-bold text-white tabular-nums">{stage.leads}</span>
                               </motion.div>
                             </div>
                             {/* Conversion arrow */}
                             {convRate !== null && (
-                              <span className={`text-[11px] font-bold tabular-nums w-10 shrink-0 ${convRate >= 50 ? 'text-success' : 'text-destructive'}`}>
+                              <span className={`text-[9px] sm:text-[11px] font-bold tabular-nums w-8 sm:w-10 shrink-0 ${convRate >= 50 ? 'text-success' : 'text-destructive'}`}>
                                 {convRate}%
                               </span>
                             )}
-                            {convRate === null && <span className="w-10 shrink-0" />}
+                            {convRate === null && <span className="w-8 sm:w-10 shrink-0" />}
                           </div>
                           {/* Tooltip on hover */}
                           {isHovered && (
