@@ -92,7 +92,7 @@ export function AppSidebar() {
               collapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
               isActive
                 ? "text-[#E8EAF0] font-medium"
-                : "text-[#6B7280] hover:text-[#9CA3AF]"
+                : "text-[#6B7280] hover:text-[#9CA3AF] hover:bg-[rgba(255,255,255,0.03)]"
             )}
             activeClassName=""
           >
@@ -202,7 +202,7 @@ export function AppSidebar() {
                   collapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
                   location.pathname === "/configuracoes"
                     ? "text-[#E8EAF0] font-medium"
-                    : "text-[#6B7280] hover:text-[#9CA3AF]"
+                    : "text-[#6B7280] hover:text-[#9CA3AF] hover:bg-[rgba(255,255,255,0.03)]"
                 )}
                 activeClassName=""
               >
