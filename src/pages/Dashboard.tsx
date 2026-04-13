@@ -3,57 +3,53 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCrm } from "@/contexts/CrmContext";
 import { useSellers } from "@/hooks/useSellers";
 import { KANBAN_STAGES } from "@/types/crm";
-import { TrendingUp, Users, Clock, Target, ArrowUpRight, ArrowDownRight, Phone, MessageCircle, ArrowDown, CalendarDays, Sparkles } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Area, AreaChart } from "recharts";
+import {
+  TrendingUp, Users, Clock, Target, ArrowUpRight, ArrowDownRight,
+  Phone, MessageCircle, CalendarDays, Sparkles, BarChart3,
+} from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, CartesianGrid, Area, AreaChart, LabelList,
+} from "recharts";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Skeleton } from "@/components/ui/skeleton";
 import { subDays, subMonths, startOfDay, isAfter, format, startOfWeek, startOfMonth } from "date-fns";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
 
+// --- Avg response time hook ---
 function useAvgResponseTime() {
   const [avgMinutes, setAvgMinutes] = useState<number | null>(null);
-
   useEffect(() => {
     const calc = async () => {
       const { data } = await supabase
         .from("whatsapp_messages")
         .select("phone, is_from_me, timestamp")
         .order("timestamp", { ascending: true });
-
       if (!data || data.length === 0) { setAvgMinutes(0); return; }
-
       const byPhone: Record<string, typeof data> = {};
-      data.forEach((m) => {
-        if (!byPhone[m.phone]) byPhone[m.phone] = [];
-        byPhone[m.phone].push(m);
-      });
-
+      data.forEach((m) => { if (!byPhone[m.phone]) byPhone[m.phone] = []; byPhone[m.phone].push(m); });
       const responseTimes: number[] = [];
       Object.values(byPhone).forEach((msgs) => {
         for (let i = 0; i < msgs.length - 1; i++) {
           if (!msgs[i].is_from_me && msgs[i + 1].is_from_me && msgs[i].timestamp && msgs[i + 1].timestamp) {
             const diff = new Date(msgs[i + 1].timestamp!).getTime() - new Date(msgs[i].timestamp!).getTime();
-            if (diff > 0 && diff < 24 * 60 * 60 * 1000) {
-              responseTimes.push(diff / 60000);
-            }
+            if (diff > 0 && diff < 24 * 60 * 60 * 1000) responseTimes.push(diff / 60000);
           }
         }
       });
-
       setAvgMinutes(responseTimes.length > 0 ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) : 0);
     };
     calc();
   }, []);
-
   return avgMinutes;
 }
 
 type PeriodKey = "week" | "month" | "quarter" | "all";
-
 const PERIOD_OPTIONS: { value: PeriodKey; label: string }[] = [
   { value: "week", label: "7 dias" },
   { value: "month", label: "30 dias" },
@@ -71,18 +67,57 @@ function getStartDate(period: PeriodKey): Date | null {
   }
 }
 
-const KPI_GRADIENTS = [
-  "from-primary/90 to-info/80",
-  "from-kanban-closing/90 to-success/80",
-  "from-kanban-demonstration/90 to-warning/80",
-  "from-accent/90 to-secondary/80",
+// Funnel gradient ramp: 8 stops from light blue to deep purple
+const FUNNEL_COLORS = [
+  "hsl(210, 80%, 62%)",
+  "hsl(220, 76%, 56%)",
+  "hsl(230, 72%, 52%)",
+  "hsl(240, 68%, 50%)",
+  "hsl(252, 64%, 48%)",
+  "hsl(260, 62%, 46%)",
+  "hsl(268, 60%, 44%)",
+  "hsl(275, 58%, 42%)",
 ];
+
+// Skeleton for chart loading
+function ChartSkeleton({ height = 260 }: { height?: number }) {
+  return (
+    <div className="space-y-3" style={{ height }}>
+      <div className="flex items-end gap-2 h-full">
+        {[60, 80, 45, 90, 70, 55, 85, 40].map((h, i) => (
+          <Skeleton key={i} className="flex-1 rounded-md" style={{ height: `${h}%` }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Custom tooltip for funnel
+function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count: number; value: number; convRate: number | null }) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-card p-3 shadow-lg text-xs space-y-1">
+      <p className="font-bold text-foreground">{stage}</p>
+      <p className="text-muted-foreground">Leads: <span className="font-semibold text-foreground">{count}</span></p>
+      <p className="text-muted-foreground">Valor: <span className="font-semibold text-foreground">R$ {value.toLocaleString("pt-BR")}</span></p>
+      {convRate !== null && (
+        <p className="text-muted-foreground">Conversão: <span className="font-semibold text-foreground">{convRate}%</span></p>
+      )}
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { leads, followUps } = useCrm();
   const sellers = useSellers();
   const avgResponseMin = useAvgResponseTime();
   const [period, setPeriod] = useState<PeriodKey>("all");
+  const [chartsReady, setChartsReady] = useState(false);
+  const [hoveredFunnel, setHoveredFunnel] = useState<number | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setChartsReady(true), 600);
+    return () => clearTimeout(t);
+  }, []);
 
   const startDate = getStartDate(period);
 
@@ -100,9 +135,9 @@ export default function Dashboard() {
   const closedLeads = filteredLeads.filter((l) => l.stage === "fechamento" || l.stage === "pos_venda").length;
   const conversionRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
   const pendingFollowUps = filteredFollowUps.filter((f) => !f.completed).length;
-
   const responseLabel = avgResponseMin !== null ? `${avgResponseMin} min` : "...";
 
+  // Previous period comparison
   const prevPeriodLeads = useMemo(() => {
     if (!startDate) return [];
     const periodMs = Date.now() - startDate.getTime();
@@ -129,17 +164,30 @@ export default function Dashboard() {
   const activeChange = formatChange(activeLeadsDiff);
   const convChange = formatChange(conversionDiff);
 
+  // KPI semantic colors: icon bg only
   const kpis = [
-    { label: "Leads Ativos", value: activeLeads, icon: Users, change: activeChange.text, positive: activeChange.positive },
-    { label: "Taxa de Conversão", value: `${conversionRate}%`, icon: Target, change: convChange.text, positive: convChange.positive },
-    { label: "Tempo Médio Resposta", value: responseLabel, icon: Clock, change: "", positive: true },
-    { label: "Follow-ups Pendentes", value: pendingFollowUps, icon: Phone, change: `${pendingFollowUps}`, positive: false },
+    { label: "LEADS ATIVOS", value: activeLeads, icon: Users, change: activeChange.text, positive: activeChange.positive, iconColor: "text-primary", iconBg: "bg-primary/10" },
+    { label: "TAXA DE CONVERSÃO", value: `${conversionRate}%`, icon: Target, change: convChange.text, positive: convChange.positive, iconColor: "text-success", iconBg: "bg-success/10" },
+    { label: "TEMPO MÉDIO RESPOSTA", value: responseLabel, icon: Clock, change: "", positive: true, iconColor: "text-warning", iconBg: "bg-warning/10" },
+    { label: "FOLLOW-UPS PENDENTES", value: pendingFollowUps, icon: Phone, change: `${pendingFollowUps}`, positive: false, iconColor: "text-destructive", iconBg: "bg-destructive/10" },
   ];
 
-  const funnelData = KANBAN_STAGES.map((stage) => ({
-    name: stage.label,
-    leads: filteredLeads.filter((l) => l.stage === stage.key).length,
-    valor: filteredLeads.filter((l) => l.stage === stage.key).reduce((s, l) => s + l.value, 0),
+  // Funnel data
+  const funnelData = KANBAN_STAGES.map((stage, i) => {
+    const stageLeads = filteredLeads.filter((l) => l.stage === stage.key);
+    return {
+      name: stage.label,
+      leads: stageLeads.length,
+      valor: stageLeads.reduce((s, l) => s + l.value, 0),
+      color: FUNNEL_COLORS[i],
+    };
+  });
+
+  // Horizontal bar data for "Leads e Valor por Etapa"
+  const barData = funnelData.map((d) => ({
+    name: d.name,
+    leads: d.leads,
+    valor: d.valor,
   }));
 
   const sellerData = sellers.map((s) => ({
@@ -155,13 +203,19 @@ export default function Dashboard() {
     { name: "Google", value: filteredLeads.filter((l) => l.source === "google").length },
     { name: "Indicação", value: filteredLeads.filter((l) => l.source === "indicacao").length },
   ];
+  const totalSourceLeads = sourceData.reduce((a, b) => a + b.value, 0);
 
-  const COLORS = ["hsl(152,60%,42%)", "hsl(338,76%,52%)", "hsl(224,76%,48%)", "hsl(28,86%,52%)", "hsl(262,60%,55%)"];
+  const SOURCE_COLORS = [
+    "hsl(152, 60%, 42%)",
+    "hsl(338, 76%, 52%)",
+    "hsl(224, 76%, 48%)",
+    "hsl(38, 92%, 50%)",
+    "hsl(262, 60%, 55%)",
+  ];
 
   const timelineData = useMemo(() => {
     const useWeeks = period === "week" || period === "month";
     const grouped: Record<string, number> = {};
-
     filteredLeads.forEach((l) => {
       const d = new Date(l.createdAt);
       const key = useWeeks
@@ -169,7 +223,6 @@ export default function Dashboard() {
         : format(startOfMonth(d), "MMM/yy");
       grouped[key] = (grouped[key] || 0) + 1;
     });
-
     const sortKeys: Record<string, number> = {};
     filteredLeads.forEach((l) => {
       const d = new Date(l.createdAt);
@@ -177,12 +230,9 @@ export default function Dashboard() {
         ? format(startOfWeek(d, { weekStartsOn: 1 }), "dd/MM")
         : format(startOfMonth(d), "MMM/yy");
       if (!sortKeys[key]) {
-        sortKeys[key] = useWeeks
-          ? startOfWeek(d, { weekStartsOn: 1 }).getTime()
-          : startOfMonth(d).getTime();
+        sortKeys[key] = useWeeks ? startOfWeek(d, { weekStartsOn: 1 }).getTime() : startOfMonth(d).getTime();
       }
     });
-
     return Object.entries(grouped)
       .sort(([a], [b]) => (sortKeys[a] || 0) - (sortKeys[b] || 0))
       .map(([key, count]) => ({ periodo: key, leads: count }));
@@ -193,18 +243,18 @@ export default function Dashboard() {
 
   return (
     <AppLayout title="Dashboard">
-      <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+      <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
         {/* Welcome + Period filter */}
-        <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-foreground flex items-center gap-2">
               {greeting} <span className="text-lg">👋</span>
             </h2>
-            <p className="text-sm text-muted-foreground mt-0.5">Aqui está o resumo do seu CRM</p>
+            <p className="text-sm text-muted-foreground mt-1">Aqui está o resumo do seu CRM</p>
           </div>
           <div className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            <ToggleGroup type="single" value={period} onValueChange={(v) => v && setPeriod(v as PeriodKey)} className="bg-card border rounded-xl p-1 shadow-sm">
+            <ToggleGroup type="single" value={period} onValueChange={(v) => v && setPeriod(v as PeriodKey)} className="bg-card border border-border/60 rounded-xl p-1 shadow-sm">
               {PERIOD_OPTIONS.map((opt) => (
                 <ToggleGroupItem
                   key={opt.value}
@@ -218,130 +268,146 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* KPIs */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {kpis.map((kpi, idx) => (
+        {/* KPIs — glassmorphism cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {kpis.map((kpi) => (
             <motion.div key={kpi.label} variants={item}>
-              <Card className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-all duration-300 group">
-                <CardContent className="p-0">
-                  <div className="flex items-stretch">
-                    {/* Gradient accent strip */}
-                    <div className={`w-1.5 bg-gradient-to-b ${KPI_GRADIENTS[idx]} rounded-l-lg`} />
-                    <div className="flex-1 p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{kpi.label}</p>
-                          <p className="mt-1.5 text-2xl font-extrabold text-foreground tracking-tight">{kpi.value}</p>
-                        </div>
-                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${KPI_GRADIENTS[idx]} shadow-lg group-hover:scale-105 transition-transform`}>
-                          <kpi.icon className="h-5 w-5 text-primary-foreground" />
-                        </div>
-                      </div>
-                      {kpi.change && (
-                        <div className="mt-2.5 flex items-center gap-1.5">
-                          {kpi.positive ? (
-                            <span className="flex items-center gap-0.5 text-xs font-bold text-success">
-                              <ArrowUpRight className="h-3 w-3" />{kpi.change}
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-0.5 text-xs font-bold text-accent">
-                              <ArrowDownRight className="h-3 w-3" />{kpi.change}
-                            </span>
-                          )}
-                          <span className="text-[10px] text-muted-foreground">vs anterior</span>
-                        </div>
-                      )}
+              <Card className="group relative overflow-hidden border border-border/50 shadow-sm hover:shadow-md hover:border-border transition-all duration-300 glass-card">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.12em]">{kpi.label}</p>
+                      <p className="text-4xl font-extrabold text-foreground tracking-tight tabular-nums leading-none mt-2">{kpi.value}</p>
+                    </div>
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${kpi.iconBg} group-hover:scale-105 transition-transform`}>
+                      <kpi.icon className={`h-5 w-5 ${kpi.iconColor}`} />
                     </div>
                   </div>
+                  {kpi.change && (
+                    <div className="mt-3 flex items-center gap-1.5">
+                      {kpi.positive ? (
+                        <span className="flex items-center gap-0.5 text-xs font-bold text-success">
+                          <ArrowUpRight className="h-3 w-3" />{kpi.change}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-0.5 text-xs font-bold text-destructive">
+                          <ArrowDownRight className="h-3 w-3" />{kpi.change}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-muted-foreground">vs período anterior</span>
+                    </div>
+                  )}
+                  {/* Left accent border */}
+                  <div className={`absolute left-0 top-0 h-full w-1 ${kpi.iconBg.replace('/10', '')} opacity-60 rounded-l-lg`} />
                 </CardContent>
               </Card>
             </motion.div>
           ))}
         </div>
 
-        {/* Funnel conversion visual */}
+        {/* Funnel — waterfall visualization */}
         <motion.div variants={item}>
-          <Card className="border-0 shadow-sm overflow-hidden">
-            <CardHeader className="pb-2">
+          <Card className="border border-border/50 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 </div>
-                Funil de Conversão por Etapa
+                Funil de Conversão
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex flex-col md:flex-row items-stretch gap-0">
-                {funnelData.map((stage, i) => {
-                  const prevCount = i > 0 ? funnelData[i - 1].leads : null;
-                  const convRate = prevCount && prevCount > 0 ? Math.round((stage.leads / prevCount) * 100) : null;
-                  const maxLeads = Math.max(...funnelData.map(s => s.leads), 1);
-                  const widthPct = Math.max(30, Math.round((stage.leads / maxLeads) * 100));
-                  const FUNNEL_COLORS = [
-                    "hsl(var(--kanban-approach))",
-                    "hsl(var(--kanban-probing))",
-                    "hsl(var(--kanban-recommendation))",
-                    "hsl(var(--kanban-demonstration))",
-                    "hsl(var(--kanban-objections))",
-                    "hsl(var(--kanban-crosssell))",
-                    "hsl(var(--kanban-closing))",
-                    "hsl(var(--kanban-postsale))",
-                  ];
-                  const bgColor = FUNNEL_COLORS[i] || "hsl(var(--primary))";
+            <CardContent className="pb-6">
+              {!chartsReady ? (
+                <ChartSkeleton height={180} />
+              ) : (
+                <>
+                  <div className="relative flex flex-col items-center gap-1 py-2">
+                    {funnelData.map((stage, i) => {
+                      const maxLeads = Math.max(...funnelData.map((s) => s.leads), 1);
+                      const widthPct = Math.max(25, Math.round((stage.leads / maxLeads) * 100));
+                      const prevCount = i > 0 ? funnelData[i - 1].leads : null;
+                      const convRate = prevCount && prevCount > 0 ? Math.round((stage.leads / prevCount) * 100) : null;
+                      const isHovered = hoveredFunnel === i;
 
-                  return (
-                    <div key={stage.name} className="flex flex-col items-center flex-1">
-                      {i > 0 && (
-                        <div className="flex flex-col items-center my-1 md:my-0 md:mb-2">
-                          <ArrowDown className="h-4 w-4 text-muted-foreground/50" />
-                          <span className={`text-xs font-bold ${convRate && convRate >= 50 ? 'text-success' : 'text-destructive'}`}>
-                            {convRate !== null ? `${convRate}%` : '—'}
-                          </span>
+                      return (
+                        <div
+                          key={stage.name}
+                          className="relative flex items-center w-full group/funnel"
+                          onMouseEnter={() => setHoveredFunnel(i)}
+                          onMouseLeave={() => setHoveredFunnel(null)}
+                        >
+                          {/* Stage label left */}
+                          <div className="w-28 shrink-0 text-right pr-4">
+                            <span className="text-[11px] font-medium text-muted-foreground">{stage.name}</span>
+                          </div>
+                          {/* Bar */}
+                          <div className="flex-1 flex items-center gap-3">
+                            <div className="flex-1 relative">
+                              <motion.div
+                                className="h-9 rounded-lg flex items-center justify-end pr-3 transition-all cursor-pointer"
+                                style={{
+                                  width: `${widthPct}%`,
+                                  backgroundColor: stage.color,
+                                  boxShadow: isHovered ? `0 4px 16px ${stage.color}40` : 'none',
+                                }}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${widthPct}%` }}
+                                transition={{ duration: 0.6, delay: i * 0.08, ease: "easeOut" }}
+                              >
+                                <span className="text-xs font-bold text-white tabular-nums">{stage.leads}</span>
+                              </motion.div>
+                            </div>
+                            {/* Conversion arrow */}
+                            {convRate !== null && (
+                              <span className={`text-[11px] font-bold tabular-nums w-10 shrink-0 ${convRate >= 50 ? 'text-success' : 'text-destructive'}`}>
+                                {convRate}%
+                              </span>
+                            )}
+                            {convRate === null && <span className="w-10 shrink-0" />}
+                          </div>
+                          {/* Tooltip on hover */}
+                          {isHovered && (
+                            <div className="absolute left-32 -top-2 z-20">
+                              <FunnelTooltip stage={stage.name} count={stage.leads} value={stage.valor} convRate={convRate} />
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {i === 0 && <div className="h-6" />}
-                      <div
-                        className="rounded-xl flex flex-col items-center justify-center py-3 px-2 transition-all min-h-[70px] shadow-sm hover:shadow-md hover:scale-[1.02]"
-                        style={{
-                          backgroundColor: bgColor,
-                          width: `${widthPct}%`,
-                          minWidth: '80px',
-                        }}
-                      >
-                        <span className="text-primary-foreground text-lg font-extrabold">{stage.leads}</span>
-                        <span className="text-primary-foreground/80 text-[10px] font-medium text-center leading-tight">{stage.name}</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground mt-1">
-                        R$ {stage.valor.toLocaleString("pt-BR")}
-                      </span>
+                      );
+                    })}
+                  </div>
+                  {/* Summary stats */}
+                  <div className="mt-5 flex flex-wrap gap-8 justify-center border-t border-border/40 pt-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-extrabold text-foreground tabular-nums">
+                        {funnelData[0]?.leads || 0} → {funnelData[funnelData.length - 1]?.leads || 0}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Início → Fechado</p>
                     </div>
-                  );
-                })}
-              </div>
-              <div className="mt-4 flex flex-wrap gap-6 justify-center border-t pt-3">
-                <div className="text-center">
-                  <p className="text-lg font-extrabold text-foreground">
-                    {funnelData[0]?.leads || 0} → {funnelData[funnelData.length - 1]?.leads || 0}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Início → Fechado</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-extrabold gradient-text">
-                    {funnelData[0]?.leads > 0
-                      ? `${Math.round((funnelData[funnelData.length - 1]?.leads / funnelData[0]?.leads) * 100)}%`
-                      : '0%'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Conversão Total</p>
-                </div>
-              </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-extrabold gradient-text tabular-nums">
+                        {funnelData[0]?.leads > 0
+                          ? `${Math.round((funnelData[funnelData.length - 1]?.leads / funnelData[0]?.leads) * 100)}%`
+                          : "0%"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Conversão Total</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-extrabold text-foreground tabular-nums">
+                        R$ {funnelData.reduce((a, b) => a + b.valor, 0).toLocaleString("pt-BR")}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Valor Total no Funil</p>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </motion.div>
 
         {/* Timeline area chart */}
         <motion.div variants={item}>
-          <Card className="border-0 shadow-sm overflow-hidden">
-            <CardHeader className="pb-2">
+          <Card className="border border-border/50 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-info/10">
                   <CalendarDays className="h-3.5 w-3.5 text-info" />
@@ -350,19 +416,21 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {timelineData.length > 0 ? (
+              {!chartsReady ? (
+                <ChartSkeleton />
+              ) : timelineData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={260}>
                   <AreaChart data={timelineData}>
                     <defs>
                       <linearGradient id="leadGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(224,76%,48%)" stopOpacity={0.3} />
+                        <stop offset="0%" stopColor="hsl(224,76%,48%)" stopOpacity={0.25} />
                         <stop offset="100%" stopColor="hsl(224,76%,48%)" stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="periodo" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                     <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
-                    <Tooltip
+                    <RTooltip
                       contentStyle={{
                         background: "hsl(var(--card))",
                         border: "1px solid hsl(var(--border))",
@@ -393,46 +461,59 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
-        {/* Charts row */}
+        {/* Charts row — horizontal bar + donut */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <motion.div variants={item} className="lg:col-span-2">
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2">
+            <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary/10">
-                    <TrendingUp className="h-3.5 w-3.5 text-secondary" />
+                    <BarChart3 className="h-3.5 w-3.5 text-secondary" />
                   </div>
                   Leads e Valor por Etapa
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={funnelData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                    <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                    <Tooltip
-                      formatter={(value: number, name: string) =>
-                        name === "valor" ? `R$ ${value.toLocaleString("pt-BR")}` : value
-                      }
-                      contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "0.75rem",
-                        fontSize: "12px",
-                      }}
-                    />
-                    <Bar dataKey="leads" fill="hsl(224,76%,48%)" radius={[8, 8, 0, 0]} name="Leads" />
-                    <Bar dataKey="valor" fill="hsl(262,60%,55%)" radius={[8, 8, 0, 0]} name="valor" />
-                  </BarChart>
-                </ResponsiveContainer>
+                {!chartsReady ? (
+                  <ChartSkeleton height={300} />
+                ) : (
+                  <ResponsiveContainer width="100%" height={320}>
+                    <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                      <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={90} />
+                      <RTooltip
+                        formatter={(value: number, name: string) =>
+                          name === "Valor" ? `R$ ${value.toLocaleString("pt-BR")}` : value
+                        }
+                        contentStyle={{
+                          background: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "0.75rem",
+                          fontSize: "12px",
+                        }}
+                      />
+                      <Bar dataKey="leads" fill="hsl(224,76%,48%)" radius={[0, 6, 6, 0]} name="Leads">
+                        <LabelList dataKey="leads" position="right" className="text-[11px] font-semibold fill-foreground" />
+                      </Bar>
+                      <Bar dataKey="valor" fill="hsl(262,60%,55%)" radius={[0, 6, 6, 0]} name="Valor">
+                        <LabelList
+                          dataKey="valor"
+                          position="right"
+                          className="text-[11px] font-semibold fill-foreground"
+                          formatter={(v: number) => `R$${(v / 1000).toFixed(0)}k`}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
           </motion.div>
 
           <motion.div variants={item}>
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2">
+            <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-success/10">
                     <MessageCircle className="h-3.5 w-3.5 text-success" />
@@ -441,32 +522,58 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie data={sourceData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} strokeWidth={0}>
-                      {sourceData.map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "0.75rem",
-                        fontSize: "12px",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2 justify-center">
-                  {sourceData.map((s, i) => (
-                    <div key={s.name} className="flex items-center gap-1.5 text-xs">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[i] }} />
-                      <span className="text-muted-foreground">{s.name}</span>
-                      <span className="font-semibold text-foreground">{s.value}</span>
+                {!chartsReady ? (
+                  <ChartSkeleton height={200} />
+                ) : (
+                  <>
+                    <div className="relative">
+                      <ResponsiveContainer width="100%" height={200}>
+                        <PieChart>
+                          <Pie
+                            data={sourceData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={55}
+                            outerRadius={85}
+                            paddingAngle={3}
+                            strokeWidth={0}
+                            cornerRadius={4}
+                          >
+                            {sourceData.map((_, i) => (
+                              <Cell key={i} fill={SOURCE_COLORS[i % SOURCE_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <RTooltip
+                            contentStyle={{
+                              background: "hsl(var(--card))",
+                              border: "1px solid hsl(var(--border))",
+                              borderRadius: "0.75rem",
+                              fontSize: "12px",
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      {/* Center stat */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="text-center">
+                          <p className="text-2xl font-extrabold text-foreground tabular-nums leading-none">{totalSourceLeads}</p>
+                          <p className="text-[10px] text-muted-foreground font-medium mt-0.5">Total</p>
+                        </div>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 justify-center">
+                      {sourceData.map((s, i) => (
+                        <div key={s.name} className="flex items-center gap-1.5 text-xs">
+                          <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SOURCE_COLORS[i] }} />
+                          <span className="text-muted-foreground">{s.name}</span>
+                          <span className="font-semibold text-foreground tabular-nums">{s.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -474,44 +581,48 @@ export default function Dashboard() {
 
         {/* Sellers performance */}
         <motion.div variants={item}>
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2">
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-kanban-probing/10">
-                  <Users className="h-3.5 w-3.5 text-kanban-probing" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-info/10">
+                  <Users className="h-3.5 w-3.5 text-info" />
                 </div>
                 Desempenho por Vendedor
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={sellerData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={70} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "0.75rem",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Bar dataKey="leads" fill="hsl(217,78%,52%)" radius={[0, 8, 8, 0]} name="Leads" />
-                  <Bar dataKey="conversoes" fill="hsl(152,60%,42%)" radius={[0, 8, 8, 0]} name="Conversões" />
-                </BarChart>
-              </ResponsiveContainer>
+              {!chartsReady ? (
+                <ChartSkeleton height={220} />
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={sellerData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={70} />
+                    <RTooltip
+                      contentStyle={{
+                        background: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "0.75rem",
+                        fontSize: "12px",
+                      }}
+                    />
+                    <Bar dataKey="leads" fill="hsl(224,76%,48%)" radius={[0, 6, 6, 0]} name="Leads" />
+                    <Bar dataKey="conversoes" fill="hsl(152,60%,42%)" radius={[0, 6, 6, 0]} name="Conversões" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </motion.div>
 
         {/* Upcoming follow-ups */}
         <motion.div variants={item}>
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2">
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10">
-                  <CalendarDays className="h-3.5 w-3.5 text-accent" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning/10">
+                  <CalendarDays className="h-3.5 w-3.5 text-warning" />
                 </div>
                 Próximos Follow-ups
               </CardTitle>
@@ -522,22 +633,22 @@ export default function Dashboard() {
                   .filter((f) => !f.completed)
                   .slice(0, 5)
                   .map((f) => (
-                    <div key={f.id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-border/60 p-3 gap-2 hover:bg-muted/30 transition-colors">
+                    <div key={f.id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-border/50 p-3 gap-2 hover:bg-muted/30 hover:border-border transition-all">
                       <div className="flex items-center gap-3">
                         <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                          f.type === 'call' ? 'bg-kanban-probing/15 text-kanban-probing' :
-                          f.type === 'whatsapp' ? 'bg-kanban-approach/15 text-kanban-approach' :
-                          f.type === 'visit' ? 'bg-kanban-recommendation/15 text-kanban-recommendation' :
-                          'bg-kanban-demonstration/15 text-kanban-demonstration'
+                          f.type === "call" ? "bg-info/10 text-info" :
+                          f.type === "whatsapp" ? "bg-success/10 text-success" :
+                          f.type === "visit" ? "bg-primary/10 text-primary" :
+                          "bg-warning/10 text-warning"
                         }`}>
-                          {f.type === 'call' ? <Phone className="h-4 w-4" /> : <MessageCircle className="h-4 w-4" />}
+                          {f.type === "call" ? <Phone className="h-4 w-4" /> : <MessageCircle className="h-4 w-4" />}
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-foreground">{f.clientName}</p>
                           <p className="text-xs text-muted-foreground line-clamp-1">{f.description}</p>
                         </div>
                       </div>
-                      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap sm:text-right pl-12 sm:pl-0">
+                      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap sm:text-right pl-12 sm:pl-0 tabular-nums">
                         {new Date(f.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
