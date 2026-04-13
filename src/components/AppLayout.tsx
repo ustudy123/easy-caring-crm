@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle } from "lucide-react";
+import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCrm } from "@/contexts/CrmContext";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "@/hooks/useTheme";
 import {
   Popover,
   PopoverContent,
