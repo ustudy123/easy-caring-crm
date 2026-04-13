@@ -78,7 +78,7 @@ export function AppSidebar() {
 
   const firstName = user?.user_metadata?.display_name?.split(" ")[0] || user?.email?.split("@")[0] || "User";
 
-  const renderItem = (item: typeof mainNav[0]) => {
+  const renderItem = (item: { title: string; url: string; icon: React.ComponentType<any>; badgeKey: string | null }) => {
     const isActive = location.pathname === item.url;
     const badge = getBadge(item.badgeKey);
     return (
