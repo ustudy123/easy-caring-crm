@@ -70,14 +70,14 @@
     --wa-header: 174 62% 38%;
 
     /* Dark navy-slate sidebar (#111318 range) */
-    --sidebar-background: 228 12% 8%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 228 12% 8%;
-    --sidebar-accent: 228 12% 12%;
-    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-background: 230 30% 16%;
+    --sidebar-foreground: 231 20% 92%;
+    --sidebar-primary: 231 20% 92%;
+    --sidebar-primary-foreground: 230 30% 16%;
+    --sidebar-accent: 232 28% 20%;
+    --sidebar-accent-foreground: 231 20% 92%;
     --sidebar-border: 0 0% 100% / 0.06;
-    --sidebar-ring: 0 0% 100%;
+    --sidebar-ring: 231 20% 92%;
 
     /* Glass / elevation tokens */
     --glass-bg: 0 0% 100% / 0.72;
@@ -115,14 +115,14 @@
     --input: 224 22% 18%;
     --ring: 224 76% 55%;
 
-    --sidebar-background: 228 12% 7%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 228 12% 7%;
-    --sidebar-accent: 228 12% 11%;
-    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-background: 230 30% 14%;
+    --sidebar-foreground: 231 20% 92%;
+    --sidebar-primary: 231 20% 92%;
+    --sidebar-primary-foreground: 230 30% 14%;
+    --sidebar-accent: 232 28% 18%;
+    --sidebar-accent-foreground: 231 20% 92%;
     --sidebar-border: 0 0% 100% / 0.06;
-    --sidebar-ring: 0 0% 100%;
+    --sidebar-ring: 231 20% 92%;
 
     --glass-bg: 224 28% 11% / 0.72;
     --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.20);
