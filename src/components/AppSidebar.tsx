@@ -106,7 +106,7 @@ export function AppSidebar() {
                 strokeWidth={1.5}
               />
               {collapsed && badge > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-sidebar-foreground text-[8px] font-semibold text-sidebar-background">
+                <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#6366F1] text-[8px] font-semibold text-white">
                   {badge}
                 </span>
               )}
@@ -117,7 +117,7 @@ export function AppSidebar() {
               </span>
             )}
             {!collapsed && badge > 0 && (
-              <span className="ml-auto flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-sidebar-foreground/10 px-1 text-[10px] font-medium text-sidebar-foreground/70 tabular-nums">
+              <span className="ml-auto flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#6366F1]/15 px-1 text-[10px] font-medium text-[#818CF8] tabular-nums">
                 {badge}
               </span>
             )}
