@@ -5,12 +5,17 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Settings, Bell, Palette, Users, Shield } from "lucide-react";
-import { useState } from "react";
+import { Settings, Bell, Shield, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Configuracoes() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [companyName, setCompanyName] = useState("CRM Tintas");
   const [notifications, setNotifications] = useState({
     newLeads: true,
@@ -18,9 +23,62 @@ export default function Configuracoes() {
     overdueAlerts: true,
   });
 
-  const handleSave = () => {
-    toast({ title: "Configurações salvas!", description: "As alterações foram aplicadas." });
+  useEffect(() => {
+    if (!user) return;
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from("settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (data) {
+        setCompanyName(data.company_name);
+        setNotifications({
+          newLeads: data.notify_new_leads,
+          followUpReminders: data.notify_follow_up_reminders,
+          overdueAlerts: data.notify_overdue_alerts,
+        });
+      }
+      setLoading(false);
+    };
+    fetchSettings();
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+
+    const payload = {
+      user_id: user.id,
+      company_name: companyName,
+      notify_new_leads: notifications.newLeads,
+      notify_follow_up_reminders: notifications.followUpReminders,
+      notify_overdue_alerts: notifications.overdueAlerts,
+    };
+
+    const { error } = await supabase
+      .from("settings")
+      .upsert(payload, { onConflict: "user_id" });
+
+    setSaving(false);
+
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Configurações salvas!", description: "As alterações foram aplicadas." });
+    }
   };
+
+  if (loading) {
+    return (
+      <AppLayout title="Configurações">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Configurações">
@@ -36,7 +94,10 @@ export default function Configuracoes() {
               <Label>Nome da empresa</Label>
               <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
             </div>
-            <Button onClick={handleSave}>Salvar</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salvar
+            </Button>
           </CardContent>
         </Card>
 
