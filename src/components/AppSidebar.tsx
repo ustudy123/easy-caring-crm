@@ -91,18 +91,18 @@ export function AppSidebar() {
               "group relative flex items-center transition-colors duration-150",
               collapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
               isActive
-                ? "text-sidebar-foreground"
-                : "text-[#8A8F98] hover:text-sidebar-foreground/80"
+                ? "text-white font-medium"
+                : "text-[#9CA3AF] hover:text-white/80"
             )}
             activeClassName=""
           >
-            {/* Active indicator — 2px left border */}
+            {/* Active indicator — 2px left border in slate-blue */}
             {isActive && !collapsed && (
-              <div className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-sm bg-sidebar-foreground" />
+              <div className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-sm bg-[#5B6AF0]" />
             )}
             <div className="relative shrink-0">
               <item.icon
-                className={cn("h-[18px] w-[18px]", isActive ? "text-sidebar-foreground" : "text-[#8A8F98]")}
+                className={cn("h-[18px] w-[18px]", isActive ? "text-white" : "text-[#9CA3AF]")}
                 strokeWidth={1.5}
               />
               {collapsed && badge > 0 && (
@@ -112,7 +112,7 @@ export function AppSidebar() {
               )}
             </div>
             {!collapsed && (
-              <span className={cn("text-[13px] leading-none", isActive ? "font-medium" : "font-normal")}>
+              <span className={cn("text-[13px] leading-none", isActive ? "font-medium text-white" : "font-normal")}>
                 {item.title}
               </span>
             )}
@@ -177,7 +177,7 @@ export function AppSidebar() {
 
         {/* Hairline divider */}
         <div className={cn("my-2 flex justify-center", collapsed ? "px-2" : "px-4")}>
-          <div className="h-px w-full" style={{ background: "hsl(var(--sidebar-foreground) / 0.06)" }} />
+          <div className="h-px w-full" style={{ background: "rgba(255,255,255,0.07)" }} />
         </div>
 
         {/* Tools navigation */}
@@ -201,13 +201,13 @@ export function AppSidebar() {
                   "flex items-center transition-colors duration-150",
                   collapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
                   location.pathname === "/configuracoes"
-                    ? "text-sidebar-foreground"
-                    : "text-[#8A8F98] hover:text-sidebar-foreground/80"
+                    ? "text-white font-medium"
+                    : "text-[#9CA3AF] hover:text-white/80"
                 )}
                 activeClassName=""
               >
                 {location.pathname === "/configuracoes" && !collapsed && (
-                  <div className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-sm bg-sidebar-foreground" />
+                  <div className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-sm bg-[#5B6AF0]" />
                 )}
                 <Settings className="h-[18px] w-[18px] shrink-0" strokeWidth={1.5} />
                 {!collapsed && <span className="text-[13px]">Configurações</span>}
@@ -216,9 +216,9 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
 
-        {/* Hairline */}
+        {/* Hairline + footer separator */}
         <div className={cn("my-1.5 flex justify-center", collapsed ? "px-2" : "px-4")}>
-          <div className="h-px w-full" style={{ background: "hsl(var(--sidebar-foreground) / 0.06)" }} />
+          <div className="h-px w-full" style={{ background: "rgba(255,255,255,0.06)" }} />
         </div>
 
         {/* User area */}
