@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle } from "lucide-react";
+import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCrm } from "@/contexts/CrmContext";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "@/hooks/useTheme";
 import {
   Popover,
   PopoverContent,
@@ -18,6 +19,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, title }: AppLayoutProps) {
   const { newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount } = useCrm();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
     try {
@@ -52,7 +54,15 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                 <h1 className="text-base sm:text-lg font-extrabold text-foreground truncate tracking-tight">{title}</h1>
               )}
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                className="h-9 w-9 rounded-xl hover:bg-muted transition-colors"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-xl hover:bg-muted transition-colors">
