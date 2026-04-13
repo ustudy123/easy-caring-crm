@@ -91,18 +91,18 @@ export function AppSidebar() {
               "group relative flex items-center transition-colors duration-150",
               collapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
               isActive
-                ? "text-white font-medium"
-                : "text-[#9CA3AF] hover:text-white/80"
+                ? "text-[#E8EAF0] font-medium"
+                : "text-[#6B7280] hover:text-[#9CA3AF]"
             )}
             activeClassName=""
           >
-            {/* Active indicator — 2px left border in slate-blue */}
+            {/* Active indicator — 2px left border + subtle bg */}
             {isActive && !collapsed && (
-              <div className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-sm bg-[#5B6AF0]" />
+              <div className="absolute inset-0 rounded-r-[7px] border-l-2 border-[#6366F1] bg-white/5" />
             )}
             <div className="relative shrink-0">
               <item.icon
-                className={cn("h-[18px] w-[18px]", isActive ? "text-white" : "text-[#9CA3AF]")}
+                className={cn("h-4 w-4", isActive ? "text-[#E8EAF0]" : "text-[#6B7280]")}
                 strokeWidth={1.5}
               />
               {collapsed && badge > 0 && (
@@ -112,7 +112,7 @@ export function AppSidebar() {
               )}
             </div>
             {!collapsed && (
-              <span className={cn("text-[13px] leading-none", isActive ? "font-medium text-white" : "font-normal")}>
+              <span className={cn("text-[13px] leading-none", isActive ? "font-medium text-[#E8EAF0]" : "font-normal text-[#6B7280]")}>
                 {item.title}
               </span>
             )}
@@ -143,10 +143,10 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="flex flex-col gap-0.5">
-              <span className="text-[13px] font-medium tracking-tight text-sidebar-foreground">
+              <span className="text-[13px] font-medium tracking-tight text-[#E8EAF0]">
                 CRM Taeco
               </span>
-              <span className="text-[10px] font-normal text-[#8A8F98]/60">
+              <span className="text-[11px] font-normal text-[#5A6078]">
                 Gestão Comercial
               </span>
             </div>
@@ -201,15 +201,15 @@ export function AppSidebar() {
                   "flex items-center transition-colors duration-150",
                   collapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
                   location.pathname === "/configuracoes"
-                    ? "text-white font-medium"
-                    : "text-[#9CA3AF] hover:text-white/80"
+                    ? "text-[#E8EAF0] font-medium"
+                    : "text-[#6B7280] hover:text-[#9CA3AF]"
                 )}
                 activeClassName=""
               >
                 {location.pathname === "/configuracoes" && !collapsed && (
-                  <div className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-sm bg-[#5B6AF0]" />
+                  <div className="absolute inset-0 rounded-r-[7px] border-l-2 border-[#6366F1] bg-white/5" />
                 )}
-                <Settings className="h-[18px] w-[18px] shrink-0" strokeWidth={1.5} />
+                <Settings className="h-4 w-4 shrink-0" strokeWidth={1.5} />
                 {!collapsed && <span className="text-[13px]">Configurações</span>}
               </NavLink>
             </SidebarMenuButton>
@@ -225,14 +225,14 @@ export function AppSidebar() {
         {!collapsed ? (
           <div className="group/footer flex items-center gap-2.5 rounded-md px-4 py-2.5">
             {/* Monochrome square avatar */}
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-sidebar-foreground/10 text-[11px] font-semibold text-sidebar-foreground/70">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-[#2D3250] text-[11px] font-semibold text-[#9CA3AF]">
               {firstName[0].toUpperCase()}
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-[12px] font-medium text-sidebar-foreground/80">
+              <span className="truncate text-[12px] font-medium text-[#C9CBD6]">
                 {firstName}
               </span>
-              <span className="truncate text-[10px] text-[#8A8F98]/50">
+              <span className="truncate text-[11px] text-[#4B5270]">
                 {user?.email}
               </span>
             </div>
