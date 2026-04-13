@@ -317,6 +317,39 @@ export type Database = {
         }
         Relationships: []
       }
+      settings: {
+        Row: {
+          company_name: string
+          created_at: string
+          id: string
+          notify_follow_up_reminders: boolean
+          notify_new_leads: boolean
+          notify_overdue_alerts: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name?: string
+          created_at?: string
+          id?: string
+          notify_follow_up_reminders?: boolean
+          notify_new_leads?: boolean
+          notify_overdue_alerts?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          id?: string
+          notify_follow_up_reminders?: boolean
+          notify_new_leads?: boolean
+          notify_overdue_alerts?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       whatsapp_messages: {
         Row: {
           body: string | null
