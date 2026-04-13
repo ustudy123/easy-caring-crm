@@ -376,26 +376,26 @@ export default function Dashboard() {
                     })}
                   </div>
                   {/* Summary stats */}
-                  <div className="mt-5 flex flex-wrap gap-8 justify-center border-t border-border/40 pt-4">
+                  <div className="mt-4 sm:mt-5 flex flex-wrap gap-4 sm:gap-8 justify-center border-t border-border/40 pt-3 sm:pt-4">
                     <div className="text-center">
-                      <p className="text-2xl font-extrabold text-foreground tabular-nums">
+                      <p className="text-lg sm:text-2xl font-extrabold text-foreground tabular-nums">
                         {funnelData[0]?.leads || 0} → {funnelData[funnelData.length - 1]?.leads || 0}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Início → Fechado</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Início → Fechado</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-extrabold gradient-text tabular-nums">
+                      <p className="text-lg sm:text-2xl font-extrabold gradient-text tabular-nums">
                         {funnelData[0]?.leads > 0
                           ? `${Math.round((funnelData[funnelData.length - 1]?.leads / funnelData[0]?.leads) * 100)}%`
                           : "0%"}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Conversão Total</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Conversão Total</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-extrabold text-foreground tabular-nums">
+                      <p className="text-lg sm:text-2xl font-extrabold text-foreground tabular-nums">
                         R$ {funnelData.reduce((a, b) => a + b.valor, 0).toLocaleString("pt-BR")}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Valor Total no Funil</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Valor Total no Funil</p>
                     </div>
                   </div>
                 </>
