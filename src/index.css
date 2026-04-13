@@ -69,15 +69,15 @@
     --wa-chat-bg: 30 15% 90%;
     --wa-header: 174 62% 38%;
 
-    /* Near-black editorial sidebar */
-    --sidebar-background: 228 20% 5%;
-    --sidebar-foreground: 220 10% 82%;
-    --sidebar-primary: 220 10% 82%;
-    --sidebar-primary-foreground: 228 20% 5%;
-    --sidebar-accent: 228 16% 10%;
-    --sidebar-accent-foreground: 220 10% 82%;
-    --sidebar-border: 228 14% 12%;
-    --sidebar-ring: 220 10% 82%;
+    /* Dark navy-slate sidebar (#111318 range) */
+    --sidebar-background: 228 12% 8%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 228 12% 8%;
+    --sidebar-accent: 228 12% 12%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100% / 0.06;
+    --sidebar-ring: 0 0% 100%;
 
     /* Glass / elevation tokens */
     --glass-bg: 0 0% 100% / 0.72;
@@ -115,14 +115,14 @@
     --input: 224 22% 18%;
     --ring: 224 76% 55%;
 
-    --sidebar-background: 228 20% 4%;
-    --sidebar-foreground: 220 10% 82%;
-    --sidebar-primary: 220 10% 82%;
-    --sidebar-primary-foreground: 228 20% 4%;
-    --sidebar-accent: 228 16% 8%;
-    --sidebar-accent-foreground: 220 10% 82%;
-    --sidebar-border: 228 14% 10%;
-    --sidebar-ring: 220 10% 82%;
+    --sidebar-background: 228 12% 7%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 228 12% 7%;
+    --sidebar-accent: 228 12% 11%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100% / 0.06;
+    --sidebar-ring: 0 0% 100%;
 
     --glass-bg: 224 28% 11% / 0.72;
     --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.20);
