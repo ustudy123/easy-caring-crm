@@ -54,6 +54,10 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount } = useCrm();
   const { user, signOut } = useAuth();
+  const { role } = useRole();
+
+  const mainNav = useMemo(() => allMainNav.filter(item => !item.roles || (role && item.roles.includes(role))), [role]);
+  const toolsNav = useMemo(() => allToolsNav.filter(item => !item.roles || (role && item.roles.includes(role))), [role]);
 
   const STORAGE_KEY = "crm-sidebar-dismissed";
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
