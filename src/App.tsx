@@ -26,23 +26,26 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/" element={<ProtectedRoute><CrmProvider><Dashboard /></CrmProvider></ProtectedRoute>} />
-            <Route path="/kanban" element={<ProtectedRoute><CrmProvider><Kanban /></CrmProvider></ProtectedRoute>} />
-            <Route path="/clientes" element={<ProtectedRoute><CrmProvider><Clientes /></CrmProvider></ProtectedRoute>} />
-            <Route path="/agenda" element={<ProtectedRoute><CrmProvider><Agenda /></CrmProvider></ProtectedRoute>} />
-            <Route path="/campanhas" element={<ProtectedRoute><CrmProvider><Campanhas /></CrmProvider></ProtectedRoute>} />
-            <Route path="/conversas" element={<ProtectedRoute><CrmProvider><Conversas /></CrmProvider></ProtectedRoute>} />
-            <Route path="/configuracoes" element={<ProtectedRoute><CrmProvider><Configuracoes /></CrmProvider></ProtectedRoute>} />
-            <Route path="/suporte-orcamento" element={<ProtectedRoute><CrmProvider><SuporteOrcamento /></CrmProvider></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <RoleProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/" element={<ProtectedRoute><CrmProvider><Dashboard /></CrmProvider></ProtectedRoute>} />
+              <Route path="/kanban" element={<ProtectedRoute><CrmProvider><Kanban /></CrmProvider></ProtectedRoute>} />
+              <Route path="/clientes" element={<ProtectedRoute><CrmProvider><Clientes /></CrmProvider></ProtectedRoute>} />
+              <Route path="/agenda" element={<ProtectedRoute><CrmProvider><Agenda /></CrmProvider></ProtectedRoute>} />
+              <Route path="/campanhas" element={<ProtectedRoute><CrmProvider><Campanhas /></CrmProvider></ProtectedRoute>} />
+              <Route path="/conversas" element={<ProtectedRoute><CrmProvider><Conversas /></CrmProvider></ProtectedRoute>} />
+              <Route path="/configuracoes" element={<ProtectedRoute><CrmProvider><Configuracoes /></CrmProvider></ProtectedRoute>} />
+              <Route path="/suporte-orcamento" element={<ProtectedRoute><CrmProvider><SuporteOrcamento /></CrmProvider></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute><CrmProvider><AdminPanel /></CrmProvider></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </RoleProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
