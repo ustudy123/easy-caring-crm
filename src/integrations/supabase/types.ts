@@ -56,6 +56,7 @@ export type Database = {
       clients: {
         Row: {
           address: string | null
+          assigned_seller_id: string | null
           city: string | null
           created_at: string
           email: string | null
@@ -64,11 +65,13 @@ export type Database = {
           name: string
           notes: string | null
           phone: string
+          store_id: string | null
           tags: string[]
           total_purchases: number
         }
         Insert: {
           address?: string | null
+          assigned_seller_id?: string | null
           city?: string | null
           created_at?: string
           email?: string | null
@@ -77,11 +80,13 @@ export type Database = {
           name: string
           notes?: string | null
           phone: string
+          store_id?: string | null
           tags?: string[]
           total_purchases?: number
         }
         Update: {
           address?: string | null
+          assigned_seller_id?: string | null
           city?: string | null
           created_at?: string
           email?: string | null
@@ -90,10 +95,26 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string
+          store_id?: string | null
           tags?: string[]
           total_purchases?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_assigned_seller_id_fkey"
+            columns: ["assigned_seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       follow_ups: {
         Row: {
@@ -106,6 +127,7 @@ export type Database = {
           id: string
           lead_id: string | null
           scheduled_at: string
+          store_id: string | null
           type: Database["public"]["Enums"]["follow_up_type"]
         }
         Insert: {
@@ -118,6 +140,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           scheduled_at: string
+          store_id?: string | null
           type?: Database["public"]["Enums"]["follow_up_type"]
         }
         Update: {
@@ -130,6 +153,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           scheduled_at?: string
+          store_id?: string | null
           type?: Database["public"]["Enums"]["follow_up_type"]
         }
         Relationships: [
@@ -145,6 +169,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -213,6 +244,7 @@ export type Database = {
           notes: string
           source: string
           stage: Database["public"]["Enums"]["kanban_stage"]
+          store_id: string | null
           tags: string[]
           updated_at: string
           value: number
@@ -228,6 +260,7 @@ export type Database = {
           notes?: string
           source?: string
           stage?: Database["public"]["Enums"]["kanban_stage"]
+          store_id?: string | null
           tags?: string[]
           updated_at?: string
           value?: number
@@ -243,6 +276,7 @@ export type Database = {
           notes?: string
           source?: string
           stage?: Database["public"]["Enums"]["kanban_stage"]
+          store_id?: string | null
           tags?: string[]
           updated_at?: string
           value?: number
@@ -253,6 +287,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -296,6 +337,8 @@ export type Database = {
           leads_count: number
           name: string
           role: Database["public"]["Enums"]["seller_role"]
+          store_id: string | null
+          user_id: string | null
         }
         Insert: {
           avatar?: string | null
@@ -305,6 +348,8 @@ export type Database = {
           leads_count?: number
           name: string
           role?: Database["public"]["Enums"]["seller_role"]
+          store_id?: string | null
+          user_id?: string | null
         }
         Update: {
           avatar?: string | null
@@ -314,8 +359,18 @@ export type Database = {
           leads_count?: number
           name?: string
           role?: Database["public"]["Enums"]["seller_role"]
+          store_id?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sellers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       settings: {
         Row: {
@@ -346,6 +401,51 @@ export type Database = {
           notify_new_leads?: boolean
           notify_overdue_alerts?: boolean
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      stores: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          id: string
+          name: string
+          phone: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
         Relationships: []
@@ -388,9 +488,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_seller_id: { Args: { _user_id: string }; Returns: string }
+      get_user_store_id: { Args: { _user_id: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "gerente" | "vendedor" | "suporte"
       campaign_channel:
         | "whatsapp"
         | "meta"
@@ -537,6 +646,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "gerente", "vendedor", "suporte"],
       campaign_channel: [
         "whatsapp",
         "meta",
