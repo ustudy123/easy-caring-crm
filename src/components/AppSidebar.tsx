@@ -9,11 +9,12 @@ import {
   ChevronRight,
   LogOut,
   FileText,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
@@ -28,18 +29,22 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useCrm } from "@/contexts/CrmContext";
+import { useRole } from "@/contexts/RoleContext";
 
-const mainNav = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard, badgeKey: null as null },
-  { title: "Kanban", url: "/kanban", icon: Columns3, badgeKey: "newLeads" as const },
-  { title: "Clientes", url: "/clientes", icon: Users, badgeKey: null as null },
-  { title: "Agenda", url: "/agenda", icon: CalendarDays, badgeKey: "pendingFollowUps" as const },
+type NavItem = { title: string; url: string; icon: React.ComponentType<any>; badgeKey: string | null; roles?: string[] };
+
+const allMainNav: NavItem[] = [
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, badgeKey: null, roles: ["admin", "gerente"] },
+  { title: "Kanban", url: "/kanban", icon: Columns3, badgeKey: "newLeads" },
+  { title: "Clientes", url: "/clientes", icon: Users, badgeKey: null },
+  { title: "Agenda", url: "/agenda", icon: CalendarDays, badgeKey: "pendingFollowUps" },
 ];
 
-const toolsNav = [
-  { title: "Campanhas", url: "/campanhas", icon: Megaphone, badgeKey: "negotiation" as const },
-  { title: "Conversas", url: "/conversas", icon: MessageSquare, badgeKey: "whatsapp" as const },
-  { title: "Suporte Orçamento", url: "/suporte-orcamento", icon: FileText, badgeKey: null as null },
+const allToolsNav: NavItem[] = [
+  { title: "Campanhas", url: "/campanhas", icon: Megaphone, badgeKey: "negotiation", roles: ["admin", "gerente"] },
+  { title: "Conversas", url: "/conversas", icon: MessageSquare, badgeKey: "whatsapp" },
+  { title: "Suporte Orçamento", url: "/suporte-orcamento", icon: FileText, badgeKey: null, roles: ["admin", "suporte"] },
+  { title: "Admin", url: "/admin", icon: ShieldCheck, badgeKey: null, roles: ["admin"] },
 ];
 
 export function AppSidebar() {
@@ -49,6 +54,10 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount } = useCrm();
   const { user, signOut } = useAuth();
+  const { role } = useRole();
+
+  const mainNav = useMemo(() => allMainNav.filter(item => !item.roles || (role && item.roles.includes(role))), [role]);
+  const toolsNav = useMemo(() => allToolsNav.filter(item => !item.roles || (role && item.roles.includes(role))), [role]);
 
   const STORAGE_KEY = "crm-sidebar-dismissed";
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
