@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Store, Users, Loader2, Trash2 } from "lucide-react";
+import { Plus, Store, Users, Loader2, Trash2, ShieldOff } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,20 +23,16 @@ interface StoreRow {
   phone: string | null;
 }
 
-interface SellerRow {
-  id: string;
-  name: string;
-  role: string;
-  user_id: string | null;
-  store_id: string | null;
-  store_name?: string;
-}
-
-interface UserRoleRow {
-  id: string;
+interface AdminUserRow {
   user_id: string;
-  role: string;
-  email?: string;
+  email: string;
+  display_name: string | null;
+  created_at: string;
+  role: string | null;
+  seller_id: string | null;
+  seller_name: string | null;
+  store_id: string | null;
+  store_name: string | null;
 }
 
 const ROLE_LABELS: Record<string, string> = {
