@@ -488,6 +488,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_assign_user_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _seller_name?: string
+          _store_id?: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      admin_list_users: {
+        Args: never
+        Returns: {
+          created_at: string
+          display_name: string
+          email: string
+          role: Database["public"]["Enums"]["app_role"]
+          seller_id: string
+          seller_name: string
+          store_id: string
+          store_name: string
+          user_id: string
+        }[]
+      }
+      admin_revoke_user_role: { Args: { _user_id: string }; Returns: undefined }
       get_user_seller_id: { Args: { _user_id: string }; Returns: string }
       get_user_store_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
