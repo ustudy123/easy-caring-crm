@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Store, Users, Loader2, Trash2, ShieldOff } from "lucide-react";
+import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ interface StoreRow {
   address: string | null;
   city: string | null;
   phone: string | null;
+  employee_count: number;
 }
 
 interface AdminUserRow {
@@ -66,10 +67,12 @@ function StoresTab() {
   const [stores, setStores] = useState<StoreRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [phone, setPhone] = useState("");
+  const [employeeCount, setEmployeeCount] = useState<string>("0");
   const [saving, setSaving] = useState(false);
 
   const fetchStores = useCallback(async () => {
@@ -80,14 +83,43 @@ function StoresTab() {
 
   useEffect(() => { fetchStores(); }, [fetchStores]);
 
-  const handleAdd = async () => {
+  const resetForm = () => {
+    setEditingId(null);
+    setName(""); setAddress(""); setCity(""); setPhone(""); setEmployeeCount("0");
+  };
+
+  const openNew = () => {
+    resetForm();
+    setOpen(true);
+  };
+
+  const openEdit = (s: StoreRow) => {
+    setEditingId(s.id);
+    setName(s.name);
+    setAddress(s.address || "");
+    setCity(s.city || "");
+    setPhone(s.phone || "");
+    setEmployeeCount(String(s.employee_count ?? 0));
+    setOpen(true);
+  };
+
+  const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
-    const { error } = await supabase.from("stores").insert({ name, address: address || null, city: city || null, phone: phone || null });
+    const payload = {
+      name,
+      address: address || null,
+      city: city || null,
+      phone: phone || null,
+      employee_count: Math.max(0, parseInt(employeeCount, 10) || 0),
+    };
+    const { error } = editingId
+      ? await supabase.from("stores").update(payload).eq("id", editingId)
+      : await supabase.from("stores").insert(payload);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Loja cadastrada!");
-    setName(""); setAddress(""); setCity(""); setPhone("");
+    toast.success(editingId ? "Loja atualizada!" : "Loja cadastrada!");
+    resetForm();
     setOpen(false);
     fetchStores();
   };
@@ -104,12 +136,12 @@ function StoresTab() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">Lojas Cadastradas</CardTitle>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Nova Loja</Button>
+            <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Nova Loja</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Cadastrar Loja</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editingId ? "Editar Loja" : "Cadastrar Loja"}</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div><Label>Nome *</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder="Nome da loja" /></div>
               <div><Label>Endereço</Label><Input value={address} onChange={e => setAddress(e.target.value)} /></div>
@@ -117,8 +149,20 @@ function StoresTab() {
                 <div><Label>Cidade</Label><Input value={city} onChange={e => setCity(e.target.value)} /></div>
                 <div><Label>Telefone</Label><Input value={phone} onChange={e => setPhone(e.target.value)} /></div>
               </div>
-              <Button onClick={handleAdd} disabled={saving} className="w-full">
-                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Cadastrar
+              <div>
+                <Label>Quantidade de funcionários</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  value={employeeCount}
+                  onChange={e => setEmployeeCount(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <Button onClick={handleSave} disabled={saving} className="w-full">
+                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} {editingId ? "Salvar alterações" : "Cadastrar"}
               </Button>
             </div>
           </DialogContent>
@@ -131,7 +175,8 @@ function StoresTab() {
               <TableHead>Nome</TableHead>
               <TableHead>Cidade</TableHead>
               <TableHead>Telefone</TableHead>
-              <TableHead className="w-12"></TableHead>
+              <TableHead className="text-center">Funcionários</TableHead>
+              <TableHead className="w-24 text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -140,13 +185,21 @@ function StoresTab() {
                 <TableCell className="font-medium">{s.name}</TableCell>
                 <TableCell>{s.city || "—"}</TableCell>
                 <TableCell>{s.phone || "—"}</TableCell>
+                <TableCell className="text-center tabular-nums">{s.employee_count ?? 0}</TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <div className="flex justify-end gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(s)} title="Editar">
+                      <Pencil className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} title="Excluir">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
             {stores.length === 0 && (
-              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma loja cadastrada</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma loja cadastrada</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
