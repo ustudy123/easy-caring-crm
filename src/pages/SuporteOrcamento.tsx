@@ -27,7 +27,38 @@ interface SupportRequest {
 
 export default function SuporteOrcamento() {
    const { leads, updateLead, sellers } = useCrm();
-  const [requests, setRequests] = useState<SupportRequest[]>([]);
+   const [requests, setRequests] = useState<SupportRequest[]>([
+     {
+       id: "1",
+       leadId: "lead1",
+       clientName: "Construtora Rocha",
+       vendedorName: "Ricardo Silva",
+       type: "orcamento",
+       description: "Orçamento para pintura predial 5000m2",
+       status: "pendente",
+       createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+     },
+     {
+       id: "2",
+       leadId: "lead2",
+       clientName: "Indústria Metal",
+       vendedorName: "Ana Santos",
+       type: "precificacao_especial",
+       description: "Solicitação de 15% de desconto para fechamento imediato",
+       status: "em_analise",
+       createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+     },
+     {
+       id: "3",
+       leadId: "lead3",
+       clientName: "Mercado Central",
+       vendedorName: "Ricardo Silva",
+       type: "orcamento",
+       description: "Orçamento de tintas epóxi",
+       status: "concluido",
+       createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+     }
+   ]);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
