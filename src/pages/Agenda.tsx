@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useCrm } from "@/contexts/CrmContext";
 import { supabase } from "@/integrations/supabase/client";
 import { FollowUp } from "@/types/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Phone, MessageCircle, Mail, MapPin, CheckCircle2, Clock, Plus, CalendarDays, Pencil, ListChecks, AlertTriangle } from "lucide-react";
@@ -29,6 +31,14 @@ export default function Agenda() {
   const [view, setView] = useState<"all" | "pending" | "completed">("all");
   const [showNewFollowUp, setShowNewFollowUp] = useState(false);
   const [editingFollowUp, setEditingFollowUp] = useState<FollowUp | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(true);
+
+  // Auto-collapse calendar on mobile initially
+  useEffect(() => {
+    if (window.innerWidth < 1024) {
+      setCalendarOpen(false);
+    }
+  }, []);
 
   const toggleComplete = (id: string) => {
     const fu = followUps.find(f => f.id === id);
@@ -100,32 +110,52 @@ export default function Agenda() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Calendar Card */}
-          <motion.div variants={fadeIn} initial="hidden" animate="show">
-            <Card className="lg:col-span-1 border-border/40 bg-card/80 backdrop-blur-sm overflow-hidden">
-              <CardHeader className="pb-2 border-b border-border/30">
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-[hsl(262,60%,55%)]">
-                    <CalendarDays className="h-3.5 w-3.5 text-primary-foreground" />
+          {/* Calendar Card - Collapsible on Mobile */}
+          <motion.div variants={fadeIn} initial="hidden" animate="show" className="lg:col-span-1">
+            <Collapsible open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <Card className="border-border/40 bg-card/80 backdrop-blur-sm overflow-hidden">
+                <CardHeader className="pb-2 border-b border-border/30 flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-[hsl(262,60%,55%)]">
+                      <CalendarDays className="h-3.5 w-3.5 text-primary-foreground" />
+                    </div>
+                    Calendário
+                  </CardTitle>
+                  <CollapsibleTrigger asChild className="lg:hidden">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg">
+                      {calendarOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                </CardHeader>
+                <CollapsibleContent className="lg:block">
+                  <CardContent className="flex justify-center pt-3">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => {
+                        setSelectedDate(date);
+                        if (window.innerWidth < 1024) setCalendarOpen(false);
+                      }}
+                      className="pointer-events-auto"
+                      modifiers={{
+                        hasFollowUp: Object.keys(followUpDates).map(d => new Date(d)),
+                      }}
+                      modifiersClassNames={{
+                        hasFollowUp: "bg-primary/15 font-bold text-primary",
+                      }}
+                    />
+                  </CardContent>
+                </CollapsibleContent>
+                {!calendarOpen && selectedDate && (
+                  <div className="px-4 py-2 bg-muted/30 lg:hidden">
+                    <p className="text-xs font-medium text-primary flex items-center gap-1.5">
+                      <CalendarDays className="h-3 w-3" />
+                      {selectedDate.toLocaleDateString("pt-BR", { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
                   </div>
-                  Calendário
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex justify-center pt-3">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  className="pointer-events-auto"
-                  modifiers={{
-                    hasFollowUp: Object.keys(followUpDates).map(d => new Date(d)),
-                  }}
-                  modifiersClassNames={{
-                    hasFollowUp: "bg-primary/15 font-bold text-primary",
-                  }}
-                />
-              </CardContent>
-            </Card>
+                )}
+              </Card>
+            </Collapsible>
           </motion.div>
 
           {/* Follow-ups List */}
