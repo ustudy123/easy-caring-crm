@@ -12,7 +12,7 @@ import {
   PieChart, Pie, Cell, CartesianGrid, Area, AreaChart, LabelList,
 } from "recharts";
 import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { forwardRef, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
