@@ -2,3 +2,6 @@ project_id = "kcatrkkpktgxbwopotwz"
 
 [functions.citel-get-client]
 verify_jwt = true
+
+[functions.citel-explore]
+verify_jwt = true
