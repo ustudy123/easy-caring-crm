@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
-import { Lead, FollowUp } from "@/types/crm";
+ import { Lead, FollowUp, Seller } from "@/types/crm";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CrmContextType {
@@ -13,6 +13,7 @@ interface CrmContextType {
   addFollowUp: (followUp: FollowUp) => void;
   updateFollowUp: (followUp: FollowUp) => void;
   deleteFollowUp: (id: string) => void;
+   sellers: Seller[];
   newLeadsCount: number;
   pendingFollowUpsCount: number;
   negotiationCount: number;
@@ -54,22 +55,36 @@ function mapFollowUpFromDb(row: any): FollowUp {
   };
 }
 
+ function mapSellerFromDb(row: any): Seller {
+   return {
+     id: row.id,
+     name: row.name,
+     avatar: row.avatar || undefined,
+     role: row.role,
+     leadsCount: Number(row.leads_count || 0),
+     conversions: Number(row.conversions || 0),
+   };
+ }
+ 
 export function CrmProvider({ children }: { children: ReactNode }) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+   const [sellers, setSellers] = useState<Seller[]>([]);
   const [unreadWhatsAppCount, setUnreadWhatsAppCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
-      const [leadsRes, followUpsRes, whatsappRes] = await Promise.all([
+       const [leadsRes, followUpsRes, whatsappRes, sellersRes] = await Promise.all([
         supabase.from("leads").select("*").order("created_at", { ascending: false }),
         supabase.from("follow_ups").select("*").order("scheduled_at"),
         supabase.from("whatsapp_messages").select("phone", { count: "exact", head: true }).eq("is_from_me", false),
+         supabase.from("sellers").select("*").order("name"),
       ]);
       if (leadsRes.data) setLeads(leadsRes.data.map(mapLeadFromDb));
       if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
+       if (sellersRes.data) setSellers(sellersRes.data.map(mapSellerFromDb));
       if (whatsappRes.count != null) setUnreadWhatsAppCount(whatsappRes.count);
       setLoading(false);
     };
@@ -213,6 +228,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       value={{
         leads, setLeads, addLead, updateLead, deleteLead,
         followUps, setFollowUps, addFollowUp, updateFollowUp, deleteFollowUp,
+       sellers,
         newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount, loading,
       }}
     >
