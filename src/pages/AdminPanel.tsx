@@ -21,6 +21,7 @@ interface StoreRow {
   address: string | null;
   city: string | null;
   phone: string | null;
+  employee_count: number;
 }
 
 interface AdminUserRow {
