@@ -79,10 +79,10 @@ const FUNNEL_COLORS = [
   "hsl(275, 58%, 42%)",
 ];
 
-// Skeleton for chart loading
-function ChartSkeleton({ height = 260 }: { height?: number }) {
+// Skeleton for chart loading (forwardRef so framer-motion can pass refs through)
+const ChartSkeleton = forwardRef<HTMLDivElement, { height?: number }>(({ height = 260 }, ref) => {
   return (
-    <div className="space-y-3" style={{ height }}>
+    <div ref={ref} className="space-y-3" style={{ height }}>
       <div className="flex items-end gap-2 h-full">
         {[60, 80, 45, 90, 70, 55, 85, 40].map((h, i) => (
           <Skeleton key={i} className="flex-1 rounded-md" style={{ height: `${h}%` }} />
@@ -90,7 +90,8 @@ function ChartSkeleton({ height = 260 }: { height?: number }) {
       </div>
     </div>
   );
-}
+});
+ChartSkeleton.displayName = "ChartSkeleton";
 
 // Custom tooltip for funnel
 function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count: number; value: number; convRate: number | null }) {
