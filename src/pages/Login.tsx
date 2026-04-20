@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Mail, Lock, User as UserIcon, ArrowLeft } from "lucide-react";
 
 export default function Login() {
   const { signIn, signUp, resetPassword } = useAuth();
@@ -55,102 +55,152 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md shadow-xl border-border/40">
-        <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-2xl font-bold text-primary">
-            CRM Taeco
-          </CardTitle>
-          <CardDescription>
-            {isForgot
-              ? "Digite seu e-mail para recuperar a senha"
-              : isSignUp
-              ? "Crie sua conta para acessar o CRM"
-              : "Entre com suas credenciais"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && !isForgot && (
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Nome</Label>
-                <Input
-                  id="displayName"
-                  placeholder="Seu nome completo"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  required
-                />
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            {!isForgot && (
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 px-4 py-8 sm:py-12">
+      <div className="w-full max-w-md animate-fade-up">
+        {/* Brand */}
+        <div className="flex flex-col items-center mb-6 sm:mb-8">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary shadow-lg shadow-primary/20 mb-3">
+            <svg width="24" height="24" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="2" y="2" width="11" height="11" rx="2" fill="white" fillOpacity="0.95" />
+              <rect x="15" y="2" width="11" height="11" rx="2" fill="white" fillOpacity="0.5" />
+              <rect x="2" y="15" width="11" height="11" rx="2" fill="white" fillOpacity="0.5" />
+              <rect x="15" y="15" width="11" height="11" rx="2" fill="white" fillOpacity="0.8" />
+            </svg>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">CRM Taeco</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Gestão Comercial Inteligente</p>
+        </div>
+
+        <Card className="shadow-xl border-border/50 backdrop-blur-sm bg-card/95">
+          <CardHeader className="space-y-1.5 pb-4">
+            <CardTitle className="text-lg sm:text-xl font-bold tracking-tight">
+              {isForgot ? "Recuperar senha" : isSignUp ? "Criar conta" : "Bem-vindo de volta"}
+            </CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              {isForgot
+                ? "Enviaremos um link de recuperação por e-mail"
+                : isSignUp
+                ? "Preencha os dados para começar"
+                : "Entre com suas credenciais para continuar"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate aria-label={isForgot ? "Formulário de recuperação de senha" : isSignUp ? "Formulário de cadastro" : "Formulário de login"}>
+              {isSignUp && !isForgot && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="displayName" className="text-xs font-semibold">Nome completo</Label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
+                    <Input
+                      id="displayName"
+                      placeholder="Seu nome completo"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      required
+                      autoComplete="name"
+                      className="pl-9 h-10 transition-shadow focus-visible:shadow-sm"
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold">E-mail</Label>
                 <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
                   <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
-                    minLength={6}
+                    autoComplete="email"
+                    inputMode="email"
+                    className="pl-9 h-10 transition-shadow focus-visible:shadow-sm"
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
                 </div>
               </div>
-            )}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              {isForgot ? "Enviar e-mail" : isSignUp ? "Criar conta" : "Entrar"}
-            </Button>
-          </form>
+              {!isForgot && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="password" className="text-xs font-semibold">Senha</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      autoComplete={isSignUp ? "new-password" : "current-password"}
+                      aria-describedby={isSignUp ? "password-hint" : undefined}
+                      className="pl-9 pr-10 h-10 transition-shadow focus-visible:shadow-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                      aria-pressed={showPassword}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  {isSignUp && (
+                    <p id="password-hint" className="text-[11px] text-muted-foreground mt-1">Mínimo de 6 caracteres</p>
+                  )}
+                </div>
+              )}
+              <Button
+                type="submit"
+                className="w-full h-10 font-semibold shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+                disabled={loading}
+                aria-busy={loading}
+              >
+                {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />}
+                {isForgot ? "Enviar link de recuperação" : isSignUp ? "Criar conta" : "Entrar"}
+              </Button>
+            </form>
 
-          <div className="mt-4 space-y-2 text-center text-sm">
-            {!isForgot && (
-              <button
-                onClick={() => setIsForgot(true)}
-                className="text-primary hover:underline block w-full"
-              >
-                Esqueci minha senha
-              </button>
-            )}
-            <button
-              onClick={() => { setIsSignUp(!isSignUp); setIsForgot(false); }}
-              className="text-muted-foreground hover:text-foreground block w-full"
-            >
-              {isSignUp ? "Já tem conta? Entrar" : "Não tem conta? Criar conta"}
-            </button>
-            {isForgot && (
-              <button
-                onClick={() => setIsForgot(false)}
-                className="text-muted-foreground hover:text-foreground block w-full"
-              >
-                Voltar ao login
-              </button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            <div className="mt-5 pt-4 border-t border-border/40 space-y-2.5 text-center text-sm">
+              {!isForgot && !isSignUp && (
+                <button
+                  type="button"
+                  onClick={() => setIsForgot(true)}
+                  className="text-primary font-medium hover:underline focus-visible:outline-none focus-visible:underline rounded-sm"
+                >
+                  Esqueci minha senha
+                </button>
+              )}
+              <div>
+                {!isForgot && (
+                  <button
+                    type="button"
+                    onClick={() => { setIsSignUp(!isSignUp); setIsForgot(false); }}
+                    className="text-muted-foreground hover:text-foreground transition-colors text-xs sm:text-sm focus-visible:outline-none focus-visible:underline rounded-sm"
+                  >
+                    {isSignUp ? "Já tem conta? " : "Não tem conta? "}
+                    <span className="text-primary font-semibold">{isSignUp ? "Entrar" : "Criar conta"}</span>
+                  </button>
+                )}
+                {isForgot && (
+                  <button
+                    type="button"
+                    onClick={() => setIsForgot(false)}
+                    className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-xs sm:text-sm focus-visible:outline-none focus-visible:underline rounded-sm"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                    Voltar ao login
+                  </button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

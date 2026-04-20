@@ -47,9 +47,15 @@ export function AppLayout({ children, title }: AppLayoutProps) {
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 sm:h-16 flex items-center justify-between border-b border-border/60 bg-card/80 backdrop-blur-md px-4 sm:px-6 shrink-0 sticky top-0 z-30">
+          <header
+            role="banner"
+            className="h-14 sm:h-16 flex items-center justify-between border-b border-border/60 bg-card/80 backdrop-blur-md px-4 sm:px-6 shrink-0 sticky top-0 z-30"
+          >
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors shrink-0" />
+              <SidebarTrigger
+                aria-label="Alternar barra lateral"
+                className="text-muted-foreground hover:text-foreground transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card rounded-md"
+              />
               {title && (
                 <h1 className="text-sm sm:text-lg font-extrabold text-foreground truncate tracking-tight">{title}</h1>
               )}
@@ -59,16 +65,25 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                 variant="ghost"
                 size="icon"
                 onClick={toggleTheme}
+                aria-label={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
                 className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl hover:bg-muted transition-colors"
               >
-                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                {theme === "dark" ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
               </Button>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-xl hover:bg-muted transition-colors">
-                    <Bell className="h-4 w-4" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Notificações${totalNotifications > 0 ? `, ${totalNotifications} não lidas` : ""}`}
+                    className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-xl hover:bg-muted transition-colors"
+                  >
+                    <Bell className="h-4 w-4" aria-hidden="true" />
                     {totalNotifications > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-accent text-[9px] sm:text-[10px] font-bold text-accent-foreground shadow-sm animate-pulse">
+                      <span
+                        aria-hidden="true"
+                        className="absolute -top-0.5 -right-0.5 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-accent text-[9px] sm:text-[10px] font-bold text-accent-foreground shadow-sm ring-2 ring-card animate-pulse"
+                      >
                         {totalNotifications > 99 ? "99+" : totalNotifications}
                       </span>
                     )}

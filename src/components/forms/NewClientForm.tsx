@@ -110,26 +110,47 @@ export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-bold">Novo Cliente</DialogTitle>
+      <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto p-0 gap-0">
+        <DialogHeader className="px-5 sm:px-6 pt-5 pb-3 border-b border-border/50">
+          <DialogTitle className="text-base sm:text-lg font-bold tracking-tight">Novo Cliente</DialogTitle>
+          <p className="text-xs text-muted-foreground mt-0.5">Cadastre um novo cliente na sua base. Use o botão de busca para preencher via ERP.</p>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2 space-y-1.5">
-              <Label>Nome *</Label>
-              <Input value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Nome completo" maxLength={100} />
-              {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+        <form onSubmit={handleSubmit} className="px-5 sm:px-6 py-4 space-y-4" noValidate>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label htmlFor="client-name" className="text-xs font-semibold">
+                Nome <span className="text-destructive" aria-hidden="true">*</span>
+              </Label>
+              <Input
+                id="client-name"
+                value={form.name}
+                onChange={(e) => update("name", e.target.value)}
+                placeholder="Nome completo"
+                maxLength={100}
+                required
+                autoComplete="name"
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? "client-name-error" : undefined}
+                className={errors.name ? "border-destructive focus-visible:ring-destructive/40" : ""}
+              />
+              {errors.name && <p id="client-name-error" role="alert" className="text-xs text-destructive font-medium">{errors.name}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>Telefone *</Label>
+              <Label htmlFor="client-phone" className="text-xs font-semibold">
+                Telefone <span className="text-destructive" aria-hidden="true">*</span>
+              </Label>
               <div className="flex gap-2">
                 <MaskedInput
+                  id="client-phone"
                   mask="phone"
                   value={form.phone}
                   onValueChange={(_, masked) => update("phone", masked)}
                   placeholder="(11) 99999-0000"
-                  className="flex-1"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  aria-invalid={!!errors.phone}
+                  aria-describedby={errors.phone ? "client-phone-error" : "client-phone-hint"}
+                  className={`flex-1 ${errors.phone ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
                 />
                 <Button
                   type="button"
@@ -138,38 +159,90 @@ export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormPro
                   onClick={handleSearchErp}
                   disabled={isSearching || !isValidPhone(form.phone)}
                   title="Buscar no ERP CITEL"
-                  aria-label="Buscar no ERP"
+                  aria-label="Buscar dados no ERP CITEL pelo telefone"
+                  className="shrink-0 transition-all hover:bg-primary/10 hover:text-primary hover:border-primary/30 active:scale-95"
                 >
-                  {isSearching ? <Loader2 className="animate-spin" /> : <Search />}
+                  {isSearching ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Search aria-hidden="true" />}
                 </Button>
               </div>
-              {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+              {errors.phone ? (
+                <p id="client-phone-error" role="alert" className="text-xs text-destructive font-medium">{errors.phone}</p>
+              ) : (
+                <p id="client-phone-hint" className="text-[11px] text-muted-foreground">Digite e clique na lupa para buscar no ERP</p>
+              )}
             </div>
             <div className="space-y-1.5">
-              <Label>E-mail</Label>
-              <Input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="email@exemplo.com" maxLength={255} />
-              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+              <Label htmlFor="client-email" className="text-xs font-semibold">E-mail</Label>
+              <Input
+                id="client-email"
+                type="email"
+                value={form.email}
+                onChange={(e) => update("email", e.target.value)}
+                placeholder="email@exemplo.com"
+                maxLength={255}
+                autoComplete="email"
+                inputMode="email"
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? "client-email-error" : undefined}
+                className={errors.email ? "border-destructive focus-visible:ring-destructive/40" : ""}
+              />
+              {errors.email && <p id="client-email-error" role="alert" className="text-xs text-destructive font-medium">{errors.email}</p>}
             </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>Endereço</Label>
-              <Input value={form.address} onChange={(e) => update("address", e.target.value)} placeholder="Rua, número, bairro" maxLength={200} />
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label htmlFor="client-address" className="text-xs font-semibold">Endereço</Label>
+              <Input
+                id="client-address"
+                value={form.address}
+                onChange={(e) => update("address", e.target.value)}
+                placeholder="Rua, número, bairro"
+                maxLength={200}
+                autoComplete="street-address"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>Cidade</Label>
-              <Input value={form.city} onChange={(e) => update("city", e.target.value)} placeholder="São Paulo" maxLength={100} />
+              <Label htmlFor="client-city" className="text-xs font-semibold">Cidade</Label>
+              <Input
+                id="client-city"
+                value={form.city}
+                onChange={(e) => update("city", e.target.value)}
+                placeholder="São Paulo"
+                maxLength={100}
+                autoComplete="address-level2"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>Tags (vírgula)</Label>
-              <Input value={form.tags} onChange={(e) => update("tags", e.target.value)} placeholder="residencial, fidelizado" maxLength={200} />
+              <Label htmlFor="client-tags" className="text-xs font-semibold">Tags</Label>
+              <Input
+                id="client-tags"
+                value={form.tags}
+                onChange={(e) => update("tags", e.target.value)}
+                placeholder="residencial, fidelizado"
+                maxLength={200}
+                aria-describedby="client-tags-hint"
+              />
+              <p id="client-tags-hint" className="text-[11px] text-muted-foreground">Separe por vírgulas</p>
             </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>Observações</Label>
-              <Textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Notas sobre o cliente..." maxLength={500} rows={3} />
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label htmlFor="client-notes" className="text-xs font-semibold">Observações</Label>
+              <Textarea
+                id="client-notes"
+                value={form.notes}
+                onChange={(e) => update("notes", e.target.value)}
+                placeholder="Notas sobre o cliente..."
+                maxLength={500}
+                rows={3}
+                className="resize-none"
+              />
+              <p className="text-[11px] text-muted-foreground text-right tabular-nums">{form.notes.length}/500</p>
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit">Cadastrar Cliente</Button>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-3 border-t border-border/50 -mx-5 sm:-mx-6 px-5 sm:px-6">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="sm:w-auto">
+              Cancelar
+            </Button>
+            <Button type="submit" className="sm:w-auto font-semibold shadow-sm hover:shadow-md active:scale-[0.98] transition-all">
+              Cadastrar Cliente
+            </Button>
           </div>
         </form>
       </DialogContent>

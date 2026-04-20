@@ -96,37 +96,46 @@ export function AppSidebar() {
           <NavLink
             to={item.url}
             end={item.url === "/"}
+            aria-current={isActive ? "page" : undefined}
+            aria-label={badge > 0 ? `${item.title}, ${badge} novos` : item.title}
             className={cn(
-              "group relative flex items-center transition-colors duration-150",
+              "group relative flex items-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar rounded-r-md",
               collapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
               isActive
-                ? "text-[#E8EAF0] font-medium"
-                : "text-[#6B7280] hover:text-[#9CA3AF] hover:bg-[rgba(255,255,255,0.03)]"
+                ? "text-sidebar-foreground font-medium"
+                : "text-sidebar-foreground/55 hover:text-sidebar-foreground/85 hover:bg-sidebar-accent/40"
             )}
             activeClassName=""
           >
             {/* Active indicator — 2px left border + subtle bg */}
             {isActive && !collapsed && (
-              <div className="absolute inset-0 rounded-r-[7px] border-l-2 border-[#6366F1] bg-white/5" />
+              <div aria-hidden="true" className="absolute inset-0 rounded-r-[7px] border-l-2 border-primary bg-sidebar-foreground/5" />
             )}
             <div className="relative shrink-0">
               <item.icon
-                className={cn("h-4 w-4", isActive ? "text-[#E8EAF0]" : "text-[#6B7280]")}
+                aria-hidden="true"
+                className={cn("h-4 w-4 transition-colors", isActive ? "text-sidebar-foreground" : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground/85")}
                 strokeWidth={1.5}
               />
               {collapsed && badge > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#6366F1] text-[8px] font-semibold text-white">
+                <span
+                  aria-hidden="true"
+                  className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-semibold text-primary-foreground ring-2 ring-sidebar"
+                >
                   {badge}
                 </span>
               )}
             </div>
             {!collapsed && (
-              <span className={cn("text-[13px] leading-none", isActive ? "font-medium text-[#E8EAF0]" : "font-normal text-[#6B7280]")}>
+              <span className={cn("text-[13px] leading-none relative", isActive ? "font-medium text-sidebar-foreground" : "font-normal")}>
                 {item.title}
               </span>
             )}
             {!collapsed && badge > 0 && (
-              <span className="ml-auto flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#6366F1]/15 px-1 text-[10px] font-medium text-[#818CF8] tabular-nums">
+              <span
+                aria-hidden="true"
+                className="ml-auto relative flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary/20 px-1.5 text-[10px] font-bold text-sidebar-foreground tabular-nums"
+              >
                 {badge}
               </span>
             )}
