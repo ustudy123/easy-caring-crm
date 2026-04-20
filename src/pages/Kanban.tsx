@@ -172,9 +172,25 @@ export default function Kanban() {
           </div>
         </div>
 
+        {/* Board Navigation for Mobile */}
+        <div className="flex sm:hidden gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3">
+          {KANBAN_STAGES.map((stage) => (
+            <button
+              key={`nav-${stage.key}`}
+              onClick={() => {
+                const el = document.getElementById(`stage-${stage.key}`);
+                el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+              }}
+              className="shrink-0 px-3 py-1.5 rounded-full bg-card border border-border/40 text-[10px] font-bold text-muted-foreground active:bg-primary active:text-primary-foreground transition-colors"
+            >
+              {stage.label}
+            </button>
+          ))}
+        </div>
+
         {/* Board */}
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none">
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none no-scrollbar scroll-smooth">
             {KANBAN_STAGES.map((stage) => {
               const stageLeads = filteredLeads.filter((l) => l.stage === stage.key);
               const totalValue = stageLeads.reduce((s, l) => s + l.value, 0);
@@ -185,12 +201,16 @@ export default function Kanban() {
               }).length;
 
               return (
-                <div key={stage.key} className="flex-shrink-0 w-[280px] sm:w-[276px] flex flex-col snap-start">
+                <div 
+                  key={stage.key} 
+                  id={`stage-${stage.key}`}
+                  className="flex-shrink-0 w-[85vw] sm:w-[280px] lg:w-[276px] flex flex-col snap-center sm:snap-start"
+                >
                   {/* Column header */}
-                  <div className={`flex items-center justify-between rounded-t-2xl p-3.5 bg-gradient-to-b ${stageHeaderGradient[stage.key]} border border-b-0 border-border/40`}>
+                  <div className={`flex items-center justify-between rounded-t-xl sm:rounded-t-2xl p-3 sm:p-3.5 bg-gradient-to-b ${stageHeaderGradient[stage.key]} border border-b-0 border-border/40`}>
                     <div className="flex items-center gap-2.5">
                       <div className={`h-2.5 w-2.5 rounded-full ${stageDotMap[stage.key]} ring-2 ring-background shadow-sm`} />
-                      <span className="text-[13px] font-bold">{stage.label}</span>
+                      <span className="text-[12px] sm:text-[13px] font-bold truncate max-w-[120px] sm:max-w-none">{stage.label}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {alertCount > 0 && (

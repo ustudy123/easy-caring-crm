@@ -48,33 +48,33 @@ export function AppLayout({ children, title }: AppLayoutProps) {
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-14 sm:h-16 flex items-center justify-between border-b border-border/60 bg-card/80 backdrop-blur-md px-4 sm:px-6 shrink-0 sticky top-0 z-30">
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors shrink-0" />
               {title && (
-                <h1 className="text-base sm:text-lg font-extrabold text-foreground truncate tracking-tight">{title}</h1>
+                <h1 className="text-sm sm:text-lg font-extrabold text-foreground truncate tracking-tight">{title}</h1>
               )}
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={toggleTheme}
-                className="h-9 w-9 rounded-xl hover:bg-muted transition-colors"
+                className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl hover:bg-muted transition-colors"
               >
                 {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-xl hover:bg-muted transition-colors">
+                  <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-xl hover:bg-muted transition-colors">
                     <Bell className="h-4 w-4" />
                     {totalNotifications > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground shadow-sm animate-pulse">
+                      <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-accent text-[9px] sm:text-[10px] font-bold text-accent-foreground shadow-sm animate-pulse">
                         {totalNotifications > 99 ? "99+" : totalNotifications}
                       </span>
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0 rounded-xl shadow-lg border-border/60" align="end">
+                <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-0 rounded-xl shadow-lg border-border/60" align="end" sideOffset={8}>
                   <div className="p-3.5 border-b border-border/60">
                     <h4 className="text-sm font-bold text-foreground">Notificações</h4>
                   </div>
@@ -134,7 +134,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
               </Popover>
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-4 sm:p-5 md:p-6">
+          <main className="flex-1 overflow-auto p-3 sm:p-5 md:p-6">
             {children}
           </main>
         </div>
