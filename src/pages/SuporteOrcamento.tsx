@@ -1,4 +1,4 @@
-import { useState } from "react";
+ import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useCrm } from "@/contexts/CrmContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, DollarSign, AlertTriangle, Clock, CheckCircle, Send, Search, Filter } from "lucide-react";
-import { Lead, KANBAN_STAGES } from "@/types/crm";
+ import { FileText, DollarSign, AlertTriangle, Clock, CheckCircle, Send, Search, Filter, GripVertical, User, MessageSquare } from "lucide-react";
+ import { Lead } from "@/types/crm";
 import { toast } from "sonner";
+ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 type RequestType = "orcamento" | "precificacao_especial";
 
@@ -17,6 +18,7 @@ interface SupportRequest {
   id: string;
   leadId: string;
   clientName: string;
+   vendedorName: string;
   type: RequestType;
   description: string;
   status: "pendente" | "em_analise" | "concluido";
@@ -24,7 +26,7 @@ interface SupportRequest {
 }
 
 export default function SuporteOrcamento() {
-  const { leads, updateLead } = useCrm();
+   const { leads, updateLead, sellers } = useCrm();
   const [requests, setRequests] = useState<SupportRequest[]>([]);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
@@ -38,24 +40,21 @@ export default function SuporteOrcamento() {
     (l) => ["sondagem", "recomendacao_tecnica", "demonstracao_valor", "contorno_objecoes"].includes(l.stage)
   );
 
-  const filteredRequests = requests.filter((r) => {
-    if (search && !r.clientName.toLowerCase().includes(search.toLowerCase())) return false;
-    if (filterType !== "all" && r.type !== filterType) return false;
-    return true;
-  });
-
   const handleSubmit = () => {
     if (!selectedLeadId) {
       toast.error("Selecione um lead");
       return;
     }
-    const lead = leads.find((l) => l.id === selectedLeadId);
+     const lead = leads.find((l) => l.id === selectedLeadId);
     if (!lead) return;
 
+     const seller = sellers.find(s => s.id === lead.assignedTo) || sellers.find(s => s.name === lead.assignedTo);
+ 
     const newRequest: SupportRequest = {
       id: crypto.randomUUID(),
       leadId: lead.id,
       clientName: lead.clientName,
+       vendedorName: seller?.name || lead.assignedTo || "Vendedor não identificado",
       type: requestType,
       description,
       status: "pendente",
@@ -80,12 +79,52 @@ export default function SuporteOrcamento() {
     setDescription("");
   };
 
-  const updateRequestStatus = (id: string, status: SupportRequest["status"]) => {
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r))
-    );
-    toast.success("Status atualizado!");
-  };
+   const updateRequestStatus = (id: string, status: SupportRequest["status"]) => {
+     const request = requests.find(r => r.id === id);
+     if (!request) return;
+ 
+     setRequests((prev) =>
+       prev.map((r) => (r.id === id ? { ...r, status } : r))
+     );
+ 
+     const statusLabels = {
+       pendente: "Pendente",
+       em_analise: "em Análise",
+       concluido: "Concluído"
+     };
+ 
+     toast.success(`Status atualizado para ${statusLabels[status]}!`);
+     
+     // Notificar vendedor
+     toast.info(`Notificação enviada para ${request.vendedorName}: O orçamento de ${request.clientName} está ${statusLabels[status]}.`, {
+       icon: <MessageSquare className="h-4 w-4" />,
+       duration: 5000,
+     });
+   };
+ 
+   const onDragEnd = (result: DropResult) => {
+     if (!result.destination) return;
+     
+     const sourceStatus = result.source.droppableId as SupportRequest["status"];
+     const destStatus = result.destination.droppableId as SupportRequest["status"];
+     
+     if (sourceStatus === destStatus) return;
+     
+     updateRequestStatus(result.draggableId, destStatus);
+   };
+ 
+   const columns: { id: SupportRequest["status"]; label: string; color: string; icon: any }[] = [
+     { id: "pendente", label: "Pendentes", color: "text-warning bg-warning/10 border-warning/20", icon: Clock },
+     { id: "em_analise", label: "Em Análise", color: "text-primary bg-primary/10 border-primary/20", icon: FileText },
+     { id: "concluido", label: "Concluídos", color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle },
+   ];
+ 
+   const filteredRequests = requests.filter((r) => {
+     const searchLower = search.toLowerCase();
+     if (search && !r.clientName.toLowerCase().includes(searchLower) && !r.vendedorName.toLowerCase().includes(searchLower)) return false;
+     if (filterType !== "all" && r.type !== filterType) return false;
+     return true;
+   });
 
   const statusConfig = {
     pendente: { label: "Pendente", color: "bg-warning/15 text-warning border-warning/30" },
