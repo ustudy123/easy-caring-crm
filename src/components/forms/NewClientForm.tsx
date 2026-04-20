@@ -8,6 +8,8 @@ import { MaskedInput } from "@/components/ui/masked-input";
 import { Client } from "@/types/crm";
 import { isValidPhone, isValidEmail } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Search } from "lucide-react";
 
 interface NewClientFormProps {
   open: boolean;
@@ -21,10 +23,57 @@ export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormPro
     name: "", phone: "", email: "", address: "", city: "", tags: "", notes: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSearching, setIsSearching] = useState(false);
 
   const update = (field: string, value: string) => {
     setForm((p) => ({ ...p, [field]: value }));
     setErrors((p) => ({ ...p, [field]: "" }));
+  };
+
+  const handleSearchErp = async () => {
+    if (!isValidPhone(form.phone)) {
+      setErrors((p) => ({ ...p, phone: "Telefone inválido (10 ou 11 dígitos)" }));
+      toast({
+        title: "Telefone inválido",
+        description: "Informe um telefone válido antes de buscar no ERP.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("citel-get-client", {
+        body: { phone: form.phone },
+      });
+      if (error) throw error;
+      if (data?.found && data.client) {
+        setForm((p) => ({
+          ...p,
+          name: p.name || data.client.name || "",
+          email: p.email || data.client.email || "",
+          address: p.address || data.client.address || "",
+          city: p.city || data.client.city || "",
+        }));
+        toast({
+          title: "Cliente encontrado no ERP",
+          description: "Campos preenchidos automaticamente.",
+        });
+      } else {
+        toast({
+          title: "Cliente não encontrado",
+          description: "Nenhum registro no ERP para este telefone — preencha manualmente.",
+        });
+      }
+    } catch (err) {
+      console.error("[NewClientForm] ERP lookup failed", err);
+      toast({
+        title: "Erro ao consultar ERP",
+        description: "Não foi possível buscar no CITEL. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const validate = () => {
@@ -74,7 +123,26 @@ export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormPro
             </div>
             <div className="space-y-1.5">
               <Label>Telefone *</Label>
-              <MaskedInput mask="phone" value={form.phone} onValueChange={(_, masked) => update("phone", masked)} placeholder="(11) 99999-0000" />
+              <div className="flex gap-2">
+                <MaskedInput
+                  mask="phone"
+                  value={form.phone}
+                  onValueChange={(_, masked) => update("phone", masked)}
+                  placeholder="(11) 99999-0000"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleSearchErp}
+                  disabled={isSearching || !isValidPhone(form.phone)}
+                  title="Buscar no ERP CITEL"
+                  aria-label="Buscar no ERP"
+                >
+                  {isSearching ? <Loader2 className="animate-spin" /> : <Search />}
+                </Button>
+              </div>
               {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
             </div>
             <div className="space-y-1.5">

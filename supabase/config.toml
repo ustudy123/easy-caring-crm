@@ -1,1 +1,4 @@
 project_id = "kcatrkkpktgxbwopotwz"
+
+[functions.citel-get-client]
+verify_jwt = true
