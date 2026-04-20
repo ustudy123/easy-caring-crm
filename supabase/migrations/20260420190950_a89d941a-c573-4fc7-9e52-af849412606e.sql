@@ -1,0 +1,1 @@
+ALTER TABLE public.stores ADD COLUMN employee_count integer NOT NULL DEFAULT 0;
