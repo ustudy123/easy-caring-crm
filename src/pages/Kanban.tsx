@@ -190,7 +190,7 @@ export default function Kanban() {
 
         {/* Board */}
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none no-scrollbar scroll-smooth">
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none scroll-smooth">
             {KANBAN_STAGES.map((stage) => {
               const stageLeads = filteredLeads.filter((l) => l.stage === stage.key);
               const totalValue = stageLeads.reduce((s, l) => s + l.value, 0);
@@ -260,11 +260,11 @@ export default function Kanban() {
                                         rounded-xl border-l-[3px] p-3.5 
                                         bg-card text-card-foreground
                                         border border-border/30 border-l-0
-                                        shadow-sm
-                                        transition-all duration-200
-                                        hover:shadow-md hover:border-border/60
-                                        cursor-grab active:cursor-grabbing
-                                        group
+                                         shadow-sm
+                                         transition-all duration-200
+                                         hover:shadow-md hover:border-border/60 hover:bg-muted/30
+                                         cursor-grab active:cursor-grabbing
+                                         group
                                         ${stageColorMap[stage.key]} 
                                         ${config.borderClass} 
                                         ${config.pulse ? "animate-urgency-pulse" : ""} 
