@@ -225,6 +225,36 @@ export default function Conversas() {
     }
   };
 
+  const handleExport = () => {
+    if (!selectedConversation) return;
+    const name = contactName || formatPhone(selectedConversation.phone);
+    const lines: string[] = [
+      `Conversa com: ${name}`,
+      `Telefone: ${formatPhone(selectedConversation.phone)}`,
+      `Exportado em: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
+      `Total de mensagens: ${selectedConversation.messages.length}`,
+      "",
+      "─".repeat(60),
+      "",
+    ];
+    selectedConversation.messages.forEach((msg) => {
+      const ts = msg.timestamp || msg.created_at || "";
+      const when = ts ? format(new Date(ts), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "—";
+      const sender = msg.is_from_me ? "Atendente" : name;
+      lines.push(`[${when}] ${sender}: ${msg.body || ""}`);
+    });
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `conversa-${selectedConversation.phone}-${format(new Date(), "yyyy-MM-dd")}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Conversa exportada com sucesso!");
+  };
+
   return (
     <AppLayout title="Conversas">
       <div className="flex h-[calc(100vh-5rem)] overflow-hidden bg-background">
