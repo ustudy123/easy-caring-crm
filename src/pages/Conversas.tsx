@@ -5,11 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock } from "lucide-react";
+import { Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useRole } from "@/contexts/RoleContext";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // ── Types ──
 interface WhatsAppMessage {
@@ -100,6 +103,7 @@ const mockContactNames: Record<string, string> = {
 
 // ── Component ──
 export default function Conversas() {
+  const { isAdmin } = useRole();
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -219,6 +223,36 @@ export default function Conversas() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleExport = () => {
+    if (!selectedConversation) return;
+    const name = contactName || formatPhone(selectedConversation.phone);
+    const lines: string[] = [
+      `Conversa com: ${name}`,
+      `Telefone: ${formatPhone(selectedConversation.phone)}`,
+      `Exportado em: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
+      `Total de mensagens: ${selectedConversation.messages.length}`,
+      "",
+      "─".repeat(60),
+      "",
+    ];
+    selectedConversation.messages.forEach((msg) => {
+      const ts = msg.timestamp || msg.created_at || "";
+      const when = ts ? format(new Date(ts), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "—";
+      const sender = msg.is_from_me ? "Atendente" : name;
+      lines.push(`[${when}] ${sender}: ${msg.body || ""}`);
+    });
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `conversa-${selectedConversation.phone}-${format(new Date(), "yyyy-MM-dd")}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Conversa exportada com sucesso!");
   };
 
   return (
@@ -368,6 +402,24 @@ export default function Conversas() {
                   )}
                 </div>
                 <div className="flex items-center gap-1">
+                  {isAdmin && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleExport}
+                            aria-label="Exportar conversa"
+                            className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
+                          >
+                            <Download className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Exportar conversa (.txt)</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                   <Button variant="ghost" size="icon" className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full">
                     <Search className="h-5 w-5" />
                   </Button>
