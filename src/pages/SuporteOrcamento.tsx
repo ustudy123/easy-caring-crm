@@ -294,10 +294,10 @@ export default function SuporteOrcamento() {
           </Card>
         )}
 
-         {/* Kanban Board */}
-         <DragDropContext onDragEnd={onDragEnd}>
-           <div className="flex gap-4 overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar">
-             {columns.map((col) => {
+          {/* Kanban Board */}
+          <DragDropContext onDragEnd={onDragEnd}>
+            <div className="flex gap-4 overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+              {columns.map((col) => {
                const colRequests = filteredRequests.filter((r) => r.status === col.id);
                return (
                  <div key={col.id} className="flex-shrink-0 w-[300px] flex flex-col bg-muted/30 rounded-xl border border-border/40 min-h-[500px]">
@@ -335,9 +335,9 @@ export default function SuporteOrcamento() {
                                  ref={provided.innerRef}
                                  {...provided.draggableProps}
                                  {...provided.dragHandleProps}
-                                 className={`shadow-sm hover:shadow-md transition-all ${
-                                   snapshot.isDragging ? "rotate-2 shadow-xl ring-2 ring-primary/20" : ""
-                                 }`}
+                                  className={`shadow-sm hover:shadow-md hover:bg-muted/30 transition-all ${
+                                    snapshot.isDragging ? "rotate-2 shadow-xl ring-2 ring-primary/20" : ""
+                                  }`}
                                >
                                  <CardContent className="p-3 space-y-2">
                                    <div className="flex items-start justify-between gap-2">
