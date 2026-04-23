@@ -1,3 +1,31 @@
+         <Card>
+           <CardHeader>
+             <CardTitle className="flex items-center gap-2 text-base font-bold">
+               <MessageCircle className="h-4 w-4 text-primary" /> Integração WhatsApp
+             </CardTitle>
+           </CardHeader>
+           <CardContent className="space-y-4">
+             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
+               <div className="flex items-center gap-3">
+                 <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                   <MessageCircle className="h-5 w-5 text-green-600" />
+                 </div>
+                 <div>
+                   <p className="text-sm font-semibold">Status da Conexão</p>
+                   <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                     <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                     Conectado e pronto para uso
+                   </p>
+                 </div>
+               </div>
+               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Ativo</Badge>
+             </div>
+             <p className="text-xs text-muted-foreground">
+               Seu número está sincronizado com o sistema. Mensagens recebidas serão transformadas em leads automaticamente.
+             </p>
+           </CardContent>
+         </Card>
+
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -5,7 +33,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Settings, Bell, Shield, Loader2 } from "lucide-react";
+ import { Settings, Bell, Shield, Loader2, MessageCircle } from "lucide-react";
+ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";

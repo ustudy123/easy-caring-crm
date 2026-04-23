@@ -266,9 +266,19 @@ export default function Conversas() {
           {/* WhatsApp-style header */}
           <div className="h-14 flex items-center justify-between px-4" style={{ backgroundColor: "hsl(var(--wa-header))" }}>
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-white/15 flex items-center justify-center">
-                <MessageCircle className="h-5 w-5 text-white" />
-              </div>
+               <div className="relative">
+                 <div className="h-10 w-10 rounded-full bg-white/15 flex items-center justify-center">
+                   <MessageCircle className="h-5 w-5 text-white" />
+                 </div>
+                 <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[hsl(var(--wa-header))] bg-green-500 shadow-sm" title="WhatsApp Conectado" />
+               </div>
+               <div className="flex flex-col">
+                 <span className="text-sm font-medium text-white leading-none">WhatsApp</span>
+                 <span className="text-[10px] text-white/70 mt-1 flex items-center gap-1">
+                   <div className="h-1 w-1 rounded-full bg-green-400 animate-pulse" />
+                   Conectado
+                 </span>
+               </div>
             </div>
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="icon" className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-full">
