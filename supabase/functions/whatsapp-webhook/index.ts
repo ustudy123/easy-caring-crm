@@ -20,7 +20,7 @@ serve(async (req) => {
      const supabase = createClient(supabaseUrl, supabaseKey);
  
       const rawBody = await req.text();
-      console.log("Webhook Raw Body:", rawBody);
+      console.log("Webhook Raw Body Received:", rawBody);
       
       let body;
       try {
@@ -35,9 +35,11 @@ serve(async (req) => {
 
       console.log("Full Request Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())));
  
-     // MeuzAPI webhook payload structure
-     const event = body.event || body.type;
-     const data = body.data || body;
+      // MeuzAPI / Evolution API / Z-API structure detection
+      const event = body.event || body.type || body.action;
+      const data = body.data || body;
+      
+      console.log("Detected Event:", event);
  
      // Handle incoming message
      if (event === "messages" || event === "message" || event === "messages.upsert") {
