@@ -19,8 +19,21 @@ serve(async (req) => {
      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
      const supabase = createClient(supabaseUrl, supabaseKey);
  
-     const body = await req.json();
-     console.log("Webhook received:", JSON.stringify(body));
+      const rawBody = await req.text();
+      console.log("Webhook Raw Body:", rawBody);
+      
+      let body;
+      try {
+        body = JSON.parse(rawBody);
+      } catch (e) {
+        console.error("Failed to parse JSON body:", e);
+        return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log("Full Request Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())));
  
      // MeuzAPI webhook payload structure
      const event = body.event || body.type;
