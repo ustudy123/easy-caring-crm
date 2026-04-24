@@ -1,3 +1,4 @@
+import { WebhookLogsTab } from "@/components/WebhookLogsTab";
 import { AppLayout } from "@/components/AppLayout";
 import { useRole } from "@/contexts/RoleContext";
 import { Navigate } from "react-router-dom";
