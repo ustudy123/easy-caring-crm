@@ -1,7 +1,10 @@
-project_id = "kcatrkkpktgxbwopotwz"
-
-[functions.citel-get-client]
-verify_jwt = true
-
-[functions.citel-explore]
-verify_jwt = true
+ project_id = "kcatrkkpktgxbwopotwz"
+ 
+ [functions.whatsapp-webhook]
+ verify_jwt = false
+ 
+ [functions.citel-get-client]
+ verify_jwt = true
+ 
+ [functions.citel-explore]
+ verify_jwt = true
