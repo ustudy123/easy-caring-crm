@@ -44,7 +44,7 @@ serve(async (req) => {
      // Handle incoming message
      if (event === "messages" || event === "message" || event === "messages.upsert") {
        const message = data.message || data;
-       const phone = message.from || message.remoteJid || data.from || "";
+       const phone = message.from || message.remoteJid || data.from || body.instance || "";
        const cleanPhone = phone.replace("@s.whatsapp.net", "").replace("@c.us", "");
        const text = message.body || message.text || message.conversation || data.body || "";
        const messageId = message.id || message.key?.id || data.id || crypto.randomUUID();
@@ -58,8 +58,9 @@ serve(async (req) => {
          body: text,
          is_from_me: isFromMe,
          timestamp: new Date(timestamp * 1000).toISOString(),
-         raw_data: body,
-       });
+          raw_data: body,
+          store_id: "b7369414-9afe-4870-974e-45aa58173b8c"
+        });
  
        // If incoming message (not from me), check if lead exists, create if not
        if (!isFromMe && cleanPhone) {
