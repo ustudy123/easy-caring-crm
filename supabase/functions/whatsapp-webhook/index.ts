@@ -35,44 +35,59 @@ serve(async (req) => {
 
       console.log("Full Request Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())));
  
-      // MeuzAPI / Evolution API / Z-API structure detection
-      const event = body.event || body.type || body.action;
-      const data = body.data || body;
-      
-      console.log("Detected Event:", event);
- 
-     // Handle incoming message
-     if (event === "messages" || event === "message" || event === "messages.upsert") {
-       const message = data.message || data;
-        // Debug log full body for investigation
-        console.log("Processing message data:", JSON.stringify(data));
+       // uazapi webhook structure: { event: "message", instance: "...", data: { chatid, sender, text, fromMe, messageType, senderName, messageTimestamp } }
+       const event = body.event || body.type || body.action;
+       const data = body.data || body;
+       
+       console.log("Detected Event:", event);
+       console.log("Event Data:", JSON.stringify(data));
 
-        let phone = message.from || message.remoteJid || data.from || body.sender || body.instance || "";
-        
-        // Specific logic for your number to ensure it's captured correctly
-        if (!phone && body.instance === "11957783553") {
-          phone = "11957783553";
-        }
+       // Handle incoming message (uazapi sends "message" singular; also support legacy formats)
+       const isMessageEvent = event === "messages" || event === "message" || event === "messages.upsert";
+       
+       if (isMessageEvent) {
+         // uazapi: phone comes from sender or chatid (e.g. "5511957783553@s.whatsapp.net")
+         const rawPhone = data.sender || data.chatid || data.from || data.remoteJid || data.key?.remoteJid || "";
+         const cleanPhone = rawPhone.toString()
+           .replace("@s.whatsapp.net", "")
+           .replace("@c.us", "")
+           .replace("@g.us", "")
+           .replace(/[^0-9]/g, "");
 
-        const cleanPhone = phone.toString().replace("@s.whatsapp.net", "").replace("@c.us", "").replace(/[^0-9]/g, "");
-        const text = message.body || message.text || message.conversation || data.body || body.content || "Mensagem de mídia ou vazia";
-       const messageId = message.id || message.key?.id || data.id || crypto.randomUUID();
-       const isFromMe = message.fromMe || message.key?.fromMe || data.fromMe || false;
-       const timestamp = message.timestamp || data.timestamp || Math.floor(Date.now() / 1000);
+         // uazapi: text is in data.text (not data.body)
+         const text = data.text || data.body || data.message?.conversation || data.content || "[mensagem sem texto]";
+         const messageId = data.messageid || data.id || data.key?.id || crypto.randomUUID();
+         const isFromMe = data.fromMe || data.key?.fromMe || false;
+         const isGroup = data.isGroup || rawPhone.includes("@g.us");
+         // uazapi uses messageTimestamp in milliseconds
+         const rawTs = data.messageTimestamp || data.timestamp || Date.now();
+         const tsMs = rawTs > 1e12 ? rawTs : rawTs * 1000;
+         const senderName = data.senderName || data.pushName || data.notifyName || `Cliente ${cleanPhone}`;
+
+         console.log(`Parsed → phone: ${cleanPhone} | fromMe: ${isFromMe} | isGroup: ${isGroup} | text: "${text}"`);
+
+         if (!cleanPhone) {
+           console.warn("Skipping: no phone could be extracted from payload");
+           return new Response(JSON.stringify({ success: true, action: "skipped_no_phone" }), {
+             status: 200,
+             headers: { ...corsHeaders, "Content-Type": "application/json" },
+           });
+         }
  
-       // Store message in whatsapp_messages table
-       await supabase.from("whatsapp_messages").insert({
-         message_id: messageId,
-         phone: cleanPhone,
-         body: text,
-         is_from_me: isFromMe,
-         timestamp: new Date(timestamp * 1000).toISOString(),
+        // Store message in whatsapp_messages table
+        const { error: msgError } = await supabase.from("whatsapp_messages").insert({
+          message_id: messageId,
+          phone: cleanPhone,
+          body: text,
+          is_from_me: isFromMe,
+          timestamp: new Date(tsMs).toISOString(),
           raw_data: body,
           store_id: "b7369414-9afe-4870-974e-45aa58173b8c"
         });
+        if (msgError) console.error("Error inserting whatsapp_messages:", msgError);
  
-       // If incoming message (not from me), check if lead exists, create if not
-       if (!isFromMe && cleanPhone) {
+       // If incoming message (not from me, not group), check if lead exists, create if not
+       if (!isFromMe && cleanPhone && !isGroup) {
          const { data: existingLead, error: leadSearchError } = await supabase
            .from("leads")
            .select("id")
@@ -82,10 +97,7 @@ serve(async (req) => {
          if (leadSearchError) console.error("Error searching lead:", leadSearchError);
 
          if (!existingLead) {
-           // Extract name from push name or contact
-           const contactName = message.pushName || message.notifyName || data.pushName || `Cliente ${cleanPhone}`;
-           
-           // Default store_id from earlier check
+           const contactName = senderName;
            const defaultStoreId = "b7369414-9afe-4870-974e-45aa58173b8c";
  
            const { data: newLead, error: insertError } = await supabase.from("leads").insert({
