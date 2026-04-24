@@ -44,9 +44,18 @@ serve(async (req) => {
      // Handle incoming message
      if (event === "messages" || event === "message" || event === "messages.upsert") {
        const message = data.message || data;
-       const phone = message.from || message.remoteJid || data.from || body.instance || "";
-       const cleanPhone = phone.replace("@s.whatsapp.net", "").replace("@c.us", "");
-       const text = message.body || message.text || message.conversation || data.body || "";
+        // Debug log full body for investigation
+        console.log("Processing message data:", JSON.stringify(data));
+
+        let phone = message.from || message.remoteJid || data.from || body.sender || body.instance || "";
+        
+        // Specific logic for your number to ensure it's captured correctly
+        if (!phone && body.instance === "11957783553") {
+          phone = "11957783553";
+        }
+
+        const cleanPhone = phone.toString().replace("@s.whatsapp.net", "").replace("@c.us", "").replace(/[^0-9]/g, "");
+        const text = message.body || message.text || message.conversation || data.body || body.content || "Mensagem de mídia ou vazia";
        const messageId = message.id || message.key?.id || data.id || crypto.randomUUID();
        const isFromMe = message.fromMe || message.key?.fromMe || data.fromMe || false;
        const timestamp = message.timestamp || data.timestamp || Math.floor(Date.now() / 1000);
@@ -64,20 +73,22 @@ serve(async (req) => {
  
        // If incoming message (not from me), check if lead exists, create if not
        if (!isFromMe && cleanPhone) {
-         const { data: existingLead } = await supabase
+         const { data: existingLead, error: leadSearchError } = await supabase
            .from("leads")
            .select("id")
            .eq("client_phone", cleanPhone)
            .maybeSingle();
- 
+
+         if (leadSearchError) console.error("Error searching lead:", leadSearchError);
+
          if (!existingLead) {
            // Extract name from push name or contact
-           const contactName = message.pushName || message.notifyName || data.pushName || `WhatsApp ${cleanPhone}`;
+           const contactName = message.pushName || message.notifyName || data.pushName || `Cliente ${cleanPhone}`;
            
            // Default store_id from earlier check
            const defaultStoreId = "b7369414-9afe-4870-974e-45aa58173b8c";
  
-           await supabase.from("leads").insert({
+           const { data: newLead, error: insertError } = await supabase.from("leads").insert({
              client_name: contactName,
              client_phone: cleanPhone,
              source: "whatsapp",
@@ -86,9 +97,27 @@ serve(async (req) => {
              tags: ["whatsapp", "auto"],
              value: 0,
              store_id: defaultStoreId
-           });
+           }).select().single();
  
-           console.log(`New lead created from WhatsApp: ${contactName} (${cleanPhone})`);
+           if (insertError) {
+             console.error("Error creating lead:", insertError);
+           } else {
+             console.log(`New lead created: ${newLead.id}`);
+             
+             // Add interaction record
+             await supabase.from("interactions").insert({
+               lead_id: newLead.id,
+               type: "whatsapp",
+               description: `Primeira mensagem: ${text}`
+             });
+           }
+         } else {
+           // Lead exists, update interaction
+           await supabase.from("interactions").insert({
+             lead_id: existingLead.id,
+             type: "whatsapp",
+             description: text
+           });
          }
  
          // Update last_contact on client if exists
