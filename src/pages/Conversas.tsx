@@ -24,6 +24,8 @@ interface WhatsAppMessage {
   timestamp: string | null;
   created_at: string | null;
   is_read?: boolean;
+  media_url?: string | null;
+  media_type?: string | null;
 }
 
 interface Conversation {
@@ -240,11 +242,53 @@ export default function Conversas() {
 
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
 
-  const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      toast.info(`Anexo selecionado: ${file.name}. Funcionalidade de envio de arquivos em desenvolvimento.`);
-      // Futuramente integrar com upload de mídia do uazapi
+    if (!file || !selectedPhone) return;
+
+    const loadingToast = toast.loading(`Enviando ${file.name}...`);
+    setSending(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${selectedPhone}/${fileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('whatsapp_media')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('whatsapp_media')
+        .getPublicUrl(filePath);
+
+      let mediaType = 'document';
+      if (file.type.startsWith('image/')) mediaType = 'image';
+      else if (file.type.startsWith('video/')) mediaType = 'video';
+      else if (file.type.startsWith('audio/')) mediaType = 'audio';
+
+      const { error: invokeError } = await supabase.functions.invoke("send-whatsapp", {
+        body: { 
+          phone: selectedPhone, 
+          message: "", 
+          mediaUrl: publicUrl,
+          mediaType: mediaType
+        },
+      });
+
+      if (invokeError) throw invokeError;
+
+      toast.dismiss(loadingToast);
+      toast.success("Arquivo enviado com sucesso!");
+    } catch (err: any) {
+      console.error("Erro ao enviar arquivo:", err);
+      toast.dismiss(loadingToast);
+      toast.error(`Erro ao enviar arquivo: ${err.message || 'Erro desconhecido'}`);
+    } finally {
+      setSending(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -330,11 +374,7 @@ export default function Conversas() {
                  </span>
                </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-full">
-                <MoreVertical className="h-5 w-5" />
-              </Button>
-            </div>
+            {/* Removido o botão de 3 pontos no cabeçalho lateral */}
           </div>
 
           {/* Search bar */}
@@ -451,18 +491,56 @@ export default function Conversas() {
                     <User className="h-5 w-5 text-white" />
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[16px] font-normal text-white truncate">
-                    {contactName || formatPhone(selectedConversation.phone)}
-                  </p>
-                  {contactName && (
-                    <p className="text-[12px] text-white/60">
-                      {formatPhone(selectedConversation.phone)}
-                    </p>
-                  )}
-                </div>
-                {isSearchingInChat ? (
-                  <div className="flex-1 flex items-center bg-white/10 rounded-lg px-2 animate-in fade-in slide-in-from-right-2">
+                {!isSearchingInChat ? (
+                  <>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      {contactName ? (
+                        <span className="text-sm font-semibold text-white">{getInitials(contactName)}</span>
+                      ) : (
+                        <User className="h-5 w-5 text-white" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[16px] font-normal text-white truncate">
+                        {contactName || formatPhone(selectedConversation.phone)}
+                      </p>
+                      {contactName && (
+                        <p className="text-[12px] text-white/60">
+                          {formatPhone(selectedConversation.phone)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {isAdmin && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleExport}
+                                aria-label="Exportar conversa"
+                                className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
+                              >
+                                <Download className="h-5 w-5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Exportar conversa (.txt)</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
+                        onClick={() => setIsSearchingInChat(true)}
+                      >
+                        <Search className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center bg-white/10 rounded-lg px-3 animate-in fade-in slide-in-from-right-2">
                     <Search className="h-4 w-4 text-white/60 mr-2" />
                     <Input
                       autoFocus
