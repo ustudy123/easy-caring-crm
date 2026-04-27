@@ -489,7 +489,7 @@ export default function Conversas() {
                                 {msg.body || ""}
                               </p>
                               <div className="flex items-center justify-end gap-1 -mb-0.5 mt-0.5">
-                                <span className="text-[11px] text-muted-foreground/70">
+                                <span className="text-[11px] text-foreground/60">
                                   {msg.timestamp && format(new Date(msg.timestamp), "HH:mm")}
                                 </span>
                                 {msg.is_from_me && (
