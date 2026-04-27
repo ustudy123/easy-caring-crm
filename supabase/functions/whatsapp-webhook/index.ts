@@ -81,8 +81,7 @@ serve(async (req) => {
           body: text,
           is_from_me: isFromMe,
           timestamp: new Date(tsMs).toISOString(),
-          raw_data: body,
-          store_id: "b7369414-9afe-4870-974e-45aa58173b8c"
+          raw_data: body
         });
         if (msgError) console.error("Error inserting whatsapp_messages:", msgError);
  
