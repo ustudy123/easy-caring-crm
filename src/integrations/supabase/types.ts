@@ -459,6 +459,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_from_me: boolean | null
+          is_read: boolean
           message_id: string
           phone: string
           raw_data: Json | null
@@ -469,6 +470,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_from_me?: boolean | null
+          is_read?: boolean
           message_id: string
           phone: string
           raw_data?: Json | null
@@ -479,6 +481,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_from_me?: boolean | null
+          is_read?: boolean
           message_id?: string
           phone?: string
           raw_data?: Json | null

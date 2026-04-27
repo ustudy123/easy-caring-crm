@@ -79,7 +79,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
        const [leadsRes, followUpsRes, whatsappRes, sellersRes] = await Promise.all([
         supabase.from("leads").select("*").order("created_at", { ascending: false }),
         supabase.from("follow_ups").select("*").order("scheduled_at"),
-        supabase.from("whatsapp_messages").select("phone", { count: "exact", head: true }).eq("is_from_me", false),
+         supabase.from("whatsapp_messages").select("phone", { count: "exact", head: true }).eq("is_from_me", false).eq("is_read", false),
          supabase.from("sellers").select("*").order("name"),
       ]);
       if (leadsRes.data) setLeads(leadsRes.data.map(mapLeadFromDb));
@@ -121,9 +121,21 @@ export function CrmProvider({ children }: { children: ReactNode }) {
 
     const whatsappChannel = supabase
       .channel("whatsapp-changes")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "whatsapp_messages" }, (payload) => {
-        if (!payload.new.is_from_me) {
-          setUnreadWhatsAppCount((prev) => prev + 1);
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages" }, (payload) => {
+        if (payload.eventType === "INSERT") {
+          if (!payload.new.is_from_me && !payload.new.is_read) {
+            setUnreadWhatsAppCount((prev) => prev + 1);
+          }
+        } else if (payload.eventType === "UPDATE") {
+          if (payload.old.is_read === false && payload.new.is_read === true) {
+            setUnreadWhatsAppCount((prev) => Math.max(0, prev - 1));
+          } else if (payload.old.is_read === true && payload.new.is_read === false) {
+            setUnreadWhatsAppCount((prev) => prev + 1);
+          }
+        } else if (payload.eventType === "DELETE") {
+          if (!payload.old.is_from_me && !payload.old.is_read) {
+            setUnreadWhatsAppCount((prev) => Math.max(0, prev - 1));
+          }
         }
       })
       .subscribe();
