@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCrm } from "@/contexts/CrmContext";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import {
