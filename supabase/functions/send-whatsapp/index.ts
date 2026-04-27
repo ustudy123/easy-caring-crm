@@ -35,12 +35,7 @@ serve(async (req) => {
     const cleanPhone = phone.replace(/\D/g, "");
     const baseUrl = whatsappApiUrl.replace(/\/+$/, "");
     
-    let endpoint = `${baseUrl}/send/text`;
-    let body: any = {
-      number: cleanPhone,
-      text: message,
-    };
-
+     let endpoint = `${baseUrl}/send/text`;
      let apiBody: any;
 
      if (mediaUrl) {
