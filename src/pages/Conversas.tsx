@@ -156,11 +156,15 @@ export default function Conversas() {
       }
       const conv = map.get(phone)!;
       conv.messages.push(msg);
-      const ts = msg.timestamp || msg.created_at || "";
-      if (!conv.lastTimestamp || ts > conv.lastTimestamp) {
-        conv.lastTimestamp = ts;
+      
+      const currentTs = new Date(msg.timestamp || msg.created_at || 0).getTime();
+      const lastTs = new Date(conv.lastTimestamp || 0).getTime();
+
+      if (!conv.lastTimestamp || currentTs >= lastTs) {
+        conv.lastTimestamp = msg.timestamp || msg.created_at || "";
         conv.lastMessage = msg.body || "";
       }
+      
       if (!msg.is_from_me) conv.unreadCount++;
     });
     return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));

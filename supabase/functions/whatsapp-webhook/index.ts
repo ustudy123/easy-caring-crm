@@ -98,40 +98,67 @@ serve(async (req) => {
          if (leadSearchError) console.error("Error searching lead:", leadSearchError);
 
          if (!existingLead) {
-           const contactName = senderName;
-           const defaultStoreId = "b7369414-9afe-4870-974e-45aa58173b8c";
+            // Get the first store available if none specified
+            const { data: storeData } = await supabase.from("stores").select("id").limit(1).maybeSingle();
+            const targetStoreId = storeData?.id || null;
+
+            // Create or find a client first (interactions table requires client_id)
+            let clientId;
+            const { data: existingClient } = await supabase.from("clients").select("id").eq("phone", cleanPhone).maybeSingle();
+            
+            if (!existingClient) {
+              const { data: newClient, error: clientError } = await supabase.from("clients").insert({
+                name: senderName,
+                phone: cleanPhone,
+                store_id: targetStoreId,
+                total_purchases: 0
+              }).select("id").single();
+              
+              if (clientError) {
+                console.error("Error creating client:", clientError);
+              } else {
+                clientId = newClient.id;
+              }
+            } else {
+              clientId = existingClient.id;
+            }
+
+            const { data: newLead, error: insertError } = await supabase.from("leads").insert({
+              client_name: senderName,
+              client_phone: cleanPhone,
+              source: "whatsapp",
+              stage: "abordagem",
+              notes: `Lead criado via WhatsApp: "${text.substring(0, 200)}"`,
+              tags: ["whatsapp", "auto"],
+              value: 0,
+              store_id: targetStoreId
+            }).select().single();
  
-           const { data: newLead, error: insertError } = await supabase.from("leads").insert({
-             client_name: contactName,
-             client_phone: cleanPhone,
-             source: "whatsapp",
-             stage: "abordagem",
-             notes: `Mensagem automática: "${text.substring(0, 200)}"`,
-             tags: ["whatsapp", "auto"],
-             value: 0,
-             store_id: defaultStoreId
-           }).select().single();
- 
-           if (insertError) {
-             console.error("Error creating lead:", insertError);
-           } else {
-             console.log(`New lead created: ${newLead.id}`);
-             
-             // Add interaction record
-             await supabase.from("interactions").insert({
-               lead_id: newLead.id,
-               type: "whatsapp",
-               description: `Primeira mensagem: ${text}`
-             });
-           }
-         } else {
-           // Lead exists, update interaction
-           await supabase.from("interactions").insert({
-             lead_id: existingLead.id,
-             type: "whatsapp",
-             description: text
-           });
-         }
+            if (insertError) {
+              console.error("Error creating lead:", insertError);
+            } else if (clientId) {
+              console.log(`New lead created: ${newLead.id}`);
+              
+              // Add interaction record
+              await supabase.from("interactions").insert({
+                lead_id: newLead.id,
+                client_id: clientId,
+                type: "whatsapp",
+                description: `Primeira mensagem: ${text}`
+              });
+            }
+          } else {
+            // Lead exists, try to find client to update interaction
+            const { data: clientData } = await supabase.from("clients").select("id").eq("phone", cleanPhone).maybeSingle();
+            if (clientData) {
+              await supabase.from("interactions").insert({
+                lead_id: existingLead.id,
+                client_id: clientData.id,
+                type: "whatsapp",
+                description: text
+              });
+            }
+          }
  
          // Update last_contact on client if exists
          await supabase

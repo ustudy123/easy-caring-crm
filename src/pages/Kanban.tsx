@@ -64,7 +64,7 @@ const stageHeaderGradient: Record<KanbanStage, string> = {
 
 export default function Kanban() {
   const navigate = useNavigate();
-  const { leads, setLeads, addLead, updateLead, deleteLead } = useCrm();
+  const { leads, setLeads, addLead, updateLead, deleteLead, loading } = useCrm();
   const [search, setSearch] = useState("");
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -120,7 +120,16 @@ export default function Kanban() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar lead..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 rounded-xl border-border/60 bg-card shadow-sm" />
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            {loading && <span className="text-[10px] text-muted-foreground animate-pulse mr-2">Carregando...</span>}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="rounded-xl text-[10px] h-8"
+              onClick={() => window.location.reload()}
+            >
+              Recarregar
+            </Button>
             <Popover open={showFilters} onOpenChange={setShowFilters}>
               <PopoverTrigger asChild>
                 <Button variant={hasActiveFilters ? "default" : "outline"} size="sm" className="rounded-xl">
