@@ -12,7 +12,8 @@ import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useRole } from "@/contexts/RoleContext";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+ import { ChatMessageBody } from "@/components/ChatMessageBody";
 
 // ── Types ──
 interface WhatsAppMessage {
