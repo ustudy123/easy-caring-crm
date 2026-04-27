@@ -37,11 +37,20 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   const visibleWhatsApp = Math.max(0, unreadWhatsAppCount - (dismissed.whatsapp || 0));
   const totalNotifications = visibleLeads + visibleFollowUps + visibleNegotiations + visibleWhatsApp;
 
-  const handleNotificationClick = (type: string, count: number, route: string) => {
-    setDismissed((prev) => ({ ...prev, [type]: (prev[type] || 0) + count }));
-    navigate(route);
-  };
-
+   const handleNotificationClick = (type: string, count: number, route: string) => {
+     setDismissed((prev) => ({ ...prev, [type]: (prev[type] || 0) + count }));
+     navigate(route);
+   };
+ 
+   const markAllAsRead = () => {
+     setDismissed({
+       leads: newLeadsCount,
+       followUps: pendingFollowUpsCount,
+       negotiations: negotiationCount,
+       whatsapp: unreadWhatsAppCount
+     });
+   };
+ 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -90,9 +99,19 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-0 rounded-xl shadow-lg border-border/60" align="end" sideOffset={8}>
-                  <div className="p-3.5 border-b border-border/60">
-                    <h4 className="text-sm font-bold text-foreground">Notificações</h4>
-                  </div>
+                   <div className="p-3.5 border-b border-border/60 flex items-center justify-between">
+                     <h4 className="text-sm font-bold text-foreground">Notificações</h4>
+                     {totalNotifications > 0 && (
+                       <Button 
+                         variant="ghost" 
+                         size="sm" 
+                         onClick={markAllAsRead}
+                         className="h-7 px-2 text-[11px] font-semibold text-primary hover:text-primary hover:bg-primary/5 rounded-lg"
+                       >
+                         Ler todas
+                       </Button>
+                     )}
+                   </div>
                   <div className="divide-y divide-border/40">
                     {visibleLeads > 0 && (
                       <div onClick={() => handleNotificationClick("leads", visibleLeads, "/kanban")} className="flex items-center gap-3 p-3.5 hover:bg-muted/40 transition-colors cursor-pointer">
