@@ -111,10 +111,14 @@ export default function Conversas() {
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [messageInput, setMessageInput] = useState("");
+  const [chatSearch, setChatSearch] = useState("");
+  const [isSearchingInChat, setIsSearchingInChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [useMock, setUseMock] = useState(false);
   const [contactNames, setContactNames] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -228,7 +232,21 @@ export default function Conversas() {
     fetchNames();
   }, [useMock, conversations.length]);
 
+  const filteredMessages = selectedConversation 
+    ? selectedConversation.messages.filter(msg => 
+        !chatSearch || (msg.body && msg.body.toLowerCase().includes(chatSearch.toLowerCase()))
+      )
+    : [];
+
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
+
+  const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      toast.info(`Anexo selecionado: ${file.name}. Funcionalidade de envio de arquivos em desenvolvimento.`);
+      // Futuramente integrar com upload de mídia do uazapi
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!messageInput.trim() || !selectedPhone || sending) return;
@@ -443,32 +461,58 @@ export default function Conversas() {
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-1">
-                  {isAdmin && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleExport}
-                            aria-label="Exportar conversa"
-                            className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
-                          >
-                            <Download className="h-5 w-5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Exportar conversa (.txt)</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full">
-                    <Search className="h-5 w-5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full">
-                    <MoreVertical className="h-5 w-5" />
-                  </Button>
-                </div>
+                {isSearchingInChat ? (
+                  <div className="flex-1 flex items-center bg-white/10 rounded-lg px-2 animate-in fade-in slide-in-from-right-2">
+                    <Search className="h-4 w-4 text-white/60 mr-2" />
+                    <Input
+                      autoFocus
+                      placeholder="Pesquisar na conversa..."
+                      value={chatSearch}
+                      onChange={(e) => setChatSearch(e.target.value)}
+                      className="flex-1 h-8 bg-transparent border-0 text-white placeholder:text-white/40 focus-visible:ring-0 text-sm"
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-7 w-7 text-white hover:bg-white/10 rounded-full"
+                      onClick={() => {
+                        setIsSearchingInChat(false);
+                        setChatSearch("");
+                      }}
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    {isAdmin && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={handleExport}
+                              aria-label="Exportar conversa"
+                              className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
+                            >
+                              <Download className="h-5 w-5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Exportar conversa (.txt)</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
+                      onClick={() => setIsSearchingInChat(true)}
+                    >
+                      <Search className="h-5 w-5" />
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Messages area - WhatsApp wallpaper style */}
@@ -479,8 +523,13 @@ export default function Conversas() {
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
                 }}
               >
-                <div className="max-w-3xl mx-auto space-y-1">
-                  {groupMessagesByDate(selectedConversation.messages).map(([dateKey, msgs]) => (
+                <div className="max-w-3xl mx-auto space-y-1 pb-4">
+                  {filteredMessages.length === 0 && chatSearch ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground bg-card/40 rounded-xl backdrop-blur-sm">
+                      <Search className="h-10 w-10 mb-2 opacity-20" />
+                      <p className="text-sm">Nenhum resultado para "{chatSearch}"</p>
+                    </div>
+                  ) : groupMessagesByDate(filteredMessages).map(([dateKey, msgs]) => (
                     <div key={dateKey}>
                       {/* Date separator - WhatsApp style */}
                       <div className="flex justify-center my-3">
@@ -536,10 +585,26 @@ export default function Conversas() {
 
               {/* Message input bar - WhatsApp style */}
               <div className="flex items-center gap-2 px-3 py-2 shrink-0" style={{ backgroundColor: "hsl(var(--wa-light))" }}>
-                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-foreground shrink-0 rounded-full">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-10 w-10 text-muted-foreground hover:text-foreground shrink-0 rounded-full"
+                  onClick={() => toast.info("Emoji picker em desenvolvimento.")}
+                >
                   <Smile className="h-6 w-6" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-foreground shrink-0 rounded-full">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={handleFileAttach}
+                />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-10 w-10 text-muted-foreground hover:text-foreground shrink-0 rounded-full"
+                  onClick={() => fileInputRef.current?.click()}
+                >
                   <Paperclip className="h-6 w-6" />
                 </Button>
                 <Input
