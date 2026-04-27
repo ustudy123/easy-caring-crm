@@ -24,6 +24,8 @@ interface WhatsAppMessage {
   timestamp: string | null;
   created_at: string | null;
   is_read?: boolean;
+  media_url?: string | null;
+  media_type?: string | null;
 }
 
 interface Conversation {
@@ -232,19 +234,65 @@ export default function Conversas() {
     fetchNames();
   }, [useMock, conversations.length]);
 
-  const filteredMessages = selectedConversation 
-    ? selectedConversation.messages.filter(msg => 
-        !chatSearch || (msg.body && msg.body.toLowerCase().includes(chatSearch.toLowerCase()))
-      )
+  const filteredMessages = selectedConversation
+    ? selectedConversation.messages.filter((msg) => {
+        if (!chatSearch) return true;
+        const searchLower = chatSearch.toLowerCase();
+        const bodyMatch = msg.body?.toLowerCase().includes(searchLower);
+        const mediaMatch = msg.media_type?.toLowerCase().includes(searchLower);
+        return bodyMatch || mediaMatch;
+      })
     : [];
 
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
 
-  const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      toast.info(`Anexo selecionado: ${file.name}. Funcionalidade de envio de arquivos em desenvolvimento.`);
-      // Futuramente integrar com upload de mídia do uazapi
+    if (!file || !selectedPhone) return;
+
+    const loadingToast = toast.loading(`Enviando ${file.name}...`);
+    setSending(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${selectedPhone}/${fileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('whatsapp_media')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('whatsapp_media')
+        .getPublicUrl(filePath);
+
+      let mediaType = 'document';
+      if (file.type.startsWith('image/')) mediaType = 'image';
+      else if (file.type.startsWith('video/')) mediaType = 'video';
+      else if (file.type.startsWith('audio/')) mediaType = 'audio';
+
+      const { error: invokeError } = await supabase.functions.invoke("send-whatsapp", {
+        body: { 
+          phone: selectedPhone, 
+          message: "", 
+          mediaUrl: publicUrl,
+          mediaType: mediaType
+        },
+      });
+
+      if (invokeError) throw invokeError;
+
+      toast.dismiss(loadingToast);
+      toast.success("Arquivo enviado com sucesso!");
+    } catch (err: any) {
+      console.error("Erro ao enviar arquivo:", err);
+      toast.dismiss(loadingToast);
+      toast.error(`Erro ao enviar arquivo: ${err.message || 'Erro desconhecido'}`);
+    } finally {
+      setSending(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -330,11 +378,7 @@ export default function Conversas() {
                  </span>
                </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10 rounded-full">
-                <MoreVertical className="h-5 w-5" />
-              </Button>
-            </div>
+            {/* Removido o botão de 3 pontos no cabeçalho lateral */}
           </div>
 
           {/* Search bar */}
@@ -444,25 +488,56 @@ export default function Conversas() {
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                  {contactName ? (
-                    <span className="text-sm font-semibold text-white">{getInitials(contactName)}</span>
-                  ) : (
-                    <User className="h-5 w-5 text-white" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[16px] font-normal text-white truncate">
-                    {contactName || formatPhone(selectedConversation.phone)}
-                  </p>
-                  {contactName && (
-                    <p className="text-[12px] text-white/60">
-                      {formatPhone(selectedConversation.phone)}
-                    </p>
-                  )}
-                </div>
-                {isSearchingInChat ? (
-                  <div className="flex-1 flex items-center bg-white/10 rounded-lg px-2 animate-in fade-in slide-in-from-right-2">
+                {!isSearchingInChat ? (
+                  <>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      {contactName ? (
+                        <span className="text-sm font-semibold text-white">{getInitials(contactName)}</span>
+                      ) : (
+                        <User className="h-5 w-5 text-white" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[16px] font-normal text-white truncate">
+                        {contactName || formatPhone(selectedConversation.phone)}
+                      </p>
+                      {contactName && (
+                        <p className="text-[12px] text-white/60">
+                          {formatPhone(selectedConversation.phone)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {isAdmin && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleExport}
+                                aria-label="Exportar conversa"
+                                className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
+                              >
+                                <Download className="h-5 w-5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Exportar conversa (.txt)</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
+                        onClick={() => setIsSearchingInChat(true)}
+                      >
+                        <Search className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center bg-white/10 rounded-lg px-3 animate-in fade-in slide-in-from-right-2">
                     <Search className="h-4 w-4 text-white/60 mr-2" />
                     <Input
                       autoFocus
@@ -481,35 +556,6 @@ export default function Conversas() {
                       }}
                     >
                       <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1">
-                    {isAdmin && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={handleExport}
-                              aria-label="Exportar conversa"
-                              className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
-                            >
-                              <Download className="h-5 w-5" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Exportar conversa (.txt)</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
-                      onClick={() => setIsSearchingInChat(true)}
-                    >
-                      <Search className="h-5 w-5" />
                     </Button>
                   </div>
                 )}
@@ -562,6 +608,31 @@ export default function Conversas() {
                                   : "hsl(var(--wa-incoming))",
                               }}
                             >
+                              {msg.media_url && (
+                                <div className="mb-1 rounded-md overflow-hidden bg-black/5">
+                                  {msg.media_type === 'image' ? (
+                                    <img 
+                                      src={msg.media_url} 
+                                      alt="Anexo" 
+                                      className="max-w-full h-auto cursor-pointer"
+                                      onClick={() => window.open(msg.media_url!, '_blank')}
+                                    />
+                                  ) : (
+                                    <div 
+                                      className="flex items-center gap-2 p-2 cursor-pointer hover:bg-black/10 transition-colors"
+                                      onClick={() => window.open(msg.media_url!, '_blank')}
+                                    >
+                                      <div className="bg-primary/10 p-2 rounded">
+                                        <Paperclip className="h-4 w-4 text-primary" />
+                                      </div>
+                                      <span className="text-xs truncate max-w-[200px]">
+                                        {msg.media_url.split('/').pop()?.slice(-20) || 'Arquivo'}
+                                      </span>
+                                      <Download className="h-4 w-4 text-muted-foreground ml-auto" />
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                               <p className="whitespace-pre-wrap break-words text-foreground">
                                 {msg.body || ""}
                               </p>

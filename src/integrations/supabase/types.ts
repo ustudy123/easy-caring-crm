@@ -460,6 +460,8 @@ export type Database = {
           id: string
           is_from_me: boolean | null
           is_read: boolean
+          media_type: string | null
+          media_url: string | null
           message_id: string
           phone: string
           raw_data: Json | null
@@ -471,6 +473,8 @@ export type Database = {
           id?: string
           is_from_me?: boolean | null
           is_read?: boolean
+          media_type?: string | null
+          media_url?: string | null
           message_id: string
           phone: string
           raw_data?: Json | null
@@ -482,6 +486,8 @@ export type Database = {
           id?: string
           is_from_me?: boolean | null
           is_read?: boolean
+          media_type?: string | null
+          media_url?: string | null
           message_id?: string
           phone?: string
           raw_data?: Json | null

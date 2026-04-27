@@ -12,10 +12,10 @@ serve(async (req) => {
   }
 
   try {
-    const { phone, message } = await req.json();
+    const { phone, message, mediaUrl, mediaType } = await req.json();
 
-    if (!phone || !message) {
-      return new Response(JSON.stringify({ error: "phone and message are required" }), {
+    if (!phone || (!message && !mediaUrl)) {
+      return new Response(JSON.stringify({ error: "phone and (message or mediaUrl) are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -31,21 +31,32 @@ serve(async (req) => {
       });
     }
 
-    // Send message via uazapi
     const cleanPhone = phone.replace(/\D/g, "");
-
-    // uazapi endpoint: POST /send/text with `token` header
     const baseUrl = whatsappApiUrl.replace(/\/+$/, "");
-    const apiResponse = await fetch(`${baseUrl}/send/text`, {
+    
+    let endpoint = `${baseUrl}/send/text`;
+    let body: any = {
+      number: cleanPhone,
+      text: message,
+    };
+
+    if (mediaUrl) {
+      endpoint = `${baseUrl}/send/media`;
+      body = {
+        number: cleanPhone,
+        url: mediaUrl,
+        type: mediaType || 'image',
+        caption: message || '',
+      };
+    }
+
+    const apiResponse = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "token": whatsappApiKey,
       },
-      body: JSON.stringify({
-        number: cleanPhone,
-        text: message,
-      }),
+      body: JSON.stringify(body),
     });
 
     const apiData = await apiResponse.json();
@@ -68,7 +79,9 @@ serve(async (req) => {
     await supabase.from("whatsapp_messages").insert({
       message_id: messageId,
       phone: cleanPhone,
-      body: message,
+      body: message || (mediaUrl ? `[Arquivo: ${mediaType || 'mídia'}]` : ''),
+      media_url: mediaUrl,
+      media_type: mediaType,
       is_from_me: true,
       timestamp: new Date().toISOString(),
     });
