@@ -23,6 +23,7 @@ interface WhatsAppMessage {
   is_from_me: boolean | null;
   timestamp: string | null;
   created_at: string | null;
+  is_read?: boolean;
 }
 
 interface Conversation {
@@ -136,8 +137,12 @@ export default function Conversas() {
   useEffect(() => {
     const channel = supabase
       .channel("whatsapp-realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "whatsapp_messages" }, (payload) => {
-        setMessages((prev) => [...prev, payload.new as WhatsAppMessage]);
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages" }, (payload) => {
+        if (payload.eventType === "INSERT") {
+          setMessages((prev) => [...prev, payload.new as WhatsAppMessage]);
+        } else if (payload.eventType === "UPDATE") {
+          setMessages((prev) => prev.map(m => m.id === payload.new.id ? (payload.new as WhatsAppMessage) : m));
+        }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -165,7 +170,7 @@ export default function Conversas() {
         conv.lastMessage = msg.body || "";
       }
       
-      if (!msg.is_from_me) conv.unreadCount++;
+      if (!msg.is_from_me && !msg.is_read) conv.unreadCount++;
     });
     return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
   })();
@@ -181,6 +186,29 @@ export default function Conversas() {
     setSelectedPhone(phone);
     setShowMobileChat(true);
   };
+
+  useEffect(() => {
+    if (selectedPhone && !useMock) {
+      const markAsRead = async () => {
+        const { error } = await supabase
+          .from("whatsapp_messages")
+          .update({ is_read: true })
+          .eq("phone", selectedPhone)
+          .eq("is_read", false)
+          .eq("is_from_me", false);
+        
+        if (error) {
+          console.error("Erro ao marcar mensagens como lidas:", error);
+        } else {
+          // Atualizar localmente as mensagens para refletir a mudança imediatamente
+          setMessages(prev => prev.map(m => 
+            (m.phone === selectedPhone && !m.is_from_me) ? { ...m, is_read: true } : m
+          ));
+        }
+      };
+      markAsRead();
+    }
+  }, [selectedPhone, useMock]);
 
   useEffect(() => {
     if (useMock) {
