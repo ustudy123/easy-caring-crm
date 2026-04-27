@@ -128,6 +128,13 @@
     --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.20);
     --shadow-card-hover: 0 4px 12px -2px rgb(0 0 0 / 0.30);
     --shadow-elevated: 0 8px 30px -4px rgb(0 0 0 / 0.40);
+
+    /* WhatsApp dark theme */
+    --wa-light: 224 15% 15%;
+    --wa-outgoing: 142 45% 18%;
+    --wa-incoming: 224 15% 22%;
+    --wa-chat-bg: 224 25% 10%;
+    --wa-header: 224 20% 16%;
   }
 }
 
