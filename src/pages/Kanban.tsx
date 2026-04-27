@@ -272,7 +272,7 @@ export default function Kanban() {
                                          shadow-sm
                                          transition-all duration-200
                                          hover:shadow-md hover:border-border/60 hover:bg-muted/30
-                                         cursor-grab active:cursor-grabbing
+                                         cursor-default active:cursor-grabbing
                                          group
                                         ${stageColorMap[stage.key]} 
                                         ${config.borderClass} 
