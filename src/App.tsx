@@ -33,16 +33,24 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/" element={<ProtectedRoute><CrmProvider><Dashboard /></CrmProvider></ProtectedRoute>} />
-              <Route path="/kanban" element={<ProtectedRoute><CrmProvider><Kanban /></CrmProvider></ProtectedRoute>} />
-              <Route path="/clientes" element={<ProtectedRoute><CrmProvider><Clientes /></CrmProvider></ProtectedRoute>} />
-              <Route path="/agenda" element={<ProtectedRoute><CrmProvider><Agenda /></CrmProvider></ProtectedRoute>} />
-              <Route path="/campanhas" element={<ProtectedRoute><CrmProvider><Campanhas /></CrmProvider></ProtectedRoute>} />
-              <Route path="/conversas" element={<ProtectedRoute><CrmProvider><Conversas /></CrmProvider></ProtectedRoute>} />
-              <Route path="/configuracoes" element={<ProtectedRoute><CrmProvider><Configuracoes /></CrmProvider></ProtectedRoute>} />
-              <Route path="/suporte-orcamento" element={<ProtectedRoute><CrmProvider><SuporteOrcamento /></CrmProvider></ProtectedRoute>} />
-              <Route path="/admin" element={<ProtectedRoute><CrmProvider><AdminPanel /></CrmProvider></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
+              <Route path="*" element={
+                <ProtectedRoute>
+                  <CrmProvider>
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/kanban" element={<Kanban />} />
+                      <Route path="/clientes" element={<Clientes />} />
+                      <Route path="/agenda" element={<Agenda />} />
+                      <Route path="/campanhas" element={<Campanhas />} />
+                      <Route path="/conversas" element={<Conversas />} />
+                      <Route path="/configuracoes" element={<Configuracoes />} />
+                      <Route path="/suporte-orcamento" element={<SuporteOrcamento />} />
+                      <Route path="/admin" element={<AdminPanel />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </CrmProvider>
+                </ProtectedRoute>
+              } />
             </Routes>
           </BrowserRouter>
         </RoleProvider>
