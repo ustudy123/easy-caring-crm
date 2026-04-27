@@ -456,7 +456,7 @@ export default function Conversas() {
                     <div key={dateKey}>
                       {/* Date separator - WhatsApp style */}
                       <div className="flex justify-center my-3">
-                        <span className="text-[12px] bg-card/90 px-3 py-1 rounded-lg text-muted-foreground shadow-sm">
+                        <span className="text-[12px] bg-card/90 px-3 py-1 rounded-lg text-foreground/70 shadow-sm">
                           {formatFullDate(msgs[0].timestamp || msgs[0].created_at || "")}
                         </span>
                       </div>
