@@ -621,7 +621,7 @@ export default function Conversas() {
                 }}
               >
                 <div className="max-w-3xl mx-auto space-y-1 pb-4">
-                   groupMessagesByDate(chatMessages).map(([dateKey, msgs]) => (
+                    {groupMessagesByDate(chatMessages).map(([dateKey, msgs]) => (
                     <div key={dateKey}>
                       {/* Date separator - WhatsApp style */}
                       <div className="flex justify-center my-3">
@@ -714,7 +714,7 @@ export default function Conversas() {
                          })}
                       </div>
                     </div>
-                  ))}
+                   ))}
                   <div ref={messagesEndRef} />
                 </div>
               </div>
