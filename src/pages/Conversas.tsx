@@ -604,6 +604,31 @@ export default function Conversas() {
                                   : "hsl(var(--wa-incoming))",
                               }}
                             >
+                              {msg.media_url && (
+                                <div className="mb-1 rounded-md overflow-hidden bg-black/5">
+                                  {msg.media_type === 'image' ? (
+                                    <img 
+                                      src={msg.media_url} 
+                                      alt="Anexo" 
+                                      className="max-w-full h-auto cursor-pointer"
+                                      onClick={() => window.open(msg.media_url!, '_blank')}
+                                    />
+                                  ) : (
+                                    <div 
+                                      className="flex items-center gap-2 p-2 cursor-pointer hover:bg-black/10 transition-colors"
+                                      onClick={() => window.open(msg.media_url!, '_blank')}
+                                    >
+                                      <div className="bg-primary/10 p-2 rounded">
+                                        <Paperclip className="h-4 w-4 text-primary" />
+                                      </div>
+                                      <span className="text-xs truncate max-w-[200px]">
+                                        {msg.media_url.split('/').pop()?.slice(-20) || 'Arquivo'}
+                                      </span>
+                                      <Download className="h-4 w-4 text-muted-foreground ml-auto" />
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                               <p className="whitespace-pre-wrap break-words text-foreground">
                                 {msg.body || ""}
                               </p>
