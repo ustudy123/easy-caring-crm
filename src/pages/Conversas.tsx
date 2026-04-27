@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock } from "lucide-react";
+ import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X } from "lucide-react";
 import { Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
@@ -115,6 +115,9 @@ export default function Conversas() {
   const [messageInput, setMessageInput] = useState("");
   const [chatSearch, setChatSearch] = useState("");
   const [isSearchingInChat, setIsSearchingInChat] = useState(false);
+  const [searchOccurrenceIndex, setSearchOccurrenceIndex] = useState(0);
+  const searchResultsRefs = useRef<(HTMLDivElement | null)[]>([]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [useMock, setUseMock] = useState(false);
   const [contactNames, setContactNames] = useState<Record<string, string>>({});
@@ -234,15 +237,29 @@ export default function Conversas() {
     fetchNames();
   }, [useMock, conversations.length]);
 
-  const filteredMessages = selectedConversation
-    ? selectedConversation.messages.filter((msg) => {
-        if (!chatSearch) return true;
-        const searchLower = chatSearch.toLowerCase();
-        const bodyMatch = msg.body?.toLowerCase().includes(searchLower);
-        const mediaMatch = msg.media_type?.toLowerCase().includes(searchLower);
-        return bodyMatch || mediaMatch;
-      })
-    : [];
+   const chatMessages = selectedConversation ? selectedConversation.messages : [];
+
+   const chatSearchResults = chatSearch.length >= 2
+     ? chatMessages.filter(msg => msg.body?.toLowerCase().includes(chatSearch.toLowerCase()))
+     : [];
+
+   useEffect(() => {
+     if (chatSearchResults.length > 0 && isSearchingInChat) {
+       setSearchOccurrenceIndex(0);
+       const firstResult = searchResultsRefs.current[0];
+       firstResult?.scrollIntoView({ behavior: "smooth", block: "center" });
+     }
+   }, [chatSearch, isSearchingInChat, chatSearchResults.length]);
+
+   const navigateSearch = (direction: 'next' | 'prev') => {
+     if (chatSearchResults.length === 0) return;
+     let newIndex = direction === 'next' ? searchOccurrenceIndex + 1 : searchOccurrenceIndex - 1;
+     if (newIndex >= chatSearchResults.length) newIndex = 0;
+     if (newIndex < 0) newIndex = chatSearchResults.length - 1;
+     setSearchOccurrenceIndex(newIndex);
+     const target = searchResultsRefs.current[newIndex];
+     target?.scrollIntoView({ behavior: "smooth", block: "center" });
+   };
 
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
 
@@ -537,27 +554,61 @@ export default function Conversas() {
                     </div>
                   </>
                 ) : (
-                  <div className="flex-1 flex items-center bg-white/10 rounded-lg px-3 animate-in fade-in slide-in-from-right-2">
-                    <Search className="h-4 w-4 text-white/60 mr-2" />
-                    <Input
-                      autoFocus
-                      placeholder="Pesquisar na conversa..."
-                      value={chatSearch}
-                      onChange={(e) => setChatSearch(e.target.value)}
-                      className="flex-1 h-8 bg-transparent border-0 text-white placeholder:text-white/40 focus-visible:ring-0 text-sm"
-                    />
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7 text-white hover:bg-white/10 rounded-full"
-                      onClick={() => {
-                        setIsSearchingInChat(false);
-                        setChatSearch("");
-                      }}
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                  </div>
+                   <div className="flex-1 flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
+                     <div className="flex-1 flex items-center bg-white/15 rounded-lg px-3">
+                       <Search className="h-4 w-4 text-white/60 mr-2" />
+                       <Input
+                         autoFocus
+                         placeholder="Pesquisar na conversa..."
+                         value={chatSearch}
+                         onChange={(e) => setChatSearch(e.target.value)}
+                         className="flex-1 h-9 bg-transparent border-0 text-white placeholder:text-white/40 focus-visible:ring-0 text-sm"
+                         onKeyDown={(e) => {
+                           if (e.key === "Enter") navigateSearch('next');
+                           if (e.key === "Escape") {
+                             setIsSearchingInChat(false);
+                             setChatSearch("");
+                           }
+                         }}
+                       />
+                       {chatSearch && (
+                         <div className="flex items-center gap-1 border-l border-white/20 pl-2 ml-1">
+                           <span className="text-[10px] text-white/60 tabular-nums whitespace-nowrap">
+                             {chatSearchResults.length > 0 ? `${searchOccurrenceIndex + 1}/${chatSearchResults.length}` : '0/0'}
+                           </span>
+                           <Button 
+                             variant="ghost" size="icon" className="h-6 w-6 text-white/80 hover:bg-white/10"
+                             onClick={() => navigateSearch('prev')} disabled={chatSearchResults.length === 0}
+                           >
+                             <ChevronUp className="h-4 w-4" />
+                           </Button>
+                           <Button 
+                             variant="ghost" size="icon" className="h-6 w-6 text-white/80 hover:bg-white/10"
+                             onClick={() => navigateSearch('next')} disabled={chatSearchResults.length === 0}
+                           >
+                             <ChevronDown className="h-4 w-4" />
+                           </Button>
+                           <Button 
+                             variant="ghost" size="icon" className="h-6 w-6 text-white/80 hover:bg-white/10"
+                             onClick={() => setChatSearch("")}
+                           >
+                             <X className="h-3 w-3" />
+                           </Button>
+                         </div>
+                       )}
+                     </div>
+                     <Button 
+                       variant="ghost" 
+                       size="sm"
+                       className="text-white hover:bg-white/10 text-xs font-medium"
+                       onClick={() => {
+                         setIsSearchingInChat(false);
+                         setChatSearch("");
+                       }}
+                     >
+                       Fechar
+                     </Button>
+                   </div>
                 )}
               </div>
 
@@ -570,12 +621,7 @@ export default function Conversas() {
                 }}
               >
                 <div className="max-w-3xl mx-auto space-y-1 pb-4">
-                  {filteredMessages.length === 0 && chatSearch ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground bg-card/40 rounded-xl backdrop-blur-sm">
-                      <Search className="h-10 w-10 mb-2 opacity-20" />
-                      <p className="text-sm">Nenhum resultado para "{chatSearch}"</p>
-                    </div>
-                  ) : groupMessagesByDate(filteredMessages).map(([dateKey, msgs]) => (
+                    {groupMessagesByDate(chatMessages).map(([dateKey, msgs]) => (
                     <div key={dateKey}>
                       {/* Date separator - WhatsApp style */}
                       <div className="flex justify-center my-3">
@@ -584,9 +630,15 @@ export default function Conversas() {
                         </span>
                       </div>
                       <div className="space-y-[2px]">
-                        {msgs.map((msg) => (
-                          <motion.div
-                            key={msg.id}
+                         {msgs.map((msg) => {
+                           const isSearchResult = chatSearch.length >= 2 && msg.body?.toLowerCase().includes(chatSearch.toLowerCase());
+                           const searchIndex = isSearchResult ? chatSearchResults.findIndex(m => m.id === msg.id) : -1;
+                           const isCurrentOccurrence = searchIndex === searchOccurrenceIndex;
+
+                           return (
+                           <motion.div
+                             key={msg.id}
+                             ref={el => { if (searchIndex !== -1) searchResultsRefs.current[searchIndex] = el; }}
                             initial={{ opacity: 0, y: 4 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.15 }}
@@ -596,17 +648,18 @@ export default function Conversas() {
                             )}
                           >
                             <div
-                              className={cn(
-                                "relative max-w-[85%] sm:max-w-[65%] px-3 py-1.5 text-[14.2px] leading-[19px] shadow-sm",
-                                msg.is_from_me
-                                  ? "rounded-lg rounded-tr-none"
-                                  : "rounded-lg rounded-tl-none"
-                              )}
-                              style={{
-                                backgroundColor: msg.is_from_me
-                                  ? "hsl(var(--wa-outgoing))"
-                                  : "hsl(var(--wa-incoming))",
-                              }}
+                               className={cn(
+                                 "relative max-w-[85%] sm:max-w-[65%] px-3 py-1.5 text-[14.2px] leading-[19px] shadow-sm transition-all duration-300",
+                                 msg.is_from_me
+                                   ? "rounded-lg rounded-tr-none"
+                                   : "rounded-lg rounded-tl-none",
+                                 isCurrentOccurrence && "ring-2 ring-[hsl(var(--wa-green))] ring-offset-2 ring-offset-transparent scale-[1.02] z-10"
+                               )}
+                               style={{
+                                 backgroundColor: isSearchResult 
+                                   ? (isCurrentOccurrence ? "hsl(var(--wa-green)/20%)" : "rgba(255, 255, 0, 0.2)")
+                                   : (msg.is_from_me ? "hsl(var(--wa-outgoing))" : "hsl(var(--wa-incoming))"),
+                               }}
                             >
                               {msg.media_url && (
                                 <div className="mb-1 rounded-md overflow-hidden bg-black/5">
@@ -633,9 +686,20 @@ export default function Conversas() {
                                   )}
                                 </div>
                               )}
-                              <p className="whitespace-pre-wrap break-words text-foreground">
-                                {msg.body || ""}
-                              </p>
+                               <p className="whitespace-pre-wrap break-words text-foreground">
+                                 {chatSearch && msg.body ? (
+                                   msg.body.split(new RegExp(`(${chatSearch})`, 'gi')).map((part, i) => 
+                                     part.toLowerCase() === chatSearch.toLowerCase() ? (
+                                       <mark key={i} className={cn(
+                                         "bg-yellow-200 text-black px-0.5 rounded-sm",
+                                         isCurrentOccurrence && "bg-orange-400 text-white"
+                                       )}>
+                                         {part}
+                                       </mark>
+                                     ) : part
+                                   )
+                                 ) : (msg.body || "")}
+                               </p>
                               <div className="flex items-center justify-end gap-1 -mb-0.5 mt-0.5">
                                 <span className="text-[11px] text-foreground/60">
                                   {msg.timestamp && format(new Date(msg.timestamp), "HH:mm")}
@@ -646,10 +710,11 @@ export default function Conversas() {
                               </div>
                             </div>
                           </motion.div>
-                        ))}
+                           );
+                         })}
                       </div>
                     </div>
-                  ))}
+                   ))}
                   <div ref={messagesEndRef} />
                 </div>
               </div>
