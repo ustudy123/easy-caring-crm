@@ -234,10 +234,14 @@ export default function Conversas() {
     fetchNames();
   }, [useMock, conversations.length]);
 
-  const filteredMessages = selectedConversation 
-    ? selectedConversation.messages.filter(msg => 
-        !chatSearch || (msg.body && msg.body.toLowerCase().includes(chatSearch.toLowerCase()))
-      )
+  const filteredMessages = selectedConversation
+    ? selectedConversation.messages.filter((msg) => {
+        if (!chatSearch) return true;
+        const searchLower = chatSearch.toLowerCase();
+        const bodyMatch = msg.body?.toLowerCase().includes(searchLower);
+        const mediaMatch = msg.media_type?.toLowerCase().includes(searchLower);
+        return bodyMatch || mediaMatch;
+      })
     : [];
 
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
