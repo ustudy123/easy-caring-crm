@@ -42,13 +42,24 @@ export function AppLayout({ children, title }: AppLayoutProps) {
      navigate(route);
    };
  
-   const markAllAsRead = () => {
+    const markAllAsRead = async () => {
      setDismissed({
        leads: newLeadsCount,
        followUps: pendingFollowUpsCount,
        negotiations: negotiationCount,
        whatsapp: unreadWhatsAppCount
      });
+
+      // Marcar todas as mensagens do WhatsApp como lidas no banco de dados
+      if (unreadWhatsAppCount > 0) {
+        const { error } = await supabase
+          .from("whatsapp_messages")
+          .update({ is_read: true })
+          .eq("is_read", false)
+          .eq("is_from_me", false);
+        
+        if (error) console.error("Erro ao marcar todas as mensagens como lidas:", error);
+      }
    };
  
   return (
