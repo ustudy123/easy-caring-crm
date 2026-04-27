@@ -484,13 +484,6 @@ export default function Conversas() {
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                  {contactName ? (
-                    <span className="text-sm font-semibold text-white">{getInitials(contactName)}</span>
-                  ) : (
-                    <User className="h-5 w-5 text-white" />
-                  )}
-                </div>
                 {!isSearchingInChat ? (
                   <>
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -559,35 +552,6 @@ export default function Conversas() {
                       }}
                     >
                       <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1">
-                    {isAdmin && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={handleExport}
-                              aria-label="Exportar conversa"
-                              className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
-                            >
-                              <Download className="h-5 w-5" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Exportar conversa (.txt)</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
-                      onClick={() => setIsSearchingInChat(true)}
-                    >
-                      <Search className="h-5 w-5" />
                     </Button>
                   </div>
                 )}
