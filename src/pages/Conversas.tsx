@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, memo } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -161,7 +161,7 @@ export default function Conversas() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectedPhone, messages]);
 
-  const conversations: Conversation[] = (() => {
+  const conversations: Conversation[] = useMemo(() => {
     const map = new Map<string, Conversation>();
     messages.forEach((msg) => {
       const phone = msg.phone;
@@ -182,14 +182,15 @@ export default function Conversas() {
       if (!msg.is_from_me && !msg.is_read) conv.unreadCount++;
     });
     return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
-  })();
+  }, [messages]);
 
-  const filteredConversations = conversations.filter((c) => {
+  const filteredConversations = useMemo(() => conversations.filter((c) => {
     const name = contactNames[c.phone] || "";
-    return c.phone.includes(search) || c.lastMessage.toLowerCase().includes(search.toLowerCase()) || name.toLowerCase().includes(search.toLowerCase());
-  });
+    const searchLower = search.toLowerCase();
+    return c.phone.includes(search) || c.lastMessage.toLowerCase().includes(searchLower) || name.toLowerCase().includes(searchLower);
+  }), [conversations, contactNames, search]);
 
-  const selectedConversation = conversations.find((c) => c.phone === selectedPhone);
+  const selectedConversation = useMemo(() => conversations.find((c) => c.phone === selectedPhone), [conversations, selectedPhone]);
 
   const handleSelectConversation = (phone: string) => {
     setSelectedPhone(phone);
@@ -237,11 +238,13 @@ export default function Conversas() {
     fetchNames();
   }, [useMock, conversations.length]);
 
-   const chatMessages = selectedConversation ? selectedConversation.messages : [];
+   const chatMessages = useMemo(() => selectedConversation ? selectedConversation.messages : [], [selectedConversation]);
 
-   const chatSearchResults = chatSearch.length >= 2
-     ? chatMessages.filter(msg => msg.body?.toLowerCase().includes(chatSearch.toLowerCase()))
-     : [];
+   const chatSearchResults = useMemo(() => {
+     if (chatSearch.length < 2) return [];
+     const searchLower = chatSearch.toLowerCase();
+     return chatMessages.filter(msg => msg.body?.toLowerCase().includes(searchLower));
+   }, [chatMessages, chatSearch]);
 
    useEffect(() => {
      if (chatSearchResults.length > 0 && isSearchingInChat) {
@@ -686,20 +689,7 @@ export default function Conversas() {
                                   )}
                                 </div>
                               )}
-                               <p className="whitespace-pre-wrap break-words text-foreground">
-                                 {chatSearch && msg.body ? (
-                                   msg.body.split(new RegExp(`(${chatSearch})`, 'gi')).map((part, i) => 
-                                     part.toLowerCase() === chatSearch.toLowerCase() ? (
-                                       <mark key={i} className={cn(
-                                         "bg-yellow-200 text-black px-0.5 rounded-sm",
-                                         isCurrentOccurrence && "bg-orange-400 text-white"
-                                       )}>
-                                         {part}
-                                       </mark>
-                                     ) : part
-                                   )
-                                 ) : (msg.body || "")}
-                               </p>
+                       <ChatMessageBody body={msg.body} chatSearch={chatSearch} isCurrentOccurrence={isCurrentOccurrence} />
                               <div className="flex items-center justify-end gap-1 -mb-0.5 mt-0.5">
                                 <span className="text-[11px] text-foreground/60">
                                   {msg.timestamp && format(new Date(msg.timestamp), "HH:mm")}
