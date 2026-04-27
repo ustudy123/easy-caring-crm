@@ -34,11 +34,13 @@ serve(async (req) => {
     // Send message via uazapi
     const cleanPhone = phone.replace(/\D/g, "");
 
-    const apiResponse = await fetch(`${whatsappApiUrl}/message/sendText`, {
+    // uazapi endpoint: POST /send/text with `token` header
+    const baseUrl = whatsappApiUrl.replace(/\/+$/, "");
+    const apiResponse = await fetch(`${baseUrl}/send/text`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${whatsappApiKey}`,
+        "token": whatsappApiKey,
       },
       body: JSON.stringify({
         number: cleanPhone,
