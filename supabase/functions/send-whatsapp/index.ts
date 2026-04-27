@@ -12,7 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const { phone, message, mediaUrl, mediaType } = await req.json();
+     const body = await req.json();
+     const { phone, message, mediaUrl, mediaType } = body;
 
     if (!phone || (!message && !mediaUrl)) {
       return new Response(JSON.stringify({ error: "phone and (message or mediaUrl) are required" }), {
@@ -40,15 +41,23 @@ serve(async (req) => {
       text: message,
     };
 
-    if (mediaUrl) {
-      endpoint = `${baseUrl}/send/media`;
-      body = {
-        number: cleanPhone,
-        url: mediaUrl,
-        type: mediaType || 'image',
-        caption: message || '',
-      };
-    }
+     let apiBody: any;
+
+     if (mediaUrl) {
+       endpoint = `${baseUrl}/send/media`;
+       // The API seems to expect 'file' for media url based on common UAZAPI patterns and log errors
+       apiBody = {
+         number: cleanPhone,
+         file: mediaUrl,
+         type: mediaType || 'image',
+         caption: message || '',
+       };
+     } else {
+       apiBody = {
+         number: cleanPhone,
+         text: message,
+       };
+     }
 
     const apiResponse = await fetch(endpoint, {
       method: "POST",
@@ -56,7 +65,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
         "token": whatsappApiKey,
       },
-      body: JSON.stringify(body),
+       body: JSON.stringify(apiBody),
     });
 
     const apiData = await apiResponse.json();
