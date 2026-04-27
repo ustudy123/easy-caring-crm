@@ -35,19 +35,21 @@ serve(async (req) => {
 
       console.log("Full Request Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())));
  
-       // uazapi webhook structure: { event: "message", instance: "...", data: { chatid, sender, text, fromMe, messageType, senderName, messageTimestamp } }
-       const event = body.event || body.type || body.action;
-       const data = body.data || body;
+        // uazapi webhook structure: 
+        // Format A: { event: "message", data: { chatid, text, ... } }
+        // Format B: { EventType: "chats", chat: { wa_chatid, wa_lastMessageTextVote, name, ... } }
+        const event = body.event || body.type || body.action || body.EventType;
+        const data = body.data || body.chat || body;
        
        console.log("Detected Event:", event);
        console.log("Event Data:", JSON.stringify(data));
 
        // Handle incoming message (uazapi sends "message" singular; also support legacy formats)
-       const isMessageEvent = event === "messages" || event === "message" || event === "messages.upsert";
+        const isMessageEvent = event === "messages" || event === "message" || event === "messages.upsert" || event === "chats";
        
        if (isMessageEvent) {
          // uazapi: phone comes from sender or chatid (e.g. "5511957783553@s.whatsapp.net")
-         const rawPhone = data.sender || data.chatid || data.from || data.remoteJid || data.key?.remoteJid || "";
+          const rawPhone = data.wa_chatid || data.sender || data.chatid || data.from || data.remoteJid || data.key?.remoteJid || "";
          const cleanPhone = rawPhone.toString()
            .replace("@s.whatsapp.net", "")
            .replace("@c.us", "")
@@ -55,14 +57,14 @@ serve(async (req) => {
            .replace(/[^0-9]/g, "");
 
          // uazapi: text is in data.text (not data.body)
-         const text = data.text || data.body || data.message?.conversation || data.content || "[mensagem sem texto]";
+          const text = data.wa_lastMessageTextVote || data.text || data.body || data.message?.conversation || data.content || "[mensagem sem texto]";
          const messageId = data.messageid || data.id || data.key?.id || crypto.randomUUID();
          const isFromMe = data.fromMe || data.key?.fromMe || false;
-         const isGroup = data.isGroup || rawPhone.includes("@g.us");
+          const isGroup = data.wa_isGroup || data.isGroup || rawPhone.includes("@g.us");
          // uazapi uses messageTimestamp in milliseconds
-         const rawTs = data.messageTimestamp || data.timestamp || Date.now();
+          const rawTs = data.wa_lastMsgTimestamp || data.messageTimestamp || data.timestamp || Date.now();
          const tsMs = rawTs > 1e12 ? rawTs : rawTs * 1000;
-         const senderName = data.senderName || data.pushName || data.notifyName || `Cliente ${cleanPhone}`;
+          const senderName = data.name || data.wa_name || data.senderName || data.pushName || data.notifyName || `Cliente ${cleanPhone}`;
 
          console.log(`Parsed → phone: ${cleanPhone} | fromMe: ${isFromMe} | isGroup: ${isGroup} | text: "${text}"`);
 
