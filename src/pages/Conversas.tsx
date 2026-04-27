@@ -13,7 +13,35 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useRole } from "@/contexts/RoleContext";
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
- import { ChatMessageBody } from "@/components/ChatMessageBody";
+const ChatMessageBody = memo(({ body, chatSearch, isCurrentOccurrence }: { body: string | null; chatSearch: string; isCurrentOccurrence: boolean }) => {
+  const content = useMemo(() => {
+    if (!chatSearch || chatSearch.length < 2 || !body) return body || "";
+    try {
+      const parts = body.split(new RegExp(`(${chatSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+      return parts.map((part, i) => 
+        part.toLowerCase() === chatSearch.toLowerCase() ? (
+          <mark key={i} className={cn(
+            "bg-yellow-200 text-black px-0.5 rounded-sm transition-colors duration-200",
+            isCurrentOccurrence && "bg-orange-400 text-white"
+          )}>
+            {part}
+          </mark>
+        ) : part
+      );
+    } catch (e) {
+      return body || "";
+    }
+  }, [body, chatSearch, isCurrentOccurrence]);
+
+  return (
+    <p className="whitespace-pre-wrap break-words text-foreground">
+      {content}
+    </p>
+  );
+});
+
+ChatMessageBody.displayName = "ChatMessageBody";
+
 
 // ── Types ──
 interface WhatsAppMessage {
