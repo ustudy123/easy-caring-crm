@@ -164,13 +164,37 @@ serve(async (req) => {
                 .eq("id", client.assigned_seller_id)
                 .maybeSingle();
 
-              if (sellerProfile && !sellerProfile.is_active && sellerProfile.substitute_id) {
-                console.log(`Seller ${client.assigned_seller_id} is inactive. Redirecting to substitute ${sellerProfile.substitute_id}`);
-                const originalSellerId = client.assigned_seller_id;
-                updateData.assigned_seller_id = sellerProfile.substitute_id;
-                
-                // Log the redirection
-                await logTransfer(client.id, originalSellerId, sellerProfile.substitute_id, "Vendedor inativo/ausente (redirecionamento automático)");
+              if (sellerProfile) {
+                if (!sellerProfile.is_active && sellerProfile.substitute_id) {
+                  console.log(`Seller ${client.assigned_seller_id} is inactive. Redirecting to substitute ${sellerProfile.substitute_id}`);
+                  const originalSellerId = client.assigned_seller_id;
+                  updateData.assigned_seller_id = sellerProfile.substitute_id;
+                  
+                  // Log the redirection
+                  await logTransfer(client.id, originalSellerId, sellerProfile.substitute_id, "Vendedor inativo/ausente (redirecionamento automático)");
+                } else if (sellerProfile.is_active) {
+                  // Check if this lead was recently transferred and if we should return it
+                  const { data: lastTransfer } = await supabase
+                    .from("service_transfers")
+                    .select("*")
+                    .eq("client_id", client.id)
+                    .eq("to_seller_id", client.assigned_seller_id)
+                    .order("created_at", { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                  if (lastTransfer && lastTransfer.from_seller_id === sellerProfile.id) {
+                    // Fetch settings to check auto_return_leads
+                    const { data: settings } = await supabase.from("settings").select("auto_return_leads").limit(1).maybeSingle();
+                    
+                    if (settings?.auto_return_leads) {
+                      console.log(`Seller ${sellerProfile.id} is active again. Returning lead ${client.id} from ${client.assigned_seller_id}`);
+                      const currentSellerId = client.assigned_seller_id;
+                      updateData.assigned_seller_id = sellerProfile.id;
+                      await logTransfer(client.id, currentSellerId, sellerProfile.id, "Vendedor retornou de ausência (retorno automático)");
+                    }
+                  }
+                }
               }
             }
 
