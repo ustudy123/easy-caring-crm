@@ -274,13 +274,13 @@ const mockContactNames: Record<string, string> = {
       });
     }, [conversations, contactNames, search, activeTab, sellerId, storeId]);
 
-    const isSelectedStale = useMemo(() => {
-      if (!selectedConversation?.last_message_from_client_at) return false;
-      const STALE_TIME = 15 * 60 * 1000;
-      return (new Date().getTime() - new Date(selectedConversation.last_message_from_client_at).getTime() > STALE_TIME);
-    }, [selectedConversation]);
-
   const selectedConversation = useMemo(() => conversations.find((c) => c.phone === selectedPhone), [conversations, selectedPhone]);
+
+  const isSelectedStale = useMemo(() => {
+    if (!selectedConversation?.last_message_from_client_at) return false;
+    const STALE_TIME = 15 * 60 * 1000;
+    return (new Date().getTime() - new Date(selectedConversation.last_message_from_client_at).getTime() > STALE_TIME);
+  }, [selectedConversation]);
 
   const handleSelectConversation = (phone: string) => {
     setSelectedPhone(phone);
