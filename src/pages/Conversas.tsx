@@ -339,6 +339,29 @@ const mockContactNames: Record<string, string> = {
 
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
 
+   const handleClaimLead = async () => {
+     if (!selectedPhone || !sellerId) return;
+     
+     try {
+       const { error } = await supabase
+         .from("clients")
+         .update({ 
+           assigned_seller_id: sellerId,
+           status: 'em_atendimento',
+           claimed_at: new Date().toISOString()
+         })
+         .eq("phone", selectedPhone);
+ 
+       if (error) throw error;
+ 
+       toast.success("Você assumiu este atendimento!");
+       fetchData(); // Refresh to update lists
+     } catch (err) {
+       console.error("Erro ao assumir lead:", err);
+       toast.error("Não foi possível assumir este lead.");
+     }
+   };
+ 
   const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedPhone) return;
