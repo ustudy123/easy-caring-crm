@@ -651,6 +651,21 @@ const mockContactNames: Record<string, string> = {
         )}>
           {selectedConversation ? (
             <>
+               {/* Alert Banners */}
+               {selectedConversation.alert_status === 'red' && (
+                 <div className="bg-red-500 text-white text-[11px] py-1 px-4 flex items-center justify-between">
+                   <span className="flex items-center gap-1.5 font-medium">
+                     <AlertCircle className="h-3 w-3" /> ATENÇÃO: Cliente aguardando há mais de 1 hora!
+                   </span>
+                   <span className="opacity-80">Gerente Notificado</span>
+                 </div>
+               )}
+               {selectedConversation.alert_status === 'yellow' && (
+                 <div className="bg-yellow-400 text-black text-[11px] py-1 px-4 flex items-center gap-1.5 font-medium">
+                   <Clock className="h-3 w-3" /> Responda logo: Cliente aguardando há mais de 30 minutos.
+                 </div>
+               )}
+
               {/* Chat header */}
               <div className="h-14 flex items-center gap-3 px-4 shrink-0 border-b border-border/20"
                 style={{ backgroundColor: "hsl(var(--wa-header))" }}>
