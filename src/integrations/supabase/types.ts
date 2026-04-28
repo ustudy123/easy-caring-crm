@@ -56,6 +56,8 @@ export type Database = {
       clients: {
         Row: {
           address: string | null
+          alert_notified_at: string | null
+          alert_status: string | null
           assigned_seller_id: string | null
           city: string | null
           claimed_at: string | null
@@ -65,6 +67,7 @@ export type Database = {
           last_contact: string | null
           last_message_at: string | null
           last_message_from_client_at: string | null
+          last_seller_response_at: string | null
           name: string
           notes: string | null
           phone: string
@@ -75,6 +78,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          alert_notified_at?: string | null
+          alert_status?: string | null
           assigned_seller_id?: string | null
           city?: string | null
           claimed_at?: string | null
@@ -84,6 +89,7 @@ export type Database = {
           last_contact?: string | null
           last_message_at?: string | null
           last_message_from_client_at?: string | null
+          last_seller_response_at?: string | null
           name: string
           notes?: string | null
           phone: string
@@ -94,6 +100,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          alert_notified_at?: string | null
+          alert_status?: string | null
           assigned_seller_id?: string | null
           city?: string | null
           claimed_at?: string | null
@@ -103,6 +111,7 @@ export type Database = {
           last_contact?: string | null
           last_message_at?: string | null
           last_message_from_client_at?: string | null
+          last_seller_response_at?: string | null
           name?: string
           notes?: string | null
           phone?: string
@@ -316,8 +325,10 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          is_active: boolean | null
           role: string | null
           store_id: string | null
+          substitute_id: string | null
           updated_at: string
           user_id: string
         }
@@ -326,8 +337,10 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          is_active?: boolean | null
           role?: string | null
           store_id?: string | null
+          substitute_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -336,8 +349,10 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          is_active?: boolean | null
           role?: string | null
           store_id?: string | null
+          substitute_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -347,6 +362,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_substitute_id_fkey"
+            columns: ["substitute_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -391,6 +413,55 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_transfers: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          from_seller_id: string | null
+          id: string
+          reason: string | null
+          to_seller_id: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          from_seller_id?: string | null
+          id?: string
+          reason?: string | null
+          to_seller_id?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          from_seller_id?: string | null
+          id?: string
+          reason?: string | null
+          to_seller_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_transfers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_transfers_from_seller_id_fkey"
+            columns: ["from_seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_transfers_to_seller_id_fkey"
+            columns: ["to_seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
