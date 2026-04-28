@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef, useMemo, memo } from "react";
+ import { useState, useEffect, useRef, useMemo, memo, useCallback } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
- import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X } from "lucide-react";
+ import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck } from "lucide-react";
 import { Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
@@ -57,13 +57,19 @@ interface WhatsAppMessage {
   media_type?: string | null;
 }
 
-interface Conversation {
-  phone: string;
-  lastMessage: string;
-  lastTimestamp: string;
-  unreadCount: number;
-  messages: WhatsAppMessage[];
-}
+ interface Conversation {
+   phone: string;
+   lastMessage: string;
+   lastTimestamp: string;
+   unreadCount: number;
+   messages: WhatsAppMessage[];
+   assigned_seller_id?: string | null;
+   store_id?: string | null;
+   status?: string;
+   claimed_at?: string | null;
+ }
+ 
+ type TabType = 'minhas' | 'loja' | 'geral';
 
 // ── Helpers ──
 function formatMessageDate(dateStr: string) {
@@ -134,9 +140,12 @@ const mockContactNames: Record<string, string> = {
 };
 
 // ── Component ──
-export default function Conversas() {
-  const { isAdmin } = useRole();
-  const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
+ export default function Conversas() {
+   const { isAdmin, user } = useRole();
+   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
+   const [profiles, setProfiles] = useState<any[]>([]);
+   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+   const [activeTab, setActiveTab] = useState<TabType>('minhas');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
