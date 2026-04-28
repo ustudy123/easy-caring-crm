@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye } from "lucide-react";
+import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -45,6 +45,117 @@ const ROLE_LABELS: Record<string, string> = {
   suporte: "Suporte",
 };
 
+ function ReportsTab() {
+   const [stats, setStats] = useState({ activeSellers: 0, inactiveSellers: 0, pendingAlerts: 0 });
+   const [transfers, setTransfers] = useState<any[]>([]);
+   const [loading, setLoading] = useState(true);
+ 
+   const fetchReports = useCallback(async () => {
+     setLoading(true);
+     const [profilesRes, alertsRes, transfersRes] = await Promise.all([
+       supabase.from("profiles").select("id, is_active").eq("role", "vendedor"),
+       supabase.from("clients").select("id").neq("alert_status", "none"),
+       supabase.from("service_transfers")
+         .select("*, client:clients(name), from_seller:profiles!service_transfers_from_seller_id_fkey(display_name), to_seller:profiles!service_transfers_to_seller_id_fkey(display_name)")
+         .order("created_at", { ascending: false })
+         .limit(20)
+     ]);
+ 
+     if (profilesRes.data) {
+       const active = profilesRes.data.filter(p => p.is_active).length;
+       setStats(prev => ({ ...prev, activeSellers: active, inactiveSellers: profilesRes.data!.length - active }));
+     }
+     if (alertsRes.data) {
+       setStats(prev => ({ ...prev, pendingAlerts: alertsRes.data.length }));
+     }
+     if (transfersRes.data) {
+       setTransfers(transfersRes.data);
+     }
+     setLoading(false);
+   }, []);
+ 
+   useEffect(() => { fetchReports(); }, [fetchReports]);
+ 
+   if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+ 
+   return (
+     <div className="space-y-6">
+       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+         <Card>
+           <CardContent className="pt-6">
+             <div className="flex items-center justify-between">
+               <div>
+                 <p className="text-sm font-medium text-muted-foreground">Vendedores Ativos</p>
+                 <h3 className="text-2xl font-bold text-green-600">{stats.activeSellers}</h3>
+               </div>
+               <UserCheck className="h-8 w-8 text-green-100" />
+             </div>
+           </CardContent>
+         </Card>
+         <Card>
+           <CardContent className="pt-6">
+             <div className="flex items-center justify-between">
+               <div>
+                 <p className="text-sm font-medium text-muted-foreground">Vendedores Ausentes</p>
+                 <h3 className="text-2xl font-bold text-orange-600">{stats.inactiveSellers}</h3>
+               </div>
+               <UserX className="h-8 w-8 text-orange-100" />
+             </div>
+           </CardContent>
+         </Card>
+         <Card>
+           <CardContent className="pt-6">
+             <div className="flex items-center justify-between">
+               <div>
+                 <p className="text-sm font-medium text-muted-foreground">Alertas Pendentes</p>
+                 <h3 className="text-2xl font-bold text-red-600">{stats.pendingAlerts}</h3>
+               </div>
+               <AlertCircle className="h-8 w-8 text-red-100" />
+             </div>
+           </CardContent>
+         </Card>
+       </div>
+ 
+       <Card>
+         <CardHeader>
+           <CardTitle className="text-base flex items-center gap-2">
+             <History className="h-4 w-4" /> Histórico Recente de Redirecionamentos
+           </CardTitle>
+         </CardHeader>
+         <CardContent>
+           <Table>
+             <TableHeader>
+               <TableRow>
+                 <TableHead>Data</TableHead>
+                 <TableHead>Cliente</TableHead>
+                 <TableHead>De</TableHead>
+                 <TableHead>Para</TableHead>
+                 <TableHead>Motivo</TableHead>
+               </TableRow>
+             </TableHeader>
+             <TableBody>
+               {transfers.map(t => (
+                 <TableRow key={t.id}>
+                   <TableCell className="text-xs text-muted-foreground">
+                     {new Date(t.created_at).toLocaleString('pt-BR')}
+                   </TableCell>
+                   <TableCell className="font-medium">{t.client?.name || 'Desconhecido'}</TableCell>
+                   <TableCell>{t.from_seller?.display_name || 'Fila Geral'}</TableCell>
+                   <TableCell>{t.to_seller?.display_name || 'Fila Geral'}</TableCell>
+                   <TableCell className="text-xs">{t.reason}</TableCell>
+                 </TableRow>
+               ))}
+               {transfers.length === 0 && (
+                 <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Nenhum redirecionamento registrado</TableCell></TableRow>
+               )}
+             </TableBody>
+           </Table>
+         </CardContent>
+       </Card>
+     </div>
+   );
+ }
+
 export default function AdminPanel() {
   const { isAdmin } = useRole();
 
@@ -56,11 +167,13 @@ export default function AdminPanel() {
         <TabsList>
           <TabsTrigger value="stores" className="gap-1.5"><Store className="h-3.5 w-3.5" /> Lojas</TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Usuários & Papéis</TabsTrigger>
+          <TabsTrigger value="reports" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Relatórios</TabsTrigger>
           <TabsTrigger value="logs" className="gap-1.5"><Terminal className="h-3.5 w-3.5" /> Webhook Logs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stores"><StoresTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
+        <TabsContent value="reports"><ReportsTab /></TabsContent>
         <TabsContent value="logs"><WebhookLogsTab /></TabsContent>
       </Tabs>
     </AppLayout>
