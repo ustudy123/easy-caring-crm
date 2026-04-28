@@ -67,6 +67,7 @@ interface WhatsAppMessage {
    store_id?: string | null;
    status?: string;
    claimed_at?: string | null;
+  last_message_from_client_at?: string | null;
  }
  
  type TabType = 'minhas' | 'loja' | 'geral';
@@ -224,7 +225,8 @@ const mockContactNames: Record<string, string> = {
            messages: [],
            assigned_seller_id: client?.assigned_seller_id,
            store_id: client?.store_id,
-           status: client?.status
+            status: client?.status,
+          last_message_from_client_at: client?.last_message_from_client_at
          });
        }
        const conv = map.get(phone)!;
@@ -241,29 +243,44 @@ const mockContactNames: Record<string, string> = {
        if (!msg.is_from_me && !msg.is_read) conv.unreadCount++;
      });
      return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
-   }, [messages, clients]);
+    }, [messages, clients]);
 
-   const filteredConversations = useMemo(() => {
-     return conversations.filter((c) => {
-       // Tab filtering
-       if (activeTab === 'minhas') {
-         if (c.assigned_seller_id !== sellerId) return false;
-       } else if (activeTab === 'loja') {
-         if (c.store_id !== storeId || !!c.assigned_seller_id) return false;
-       } else if (activeTab === 'geral') {
-         if (!!c.store_id || !!c.assigned_seller_id) return false;
-       }
- 
-       // Search filtering
-       const name = contactNames[c.phone] || "";
-       const searchLower = search.toLowerCase();
-       return c.phone.includes(search) || 
-              c.lastMessage.toLowerCase().includes(searchLower) || 
-              name.toLowerCase().includes(searchLower);
-     });
-   }, [conversations, contactNames, search, activeTab, sellerId, storeId]);
+    const filteredConversations = useMemo(() => {
+      const STALE_TIME = 15 * 60 * 1000;
+      const now = new Date().getTime();
+
+      return conversations.filter((c) => {
+        const isStale = c.last_message_from_client_at && (now - new Date(c.last_message_from_client_at).getTime() > STALE_TIME);
+        
+        // Tab filtering
+        if (activeTab === 'minhas') {
+          if (c.assigned_seller_id !== sellerId) return false;
+        } else if (activeTab === 'loja') {
+          if (c.store_id !== storeId) return false;
+          if (c.assigned_seller_id && !isStale) return false;
+          if (c.assigned_seller_id === sellerId) return false;
+        } else if (activeTab === 'geral') {
+          if (!!c.store_id) return false;
+          if (c.assigned_seller_id && !isStale) return false;
+          if (c.assigned_seller_id === sellerId) return false;
+        }
+  
+        // Search filtering
+        const name = contactNames[c.phone] || "";
+        const searchLower = search.toLowerCase();
+        return c.phone.includes(search) || 
+               c.lastMessage.toLowerCase().includes(searchLower) || 
+               name.toLowerCase().includes(searchLower);
+      });
+    }, [conversations, contactNames, search, activeTab, sellerId, storeId]);
 
   const selectedConversation = useMemo(() => conversations.find((c) => c.phone === selectedPhone), [conversations, selectedPhone]);
+
+  const isSelectedStale = useMemo(() => {
+    if (!selectedConversation?.last_message_from_client_at) return false;
+    const STALE_TIME = 15 * 60 * 1000;
+    return (new Date().getTime() - new Date(selectedConversation.last_message_from_client_at).getTime() > STALE_TIME);
+  }, [selectedConversation]);
 
   const handleSelectConversation = (phone: string) => {
     setSelectedPhone(phone);
@@ -657,13 +674,13 @@ const mockContactNames: Record<string, string> = {
                       )}
                     </div>
                      <div className="flex items-center gap-2">
-                       {!selectedConversation.assigned_seller_id && (
+                       {(!selectedConversation.assigned_seller_id || (isSelectedStale && selectedConversation.assigned_seller_id !== sellerId)) && (
                          <Button
                            size="sm"
                            onClick={handleClaimLead}
                            className="bg-white text-[hsl(var(--wa-header))] hover:bg-white/90 font-semibold h-8 px-3"
                          >
-                           Atender Cliente
+                           {isSelectedStale && selectedConversation?.assigned_seller_id ? "Retomar Atendimento" : "Atender Cliente"}
                          </Button>
                        )}
                        {isAdmin && (
