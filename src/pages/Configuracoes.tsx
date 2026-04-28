@@ -258,17 +258,6 @@ export default function Configuracoes() {
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-bold">
-              <Shield className="h-4 w-4 text-primary" /> Sobre
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">CRM Tintas v1.0 — Sistema de gestão comercial</p>
-          </CardContent>
-        </Card>
       </div>
     </AppLayout>
   );
