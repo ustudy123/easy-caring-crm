@@ -51,6 +51,7 @@ export default function Configuracoes() {
   const [profile, setProfile] = useState<any>(null);
   const [allSellers, setAllSellers] = useState<any[]>([]);
   const [companyName, setCompanyName] = useState("CRM Tintas");
+  const [autoReturnLeads, setAutoReturnLeads] = useState(true);
   const [notifications, setNotifications] = useState({
     newLeads: true,
     followUpReminders: true,
@@ -68,6 +69,7 @@ export default function Configuracoes() {
 
       if (settingsRes.data) {
         setCompanyName(settingsRes.data.company_name);
+        setAutoReturnLeads(settingsRes.data.auto_return_leads ?? true);
         setNotifications({
           newLeads: settingsRes.data.notify_new_leads,
           followUpReminders: settingsRes.data.notify_follow_up_reminders,
@@ -95,6 +97,7 @@ export default function Configuracoes() {
     const payload = {
       user_id: user.id,
       company_name: companyName,
+      auto_return_leads: autoReturnLeads,
       notify_new_leads: notifications.newLeads,
       notify_follow_up_reminders: notifications.followUpReminders,
       notify_overdue_alerts: notifications.overdueAlerts,
@@ -204,6 +207,16 @@ export default function Configuracoes() {
               <div className="space-y-1.5">
                 <Label>Nome da empresa</Label>
                 <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Retorno Automático de Leads</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Conversas retornam ao vendedor original quando ele volta a ficar ativo.
+                  </p>
+                </div>
+                <Switch checked={autoReturnLeads} onCheckedChange={setAutoReturnLeads} />
               </div>
               <Button onClick={handleSave} disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
