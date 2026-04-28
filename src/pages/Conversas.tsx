@@ -264,6 +264,11 @@ const mockContactNames: Record<string, string> = {
        const searchLower = search.toLowerCase();
        return c.phone.includes(search) || 
               c.lastMessage.toLowerCase().includes(searchLower) || 
+  const isSelectedStale = useMemo(() => {
+    if (!selectedConversation?.last_message_from_client_at) return false;
+    const STALE_TIME = 15 * 60 * 1000;
+    return (new Date().getTime() - new Date(selectedConversation.last_message_from_client_at).getTime() > STALE_TIME);
+  }, [selectedConversation]);
               name.toLowerCase().includes(searchLower);
      });
    }, [conversations, contactNames, search, activeTab, sellerId, storeId]);
@@ -662,13 +667,13 @@ const mockContactNames: Record<string, string> = {
                       )}
                     </div>
                      <div className="flex items-center gap-2">
-                       {!selectedConversation.assigned_seller_id && (
+                       {(!selectedConversation.assigned_seller_id || (isSelectedStale && selectedConversation.assigned_seller_id !== sellerId)) && (
                          <Button
                            size="sm"
                            onClick={handleClaimLead}
                            className="bg-white text-[hsl(var(--wa-header))] hover:bg-white/90 font-semibold h-8 px-3"
                          >
-                           Atender Cliente
+                           {isSelectedStale && selectedConversation?.assigned_seller_id ? "Retomar Atendimento" : "Atender Cliente"}
                          </Button>
                        )}
                        {isAdmin && (
