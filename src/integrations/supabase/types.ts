@@ -468,6 +468,7 @@ export type Database = {
       }
       settings: {
         Row: {
+          auto_return_leads: boolean | null
           company_name: string
           created_at: string
           id: string
@@ -478,6 +479,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          auto_return_leads?: boolean | null
           company_name?: string
           created_at?: string
           id?: string
@@ -488,6 +490,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          auto_return_leads?: boolean | null
           company_name?: string
           created_at?: string
           id?: string
