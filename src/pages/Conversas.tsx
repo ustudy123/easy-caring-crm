@@ -300,15 +300,9 @@ const mockContactNames: Record<string, string> = {
     }
     const phones = conversations.map(c => c.phone);
     if (phones.length === 0) return;
-    const fetchNames = async () => {
-      const names: Record<string, string> = {};
-      const { data: leads } = await supabase.from("leads").select("client_name, client_phone");
-      const { data: clients } = await supabase.from("clients").select("name, phone");
-      leads?.forEach(l => { if (phones.includes(l.client_phone)) names[l.client_phone] = l.client_name; });
-      clients?.forEach(c => { if (phones.includes(c.phone) && !names[c.phone]) names[c.phone] = c.name; });
-      setContactNames(names);
-    };
-    fetchNames();
+     const names: Record<string, string> = {};
+     clients.forEach(c => { if (phones.includes(c.phone)) names[c.phone] = c.name; });
+     setContactNames(names);
   }, [useMock, conversations.length]);
 
    const chatMessages = useMemo(() => selectedConversation ? selectedConversation.messages : [], [selectedConversation]);
