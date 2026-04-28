@@ -662,8 +662,17 @@ const mockContactNames: Record<string, string> = {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-1">
-                      {isAdmin && (
+                     <div className="flex items-center gap-2">
+                       {!selectedConversation.assigned_seller_id && (
+                         <Button
+                           size="sm"
+                           onClick={handleClaimLead}
+                           className="bg-white text-[hsl(var(--wa-header))] hover:bg-white/90 font-semibold h-8 px-3"
+                         >
+                           Atender Cliente
+                         </Button>
+                       )}
+                       {isAdmin && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
