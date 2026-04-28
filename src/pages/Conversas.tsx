@@ -225,7 +225,7 @@ const mockContactNames: Record<string, string> = {
            messages: [],
            assigned_seller_id: client?.assigned_seller_id,
            store_id: client?.store_id,
-           status: client?.status
+            status: client?.status,
           last_message_from_client_at: client?.last_message_from_client_at
          });
        }
