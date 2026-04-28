@@ -64,6 +64,7 @@ export type Database = {
           id: string
           last_contact: string | null
           last_message_at: string | null
+          last_message_from_client_at: string | null
           name: string
           notes: string | null
           phone: string
@@ -82,6 +83,7 @@ export type Database = {
           id?: string
           last_contact?: string | null
           last_message_at?: string | null
+          last_message_from_client_at?: string | null
           name: string
           notes?: string | null
           phone: string
@@ -100,6 +102,7 @@ export type Database = {
           id?: string
           last_contact?: string | null
           last_message_at?: string | null
+          last_message_from_client_at?: string | null
           name?: string
           notes?: string | null
           phone?: string
