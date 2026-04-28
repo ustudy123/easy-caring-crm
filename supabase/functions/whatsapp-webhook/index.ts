@@ -87,85 +87,72 @@ serve(async (req) => {
         });
         if (msgError) console.error("Error inserting whatsapp_messages:", msgError);
  
-       // If incoming message (not from me, not group), check if lead exists, create if not
-       if (!isFromMe && cleanPhone && !isGroup) {
-         const { data: existingLead, error: leadSearchError } = await supabase
-           .from("leads")
-           .select("id")
-           .eq("client_phone", cleanPhone)
-           .maybeSingle();
+        // If incoming message (not from me, not group), handle lead distribution logic
+        if (!isFromMe && cleanPhone && !isGroup) {
+          const { data: client, error: clientError } = await supabase
+            .from("clients")
+            .select("*")
+            .eq("phone", cleanPhone)
+            .maybeSingle();
 
-         if (leadSearchError) console.error("Error searching lead:", leadSearchError);
+          if (clientError) console.error("Error fetching client:", clientError);
 
-         if (!existingLead) {
-            // Get the first store available if none specified
-            const { data: storeData } = await supabase.from("stores").select("id").limit(1).maybeSingle();
-            const targetStoreId = storeData?.id || null;
+          let targetStoreId = client?.store_id || null;
+          const normalizedText = text.toLowerCase();
 
-            // Create or find a client first (interactions table requires client_id)
-            let clientId;
-            const { data: existingClient } = await supabase.from("clients").select("id").eq("phone", cleanPhone).maybeSingle();
-            
-            if (!existingClient) {
-              const { data: newClient, error: clientError } = await supabase.from("clients").insert({
-                name: senderName,
-                phone: cleanPhone,
-                store_id: targetStoreId,
-                total_purchases: 0
-              }).select("id").single();
-              
-              if (clientError) {
-                console.error("Error creating client:", clientError);
-              } else {
-                clientId = newClient.id;
+          // Lead distribution logic: check for store preference in the message
+          const { data: allStores } = await supabase.from("stores").select("id, name");
+          if (allStores) {
+            for (const store of allStores) {
+              if (normalizedText.includes(store.name.toLowerCase())) {
+                targetStoreId = store.id;
+                console.log(`Detected store preference: ${store.name}`);
+                break;
               }
-            } else {
-              clientId = existingClient.id;
             }
+          }
 
-            const { data: newLead, error: insertError } = await supabase.from("leads").insert({
-              client_name: senderName,
-              client_phone: cleanPhone,
-              source: "whatsapp",
-              stage: "abordagem",
-              notes: `Lead criado via WhatsApp: "${text.substring(0, 200)}"`,
-              tags: ["whatsapp", "auto"],
-              value: 0,
-              store_id: targetStoreId
-            }).select().single();
- 
-            if (insertError) {
-              console.error("Error creating lead:", insertError);
-            } else if (clientId) {
-              console.log(`New lead created: ${newLead.id}`);
-              
-              // Add interaction record
-              await supabase.from("interactions").insert({
-                lead_id: newLead.id,
-                client_id: clientId,
-                type: "whatsapp",
-                description: `Primeira mensagem: ${text}`
+          if (!client) {
+            // Create new client if not exists
+            const { data: newClient, error: createError } = await supabase.from("clients").insert({
+              name: senderName,
+              phone: cleanPhone,
+              store_id: targetStoreId,
+              status: 'novo',
+              last_message_at: new Date().toISOString(),
+              last_message_from_client_at: new Date().toISOString()
+            }).select("id").single();
+
+            if (createError) {
+              console.error("Error creating client:", createError);
+            } else {
+              // Create a lead record too
+              await supabase.from("leads").insert({
+                client_name: senderName,
+                client_phone: cleanPhone,
+                source: "whatsapp",
+                stage: "abordagem",
+                store_id: targetStoreId
               });
             }
           } else {
-            // Lead exists, try to find client to update interaction
-            const { data: clientData } = await supabase.from("clients").select("id").eq("phone", cleanPhone).maybeSingle();
-            if (clientData) {
-              await supabase.from("interactions").insert({
-                lead_id: existingLead.id,
-                client_id: clientData.id,
-                type: "whatsapp",
-                description: text
-              });
+            // Update existing client
+            const updateData: any = {
+              last_message_at: new Date().toISOString(),
+              last_message_from_client_at: new Date().toISOString()
+            };
+
+            // Only update store_id if not already assigned to a seller (as per user instruction)
+            if (!client.assigned_seller_id) {
+              updateData.store_id = targetStoreId;
             }
+
+            await supabase
+              .from("clients")
+              .update(updateData)
+              .eq("id", client.id);
           }
- 
-         // Update last_contact on client if exists
-         await supabase
-           .from("clients")
-           .update({ last_contact: new Date().toISOString() })
-           .eq("phone", cleanPhone);
-       }
+        }
  
        return new Response(JSON.stringify({ success: true, action: "message_processed" }), {
          status: 200,
