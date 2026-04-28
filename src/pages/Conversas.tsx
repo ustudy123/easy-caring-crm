@@ -364,28 +364,77 @@ const mockContactNames: Record<string, string> = {
 
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
 
-   const handleClaimLead = async () => {
-     if (!selectedPhone || !sellerId) return;
-     
-     try {
-       const { error } = await supabase
-         .from("clients")
-         .update({ 
-           assigned_seller_id: sellerId,
-           status: 'em_atendimento',
-           claimed_at: new Date().toISOString()
-         })
-         .eq("phone", selectedPhone);
- 
-       if (error) throw error;
- 
-       toast.success("Você assumiu este atendimento!");
-       fetchData(); // Refresh to update lists
-     } catch (err) {
-       console.error("Erro ao assumir lead:", err);
-       toast.error("Não foi possível assumir este lead.");
-     }
-   };
+    const handleClaimLead = async () => {
+      if (!selectedPhone || !sellerId) {
+        console.warn("Missing selectedPhone or sellerId:", { selectedPhone, sellerId });
+        return;
+      }
+      
+      try {
+        // First check if client exists
+        const { data: existingClient } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("phone", selectedPhone)
+          .maybeSingle();
+
+        let error;
+        if (existingClient) {
+          const { error: updateError } = await supabase
+            .from("clients")
+            .update({ 
+              assigned_seller_id: sellerId,
+              status: 'em_atendimento',
+              claimed_at: new Date().toISOString()
+            })
+            .eq("phone", selectedPhone);
+          error = updateError;
+        } else {
+          // Create client if it doesn't exist
+          const { error: insertError } = await supabase
+            .from("clients")
+            .insert({ 
+              phone: selectedPhone,
+              name: `Cliente ${formatPhone(selectedPhone)}`,
+              assigned_seller_id: sellerId,
+              status: 'em_atendimento',
+              claimed_at: new Date().toISOString(),
+              store_id: storeId // Assign to current seller's store if possible
+            });
+          error = insertError;
+        }
+  
+        if (error) throw error;
+  
+        toast.success("Você assumiu este atendimento!");
+        // Force an immediate update of the local state before fetching
+        setClients(prev => {
+          const existing = prev.find(c => c.phone === selectedPhone);
+          if (existing) {
+            return prev.map(c => c.phone === selectedPhone ? { 
+              ...c, 
+              assigned_seller_id: sellerId, 
+              status: 'em_atendimento',
+              claimed_at: new Date().toISOString() 
+            } : c);
+          } else {
+            return [...prev, { 
+              phone: selectedPhone, 
+              name: `Cliente ${formatPhone(selectedPhone)}`,
+              assigned_seller_id: sellerId, 
+              status: 'em_atendimento',
+              claimed_at: new Date().toISOString(),
+              store_id: storeId
+            }];
+          }
+        });
+        
+        fetchData(); // Refresh to ensure sync
+      } catch (err) {
+        console.error("Erro ao assumir lead:", err);
+        toast.error("Não foi possível assumir este lead.");
+      }
+    };
  
   const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
