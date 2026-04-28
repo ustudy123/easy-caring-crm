@@ -68,6 +68,7 @@ interface WhatsAppMessage {
    status?: string;
    claimed_at?: string | null;
   last_message_from_client_at?: string | null;
+  alert_status?: 'none' | 'yellow' | 'red' | 'transferred';
  }
  
  type TabType = 'minhas' | 'loja' | 'geral';
@@ -167,8 +168,8 @@ const mockContactNames: Record<string, string> = {
      setLoading(true);
      try {
        const [msgsRes, clientsRes] = await Promise.all([
-         supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }),
-         supabase.from("clients").select("*")
+          supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }),
+          supabase.from("clients").select("*, alert_status")
        ]);
  
        if (msgsRes.data && msgsRes.data.length > 0) {
@@ -226,6 +227,7 @@ const mockContactNames: Record<string, string> = {
            assigned_seller_id: client?.assigned_seller_id,
            store_id: client?.store_id,
             status: client?.status,
+            alert_status: client?.alert_status,
           last_message_from_client_at: client?.last_message_from_client_at
          });
        }
@@ -588,7 +590,9 @@ const mockContactNames: Record<string, string> = {
                         onClick={() => handleSelectConversation(conv.phone)}
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-3 text-left transition-colors duration-100 hover:bg-muted/40",
-                          isSelected && "bg-muted/60"
+                          isSelected && "bg-muted/60",
+                          conv.alert_status === 'red' && "bg-red-50/50 hover:bg-red-100/40",
+                          conv.alert_status === 'yellow' && "bg-yellow-50/50 hover:bg-yellow-100/40"
                         )}
                       >
                         {/* Avatar */}
@@ -602,9 +606,13 @@ const mockContactNames: Record<string, string> = {
 
                         <div className="flex-1 min-w-0 border-b border-border/20 pb-3">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[16px] font-normal text-foreground truncate">
-                              {name}
-                            </span>
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="text-[16px] font-normal text-foreground truncate">
+                                {name}
+                              </span>
+                              {conv.alert_status === 'red' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" title="Alerta Crítico" />}
+                              {conv.alert_status === 'yellow' && <div className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" title="Alerta de Demora" />}
+                            </div>
                             <span className={cn(
                               "text-[12px] shrink-0",
                               conv.unreadCount > 0 ? "text-[hsl(var(--wa-green))]" : "text-muted-foreground"
