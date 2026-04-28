@@ -143,7 +143,7 @@ const mockContactNames: Record<string, string> = {
 
 // ── Component ──
  export default function Conversas() {
-    const { isAdmin, sellerId, storeId } = useRole();
+    const { isAdmin, sellerId, storeId, role } = useRole();
     const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
     const [clients, setClients] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState<TabType>('minhas');
@@ -212,6 +212,16 @@ const mockContactNames: Record<string, string> = {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectedPhone, messages]);
 
+   useEffect(() => {
+     const channel = supabase
+       .channel("clients-realtime")
+       .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, () => {
+         fetchData();
+       })
+       .subscribe();
+     return () => { supabase.removeChannel(channel); };
+   }, [fetchData]);
+
    const conversations: Conversation[] = useMemo(() => {
      const map = new Map<string, Conversation>();
      messages.forEach((msg) => {
@@ -255,16 +265,18 @@ const mockContactNames: Record<string, string> = {
         const isStale = c.last_message_from_client_at && (now - new Date(c.last_message_from_client_at).getTime() > STALE_TIME);
         
         // Tab filtering
+        const isMine = c.assigned_seller_id === sellerId;
+
         if (activeTab === 'minhas') {
-          if (c.assigned_seller_id !== sellerId) return false;
+          if (!isMine) return false;
         } else if (activeTab === 'loja') {
           if (c.store_id !== storeId) return false;
           if (c.assigned_seller_id && !isStale) return false;
-          if (c.assigned_seller_id === sellerId) return false;
+          if (isMine) return false;
         } else if (activeTab === 'geral') {
           if (!!c.store_id) return false;
           if (c.assigned_seller_id && !isStale) return false;
-          if (c.assigned_seller_id === sellerId) return false;
+          if (isMine) return false;
         }
   
         // Search filtering
