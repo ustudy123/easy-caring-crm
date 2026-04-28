@@ -90,6 +90,16 @@ serve(async (req) => {
       timestamp: new Date().toISOString(),
     });
 
+    // Update client metadata for response tracking
+    await supabase
+      .from("clients")
+      .update({
+        last_seller_response_at: new Date().toISOString(),
+        alert_status: 'none',
+        alert_notified_at: null
+      })
+      .eq("phone", cleanPhone);
+
     return new Response(JSON.stringify({ success: true, messageId }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
