@@ -399,13 +399,19 @@ const mockContactNames: Record<string, string> = {
               assigned_seller_id: sellerId,
               status: 'em_atendimento',
               claimed_at: new Date().toISOString(),
-              store_id: storeId // Assign to current seller's store if possible
+              store_id: storeId
             });
           error = insertError;
         }
   
         if (error) throw error;
-  
+
+        // Also update or create a lead in the leads table
+        await supabase
+          .from("leads")
+          .update({ assigned_to: sellerId })
+          .eq("client_phone", selectedPhone);
+
         toast.success("Você assumiu este atendimento!");
         // Force an immediate update of the local state before fetching
         setClients(prev => {
