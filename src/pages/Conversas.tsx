@@ -210,28 +210,38 @@ const mockContactNames: Record<string, string> = {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectedPhone, messages]);
 
-  const conversations: Conversation[] = useMemo(() => {
-    const map = new Map<string, Conversation>();
-    messages.forEach((msg) => {
-      const phone = msg.phone;
-      if (!map.has(phone)) {
-        map.set(phone, { phone, lastMessage: "", lastTimestamp: "", unreadCount: 0, messages: [] });
-      }
-      const conv = map.get(phone)!;
-      conv.messages.push(msg);
-      
-      const currentTs = new Date(msg.timestamp || msg.created_at || 0).getTime();
-      const lastTs = new Date(conv.lastTimestamp || 0).getTime();
-
-      if (!conv.lastTimestamp || currentTs >= lastTs) {
-        conv.lastTimestamp = msg.timestamp || msg.created_at || "";
-        conv.lastMessage = msg.body || "";
-      }
-      
-      if (!msg.is_from_me && !msg.is_read) conv.unreadCount++;
-    });
-    return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
-  }, [messages]);
+   const conversations: Conversation[] = useMemo(() => {
+     const map = new Map<string, Conversation>();
+     messages.forEach((msg) => {
+       const phone = msg.phone;
+       if (!map.has(phone)) {
+         const client = clients.find(c => c.phone === phone);
+         map.set(phone, { 
+           phone, 
+           lastMessage: "", 
+           lastTimestamp: "", 
+           unreadCount: 0, 
+           messages: [],
+           assigned_seller_id: client?.assigned_seller_id,
+           store_id: client?.store_id,
+           status: client?.status
+         });
+       }
+       const conv = map.get(phone)!;
+       conv.messages.push(msg);
+       
+       const currentTs = new Date(msg.timestamp || msg.created_at || 0).getTime();
+       const lastTs = new Date(conv.lastTimestamp || 0).getTime();
+ 
+       if (!conv.lastTimestamp || currentTs >= lastTs) {
+         conv.lastTimestamp = msg.timestamp || msg.created_at || "";
+         conv.lastMessage = msg.body || "";
+       }
+       
+       if (!msg.is_from_me && !msg.is_read) conv.unreadCount++;
+     });
+     return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
+   }, [messages, clients]);
 
   const filteredConversations = useMemo(() => conversations.filter((c) => {
     const name = contactNames[c.phone] || "";
