@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef, useMemo, memo } from "react";
+ import { useState, useEffect, useRef, useMemo, memo, useCallback } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
- import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X } from "lucide-react";
+ import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck } from "lucide-react";
 import { Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
@@ -57,13 +57,19 @@ interface WhatsAppMessage {
   media_type?: string | null;
 }
 
-interface Conversation {
-  phone: string;
-  lastMessage: string;
-  lastTimestamp: string;
-  unreadCount: number;
-  messages: WhatsAppMessage[];
-}
+ interface Conversation {
+   phone: string;
+   lastMessage: string;
+   lastTimestamp: string;
+   unreadCount: number;
+   messages: WhatsAppMessage[];
+   assigned_seller_id?: string | null;
+   store_id?: string | null;
+   status?: string;
+   claimed_at?: string | null;
+ }
+ 
+ type TabType = 'minhas' | 'loja' | 'geral';
 
 // ── Helpers ──
 function formatMessageDate(dateStr: string) {
@@ -134,9 +140,11 @@ const mockContactNames: Record<string, string> = {
 };
 
 // ── Component ──
-export default function Conversas() {
-  const { isAdmin } = useRole();
-  const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
+ export default function Conversas() {
+    const { isAdmin, sellerId, storeId } = useRole();
+    const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
+    const [clients, setClients] = useState<any[]>([]);
+    const [activeTab, setActiveTab] = useState<TabType>('minhas');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
@@ -154,23 +162,35 @@ export default function Conversas() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const fetchMessages = async () => {
-      const { data } = await supabase
-        .from("whatsapp_messages")
-        .select("*")
-        .order("timestamp", { ascending: true });
-      if (data && data.length > 0) {
-        setMessages(data as WhatsAppMessage[]);
-        setUseMock(false);
-      } else {
-        setMessages(mockMessages);
-        setUseMock(true);
-      }
-      setLoading(false);
-    };
-    fetchMessages();
-  }, []);
+   const fetchData = useCallback(async () => {
+     setLoading(true);
+     try {
+       const [msgsRes, clientsRes] = await Promise.all([
+         supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }),
+         supabase.from("clients").select("*")
+       ]);
+ 
+       if (msgsRes.data && msgsRes.data.length > 0) {
+         setMessages(msgsRes.data as WhatsAppMessage[]);
+         setUseMock(false);
+       } else {
+         setMessages(mockMessages);
+         setUseMock(true);
+       }
+ 
+       if (clientsRes.data) {
+         setClients(clientsRes.data);
+       }
+     } catch (err) {
+       console.error("Erro ao carregar dados:", err);
+     } finally {
+       setLoading(false);
+     }
+   }, []);
+ 
+   useEffect(() => {
+     fetchData();
+   }, [fetchData]);
 
   useEffect(() => {
     const channel = supabase
@@ -190,34 +210,58 @@ export default function Conversas() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectedPhone, messages]);
 
-  const conversations: Conversation[] = useMemo(() => {
-    const map = new Map<string, Conversation>();
-    messages.forEach((msg) => {
-      const phone = msg.phone;
-      if (!map.has(phone)) {
-        map.set(phone, { phone, lastMessage: "", lastTimestamp: "", unreadCount: 0, messages: [] });
-      }
-      const conv = map.get(phone)!;
-      conv.messages.push(msg);
-      
-      const currentTs = new Date(msg.timestamp || msg.created_at || 0).getTime();
-      const lastTs = new Date(conv.lastTimestamp || 0).getTime();
+   const conversations: Conversation[] = useMemo(() => {
+     const map = new Map<string, Conversation>();
+     messages.forEach((msg) => {
+       const phone = msg.phone;
+       if (!map.has(phone)) {
+         const client = clients.find(c => c.phone === phone);
+         map.set(phone, { 
+           phone, 
+           lastMessage: "", 
+           lastTimestamp: "", 
+           unreadCount: 0, 
+           messages: [],
+           assigned_seller_id: client?.assigned_seller_id,
+           store_id: client?.store_id,
+           status: client?.status
+         });
+       }
+       const conv = map.get(phone)!;
+       conv.messages.push(msg);
+       
+       const currentTs = new Date(msg.timestamp || msg.created_at || 0).getTime();
+       const lastTs = new Date(conv.lastTimestamp || 0).getTime();
+ 
+       if (!conv.lastTimestamp || currentTs >= lastTs) {
+         conv.lastTimestamp = msg.timestamp || msg.created_at || "";
+         conv.lastMessage = msg.body || "";
+       }
+       
+       if (!msg.is_from_me && !msg.is_read) conv.unreadCount++;
+     });
+     return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
+   }, [messages, clients]);
 
-      if (!conv.lastTimestamp || currentTs >= lastTs) {
-        conv.lastTimestamp = msg.timestamp || msg.created_at || "";
-        conv.lastMessage = msg.body || "";
-      }
-      
-      if (!msg.is_from_me && !msg.is_read) conv.unreadCount++;
-    });
-    return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
-  }, [messages]);
-
-  const filteredConversations = useMemo(() => conversations.filter((c) => {
-    const name = contactNames[c.phone] || "";
-    const searchLower = search.toLowerCase();
-    return c.phone.includes(search) || c.lastMessage.toLowerCase().includes(searchLower) || name.toLowerCase().includes(searchLower);
-  }), [conversations, contactNames, search]);
+   const filteredConversations = useMemo(() => {
+     return conversations.filter((c) => {
+       // Tab filtering
+       if (activeTab === 'minhas') {
+         if (c.assigned_seller_id !== sellerId) return false;
+       } else if (activeTab === 'loja') {
+         if (c.store_id !== storeId || !!c.assigned_seller_id) return false;
+       } else if (activeTab === 'geral') {
+         if (!!c.store_id || !!c.assigned_seller_id) return false;
+       }
+ 
+       // Search filtering
+       const name = contactNames[c.phone] || "";
+       const searchLower = search.toLowerCase();
+       return c.phone.includes(search) || 
+              c.lastMessage.toLowerCase().includes(searchLower) || 
+              name.toLowerCase().includes(searchLower);
+     });
+   }, [conversations, contactNames, search, activeTab, sellerId, storeId]);
 
   const selectedConversation = useMemo(() => conversations.find((c) => c.phone === selectedPhone), [conversations, selectedPhone]);
 
@@ -256,15 +300,9 @@ export default function Conversas() {
     }
     const phones = conversations.map(c => c.phone);
     if (phones.length === 0) return;
-    const fetchNames = async () => {
-      const names: Record<string, string> = {};
-      const { data: leads } = await supabase.from("leads").select("client_name, client_phone");
-      const { data: clients } = await supabase.from("clients").select("name, phone");
-      leads?.forEach(l => { if (phones.includes(l.client_phone)) names[l.client_phone] = l.client_name; });
-      clients?.forEach(c => { if (phones.includes(c.phone) && !names[c.phone]) names[c.phone] = c.name; });
-      setContactNames(names);
-    };
-    fetchNames();
+     const names: Record<string, string> = {};
+     clients.forEach(c => { if (phones.includes(c.phone)) names[c.phone] = c.name; });
+     setContactNames(names);
   }, [useMock, conversations.length]);
 
    const chatMessages = useMemo(() => selectedConversation ? selectedConversation.messages : [], [selectedConversation]);
@@ -295,6 +333,29 @@ export default function Conversas() {
 
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
 
+   const handleClaimLead = async () => {
+     if (!selectedPhone || !sellerId) return;
+     
+     try {
+       const { error } = await supabase
+         .from("clients")
+         .update({ 
+           assigned_seller_id: sellerId,
+           status: 'em_atendimento',
+           claimed_at: new Date().toISOString()
+         })
+         .eq("phone", selectedPhone);
+ 
+       if (error) throw error;
+ 
+       toast.success("Você assumiu este atendimento!");
+       fetchData(); // Refresh to update lists
+     } catch (err) {
+       console.error("Erro ao assumir lead:", err);
+       toast.error("Não foi possível assumir este lead.");
+     }
+   };
+ 
   const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedPhone) return;
@@ -430,18 +491,57 @@ export default function Conversas() {
             {/* Removido o botão de 3 pontos no cabeçalho lateral */}
           </div>
 
-          {/* Search bar */}
-          <div className="px-2 py-2 bg-card">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-              <Input
-                placeholder="Pesquisar ou começar uma nova conversa"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 h-9 rounded-lg bg-muted/50 border-0 text-sm placeholder:text-muted-foreground/50 focus-visible:ring-0 focus-visible:bg-muted/70"
-              />
-            </div>
-          </div>
+           {/* Search and Tabs */}
+           <div className="px-2 py-2 bg-card space-y-2 border-b border-border/10">
+             <div className="relative">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+               <Input
+                 placeholder="Pesquisar..."
+                 value={search}
+                 onChange={(e) => setSearch(e.target.value)}
+                 className="pl-10 h-9 rounded-lg bg-muted/50 border-0 text-sm placeholder:text-muted-foreground/50 focus-visible:ring-0 focus-visible:bg-muted/70"
+               />
+             </div>
+             
+             <div className="flex gap-1">
+               <Button 
+                 variant="ghost" 
+                 size="sm" 
+                 onClick={() => setActiveTab('minhas')}
+                 className={cn(
+                   "flex-1 text-[11px] h-8 gap-1.5 rounded-md transition-all",
+                   activeTab === 'minhas' ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:bg-muted"
+                 )}
+               >
+                 <UserCheck className="h-3.5 w-3.5" />
+                 Minhas
+               </Button>
+               <Button 
+                 variant="ghost" 
+                 size="sm" 
+                 onClick={() => setActiveTab('loja')}
+                 className={cn(
+                   "flex-1 text-[11px] h-8 gap-1.5 rounded-md transition-all",
+                   activeTab === 'loja' ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:bg-muted"
+                 )}
+               >
+                 <Store className="h-3.5 w-3.5" />
+                 Loja
+               </Button>
+               <Button 
+                 variant="ghost" 
+                 size="sm" 
+                 onClick={() => setActiveTab('geral')}
+                 className={cn(
+                   "flex-1 text-[11px] h-8 gap-1.5 rounded-md transition-all",
+                   activeTab === 'geral' ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:bg-muted"
+                 )}
+               >
+                 <Users className="h-3.5 w-3.5" />
+                 Geral
+               </Button>
+             </div>
+           </div>
 
           {/* Conversations list */}
           <div className="flex-1 overflow-y-auto">
@@ -556,8 +656,17 @@ export default function Conversas() {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-1">
-                      {isAdmin && (
+                     <div className="flex items-center gap-2">
+                       {!selectedConversation.assigned_seller_id && (
+                         <Button
+                           size="sm"
+                           onClick={handleClaimLead}
+                           className="bg-white text-[hsl(var(--wa-header))] hover:bg-white/90 font-semibold h-8 px-3"
+                         >
+                           Atender Cliente
+                         </Button>
+                       )}
+                       {isAdmin && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>

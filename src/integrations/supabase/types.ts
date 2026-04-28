@@ -58,13 +58,16 @@ export type Database = {
           address: string | null
           assigned_seller_id: string | null
           city: string | null
+          claimed_at: string | null
           created_at: string
           email: string | null
           id: string
           last_contact: string | null
+          last_message_at: string | null
           name: string
           notes: string | null
           phone: string
+          status: string | null
           store_id: string | null
           tags: string[]
           total_purchases: number
@@ -73,13 +76,16 @@ export type Database = {
           address?: string | null
           assigned_seller_id?: string | null
           city?: string | null
+          claimed_at?: string | null
           created_at?: string
           email?: string | null
           id?: string
           last_contact?: string | null
+          last_message_at?: string | null
           name: string
           notes?: string | null
           phone: string
+          status?: string | null
           store_id?: string | null
           tags?: string[]
           total_purchases?: number
@@ -88,13 +94,16 @@ export type Database = {
           address?: string | null
           assigned_seller_id?: string | null
           city?: string | null
+          claimed_at?: string | null
           created_at?: string
           email?: string | null
           id?: string
           last_contact?: string | null
+          last_message_at?: string | null
           name?: string
           notes?: string | null
           phone?: string
+          status?: string | null
           store_id?: string | null
           tags?: string[]
           total_purchases?: number
@@ -305,6 +314,7 @@ export type Database = {
           display_name: string | null
           id: string
           role: string | null
+          store_id: string | null
           updated_at: string
           user_id: string
         }
@@ -314,6 +324,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           role?: string | null
+          store_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -323,10 +334,19 @@ export type Database = {
           display_name?: string | null
           id?: string
           role?: string | null
+          store_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sellers: {
         Row: {
