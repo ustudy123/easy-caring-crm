@@ -67,6 +67,7 @@ interface WhatsAppMessage {
    store_id?: string | null;
    status?: string;
    claimed_at?: string | null;
+  last_message_from_client_at?: string | null;
  }
  
  type TabType = 'minhas' | 'loja' | 'geral';
@@ -225,6 +226,7 @@ const mockContactNames: Record<string, string> = {
            assigned_seller_id: client?.assigned_seller_id,
            store_id: client?.store_id,
            status: client?.status
+          last_message_from_client_at: client?.last_message_from_client_at
          });
        }
        const conv = map.get(phone)!;
@@ -243,15 +245,18 @@ const mockContactNames: Record<string, string> = {
      return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
    }, [messages, clients]);
 
+    const STALE_TIME = 15 * 60 * 1000;
+    const now = new Date().getTime();
+      const isStale = c.last_message_from_client_at && (now - new Date(c.last_message_from_client_at).getTime() > STALE_TIME);
    const filteredConversations = useMemo(() => {
      return conversations.filter((c) => {
        // Tab filtering
        if (activeTab === 'minhas') {
          if (c.assigned_seller_id !== sellerId) return false;
        } else if (activeTab === 'loja') {
-         if (c.store_id !== storeId || !!c.assigned_seller_id) return false;
+         if (c.store_id !== storeId) return false; if (c.assigned_seller_id && !isStale) return false; if (c.assigned_seller_id === sellerId) return false;
        } else if (activeTab === 'geral') {
-         if (!!c.store_id || !!c.assigned_seller_id) return false;
+         if (!!c.store_id) return false; if (c.assigned_seller_id && !isStale) return false; if (c.assigned_seller_id === sellerId) return false;
        }
  
        // Search filtering
