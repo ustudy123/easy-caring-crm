@@ -28,9 +28,10 @@ export function useUserRole(): UserRoleInfo {
     }
 
     const fetch = async () => {
-      const [rolesRes, sellerRes] = await Promise.all([
+      const [rolesRes, sellerRes, profileRes] = await Promise.all([
         supabase.from("user_roles").select("role").eq("user_id", user.id),
         supabase.from("sellers").select("id, store_id").eq("user_id", user.id).maybeSingle(),
+        supabase.from("profiles").select("id, store_id").eq("user_id", user.id).maybeSingle(),
       ]);
 
       if (rolesRes.data && rolesRes.data.length > 0) {
@@ -44,7 +45,11 @@ export function useUserRole(): UserRoleInfo {
         setRole(null);
       }
 
-      if (sellerRes.data) {
+      // Use profile ID as the primary seller identifier for consistency across the app
+      if (profileRes.data) {
+        setSellerId(profileRes.data.id);
+        setStoreId(profileRes.data.store_id || sellerRes.data?.store_id || null);
+      } else if (sellerRes.data) {
         setSellerId(sellerRes.data.id);
         setStoreId(sellerRes.data.store_id);
       }
