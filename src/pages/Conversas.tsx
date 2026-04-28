@@ -243,11 +243,25 @@ const mockContactNames: Record<string, string> = {
      return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
    }, [messages, clients]);
 
-  const filteredConversations = useMemo(() => conversations.filter((c) => {
-    const name = contactNames[c.phone] || "";
-    const searchLower = search.toLowerCase();
-    return c.phone.includes(search) || c.lastMessage.toLowerCase().includes(searchLower) || name.toLowerCase().includes(searchLower);
-  }), [conversations, contactNames, search]);
+   const filteredConversations = useMemo(() => {
+     return conversations.filter((c) => {
+       // Tab filtering
+       if (activeTab === 'minhas') {
+         if (c.assigned_seller_id !== sellerId) return false;
+       } else if (activeTab === 'loja') {
+         if (c.store_id !== storeId || !!c.assigned_seller_id) return false;
+       } else if (activeTab === 'geral') {
+         if (!!c.store_id || !!c.assigned_seller_id) return false;
+       }
+ 
+       // Search filtering
+       const name = contactNames[c.phone] || "";
+       const searchLower = search.toLowerCase();
+       return c.phone.includes(search) || 
+              c.lastMessage.toLowerCase().includes(searchLower) || 
+              name.toLowerCase().includes(searchLower);
+     });
+   }, [conversations, contactNames, search, activeTab, sellerId, storeId]);
 
   const selectedConversation = useMemo(() => conversations.find((c) => c.phone === selectedPhone), [conversations, selectedPhone]);
 
