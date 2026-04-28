@@ -162,23 +162,35 @@ const mockContactNames: Record<string, string> = {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const fetchMessages = async () => {
-      const { data } = await supabase
-        .from("whatsapp_messages")
-        .select("*")
-        .order("timestamp", { ascending: true });
-      if (data && data.length > 0) {
-        setMessages(data as WhatsAppMessage[]);
-        setUseMock(false);
-      } else {
-        setMessages(mockMessages);
-        setUseMock(true);
-      }
-      setLoading(false);
-    };
-    fetchMessages();
-  }, []);
+   const fetchData = useCallback(async () => {
+     setLoading(true);
+     try {
+       const [msgsRes, clientsRes] = await Promise.all([
+         supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }),
+         supabase.from("clients").select("*")
+       ]);
+ 
+       if (msgsRes.data && msgsRes.data.length > 0) {
+         setMessages(msgsRes.data as WhatsAppMessage[]);
+         setUseMock(false);
+       } else {
+         setMessages(mockMessages);
+         setUseMock(true);
+       }
+ 
+       if (clientsRes.data) {
+         setClients(clientsRes.data);
+       }
+     } catch (err) {
+       console.error("Erro ao carregar dados:", err);
+     } finally {
+       setLoading(false);
+     }
+   }, []);
+ 
+   useEffect(() => {
+     fetchData();
+   }, [fetchData]);
 
   useEffect(() => {
     const channel = supabase
