@@ -141,11 +141,10 @@ const mockContactNames: Record<string, string> = {
 
 // ── Component ──
  export default function Conversas() {
-   const { isAdmin, user } = useRole();
-   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
-   const [profiles, setProfiles] = useState<any[]>([]);
-   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
-   const [activeTab, setActiveTab] = useState<TabType>('minhas');
+    const { isAdmin, sellerId, storeId } = useRole();
+    const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
+    const [clients, setClients] = useState<any[]>([]);
+    const [activeTab, setActiveTab] = useState<TabType>('minhas');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
