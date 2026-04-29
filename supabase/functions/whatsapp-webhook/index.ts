@@ -1,8 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// WhatsApp API config (uazapi)
-const WHATSAPP_API_URL = "https://ipazua.uazapi.com";
+ // WhatsApp API config (uazapi)
+ const WHATSAPP_API_URL = "https://ipazua.uazapi.com";
+ const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,7 +26,56 @@ const corsHeaders = {
      console.error("Error sending WhatsApp message:", e);
    }
  }
- 
+
+ // Function to analyze message with OpenAI
+ async function analyzeMessageWithAI(text: string, stores: { id: string; name: string }[]) {
+   if (!OPENAI_API_KEY) {
+     console.error("OPENAI_API_KEY not set");
+     return null;
+   }
+
+   const storeNames = stores.map(s => s.name).join(", ");
+   const prompt = `
+     Você é um assistente de triagem de uma empresa de intercâmbio/educação. 
+     Um cliente enviou a seguinte mensagem: "${text}"
+     
+     As lojas disponíveis são: ${storeNames}
+     
+     Sua tarefa é identificar se o cliente expressou preferência por uma dessas lojas ou se ele não tem preferência.
+     
+     Responda APENAS em formato JSON:
+     {
+       "preference": "nome_da_loja_exato" ou "nenhuma" ou "incerto",
+       "reason": "breve explicação"
+     }
+     
+     Se ele disser "não tenho preferência", "qualquer uma", "tanto faz", responda "nenhuma".
+     Se ele citar uma das lojas da lista, responda o nome exato da loja.
+     Se não estiver claro, responda "incerto".
+   `;
+
+   try {
+     const response = await fetch("https://api.openai.com/v1/chat/completions", {
+       method: "POST",
+       headers: {
+         "Content-Type": "application/json",
+         "Authorization": `Bearer ${OPENAI_API_KEY}`
+       },
+       body: JSON.stringify({
+         model: "gpt-3.5-turbo",
+         messages: [{ role: "user", content: prompt }],
+         temperature: 0
+       })
+     });
+     const data = await response.json();
+     const content = data.choices[0].message.content;
+     return JSON.parse(content);
+   } catch (e) {
+     console.error("Error calling OpenAI:", e);
+     return null;
+   }
+ }
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -159,36 +209,40 @@ serve(async (req) => {
                await sendWhatsAppMessage(cleanPhone, welcomeMsg);
              }
            } else if (client.triaging) {
-             // 2. Client is in triage: Handle their response
-             const normalizedText = text.toLowerCase().trim();
+             // 2. Client is in triage: Handle their response using OpenAI
              const { data: stores } = await supabase.from("stores").select("id, name");
-             
-             let selectedStore = stores?.find(s => normalizedText.includes(s.name.toLowerCase()));
-             
-             if (selectedStore) {
+             const aiResult = await analyzeMessageWithAI(text, stores || []);
+             console.log("AI Triage Result:", aiResult);
+
+             if (aiResult?.preference && aiResult.preference !== "nenhuma" && aiResult.preference !== "incerto") {
+               const selectedStore = stores?.find(s => s.name === aiResult.preference);
+               if (selectedStore) {
+                 await supabase.from("clients").update({
+                   store_id: selectedStore.id,
+                   triaging: false,
+                   last_message_at: new Date().toISOString(),
+                   last_message_from_client_at: new Date().toISOString()
+                 }).eq("id", client.id);
+                 
+                 await supabase.from("leads").insert({
+                   client_name: client.name,
+                   client_phone: client.phone,
+                   source: "whatsapp",
+                   stage: "abordagem",
+                   store_id: selectedStore.id
+                 });
+
+                 await sendWhatsAppMessage(cleanPhone, `Perfeito! Você será atendido pela unidade ${selectedStore.name}. Um consultor entrará em contato em breve.`);
+               } else {
+                 await sendWhatsAppMessage(cleanPhone, `Desculpe, não entendi qual unidade você prefere. Por favor, digite o nome de uma de nossas lojas ou "Não" para qualquer unidade.`);
+               }
+             } else if (aiResult?.preference === "nenhuma") {
                await supabase.from("clients").update({
-                 store_id: selectedStore.id,
                  triaging: false,
                  last_message_at: new Date().toISOString(),
                  last_message_from_client_at: new Date().toISOString()
                }).eq("id", client.id);
-               
-               await supabase.from("leads").insert({
-                 client_name: client.name,
-                 client_phone: client.phone,
-                 source: "whatsapp",
-                 stage: "abordagem",
-                 store_id: selectedStore.id
-               });
- 
-               await sendWhatsAppMessage(cleanPhone, `Perfeito! Você será atendido pela unidade ${selectedStore.name}. Um consultor entrará em contato em breve.`);
-             } else if (normalizedText === "não" || normalizedText === "nao" || normalizedText.includes("qualquer")) {
-               await supabase.from("clients").update({
-                 triaging: false,
-                 last_message_at: new Date().toISOString(),
-                 last_message_from_client_at: new Date().toISOString()
-               }).eq("id", client.id);
- 
+
                await supabase.from("leads").insert({
                  client_name: client.name,
                  client_phone: client.phone,
@@ -196,7 +250,7 @@ serve(async (req) => {
                  stage: "abordagem",
                  store_id: null // Available to everyone
                });
- 
+
                await sendWhatsAppMessage(cleanPhone, `Entendido! Um de nossos consultores disponíveis entrará em contato em breve.`);
              } else {
                await sendWhatsAppMessage(cleanPhone, `Desculpe, não entendi. Por favor, digite o nome de uma de nossas lojas ou "Não" para qualquer unidade.`);
