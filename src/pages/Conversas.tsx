@@ -1052,6 +1052,14 @@ const mockContactNames: Record<string, string> = {
                                       className="max-w-full h-auto cursor-pointer"
                                       onClick={() => window.open(msg.media_url!, '_blank')}
                                     />
+                                  ) : msg.media_type === 'audio' ? (
+                                    <div className="p-2 min-w-[200px]">
+                                      <audio 
+                                        src={msg.media_url} 
+                                        controls 
+                                        className="w-full h-8"
+                                      />
+                                    </div>
                                   ) : (
                                     <div 
                                       className="flex items-center gap-2 p-2 cursor-pointer hover:bg-black/10 transition-colors"
