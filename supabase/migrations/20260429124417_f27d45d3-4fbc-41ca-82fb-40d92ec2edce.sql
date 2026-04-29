@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS sla_target_minutes INTEGER DEFAULT 30;
+ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS sla_target_minutes INTEGER DEFAULT 30;

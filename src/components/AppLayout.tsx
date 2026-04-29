@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle, Sun, Moon } from "lucide-react";
+import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle, Sun, Moon, AlertTriangle, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCrm } from "@/contexts/CrmContext";
+import { useCrm, Notification } from "@/contexts/CrmContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
@@ -19,7 +19,14 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, title }: AppLayoutProps) {
-  const { newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount } = useCrm();
+  const { 
+    newLeadsCount, 
+    pendingFollowUpsCount, 
+    negotiationCount, 
+    unreadWhatsAppCount, 
+    notifications,
+    markNotificationRead
+  } = useCrm();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
@@ -36,32 +43,42 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   const visibleFollowUps = Math.max(0, pendingFollowUpsCount - (dismissed.followUps || 0));
   const visibleNegotiations = Math.max(0, negotiationCount - (dismissed.negotiations || 0));
   const visibleWhatsApp = Math.max(0, unreadWhatsAppCount - (dismissed.whatsapp || 0));
-  const totalNotifications = visibleLeads + visibleFollowUps + visibleNegotiations + visibleWhatsApp;
+  const totalNotifications = visibleLeads + visibleFollowUps + visibleNegotiations + visibleWhatsApp + notifications.length;
 
-   const handleNotificationClick = (type: string, count: number, route: string) => {
-     setDismissed((prev) => ({ ...prev, [type]: (prev[type] || 0) + count }));
-     navigate(route);
-   };
- 
-    const markAllAsRead = async () => {
-     setDismissed({
-       leads: newLeadsCount,
-       followUps: pendingFollowUpsCount,
-       negotiations: negotiationCount,
-       whatsapp: unreadWhatsAppCount
-     });
+  const handleNotificationClick = (type: string, count: number, route: string) => {
+    setDismissed((prev) => ({ ...prev, [type]: (prev[type] || 0) + count }));
+    navigate(route);
+  };
 
-      // Marcar todas as mensagens do WhatsApp como lidas no banco de dados
-      if (unreadWhatsAppCount > 0) {
-        const { error } = await supabase
-          .from("whatsapp_messages")
-          .update({ is_read: true })
-          .eq("is_read", false)
-          .eq("is_from_me", false);
-        
-        if (error) console.error("Erro ao marcar todas as mensagens como lidas:", error);
-      }
-   };
+  const handleSlaNotificationClick = (notif: Notification) => {
+    markNotificationRead(notif.id);
+    navigate("/conversas");
+  };
+
+  const markAllAsRead = async () => {
+    setDismissed({
+      leads: newLeadsCount,
+      followUps: pendingFollowUpsCount,
+      negotiations: negotiationCount,
+      whatsapp: unreadWhatsAppCount
+    });
+
+    // Mark notifications as read
+    for (const notif of notifications) {
+      markNotificationRead(notif.id);
+    }
+
+    // Marcar todas as mensagens do WhatsApp como lidas no banco de dados
+    if (unreadWhatsAppCount > 0) {
+      const { error } = await supabase
+        .from("whatsapp_messages")
+        .update({ is_read: true })
+        .eq("is_read", false)
+        .eq("is_from_me", false);
+      
+      if (error) console.error("Erro ao marcar todas as mensagens como lidas:", error);
+    }
+  };
  
   return (
     <SidebarProvider>
@@ -169,6 +186,21 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                         </div>
                       </div>
                     )}
+                {notifications.map((notif) => (
+                  <div 
+                    key={notif.id} 
+                    onClick={() => handleSlaNotificationClick(notif)} 
+                    className="flex items-center gap-3 p-3.5 hover:bg-muted/40 transition-colors cursor-pointer"
+                  >
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${notif.type === 'sla_critical' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'}`}>
+                      {notif.type === 'sla_critical' ? <ShieldAlert className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">{notif.title}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{notif.message}</p>
+                    </div>
+                  </div>
+                ))}
                     {totalNotifications === 0 && (
                       <div className="p-8 text-center">
                         <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />

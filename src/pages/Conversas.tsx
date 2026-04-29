@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-  import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle } from "lucide-react";
+  import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle, ShieldAlert } from "lucide-react";
 import { Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
@@ -68,7 +68,7 @@ interface WhatsAppMessage {
    status?: string;
    claimed_at?: string | null;
   last_message_from_client_at?: string | null;
-  alert_status?: 'none' | 'yellow' | 'red' | 'transferred';
+  alert_status?: 'none' | 'yellow' | 'red' | 'transferred' | 'critical';
  }
  
  type TabType = 'minhas' | 'loja' | 'geral';
@@ -658,6 +658,7 @@ const mockContactNames: Record<string, string> = {
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-3 text-left transition-colors duration-100 hover:bg-muted/40",
                           isSelected && "bg-muted/60",
+                          conv.alert_status === 'critical' && "bg-destructive/10 hover:bg-destructive/20",
                           conv.alert_status === 'red' && "bg-red-50/50 hover:bg-red-100/40",
                           conv.alert_status === 'yellow' && "bg-yellow-50/50 hover:bg-yellow-100/40"
                         )}
@@ -677,6 +678,7 @@ const mockContactNames: Record<string, string> = {
                               <span className="text-[16px] font-normal text-foreground truncate">
                                 {name}
                               </span>
+                              {conv.alert_status === 'critical' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" title="ALERTA CRÍTICO - ADMIN" />}
                               {conv.alert_status === 'red' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" title="Alerta Crítico" />}
                               {conv.alert_status === 'yellow' && <div className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" title="Alerta de Demora" />}
                             </div>
@@ -719,6 +721,14 @@ const mockContactNames: Record<string, string> = {
           {selectedConversation ? (
             <>
                {/* Alert Banners */}
+               {selectedConversation.alert_status === 'critical' && (
+                 <div className="bg-destructive text-white text-[11px] py-1 px-4 flex items-center justify-between">
+                   <span className="flex items-center gap-1.5 font-bold">
+                     <ShieldAlert className="h-3 w-3" /> ALERTA CRÍTICO: Cliente sem resposta há mais de 1h30! Administrador notificado.
+                   </span>
+                   <span className="opacity-80">SLA Estourado</span>
+                 </div>
+               )}
                {selectedConversation.alert_status === 'red' && (
                  <div className="bg-red-500 text-white text-[11px] py-1 px-4 flex items-center justify-between">
                    <span className="flex items-center gap-1.5 font-medium">
