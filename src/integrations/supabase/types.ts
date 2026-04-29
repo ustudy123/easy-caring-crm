@@ -374,6 +374,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           role: string | null
+          sla_target_minutes: number | null
           store_id: string | null
           substitute_id: string | null
           updated_at: string
@@ -386,6 +387,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           role?: string | null
+          sla_target_minutes?: number | null
           store_id?: string | null
           substitute_id?: string | null
           updated_at?: string
@@ -398,6 +400,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           role?: string | null
+          sla_target_minutes?: number | null
           store_id?: string | null
           substitute_id?: string | null
           updated_at?: string
@@ -429,6 +432,7 @@ export type Database = {
           leads_count: number
           name: string
           role: Database["public"]["Enums"]["seller_role"]
+          sla_target_minutes: number | null
           store_id: string | null
           user_id: string | null
         }
@@ -440,6 +444,7 @@ export type Database = {
           leads_count?: number
           name: string
           role?: Database["public"]["Enums"]["seller_role"]
+          sla_target_minutes?: number | null
           store_id?: string | null
           user_id?: string | null
         }
@@ -451,6 +456,7 @@ export type Database = {
           leads_count?: number
           name?: string
           role?: Database["public"]["Enums"]["seller_role"]
+          sla_target_minutes?: number | null
           store_id?: string | null
           user_id?: string | null
         }
