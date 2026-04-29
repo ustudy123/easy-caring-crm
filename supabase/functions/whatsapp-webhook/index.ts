@@ -26,7 +26,56 @@ const corsHeaders = {
      console.error("Error sending WhatsApp message:", e);
    }
  }
- 
+
+ // Function to analyze message with OpenAI
+ async function analyzeMessageWithAI(text: string, stores: { id: string; name: string }[]) {
+   if (!OPENAI_API_KEY) {
+     console.error("OPENAI_API_KEY not set");
+     return null;
+   }
+
+   const storeNames = stores.map(s => s.name).join(", ");
+   const prompt = `
+     Você é um assistente de triagem de uma empresa de intercâmbio/educação. 
+     Um cliente enviou a seguinte mensagem: "${text}"
+     
+     As lojas disponíveis são: ${storeNames}
+     
+     Sua tarefa é identificar se o cliente expressou preferência por uma dessas lojas ou se ele não tem preferência.
+     
+     Responda APENAS em formato JSON:
+     {
+       "preference": "nome_da_loja_exato" ou "nenhuma" ou "incerto",
+       "reason": "breve explicação"
+     }
+     
+     Se ele disser "não tenho preferência", "qualquer uma", "tanto faz", responda "nenhuma".
+     Se ele citar uma das lojas da lista, responda o nome exato da loja.
+     Se não estiver claro, responda "incerto".
+   `;
+
+   try {
+     const response = await fetch("https://api.openai.com/v1/chat/completions", {
+       method: "POST",
+       headers: {
+         "Content-Type": "application/json",
+         "Authorization": `Bearer ${OPENAI_API_KEY}`
+       },
+       body: JSON.stringify({
+         model: "gpt-3.5-turbo",
+         messages: [{ role: "user", content: prompt }],
+         temperature: 0
+       })
+     });
+     const data = await response.json();
+     const content = data.choices[0].message.content;
+     return JSON.parse(content);
+   } catch (e) {
+     console.error("Error calling OpenAI:", e);
+     return null;
+   }
+ }
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
