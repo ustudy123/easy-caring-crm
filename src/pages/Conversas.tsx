@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-  import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle } from "lucide-react";
+  import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle, ShieldAlert } from "lucide-react";
 import { Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
@@ -68,7 +68,7 @@ interface WhatsAppMessage {
    status?: string;
    claimed_at?: string | null;
   last_message_from_client_at?: string | null;
-  alert_status?: 'none' | 'yellow' | 'red' | 'transferred';
+  alert_status?: 'none' | 'yellow' | 'red' | 'transferred' | 'critical';
  }
  
  type TabType = 'minhas' | 'loja' | 'geral';
