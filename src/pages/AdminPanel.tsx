@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History } from "lucide-react";
+ import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -48,17 +48,22 @@ const ROLE_LABELS: Record<string, string> = {
  function ReportsTab() {
    const [stats, setStats] = useState({ activeSellers: 0, inactiveSellers: 0, pendingAlerts: 0 });
    const [transfers, setTransfers] = useState<any[]>([]);
+   const [slaAlerts, setSlaAlerts] = useState<any[]>([]);
    const [loading, setLoading] = useState(true);
  
    const fetchReports = useCallback(async () => {
      setLoading(true);
-     const [profilesRes, alertsRes, transfersRes] = await Promise.all([
+     const [profilesRes, alertsRes, transfersRes, slaAlertsRes] = await Promise.all([
        supabase.from("profiles").select("id, is_active").eq("role", "vendedor"),
        supabase.from("clients").select("id").neq("alert_status", "none"),
        supabase.from("service_transfers")
          .select("*, client:clients(name), from_seller:profiles!service_transfers_from_seller_id_fkey(display_name), to_seller:profiles!service_transfers_to_seller_id_fkey(display_name)")
          .order("created_at", { ascending: false })
-         .limit(20)
+         .limit(20),
+       supabase.from("sla_alerts")
+         .select("*, vendedor:profiles(display_name), lead:leads(phone)")
+         .order("created_at", { ascending: false })
+         .limit(50)
      ]);
  
      if (profilesRes.data) {
@@ -70,6 +75,9 @@ const ROLE_LABELS: Record<string, string> = {
      }
      if (transfersRes.data) {
        setTransfers(transfersRes.data);
+     }
+     if (slaAlertsRes.data) {
+       setSlaAlerts(slaAlertsRes.data);
      }
      setLoading(false);
    }, []);
@@ -147,6 +155,55 @@ const ROLE_LABELS: Record<string, string> = {
                ))}
                {transfers.length === 0 && (
                  <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Nenhum redirecionamento registrado</TableCell></TableRow>
+               )}
+             </TableBody>
+           </Table>
+         </CardContent>
+       </Card>
+
+       <Card>
+         <CardHeader>
+           <CardTitle className="text-base flex items-center gap-2">
+             <Bell className="h-4 w-4" /> Histórico de Alertas SLA
+           </CardTitle>
+         </CardHeader>
+         <CardContent>
+           <Table>
+             <TableHeader>
+               <TableRow>
+                 <TableHead>Data</TableHead>
+                 <TableHead>Nível</TableHead>
+                 <TableHead>Destinatário</TableHead>
+                 <TableHead>Vendedor</TableHead>
+                 <TableHead>Mensagem</TableHead>
+               </TableRow>
+             </TableHeader>
+             <TableBody>
+               {slaAlerts.map(alert => (
+                 <TableRow key={alert.id}>
+                   <TableCell className="text-xs text-muted-foreground">
+                     {new Date(alert.created_at).toLocaleString('pt-BR')}
+                   </TableCell>
+                   <TableCell>
+                     <Badge variant={
+                       alert.alert_level === 'amarelo' ? 'secondary' : 
+                       alert.alert_level === 'vermelho' ? 'destructive' : 'outline'
+                     } className={
+                       alert.alert_level === 'amarelo' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' : 
+                       alert.alert_level === 'crítico' ? 'bg-red-600 text-white hover:bg-red-600' : ''
+                     }>
+                       {alert.alert_level.toUpperCase()}
+                     </Badge>
+                   </TableCell>
+                   <TableCell className="capitalize">{alert.alert_type}</TableCell>
+                   <TableCell className="font-medium">{alert.vendedor?.display_name || '—'}</TableCell>
+                   <TableCell className="text-xs max-w-xs truncate" title={alert.message}>
+                     {alert.message}
+                   </TableCell>
+                 </TableRow>
+               ))}
+               {slaAlerts.length === 0 && (
+                 <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Nenhum alerta de SLA registrado</TableCell></TableRow>
                )}
              </TableBody>
            </Table>
