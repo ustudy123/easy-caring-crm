@@ -2,6 +2,19 @@ import { createContext, useContext, useState, useCallback, useEffect, ReactNode 
  import { Lead, FollowUp, Seller } from "@/types/crm";
 import { supabase } from "@/integrations/supabase/client";
 
+ export interface Notification {
+   id: string;
+   user_id: string | null;
+   role_target: string | null;
+   store_id: string | null;
+   type: string;
+   title: string;
+   message: string;
+   metadata: any;
+   is_read: boolean;
+   created_at: string;
+ }
+ 
 interface CrmContextType {
   leads: Lead[];
   setLeads: React.Dispatch<React.SetStateAction<Lead[]>>;
@@ -18,7 +31,10 @@ interface CrmContextType {
   pendingFollowUpsCount: number;
   negotiationCount: number;
   unreadWhatsAppCount: number;
+   slaAlertsCount: number;
+   notifications: Notification[];
   loading: boolean;
+   markNotificationRead: (id: string) => Promise<void>;
 }
 
 const CrmContext = createContext<CrmContextType | null>(null);
@@ -71,21 +87,24 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
    const [sellers, setSellers] = useState<Seller[]>([]);
   const [unreadWhatsAppCount, setUnreadWhatsAppCount] = useState(0);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
-       const [leadsRes, followUpsRes, whatsappRes, sellersRes] = await Promise.all([
+       const [leadsRes, followUpsRes, whatsappRes, sellersRes, notificationsRes] = await Promise.all([
         supabase.from("leads").select("*").order("created_at", { ascending: false }),
         supabase.from("follow_ups").select("*").order("scheduled_at"),
          supabase.from("whatsapp_messages").select("phone", { count: "exact", head: true }).eq("is_from_me", false).eq("is_read", false),
          supabase.from("sellers").select("*").order("name"),
+         supabase.from("notifications").select("*").eq("is_read", false).order("created_at", { ascending: false }),
       ]);
       if (leadsRes.data) setLeads(leadsRes.data.map(mapLeadFromDb));
       if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
        if (sellersRes.data) setSellers(sellersRes.data.map(mapSellerFromDb));
       if (whatsappRes.count != null) setUnreadWhatsAppCount(whatsappRes.count);
+      if (notificationsRes.data) setNotifications(notificationsRes.data);
       setLoading(false);
     };
     fetchData();
@@ -140,11 +159,31 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       })
       .subscribe();
 
+    const notificationsChannel = supabase
+      .channel("notifications-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, (payload) => {
+        if (payload.eventType === "INSERT") {
+          setNotifications((prev) => [payload.new as Notification, ...prev]);
+        } else if (payload.eventType === "UPDATE") {
+          setNotifications((prev) => prev.map((n) => n.id === payload.new.id ? payload.new as Notification : n));
+        } else if (payload.eventType === "DELETE") {
+          setNotifications((prev) => prev.filter((n) => n.id !== payload.old.id));
+        }
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(leadsChannel);
       supabase.removeChannel(followUpsChannel);
       supabase.removeChannel(whatsappChannel);
+      supabase.removeChannel(notificationsChannel);
     };
+  }, []);
+
+  const markNotificationRead = useCallback(async (id: string) => {
+    setNotifications((prev) => prev.filter(n => n.id !== id));
+    const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+    if (error) console.error("Error marking notification as read:", error);
   }, []);
 
   const addLead = useCallback(async (lead: Lead) => {
@@ -234,14 +273,16 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const newLeadsCount = leads.filter((l) => l.stage === "abordagem").length;
   const pendingFollowUpsCount = followUps.filter((f) => !f.completed).length;
   const negotiationCount = leads.filter((l) => l.stage === "contorno_objecoes").length;
+  const slaAlertsCount = notifications.length;
 
   return (
     <CrmContext.Provider
       value={{
         leads, setLeads, addLead, updateLead, deleteLead,
         followUps, setFollowUps, addFollowUp, updateFollowUp, deleteFollowUp,
-       sellers,
+       sellers, notifications, slaAlertsCount,
         newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount, loading,
+        markNotificationRead
       }}
     >
       {children}
