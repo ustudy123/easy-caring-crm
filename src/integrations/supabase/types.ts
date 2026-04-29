@@ -70,11 +70,13 @@ export type Database = {
           last_seller_response_at: string | null
           name: string
           notes: string | null
+          pending_store_preference: string | null
           phone: string
           status: string | null
           store_id: string | null
           tags: string[]
           total_purchases: number
+          triaging: boolean | null
         }
         Insert: {
           address?: string | null
@@ -92,11 +94,13 @@ export type Database = {
           last_seller_response_at?: string | null
           name: string
           notes?: string | null
+          pending_store_preference?: string | null
           phone: string
           status?: string | null
           store_id?: string | null
           tags?: string[]
           total_purchases?: number
+          triaging?: boolean | null
         }
         Update: {
           address?: string | null
@@ -114,11 +118,13 @@ export type Database = {
           last_seller_response_at?: string | null
           name?: string
           notes?: string | null
+          pending_store_preference?: string | null
           phone?: string
           status?: string | null
           store_id?: string | null
           tags?: string[]
           total_purchases?: number
+          triaging?: boolean | null
         }
         Relationships: [
           {
@@ -126,6 +132,13 @@ export type Database = {
             columns: ["assigned_seller_id"]
             isOneToOne: false
             referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_pending_store_preference_fkey"
+            columns: ["pending_store_preference"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
           {

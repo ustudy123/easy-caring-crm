@@ -9,6 +9,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+ // Function to send message via uazapi
+ async function sendWhatsAppMessage(phone: string, text: string) {
+   try {
+     const response = await fetch(`${WHATSAPP_API_URL}/message/sendText?token=${Deno.env.get("WHATSAPP_API_TOKEN")}`, {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({
+         chatId: `${phone}@s.whatsapp.net`,
+         text: text
+       })
+     });
+     return await response.json();
+   } catch (e) {
+     console.error("Error sending WhatsApp message:", e);
+   }
+ }
+ 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -122,30 +139,69 @@ serve(async (req) => {
             });
           };
 
-          if (!client) {
-            // Create new client if not exists
-            const { data: newClient, error: createError } = await supabase.from("clients").insert({
-              name: senderName,
-              phone: cleanPhone,
-              store_id: targetStoreId,
-              status: 'novo',
-              last_message_at: new Date().toISOString(),
-              last_message_from_client_at: new Date().toISOString()
-            }).select("id").single();
-
-            if (createError) {
-              console.error("Error creating client:", createError);
-            } else {
-              // Create a lead record too
-              await supabase.from("leads").insert({
-                client_name: senderName,
-                client_phone: cleanPhone,
-                source: "whatsapp",
-                stage: "abordagem",
-                store_id: targetStoreId
-              });
-            }
-          } else {
+           if (!client) {
+             // 1. First message from a new client: Start Triage
+             const { data: newClient, error: createError } = await supabase.from("clients").insert({
+               name: senderName,
+               phone: cleanPhone,
+               status: 'novo',
+               triaging: true,
+               last_message_at: new Date().toISOString(),
+               last_message_from_client_at: new Date().toISOString()
+             }).select("id, name, phone").single();
+ 
+             if (!createError) {
+               // Get stores for triage
+               const { data: stores } = await supabase.from("stores").select("name");
+               const storeList = stores?.map((s, i) => `${i + 1}. ${s.name}`).join("\n") || "";
+               
+               const welcomeMsg = `Olá! Seja bem-vindo(a). Para melhor atendê-lo(a), você tem preferência por alguma de nossas lojas?\n\n${storeList}\n\nResponda com o nome da loja ou diga "Não" para ser atendido por qualquer unidade.`;
+               await sendWhatsAppMessage(cleanPhone, welcomeMsg);
+             }
+           } else if (client.triaging) {
+             // 2. Client is in triage: Handle their response
+             const normalizedText = text.toLowerCase().trim();
+             const { data: stores } = await supabase.from("stores").select("id, name");
+             
+             let selectedStore = stores?.find(s => normalizedText.includes(s.name.toLowerCase()));
+             
+             if (selectedStore) {
+               await supabase.from("clients").update({
+                 store_id: selectedStore.id,
+                 triaging: false,
+                 last_message_at: new Date().toISOString(),
+                 last_message_from_client_at: new Date().toISOString()
+               }).eq("id", client.id);
+               
+               await supabase.from("leads").insert({
+                 client_name: client.name,
+                 client_phone: client.phone,
+                 source: "whatsapp",
+                 stage: "abordagem",
+                 store_id: selectedStore.id
+               });
+ 
+               await sendWhatsAppMessage(cleanPhone, `Perfeito! Você será atendido pela unidade ${selectedStore.name}. Um consultor entrará em contato em breve.`);
+             } else if (normalizedText === "não" || normalizedText === "nao" || normalizedText.includes("qualquer")) {
+               await supabase.from("clients").update({
+                 triaging: false,
+                 last_message_at: new Date().toISOString(),
+                 last_message_from_client_at: new Date().toISOString()
+               }).eq("id", client.id);
+ 
+               await supabase.from("leads").insert({
+                 client_name: client.name,
+                 client_phone: client.phone,
+                 source: "whatsapp",
+                 stage: "abordagem",
+                 store_id: null // Available to everyone
+               });
+ 
+               await sendWhatsAppMessage(cleanPhone, `Entendido! Um de nossos consultores disponíveis entrará em contato em breve.`);
+             } else {
+               await sendWhatsAppMessage(cleanPhone, `Desculpe, não entendi. Por favor, digite o nome de uma de nossas lojas ou "Não" para qualquer unidade.`);
+             }
+           } else {
             // Update existing client
             let updateData: any = {
               last_message_at: new Date().toISOString(),
