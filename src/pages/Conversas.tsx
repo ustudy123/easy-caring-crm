@@ -161,6 +161,11 @@ const mockContactNames: Record<string, string> = {
   const [useMock, setUseMock] = useState(false);
   const [contactNames, setContactNames] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
+ const [isRecording, setIsRecording] = useState(false);
+ const [recordingDuration, setRecordingDuration] = useState(0);
+ const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+ const audioChunksRef = useRef<Blob[]>([]);
+ const timerIntervalRef = useRef<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -545,6 +550,98 @@ const mockContactNames: Record<string, string> = {
       setSending(false);
     }
   };
+
+ const startRecording = async () => {
+   try {
+     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+     const mediaRecorder = new MediaRecorder(stream);
+     mediaRecorderRef.current = mediaRecorder;
+     audioChunksRef.current = [];
+
+     mediaRecorder.ondataavailable = (event) => {
+       if (event.data.size > 0) {
+         audioChunksRef.current.push(event.data);
+       }
+     };
+
+     mediaRecorder.onstop = async () => {
+       const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+       if (audioBlob.size > 0) {
+         await uploadAndSendAudio(audioBlob);
+       }
+       stream.getTracks().forEach(track => track.stop());
+     };
+
+     mediaRecorder.start();
+     setIsRecording(true);
+     setRecordingDuration(0);
+     timerIntervalRef.current = window.setInterval(() => {
+       setRecordingDuration(prev => prev + 1);
+     }, 1000);
+   } catch (err) {
+     console.error("Erro ao acessar microfone:", err);
+     toast.error("Não foi possível acessar o microfone.");
+   }
+ };
+
+ const stopRecording = () => {
+   if (mediaRecorderRef.current && isRecording) {
+     mediaRecorderRef.current.stop();
+     setIsRecording(false);
+     if (timerIntervalRef.current) {
+       clearInterval(timerIntervalRef.current);
+       timerIntervalRef.current = null;
+     }
+   }
+ };
+
+ const uploadAndSendAudio = async (blob: Blob) => {
+   if (!selectedPhone) return;
+
+   const loadingToast = toast.loading("Enviando áudio...");
+   setSending(true);
+
+   try {
+     const fileName = `${Math.random()}.webm`;
+     const filePath = `${selectedPhone}/${fileName}`;
+
+     const { data: uploadData, error: uploadError } = await supabase.storage
+       .from('whatsapp_media')
+       .upload(filePath, blob);
+
+     if (uploadError) throw uploadError;
+
+     const { data: { publicUrl } } = supabase.storage
+       .from('whatsapp_media')
+       .getPublicUrl(filePath);
+
+     const { error: invokeError } = await supabase.functions.invoke("send-whatsapp", {
+       body: { 
+         phone: selectedPhone, 
+         message: "", 
+         mediaUrl: publicUrl,
+         mediaType: 'audio'
+       },
+     });
+
+     if (invokeError) throw invokeError;
+
+     toast.dismiss(loadingToast);
+     toast.success("Áudio enviado com sucesso!");
+   } catch (err: any) {
+     console.error("Erro ao enviar áudio:", err);
+     toast.dismiss(loadingToast);
+     toast.error(`Erro ao enviar áudio: ${err.message || 'Erro desconhecido'}`);
+   } finally {
+     setSending(false);
+   }
+ };
+
+ const formatDuration = (seconds: number) => {
+   const mins = Math.floor(seconds / 60);
+   const secs = seconds % 60;
+   return `${mins}:${secs.toString().padStart(2, '0')}`;
+ };
 
   const handleExport = () => {
     if (!selectedConversation) return;
@@ -955,6 +1052,14 @@ const mockContactNames: Record<string, string> = {
                                       className="max-w-full h-auto cursor-pointer"
                                       onClick={() => window.open(msg.media_url!, '_blank')}
                                     />
+                                  ) : msg.media_type === 'audio' ? (
+                                    <div className="p-2 min-w-[200px]">
+                                      <audio 
+                                        src={msg.media_url} 
+                                        controls 
+                                        className="w-full h-8"
+                                      />
+                                    </div>
                                   ) : (
                                     <div 
                                       className="flex items-center gap-2 p-2 cursor-pointer hover:bg-black/10 transition-colors"
@@ -1017,9 +1122,13 @@ const mockContactNames: Record<string, string> = {
                 </Button>
                 <Input
                   placeholder="Digite uma mensagem"
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  className="flex-1 h-[42px] rounded-lg bg-card border-0 text-[15px] placeholder:text-muted-foreground/50 focus-visible:ring-0 shadow-sm"
+                  value={isRecording ? `Gravando... ${formatDuration(recordingDuration)}` : messageInput}
+                  onChange={(e) => !isRecording && setMessageInput(e.target.value)}
+                  className={cn(
+                    "flex-1 h-[42px] rounded-lg bg-card border-0 text-[15px] placeholder:text-muted-foreground/50 focus-visible:ring-0 shadow-sm",
+                    isRecording && "text-red-500 font-medium animate-pulse"
+                  )}
+                  readOnly={isRecording}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -1029,15 +1138,26 @@ const mockContactNames: Record<string, string> = {
                 />
                 <Button
                   size="icon"
-                  className="h-[48px] w-[48px] rounded-full shrink-0 shadow-md transition-all"
+                  className={cn(
+                    "h-[48px] w-[48px] rounded-full shrink-0 shadow-md transition-all",
+                    isRecording && "bg-red-500 hover:bg-red-600 animate-pulse"
+                  )}
                   style={{ backgroundColor: "hsl(var(--wa-green))" }}
-                  disabled={!messageInput.trim() || sending}
-                  onClick={handleSendMessage}
+                  disabled={(!messageInput.trim() && !isRecording && sending) || sending}
+                  onClick={() => {
+                    if (messageInput.trim()) {
+                      handleSendMessage();
+                    } else if (isRecording) {
+                      stopRecording();
+                    } else {
+                      startRecording();
+                    }
+                  }}
                 >
                   {messageInput.trim() ? (
                     <Send className="h-5 w-5 text-white" />
                   ) : (
-                    <Mic className="h-6 w-6 text-white" />
+                    <Mic className={cn("h-6 w-6 text-white", isRecording && "scale-125")} />
                   )}
                 </Button>
               </div>
