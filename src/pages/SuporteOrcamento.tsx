@@ -335,7 +335,7 @@ export default function SuporteOrcamento() {
                                  ref={provided.innerRef}
                                  {...provided.draggableProps}
                                  {...provided.dragHandleProps}
-                                   className={`shadow-sm hover:shadow-md hover:bg-accent/10 transition-all cursor-pointer ${
+                                   className={`shadow-sm hover:shadow-md hover:bg-accent/5 hover:border-accent/30 transition-all !cursor-pointer ${
                                     snapshot.isDragging ? "rotate-2 shadow-xl ring-2 ring-primary/20" : ""
                                   }`}
                                >
