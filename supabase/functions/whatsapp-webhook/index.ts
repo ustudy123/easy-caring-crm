@@ -209,36 +209,40 @@ serve(async (req) => {
                await sendWhatsAppMessage(cleanPhone, welcomeMsg);
              }
            } else if (client.triaging) {
-             // 2. Client is in triage: Handle their response
-             const normalizedText = text.toLowerCase().trim();
+             // 2. Client is in triage: Handle their response using OpenAI
              const { data: stores } = await supabase.from("stores").select("id, name");
-             
-             let selectedStore = stores?.find(s => normalizedText.includes(s.name.toLowerCase()));
-             
-             if (selectedStore) {
+             const aiResult = await analyzeMessageWithAI(text, stores || []);
+             console.log("AI Triage Result:", aiResult);
+
+             if (aiResult?.preference && aiResult.preference !== "nenhuma" && aiResult.preference !== "incerto") {
+               const selectedStore = stores?.find(s => s.name === aiResult.preference);
+               if (selectedStore) {
+                 await supabase.from("clients").update({
+                   store_id: selectedStore.id,
+                   triaging: false,
+                   last_message_at: new Date().toISOString(),
+                   last_message_from_client_at: new Date().toISOString()
+                 }).eq("id", client.id);
+                 
+                 await supabase.from("leads").insert({
+                   client_name: client.name,
+                   client_phone: client.phone,
+                   source: "whatsapp",
+                   stage: "abordagem",
+                   store_id: selectedStore.id
+                 });
+
+                 await sendWhatsAppMessage(cleanPhone, `Perfeito! Você será atendido pela unidade ${selectedStore.name}. Um consultor entrará em contato em breve.`);
+               } else {
+                 await sendWhatsAppMessage(cleanPhone, `Desculpe, não entendi qual unidade você prefere. Por favor, digite o nome de uma de nossas lojas ou "Não" para qualquer unidade.`);
+               }
+             } else if (aiResult?.preference === "nenhuma") {
                await supabase.from("clients").update({
-                 store_id: selectedStore.id,
                  triaging: false,
                  last_message_at: new Date().toISOString(),
                  last_message_from_client_at: new Date().toISOString()
                }).eq("id", client.id);
-               
-               await supabase.from("leads").insert({
-                 client_name: client.name,
-                 client_phone: client.phone,
-                 source: "whatsapp",
-                 stage: "abordagem",
-                 store_id: selectedStore.id
-               });
- 
-               await sendWhatsAppMessage(cleanPhone, `Perfeito! Você será atendido pela unidade ${selectedStore.name}. Um consultor entrará em contato em breve.`);
-             } else if (normalizedText === "não" || normalizedText === "nao" || normalizedText.includes("qualquer")) {
-               await supabase.from("clients").update({
-                 triaging: false,
-                 last_message_at: new Date().toISOString(),
-                 last_message_from_client_at: new Date().toISOString()
-               }).eq("id", client.id);
- 
+
                await supabase.from("leads").insert({
                  client_name: client.name,
                  client_phone: client.phone,
@@ -246,7 +250,7 @@ serve(async (req) => {
                  stage: "abordagem",
                  store_id: null // Available to everyone
                });
- 
+
                await sendWhatsAppMessage(cleanPhone, `Entendido! Um de nossos consultores disponíveis entrará em contato em breve.`);
              } else {
                await sendWhatsAppMessage(cleanPhone, `Desculpe, não entendi. Por favor, digite o nome de uma de nossas lojas ou "Não" para qualquer unidade.`);
