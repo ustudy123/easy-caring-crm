@@ -374,7 +374,7 @@ const mockContactNames: Record<string, string> = {
         // First check if client exists
         const { data: existingClient } = await supabase
           .from("clients")
-          .select("id")
+          .select("id, name")
           .eq("phone", selectedPhone)
           .maybeSingle();
 
@@ -407,10 +407,35 @@ const mockContactNames: Record<string, string> = {
         if (error) throw error;
 
         // Also update or create a lead in the leads table
-        await supabase
+        const { data: existingLead } = await supabase
           .from("leads")
-          .update({ assigned_to: sellerId })
-          .eq("client_phone", selectedPhone);
+          .select("id")
+          .eq("client_phone", selectedPhone)
+          .maybeSingle();
+
+        if (existingLead) {
+          await supabase
+            .from("leads")
+            .update({ 
+              assigned_to: sellerId,
+              updated_at: new Date().toISOString()
+            })
+            .eq("client_phone", selectedPhone);
+        } else {
+          // Try to get client name if it exists, otherwise use the generic name
+          const clientName = existingClient?.name || `Cliente ${formatPhone(selectedPhone)}`;
+          
+          await supabase
+            .from("leads")
+            .insert({
+              client_phone: selectedPhone,
+              client_name: clientName,
+              assigned_to: sellerId,
+              stage: 'abordagem',
+              store_id: storeId,
+              source: 'whatsapp'
+            });
+        }
 
         toast.success("Você assumiu este atendimento!");
         // Force an immediate update of the local state before fetching
