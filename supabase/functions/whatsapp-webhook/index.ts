@@ -152,7 +152,9 @@ serve(async (req) => {
           timestamp: new Date(tsMs).toISOString(),
           raw_data: body
         });
-        if (msgError) console.error("Error inserting whatsapp_messages:", msgError);
+        if (msgError && msgError.code !== '23505') { // Ignore unique constraint violation (duplicate webhook)
+          console.error("Error inserting whatsapp_messages:", msgError);
+        }
  
         // If incoming message (not from me, not group), handle lead distribution logic
         if (!isFromMe && cleanPhone && !isGroup) {
@@ -160,6 +162,8 @@ serve(async (req) => {
             .from("clients")
             .select("*")
             .eq("phone", cleanPhone)
+            .order("created_at", { ascending: false })
+            .limit(1)
             .maybeSingle();
 
           if (clientError) console.error("Error fetching client:", clientError);
@@ -191,14 +195,14 @@ serve(async (req) => {
 
            if (!client) {
              // 1. First message from a new client: Start Triage
-             const { data: newClient, error: createError } = await supabase.from("clients").insert({
+             const { data: newClient, error: createError } = await supabase.from("clients").upsert({
                name: senderName,
                phone: cleanPhone,
                status: 'novo',
                triaging: true,
                last_message_at: new Date().toISOString(),
                last_message_from_client_at: new Date().toISOString()
-             }).select("id, name, phone").single();
+             }, { onConflict: 'phone' }).select("id, name, phone").single();
  
              if (!createError) {
                // Get stores for triage

@@ -63,8 +63,8 @@ export default function Configuracoes() {
     const fetchSettings = async () => {
       const [settingsRes, profileRes, sellersRes] = await Promise.all([
         supabase.from("settings").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-        supabase.from("profiles").select("id, display_name").neq("id", user.id).order("display_name")
+        supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("profiles").select("id, display_name").neq("user_id", user.id).order("display_name")
       ]);
 
       if (settingsRes.data) {
@@ -129,7 +129,7 @@ export default function Configuracoes() {
   const handleUpdateProfile = async (updates: any) => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("profiles").update(updates).eq("id", user.id);
+    const { error } = await supabase.from("profiles").update(updates).eq("user_id", user.id);
     setSaving(false);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
