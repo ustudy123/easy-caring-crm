@@ -374,7 +374,7 @@ const mockContactNames: Record<string, string> = {
         // First check if client exists
         const { data: existingClient } = await supabase
           .from("clients")
-          .select("id")
+          .select("id, name")
           .eq("phone", selectedPhone)
           .maybeSingle();
 
