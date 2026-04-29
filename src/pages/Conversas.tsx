@@ -384,6 +384,7 @@ const mockContactNames: Record<string, string> = {
             .from("clients")
             .update({ 
               assigned_seller_id: sellerId,
+              store_id: storeId,
               status: 'em_atendimento',
               claimed_at: new Date().toISOString()
             })
@@ -418,6 +419,7 @@ const mockContactNames: Record<string, string> = {
             .from("leads")
             .update({ 
               assigned_to: sellerId,
+              store_id: storeId,
               updated_at: new Date().toISOString()
             })
             .eq("client_phone", selectedPhone);
