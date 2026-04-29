@@ -555,6 +555,51 @@ export type Database = {
         }
         Relationships: []
       }
+      sla_alerts: {
+        Row: {
+          alert_level: string
+          alert_type: string
+          created_at: string
+          id: string
+          lead_id: string | null
+          message: string
+          vendedor_id: string | null
+        }
+        Insert: {
+          alert_level: string
+          alert_type: string
+          created_at?: string
+          id?: string
+          lead_id?: string | null
+          message: string
+          vendedor_id?: string | null
+        }
+        Update: {
+          alert_level?: string
+          alert_type?: string
+          created_at?: string
+          id?: string
+          lead_id?: string | null
+          message?: string
+          vendedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sla_alerts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sla_alerts_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           address: string | null
