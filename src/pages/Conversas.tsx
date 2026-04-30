@@ -204,7 +204,14 @@ const mockContactNames: Record<string, string> = {
       .channel("whatsapp-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages" }, (payload) => {
         if (payload.eventType === "INSERT") {
-          setMessages((prev) => [...prev, payload.new as WhatsAppMessage]);
+          setMessages((prev) => {
+            const newMsg = payload.new as WhatsAppMessage;
+            // Avoid duplicates: check if message already exists by id or message_id
+            if (prev.some(m => m.id === newMsg.id || m.message_id === newMsg.message_id)) {
+              return prev;
+            }
+            return [...prev, newMsg];
+          });
         } else if (payload.eventType === "UPDATE") {
           setMessages((prev) => prev.map(m => m.id === payload.new.id ? (payload.new as WhatsAppMessage) : m));
         }
