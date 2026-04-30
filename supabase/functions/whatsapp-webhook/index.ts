@@ -364,6 +364,39 @@ serve(async (req) => {
               .from("clients")
               .update(updateData)
               .eq("id", client.id);
+
+            // Auto-reply with AI for existing clients
+            try {
+              // Fetch recent messages for context
+              const { data: recentMsgs } = await supabase
+                .from("whatsapp_messages")
+                .select("body, is_from_me")
+                .eq("phone", cleanPhone)
+                .order("timestamp", { ascending: false })
+                .limit(10);
+
+              const aiReply = await generateAutoReply(
+                text,
+                (recentMsgs || []).reverse(),
+                client.name || senderName
+              );
+
+              if (aiReply) {
+                await sendWhatsAppMessage(cleanPhone, aiReply);
+
+                // Store the AI reply in whatsapp_messages
+                await supabase.from("whatsapp_messages").insert({
+                  message_id: `ai-reply-${crypto.randomUUID()}`,
+                  phone: cleanPhone,
+                  body: aiReply,
+                  is_from_me: true,
+                  timestamp: new Date().toISOString(),
+                  raw_data: { type: "ai_auto_reply" }
+                });
+              }
+            } catch (aiError) {
+              console.error("Error generating AI auto-reply:", aiError);
+            }
           }
         }
  
