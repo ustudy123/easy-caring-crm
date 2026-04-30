@@ -76,6 +76,54 @@ const corsHeaders = {
    }
  }
 
+// Function to generate AI auto-reply for existing clients
+async function generateAutoReply(text: string, recentMessages: { body: string; is_from_me: boolean }[], clientName: string) {
+  if (!OPENAI_API_KEY) {
+    console.error("OPENAI_API_KEY not set for auto-reply");
+    return null;
+  }
+
+  // Build conversation history for context
+  const history = recentMessages.slice(-10).map(m => ({
+    role: m.is_from_me ? "assistant" as const : "user" as const,
+    content: m.body
+  }));
+
+  // Add the current message
+  history.push({ role: "user", content: text });
+
+  const systemPrompt = `Você é um assistente virtual de atendimento de uma empresa de intercâmbio/educação. 
+Seu nome é Assistente Virtual. Seja educado, prestativo e breve nas respostas.
+O nome do cliente é ${clientName}.
+Responda de forma natural e amigável. Se o cliente mandar uma saudação (oi, olá, etc), cumprimente-o e pergunte como pode ajudá-lo.
+Se não souber a resposta para algo específico, diga que vai encaminhar para um consultor humano.
+Mantenha as respostas curtas (máximo 2-3 frases).`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...history
+        ],
+        temperature: 0.7,
+        max_tokens: 200
+      })
+    });
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || null;
+  } catch (e) {
+    console.error("Error calling OpenAI for auto-reply:", e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -316,6 +364,39 @@ serve(async (req) => {
               .from("clients")
               .update(updateData)
               .eq("id", client.id);
+
+            // Auto-reply with AI for existing clients
+            try {
+              // Fetch recent messages for context
+              const { data: recentMsgs } = await supabase
+                .from("whatsapp_messages")
+                .select("body, is_from_me")
+                .eq("phone", cleanPhone)
+                .order("timestamp", { ascending: false })
+                .limit(10);
+
+              const aiReply = await generateAutoReply(
+                text,
+                (recentMsgs || []).reverse(),
+                client.name || senderName
+              );
+
+              if (aiReply) {
+                await sendWhatsAppMessage(cleanPhone, aiReply);
+
+                // Store the AI reply in whatsapp_messages
+                await supabase.from("whatsapp_messages").insert({
+                  message_id: `ai-reply-${crypto.randomUUID()}`,
+                  phone: cleanPhone,
+                  body: aiReply,
+                  is_from_me: true,
+                  timestamp: new Date().toISOString(),
+                  raw_data: { type: "ai_auto_reply" }
+                });
+              }
+            } catch (aiError) {
+              console.error("Error generating AI auto-reply:", aiError);
+            }
           }
         }
  
