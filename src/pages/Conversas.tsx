@@ -384,8 +384,6 @@ const mockContactNames: Record<string, string> = {
       
       try {
         // clients/leads assignment fields reference sellers.id.
-        const { data: authData } = await supabase.auth.getUser();
-        const uid = authData?.user?.id;
         let realSellerId: string | null = null;
         let realStoreId: string | null = storeId;
 
