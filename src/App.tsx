@@ -16,6 +16,7 @@ import Campanhas from "./pages/Campanhas";
 import Configuracoes from "./pages/Configuracoes";
 import Conversas from "./pages/Conversas";
 import SuporteOrcamento from "./pages/SuporteOrcamento";
+ import WebhookSimulator from "./pages/WebhookSimulator";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -46,6 +47,7 @@ const App = () => (
                       <Route path="/configuracoes" element={<Configuracoes />} />
                       <Route path="/suporte-orcamento" element={<SuporteOrcamento />} />
                       <Route path="/admin" element={<AdminPanel />} />
+                      <Route path="/simulador" element={<WebhookSimulator />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </CrmProvider>

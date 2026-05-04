@@ -10,6 +10,7 @@ import {
   LogOut,
   FileText,
   ShieldCheck,
+  TestTube2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -45,6 +46,7 @@ const allToolsNav: NavItem[] = [
   { title: "Conversas", url: "/conversas", icon: MessageSquare, badgeKey: "whatsapp" },
   { title: "Suporte Orçamento", url: "/suporte-orcamento", icon: FileText, badgeKey: null, roles: ["admin", "suporte"] },
   { title: "Admin", url: "/admin", icon: ShieldCheck, badgeKey: null, roles: ["admin"] },
+  { title: "Simulador", url: "/simulador", icon: TestTube2, badgeKey: null, roles: ["admin"] },
 ];
 
 export function AppSidebar() {

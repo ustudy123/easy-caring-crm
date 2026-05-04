@@ -11,7 +11,11 @@ const corsHeaders = {
 };
 
  // Function to send message via uazapi
- async function sendWhatsAppMessage(phone: string, text: string) {
+ async function sendWhatsAppMessage(phone: string, text: string, isTest: boolean = false) {
+    if (isTest) {
+      console.log(`[TEST MODE] Would send WhatsApp message to ${phone}: ${text}`);
+      return { success: true, message: "Test mode: message not sent to real API" };
+    }
    try {
      const response = await fetch(`${WHATSAPP_API_URL}/message/sendText?token=${Deno.env.get("WHATSAPP_API_TOKEN")}`, {
        method: "POST",
@@ -180,6 +184,7 @@ serve(async (req) => {
           const rawTs = data.wa_lastMsgTimestamp || data.messageTimestamp || data.timestamp || Date.now();
          const tsMs = rawTs > 1e12 ? rawTs : rawTs * 1000;
           const senderName = data.name || data.wa_name || data.senderName || data.pushName || data.notifyName || `Cliente ${cleanPhone}`;
+       const isTest = body.test_mode === true;
 
          console.log(`Parsed → phone: ${cleanPhone} | fromMe: ${isFromMe} | isGroup: ${isGroup} | text: "${text}"`);
 
@@ -200,7 +205,14 @@ serve(async (req) => {
           timestamp: new Date(tsMs).toISOString(),
           raw_data: body
         });
-        if (msgError && msgError.code !== '23505') { // Ignore unique constraint violation (duplicate webhook)
+        if (msgError) {
+          if (msgError.code === '23505') {
+            console.log(`Deduplicated: message ${messageId} already exists.`);
+            return new Response(JSON.stringify({ success: true, action: "deduplicated" }), {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
           console.error("Error inserting whatsapp_messages:", msgError);
         }
  
@@ -258,7 +270,7 @@ serve(async (req) => {
                const storeList = stores?.map((s, i) => `${i + 1}. ${s.name}`).join("\n") || "";
                
                const welcomeMsg = `Olá! Seja bem-vindo(a). Para melhor atendê-lo(a), você tem preferência por alguma de nossas lojas?\n\n${storeList}\n\nResponda com o nome da loja ou diga "Não" para ser atendido por qualquer unidade.`;
-               await sendWhatsAppMessage(cleanPhone, welcomeMsg);
+               await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest);
              }
            } else if (client.triaging) {
              // 2. Client is in triage: Handle their response using OpenAI
@@ -284,9 +296,9 @@ serve(async (req) => {
                    store_id: selectedStore.id
                  });
 
-                 await sendWhatsAppMessage(cleanPhone, `Perfeito! Você será atendido pela unidade ${selectedStore.name}. Um consultor entrará em contato em breve.`);
+                  await sendWhatsAppMessage(cleanPhone, `Perfeito! Você será atendido pela unidade ${selectedStore.name}. Um consultor entrará em contato em breve.`, isTest);
                } else {
-                 await sendWhatsAppMessage(cleanPhone, `Desculpe, não entendi qual unidade você prefere. Por favor, digite o nome de uma de nossas lojas ou "Não" para qualquer unidade.`);
+                  await sendWhatsAppMessage(cleanPhone, `Desculpe, não entendi qual unidade você prefere. Por favor, digite o nome de uma de nossas lojas ou "Não" para qualquer unidade.`, isTest);
                }
              } else if (aiResult?.preference === "nenhuma") {
                await supabase.from("clients").update({
@@ -303,9 +315,9 @@ serve(async (req) => {
                  store_id: null // Available to everyone
                });
 
-               await sendWhatsAppMessage(cleanPhone, `Entendido! Um de nossos consultores disponíveis entrará em contato em breve.`);
+                await sendWhatsAppMessage(cleanPhone, `Entendido! Um de nossos consultores disponíveis entrará em contato em breve.`, isTest);
              } else {
-               await sendWhatsAppMessage(cleanPhone, `Desculpe, não entendi. Por favor, digite o nome de uma de nossas lojas ou "Não" para qualquer unidade.`);
+                await sendWhatsAppMessage(cleanPhone, `Desculpe, não entendi. Por favor, digite o nome de uma de nossas lojas ou "Não" para qualquer unidade.`, isTest);
              }
            } else {
             // Update existing client
@@ -382,7 +394,7 @@ serve(async (req) => {
               );
 
               if (aiReply) {
-                await sendWhatsAppMessage(cleanPhone, aiReply);
+                await sendWhatsAppMessage(cleanPhone, aiReply, isTest);
 
                 // Store the AI reply in whatsapp_messages
                 await supabase.from("whatsapp_messages").insert({
