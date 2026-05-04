@@ -205,7 +205,14 @@ serve(async (req) => {
           timestamp: new Date(tsMs).toISOString(),
           raw_data: body
         });
-        if (msgError && msgError.code !== '23505') { // Ignore unique constraint violation (duplicate webhook)
+        if (msgError) {
+          if (msgError.code === '23505') {
+            console.log(`Deduplicated: message ${messageId} already exists.`);
+            return new Response(JSON.stringify({ success: true, action: "deduplicated" }), {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
           console.error("Error inserting whatsapp_messages:", msgError);
         }
  
