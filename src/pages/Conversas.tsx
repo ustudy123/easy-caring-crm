@@ -447,28 +447,30 @@ const mockContactNames: Record<string, string> = {
         const existingLead = existingLeads?.[0];
 
         if (existingLead) {
-          await supabase
+          const { error: leadUpdateError } = await supabase
             .from("leads")
             .update({ 
               assigned_to: realSellerId,
-              store_id: storeId,
+              store_id: realStoreId,
               updated_at: new Date().toISOString()
             })
             .eq("client_phone", selectedPhone);
+          if (leadUpdateError) throw leadUpdateError;
         } else {
           // Try to get client name if it exists, otherwise use the generic name
           const clientName = existingClient?.name || `Cliente ${formatPhone(selectedPhone)}`;
           
-          await supabase
+          const { error: leadInsertError } = await supabase
             .from("leads")
             .insert({
               client_phone: selectedPhone,
               client_name: clientName,
               assigned_to: realSellerId,
               stage: 'abordagem',
-              store_id: storeId,
+              store_id: realStoreId,
               source: 'whatsapp'
             });
+          if (leadInsertError) throw leadInsertError;
         }
 
         toast.success("Você assumiu este atendimento!");
@@ -479,6 +481,7 @@ const mockContactNames: Record<string, string> = {
             return prev.map(c => c.phone === selectedPhone ? { 
               ...c, 
               assigned_seller_id: realSellerId, 
+              store_id: realStoreId,
               status: 'em_atendimento',
               claimed_at: new Date().toISOString() 
             } : c);
@@ -489,7 +492,7 @@ const mockContactNames: Record<string, string> = {
               assigned_seller_id: realSellerId, 
               status: 'em_atendimento',
               claimed_at: new Date().toISOString(),
-              store_id: storeId
+              store_id: realStoreId
             }];
           }
         });
