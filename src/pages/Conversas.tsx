@@ -438,12 +438,12 @@ const mockContactNames: Record<string, string> = {
         if (error) throw error;
 
         // Also update or create a lead in the leads table
-        const { data: existingLead } = await supabase
+        const { data: existingLeads } = await supabase
           .from("leads")
           .select("id")
           .eq("client_phone", selectedPhone)
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
+        const existingLead = existingLeads?.[0];
 
         if (existingLead) {
           await supabase
