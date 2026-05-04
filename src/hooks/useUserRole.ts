@@ -45,13 +45,13 @@ export function useUserRole(): UserRoleInfo {
         setRole(null);
       }
 
-      // Use profile ID as the primary seller identifier for consistency across the app
-      if (profileRes.data) {
-        setSellerId(profileRes.data.id);
-        setStoreId(profileRes.data.store_id || sellerRes.data?.store_id || null);
-      } else if (sellerRes.data) {
+      // CRM assignment fields reference sellers.id, so prefer the linked seller row.
+      if (sellerRes.data) {
         setSellerId(sellerRes.data.id);
-        setStoreId(sellerRes.data.store_id);
+        setStoreId(sellerRes.data.store_id || profileRes.data?.store_id || null);
+      } else if (profileRes.data) {
+        setSellerId(profileRes.data.id);
+        setStoreId(profileRes.data.store_id || null);
       }
 
       setLoading(false);
