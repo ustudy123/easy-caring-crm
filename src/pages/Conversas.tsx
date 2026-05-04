@@ -383,6 +383,24 @@ const mockContactNames: Record<string, string> = {
       }
       
       try {
+        // sellerId from context is profiles.id, but clients/leads FK references sellers.id.
+        // Resolve the actual sellers.id for the current auth user.
+        const { data: authData } = await supabase.auth.getUser();
+        const uid = authData?.user?.id;
+        let realSellerId: string | null = null;
+        if (uid) {
+          const { data: sellerRow } = await supabase
+            .from("sellers")
+            .select("id, store_id")
+            .eq("user_id", uid)
+            .maybeSingle();
+          realSellerId = sellerRow?.id ?? null;
+        }
+        if (!realSellerId) {
+          toast.error("Seu usuário não está vinculado a um vendedor. Peça para um administrador criar seu cadastro em Vendedores.");
+          return;
+        }
+
         // First check if client exists
         const { data: existingClient } = await supabase
           .from("clients")
@@ -395,7 +413,7 @@ const mockContactNames: Record<string, string> = {
           const { error: updateError } = await supabase
             .from("clients")
             .update({ 
-              assigned_seller_id: sellerId,
+              assigned_seller_id: realSellerId,
               store_id: storeId,
               status: 'em_atendimento',
               claimed_at: new Date().toISOString()
@@ -409,7 +427,7 @@ const mockContactNames: Record<string, string> = {
             .insert({ 
               phone: selectedPhone,
               name: `Cliente ${formatPhone(selectedPhone)}`,
-              assigned_seller_id: sellerId,
+              assigned_seller_id: realSellerId,
               status: 'em_atendimento',
               claimed_at: new Date().toISOString(),
               store_id: storeId
@@ -424,13 +442,14 @@ const mockContactNames: Record<string, string> = {
           .from("leads")
           .select("id")
           .eq("client_phone", selectedPhone)
+          .limit(1)
           .maybeSingle();
 
         if (existingLead) {
           await supabase
             .from("leads")
             .update({ 
-              assigned_to: sellerId,
+              assigned_to: realSellerId,
               store_id: storeId,
               updated_at: new Date().toISOString()
             })
@@ -444,7 +463,7 @@ const mockContactNames: Record<string, string> = {
             .insert({
               client_phone: selectedPhone,
               client_name: clientName,
-              assigned_to: sellerId,
+              assigned_to: realSellerId,
               stage: 'abordagem',
               store_id: storeId,
               source: 'whatsapp'
@@ -458,7 +477,7 @@ const mockContactNames: Record<string, string> = {
           if (existing) {
             return prev.map(c => c.phone === selectedPhone ? { 
               ...c, 
-              assigned_seller_id: sellerId, 
+              assigned_seller_id: realSellerId, 
               status: 'em_atendimento',
               claimed_at: new Date().toISOString() 
             } : c);
@@ -466,7 +485,7 @@ const mockContactNames: Record<string, string> = {
             return [...prev, { 
               phone: selectedPhone, 
               name: `Cliente ${formatPhone(selectedPhone)}`,
-              assigned_seller_id: sellerId, 
+              assigned_seller_id: realSellerId, 
               status: 'em_atendimento',
               claimed_at: new Date().toISOString(),
               store_id: storeId
