@@ -377,17 +377,17 @@ const mockContactNames: Record<string, string> = {
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
 
     const handleClaimLead = async () => {
-      if (!selectedPhone || !sellerId) {
-        console.warn("Missing selectedPhone or sellerId:", { selectedPhone, sellerId });
+      if (!selectedPhone) {
+        console.warn("Missing selectedPhone:", { selectedPhone });
         return;
       }
       
       try {
-        // sellerId from context is profiles.id, but clients/leads FK references sellers.id.
-        // Resolve the actual sellers.id for the current auth user.
+        // clients/leads assignment fields reference sellers.id.
         const { data: authData } = await supabase.auth.getUser();
         const uid = authData?.user?.id;
         let realSellerId: string | null = null;
+        let realStoreId: string | null = storeId;
         if (uid) {
           const { data: sellerRow } = await supabase
             .from("sellers")
@@ -395,6 +395,7 @@ const mockContactNames: Record<string, string> = {
             .eq("user_id", uid)
             .maybeSingle();
           realSellerId = sellerRow?.id ?? null;
+          realStoreId = sellerRow?.store_id ?? storeId;
         }
         if (!realSellerId) {
           toast.error("Seu usuário não está vinculado a um vendedor. Peça para um administrador criar seu cadastro em Vendedores.");
@@ -414,7 +415,7 @@ const mockContactNames: Record<string, string> = {
             .from("clients")
             .update({ 
               assigned_seller_id: realSellerId,
-              store_id: storeId,
+              store_id: realStoreId,
               status: 'em_atendimento',
               claimed_at: new Date().toISOString()
             })
@@ -430,7 +431,7 @@ const mockContactNames: Record<string, string> = {
               assigned_seller_id: realSellerId,
               status: 'em_atendimento',
               claimed_at: new Date().toISOString(),
-              store_id: storeId
+              store_id: realStoreId
             });
           error = insertError;
         }
