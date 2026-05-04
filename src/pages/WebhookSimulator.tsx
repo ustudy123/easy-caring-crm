@@ -7,7 +7,7 @@
  import { Switch } from "@/components/ui/switch";
  import { supabase } from "@/integrations/supabase/client";
  import { toast } from "sonner";
- import { Layout } from "@/components/Layout";
+ import { AppLayout } from "@/components/AppLayout";
  
  const WebhookSimulator = () => {
    const [phone, setPhone] = useState("5511999999999");
@@ -52,7 +52,7 @@
    };
  
    return (
-     <Layout>
+     <AppLayout title="Simulador de Webhook">
        <div className="container mx-auto py-8">
          <Card className="max-w-2xl mx-auto">
            <CardHeader>
@@ -116,7 +116,7 @@
            </CardContent>
          </Card>
        </div>
-     </Layout>
+     </AppLayout>
    );
  };
  
