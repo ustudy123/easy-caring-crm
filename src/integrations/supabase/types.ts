@@ -732,6 +732,14 @@ export type Database = {
         }[]
       }
       admin_revoke_user_role: { Args: { _user_id: string }; Returns: undefined }
+      claim_whatsapp_client: {
+        Args: { _fallback_name?: string; _phone: string }
+        Returns: {
+          client_id: string
+          seller_id: string
+          store_id: string
+        }[]
+      }
       get_user_seller_id: { Args: { _user_id: string }; Returns: string }
       get_user_store_id: { Args: { _user_id: string }; Returns: string }
       has_role: {

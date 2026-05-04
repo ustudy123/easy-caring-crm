@@ -377,97 +377,31 @@ const mockContactNames: Record<string, string> = {
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
 
     const handleClaimLead = async () => {
-      if (!selectedPhone || !sellerId) {
-        console.warn("Missing selectedPhone or sellerId:", { selectedPhone, sellerId });
+      if (!selectedPhone) {
+        console.warn("Missing selectedPhone:", { selectedPhone });
         return;
       }
       
       try {
-        // sellerId from context is profiles.id, but clients/leads FK references sellers.id.
-        // Resolve the actual sellers.id for the current auth user.
-        const { data: authData } = await supabase.auth.getUser();
-        const uid = authData?.user?.id;
+        // clients/leads assignment fields reference sellers.id.
         let realSellerId: string | null = null;
-        if (uid) {
-          const { data: sellerRow } = await supabase
-            .from("sellers")
-            .select("id, store_id")
-            .eq("user_id", uid)
-            .maybeSingle();
-          realSellerId = sellerRow?.id ?? null;
-        }
+        let realStoreId: string | null = storeId;
+
+        const { data: claimResult, error: claimError } = await (supabase as any)
+          .rpc("claim_whatsapp_client", {
+            _phone: selectedPhone,
+            _fallback_name: `Cliente ${formatPhone(selectedPhone)}`,
+          });
+
+        if (claimError) throw claimError;
+
+        const claimed = claimResult?.[0];
+        realSellerId = claimed?.seller_id ?? null;
+        realStoreId = claimed?.store_id ?? storeId;
+
         if (!realSellerId) {
           toast.error("Seu usuário não está vinculado a um vendedor. Peça para um administrador criar seu cadastro em Vendedores.");
           return;
-        }
-
-        // First check if client exists
-        const { data: existingClient } = await supabase
-          .from("clients")
-          .select("id, name")
-          .eq("phone", selectedPhone)
-          .maybeSingle();
-
-        let error;
-        if (existingClient) {
-          const { error: updateError } = await supabase
-            .from("clients")
-            .update({ 
-              assigned_seller_id: realSellerId,
-              store_id: storeId,
-              status: 'em_atendimento',
-              claimed_at: new Date().toISOString()
-            })
-            .eq("phone", selectedPhone);
-          error = updateError;
-        } else {
-          // Create client if it doesn't exist
-          const { error: insertError } = await supabase
-            .from("clients")
-            .insert({ 
-              phone: selectedPhone,
-              name: `Cliente ${formatPhone(selectedPhone)}`,
-              assigned_seller_id: realSellerId,
-              status: 'em_atendimento',
-              claimed_at: new Date().toISOString(),
-              store_id: storeId
-            });
-          error = insertError;
-        }
-  
-        if (error) throw error;
-
-        // Also update or create a lead in the leads table
-        const { data: existingLeads } = await supabase
-          .from("leads")
-          .select("id")
-          .eq("client_phone", selectedPhone)
-          .limit(1);
-        const existingLead = existingLeads?.[0];
-
-        if (existingLead) {
-          await supabase
-            .from("leads")
-            .update({ 
-              assigned_to: realSellerId,
-              store_id: storeId,
-              updated_at: new Date().toISOString()
-            })
-            .eq("client_phone", selectedPhone);
-        } else {
-          // Try to get client name if it exists, otherwise use the generic name
-          const clientName = existingClient?.name || `Cliente ${formatPhone(selectedPhone)}`;
-          
-          await supabase
-            .from("leads")
-            .insert({
-              client_phone: selectedPhone,
-              client_name: clientName,
-              assigned_to: realSellerId,
-              stage: 'abordagem',
-              store_id: storeId,
-              source: 'whatsapp'
-            });
         }
 
         toast.success("Você assumiu este atendimento!");
@@ -478,6 +412,7 @@ const mockContactNames: Record<string, string> = {
             return prev.map(c => c.phone === selectedPhone ? { 
               ...c, 
               assigned_seller_id: realSellerId, 
+              store_id: realStoreId,
               status: 'em_atendimento',
               claimed_at: new Date().toISOString() 
             } : c);
@@ -488,7 +423,7 @@ const mockContactNames: Record<string, string> = {
               assigned_seller_id: realSellerId, 
               status: 'em_atendimento',
               claimed_at: new Date().toISOString(),
-              store_id: storeId
+              store_id: realStoreId
             }];
           }
         });
