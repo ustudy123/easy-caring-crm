@@ -1296,9 +1296,7 @@ const mockContactNames: Record<string, string> = {
           )}
         </div>
       </div>
-    </AppLayout>
-
-    <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
+      <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Transferir Conversa</DialogTitle>
@@ -1335,6 +1333,7 @@ const mockContactNames: Record<string, string> = {
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+    </AppLayout>
   );
 }
