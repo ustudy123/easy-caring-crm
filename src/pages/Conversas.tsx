@@ -301,6 +301,42 @@ const mockContactNames: Record<string, string> = {
                c.lastMessage.toLowerCase().includes(searchLower) || 
                name.toLowerCase().includes(searchLower);
       });
+  // Monitor conversations for stale messages to trigger alert popup
+  useEffect(() => {
+    const STALE_ALERT_THRESHOLD = 30 * 60 * 1000; // 30 minutes
+    const checkStale = () => {
+      const now = new Date().getTime();
+      const myConversations = conversations.filter(c => c.assigned_seller_id === sellerId);
+      const stale = myConversations.find(c => {
+        if (!c.last_message_from_client_at || hasDismissedStaleAlert.current.has(c.phone)) return false;
+        const waitTime = now - new Date(c.last_message_from_client_at).getTime();
+        return waitTime > STALE_ALERT_THRESHOLD;
+      });
+      if (stale && (!staleAlertConversation || staleAlertConversation.phone !== stale.phone)) {
+        setStaleAlertConversation(stale);
+      }
+    };
+    const interval = setInterval(checkStale, 30000);
+    checkStale();
+    return () => clearInterval(interval);
+  }, [conversations, sellerId, staleAlertConversation]);
+
+  const dismissStaleAlert = () => {
+    if (staleAlertConversation) {
+      hasDismissedStaleAlert.current.add(staleAlertConversation.phone);
+      setStaleAlertConversation(null);
+    }
+  };
+
+  const formatWaitTime = (lastMessageAt: string | null | undefined) => {
+    if (!lastMessageAt) return "";
+    const diffMs = new Date().getTime() - new Date(lastMessageAt).getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 60) return `${diffMins} minutos`;
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    return `${hours}h ${mins}m`;
+  };
     }, [conversations, contactNames, search, activeTab, sellerId, storeId]);
 
   const selectedConversation = useMemo(() => conversations.find((c) => c.phone === selectedPhone), [conversations, selectedPhone]);
