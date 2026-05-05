@@ -53,9 +53,11 @@ const ROLE_LABELS: Record<string, string> = {
  
    const fetchReports = useCallback(async () => {
      setLoading(true);
+      const ONE_HOUR_HALF_MS = 90 * 60 * 1000;
+      const now = new Date().getTime();
      const [profilesRes, alertsRes, transfersRes, slaAlertsRes] = await Promise.all([
        supabase.from("profiles").select("id, is_active").eq("role", "vendedor"),
-       supabase.from("clients").select("id").neq("alert_status", "none"),
+       supabase.from("clients").select("id, last_message_from_client_at").neq("alert_status", "none"),
        supabase.from("service_transfers")
          .select("*, client:clients(name), from_seller:profiles!service_transfers_from_seller_id_fkey(display_name), to_seller:profiles!service_transfers_to_seller_id_fkey(display_name)")
          .order("created_at", { ascending: false })
@@ -71,7 +73,11 @@ const ROLE_LABELS: Record<string, string> = {
        setStats(prev => ({ ...prev, activeSellers: active, inactiveSellers: profilesRes.data!.length - active }));
      }
      if (alertsRes.data) {
-       setStats(prev => ({ ...prev, pendingAlerts: alertsRes.data.length }));
+        const longWaitAlerts = alertsRes.data.filter(c => {
+          if (!c.last_message_from_client_at) return false;
+          return (now - new Date(c.last_message_from_client_at).getTime()) > ONE_HOUR_HALF_MS;
+        });
+        setStats(prev => ({ ...prev, pendingAlerts: longWaitAlerts.length }));
      }
      if (transfersRes.data) {
        setTransfers(transfersRes.data);
