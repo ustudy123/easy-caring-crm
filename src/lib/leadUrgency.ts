@@ -45,14 +45,14 @@ export function getUrgencyConfig(level: UrgencyLevel) {
   switch (level) {
     case "critical":
       return {
-        borderClass: "ring-2 ring-destructive/60",
+        borderClass: "ring-2 ring-destructive/60 bg-red-50 dark:bg-red-950/20",
         badgeClass: "bg-destructive text-destructive-foreground",
         label: "Crítico",
         pulse: true,
       };
     case "warning":
       return {
-        borderClass: "ring-2 ring-warning/50",
+        borderClass: "ring-2 ring-warning/50 bg-yellow-50 dark:bg-yellow-950/20",
         badgeClass: "bg-warning text-white",
         label: "Atenção",
         pulse: true,
