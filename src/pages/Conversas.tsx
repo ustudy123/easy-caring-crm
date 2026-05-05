@@ -301,6 +301,8 @@ const mockContactNames: Record<string, string> = {
                c.lastMessage.toLowerCase().includes(searchLower) || 
                name.toLowerCase().includes(searchLower);
       });
+    }, [conversations, contactNames, search, activeTab, sellerId, storeId]);
+
   // Monitor conversations for stale messages to trigger alert popup
   useEffect(() => {
     const STALE_ALERT_THRESHOLD = 30 * 60 * 1000; // 30 minutes
@@ -337,7 +339,6 @@ const mockContactNames: Record<string, string> = {
     const mins = diffMins % 60;
     return `${hours}h ${mins}m`;
   };
-    }, [conversations, contactNames, search, activeTab, sellerId, storeId]);
 
   const selectedConversation = useMemo(() => conversations.find((c) => c.phone === selectedPhone), [conversations, selectedPhone]);
 
