@@ -168,6 +168,8 @@ const mockContactNames: Record<string, string> = {
  const timerIntervalRef = useRef<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [staleAlertConversation, setStaleAlertConversation] = useState<Conversation | null>(null);
+  const hasDismissedStaleAlert = useRef<Set<string>>(new Set());
   const [isClaiming, setIsClaiming] = useState(false);
 
    const fetchData = useCallback(async () => {
