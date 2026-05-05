@@ -168,6 +168,7 @@ const mockContactNames: Record<string, string> = {
  const timerIntervalRef = useRef<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isClaiming, setIsClaiming] = useState(false);
 
    const fetchData = useCallback(async () => {
      setLoading(true);
@@ -381,6 +382,7 @@ const mockContactNames: Record<string, string> = {
         console.warn("Missing selectedPhone:", { selectedPhone });
         return;
       }
+      setIsClaiming(true);
       
       try {
         // clients/leads assignment fields reference sellers.id.
@@ -432,6 +434,8 @@ const mockContactNames: Record<string, string> = {
       } catch (err) {
         console.error("Erro ao assumir lead:", err);
         toast.error("Não foi possível assumir este lead.");
+      } finally {
+        setIsClaiming(false);
       }
     };
  
@@ -862,10 +866,10 @@ const mockContactNames: Record<string, string> = {
                        {(!selectedConversation.assigned_seller_id || (isSelectedStale && selectedConversation.assigned_seller_id !== sellerId)) && (
                          <Button
                            size="sm"
-                           onClick={handleClaimLead}
+                           onClick={handleClaimLead} disabled={isClaiming}
                            className="bg-white text-[hsl(var(--wa-header))] hover:bg-white/90 font-semibold h-8 px-3"
                          >
-                           {isSelectedStale && selectedConversation?.assigned_seller_id ? "Retomar Atendimento" : "Atender Cliente"}
+                           {isClaiming ? (<span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 animate-spin" /> Processando...</span>) : (<span className="flex items-center gap-1.5"><UserCheck className="h-4 w-4" /> {isSelectedStale && selectedConversation?.assigned_seller_id ? "Retomar Atendimento" : "Atender Cliente"}</span>)}
                          </Button>
                        )}
                        {isAdmin && (
