@@ -1191,6 +1191,47 @@ const mockContactNames: Record<string, string> = {
                   <Lock className="h-3 w-3" />
                   <span>Suas mensagens são sincronizadas em tempo real</span>
                 </div>
+                <AnimatePresence>
+                  {staleAlertConversation && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 50 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 20 }}
+                      className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-white dark:bg-zinc-900 border-l-4 border-amber-500 shadow-2xl rounded-lg overflow-hidden flex flex-col p-4 gap-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full">
+                          <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">Atendimento Atrasado</h4>
+                          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                            O cliente <span className="font-medium">{contactNames[staleAlertConversation.phone] || formatPhone(staleAlertConversation.phone)}</span> aguarda há {formatWaitTime(staleAlertConversation.last_message_from_client_at)}.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                          onClick={() => {
+                            handleSelectConversation(staleAlertConversation.phone);
+                            dismissStaleAlert();
+                          }}
+                        >
+                          Atender Agora
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={dismissStaleAlert}
+                        >
+                          Ignorar
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             </div>
           )}
