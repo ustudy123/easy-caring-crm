@@ -433,11 +433,10 @@ const mockContactNames: Record<string, string> = {
         fetchData(); // Refresh to ensure sync
       } catch (err) {
         console.error("Erro ao assumir lead:", err);
-      } catch (err) {
-        console.error("Erro ao assumir lead:", err);
         toast.error("Não foi possível assumir este lead.");
       } finally {
         setIsClaiming(false);
+      }
     };
  
   const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
