@@ -951,7 +951,25 @@ const mockContactNames: Record<string, string> = {
                            {isClaiming ? (<span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 animate-spin" /> Processando...</span>) : (<span className="flex items-center gap-1.5"><UserCheck className="h-4 w-4" /> {isSelectedStale && selectedConversation?.assigned_seller_id ? "Retomar Atendimento" : "Atender Cliente"}</span>)}
                          </Button>
                        )}
-                       {isAdmin && (
+                        {(isAdmin || role === 'gerente') && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setIsTransferModalOpen(true)}
+                                  aria-label="Transferir conversa"
+                                  className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
+                                >
+                                  <Forward className="h-5 w-5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Transferir conversa</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {isAdmin && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1279,5 +1297,44 @@ const mockContactNames: Record<string, string> = {
         </div>
       </div>
     </AppLayout>
+
+    <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Transferir Conversa</DialogTitle>
+          <DialogDescription>
+            Selecione o vendedor para quem deseja transferir este atendimento.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <Select value={selectedTransferSeller} onValueChange={setSelectedTransferSeller}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione um vendedor" />
+            </SelectTrigger>
+            <SelectContent>
+              {sellers
+                .filter(s => s.id !== sellerId && s.is_active !== false)
+                .map(seller => (
+                  <SelectItem key={seller.id} value={seller.id}>
+                    {seller.name} {seller.store_id ? `(Loja)` : ''}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsTransferModalOpen(false)}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleTransferConversation} 
+            disabled={!selectedTransferSeller || isTransferring}
+            className="bg-[hsl(var(--wa-green))] hover:bg-[hsl(var(--wa-green))/90] text-white"
+          >
+            {isTransferring ? "Transferindo..." : "Transferir"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
