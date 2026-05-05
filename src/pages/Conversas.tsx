@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-  import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle, ShieldAlert } from "lucide-react";
+   import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle, ShieldAlert, Forward } from "lucide-react";
 import { Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
@@ -13,6 +13,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useRole } from "@/contexts/RoleContext";
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 const ChatMessageBody = memo(({ body, chatSearch, isCurrentOccurrence }: { body: string | null; chatSearch: string; isCurrentOccurrence: boolean }) => {
   const content = useMemo(() => {
     if (!chatSearch || chatSearch.length < 2 || !body) return body || "";
@@ -170,14 +172,19 @@ const mockContactNames: Record<string, string> = {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [staleAlertConversation, setStaleAlertConversation] = useState<Conversation | null>(null);
   const hasDismissedStaleAlert = useRef<Set<string>>(new Set());
-  const [isClaiming, setIsClaiming] = useState(false);
+   const [isClaiming, setIsClaiming] = useState(false);
+   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+   const [sellers, setSellers] = useState<any[]>([]);
+   const [selectedTransferSeller, setSelectedTransferSeller] = useState<string>("");
+   const [isTransferring, setIsTransferring] = useState(false);
 
    const fetchData = useCallback(async () => {
      setLoading(true);
      try {
-       const [msgsRes, clientsRes] = await Promise.all([
+       const [msgsRes, clientsRes, sellersRes] = await Promise.all([
           supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }),
-          supabase.from("clients").select("*, alert_status")
+          supabase.from("clients").select("*, alert_status"),
+          supabase.from("sellers").select("id, name, store_id, is_active")
        ]);
  
        if (msgsRes.data && msgsRes.data.length > 0) {
@@ -191,12 +198,45 @@ const mockContactNames: Record<string, string> = {
        if (clientsRes.data) {
          setClients(clientsRes.data);
        }
+
+       if (sellersRes.data) {
+         setSellers(sellersRes.data);
+       }
      } catch (err) {
        console.error("Erro ao carregar dados:", err);
      } finally {
        setLoading(false);
      }
    }, []);
+   const handleTransferConversation = async () => {
+     if (!selectedPhone || !selectedTransferSeller) return;
+     setIsTransferring(true);
+     try {
+       const targetSeller = sellers.find(s => s.id === selectedTransferSeller);
+       
+       const { error } = await supabase
+         .from("clients")
+         .update({ 
+           assigned_seller_id: selectedTransferSeller,
+           store_id: targetSeller?.store_id || null,
+           status: 'em_atendimento',
+           claimed_at: new Date().toISOString()
+         })
+         .eq("phone", selectedPhone);
+
+       if (error) throw error;
+
+       toast.success(`Conversa transferida para ${targetSeller?.name || 'o vendedor'}`);
+       setIsTransferModalOpen(false);
+       fetchData();
+     } catch (err) {
+       console.error("Erro ao transferir conversa:", err);
+       toast.error("Erro ao transferir a conversa.");
+     } finally {
+       setIsTransferring(false);
+     }
+   };
+
  
    useEffect(() => {
      fetchData();
