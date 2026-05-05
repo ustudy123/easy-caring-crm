@@ -168,6 +168,8 @@ const mockContactNames: Record<string, string> = {
  const timerIntervalRef = useRef<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [staleAlertConversation, setStaleAlertConversation] = useState<Conversation | null>(null);
+  const hasDismissedStaleAlert = useRef<Set<string>>(new Set());
   const [isClaiming, setIsClaiming] = useState(false);
 
    const fetchData = useCallback(async () => {
@@ -299,6 +301,42 @@ const mockContactNames: Record<string, string> = {
                c.lastMessage.toLowerCase().includes(searchLower) || 
                name.toLowerCase().includes(searchLower);
       });
+  // Monitor conversations for stale messages to trigger alert popup
+  useEffect(() => {
+    const STALE_ALERT_THRESHOLD = 30 * 60 * 1000; // 30 minutes
+    const checkStale = () => {
+      const now = new Date().getTime();
+      const myConversations = conversations.filter(c => c.assigned_seller_id === sellerId);
+      const stale = myConversations.find(c => {
+        if (!c.last_message_from_client_at || hasDismissedStaleAlert.current.has(c.phone)) return false;
+        const waitTime = now - new Date(c.last_message_from_client_at).getTime();
+        return waitTime > STALE_ALERT_THRESHOLD;
+      });
+      if (stale && (!staleAlertConversation || staleAlertConversation.phone !== stale.phone)) {
+        setStaleAlertConversation(stale);
+      }
+    };
+    const interval = setInterval(checkStale, 30000);
+    checkStale();
+    return () => clearInterval(interval);
+  }, [conversations, sellerId, staleAlertConversation]);
+
+  const dismissStaleAlert = () => {
+    if (staleAlertConversation) {
+      hasDismissedStaleAlert.current.add(staleAlertConversation.phone);
+      setStaleAlertConversation(null);
+    }
+  };
+
+  const formatWaitTime = (lastMessageAt: string | null | undefined) => {
+    if (!lastMessageAt) return "";
+    const diffMs = new Date().getTime() - new Date(lastMessageAt).getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 60) return `${diffMins} minutos`;
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    return `${hours}h ${mins}m`;
+  };
     }, [conversations, contactNames, search, activeTab, sellerId, storeId]);
 
   const selectedConversation = useMemo(() => conversations.find((c) => c.phone === selectedPhone), [conversations, selectedPhone]);
@@ -1153,6 +1191,47 @@ const mockContactNames: Record<string, string> = {
                   <Lock className="h-3 w-3" />
                   <span>Suas mensagens são sincronizadas em tempo real</span>
                 </div>
+                <AnimatePresence>
+                  {staleAlertConversation && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 50 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 20 }}
+                      className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-white dark:bg-zinc-900 border-l-4 border-amber-500 shadow-2xl rounded-lg overflow-hidden flex flex-col p-4 gap-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full">
+                          <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">Atendimento Atrasado</h4>
+                          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                            O cliente <span className="font-medium">{contactNames[staleAlertConversation.phone] || formatPhone(staleAlertConversation.phone)}</span> aguarda há {formatWaitTime(staleAlertConversation.last_message_from_client_at)}.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                          onClick={() => {
+                            handleSelectConversation(staleAlertConversation.phone);
+                            dismissStaleAlert();
+                          }}
+                        >
+                          Atender Agora
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={dismissStaleAlert}
+                        >
+                          Ignorar
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             </div>
           )}
