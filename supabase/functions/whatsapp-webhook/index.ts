@@ -283,70 +283,162 @@ serve(async (req) => {
           };
 
            if (!client) {
-             // 1. First message from a new client: Start Triage
-             const { data: newClient, error: createError } = await supabase.from("clients").upsert({
+             // 1. First message from a new client: Start URA flow at step "ask_code"
+             const { error: createError } = await supabase.from("clients").upsert({
                name: senderName,
                phone: cleanPhone,
                status: 'novo',
                triaging: true,
+               triage_step: 'ask_code',
                last_message_at: new Date().toISOString(),
                last_message_from_client_at: new Date().toISOString()
-             }, { onConflict: 'phone' }).select("id, name, phone").single();
- 
+             }, { onConflict: 'phone' }).select("id").single();
+
              if (!createError) {
-               // Get stores for triage
-               const { data: stores } = await supabase.from("stores").select("name");
-               const storeList = stores?.map((s, i) => `${i + 1}. ${s.name}`).join("\n") || "";
-               
-                const welcomeMsg = `Olá! Seja bem-vindo(a). Para melhor atendê-lo(a), você tem preferência por alguma de nossas lojas?\n\n${storeList}\n\nResponda com o nome da loja ou diga "Não" para ser atendido por qualquer unidade.\n\n💡 Se você já tem o *código do seu vendedor*, basta digitá-lo (ex: 1023) que encaminhamos direto para ele.`;
+               const welcomeMsg = `Olá! 👋 Você está falando com a *TF Tintas*.\n\nVocê já possui o *código (ramal)* de um vendedor?\n\n👉 Se *sim*, digite o código agora (ex: 1023).\n👉 Se *não*, responda com *N* para continuar.`;
                await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest);
              }
            } else if (client.triaging) {
-             // 2. Client is in triage: Handle their response using OpenAI
-             const { data: stores } = await supabase.from("stores").select("id, name");
-             const aiResult = await analyzeMessageWithAI(text, stores || []);
-             console.log("AI Triage Result:", aiResult);
+             // URA-style step machine
+             const step = client.triage_step || 'ask_code';
+             const trimmed = text.trim();
+             const lower = trimmed.toLowerCase();
 
-             if (aiResult?.preference && aiResult.preference !== "nenhuma" && aiResult.preference !== "incerto") {
-               const selectedStore = stores?.find(s => s.name === aiResult.preference);
-               if (selectedStore) {
-                 await supabase.from("clients").update({
-                   store_id: selectedStore.id,
-                   triaging: false,
-                   last_message_at: new Date().toISOString(),
-                   last_message_from_client_at: new Date().toISOString()
-                 }).eq("id", client.id);
-                 
-                 await supabase.from("leads").insert({
-                   client_name: client.name,
-                   client_phone: client.phone,
-                   source: "whatsapp",
-                   stage: "abordagem",
-                   store_id: selectedStore.id
-                 });
-
-                  await sendWhatsAppMessage(cleanPhone, `Perfeito! Você será atendido pela unidade ${selectedStore.name}. Um consultor entrará em contato em breve.`, isTest);
-               } else {
-                  await sendWhatsAppMessage(cleanPhone, `Desculpe, não entendi qual unidade você prefere. Por favor, digite o nome de uma de nossas lojas ou "Não" para qualquer unidade.`, isTest);
-               }
-             } else if (aiResult?.preference === "nenhuma") {
+             const updateClient = async (patch: any) => {
                await supabase.from("clients").update({
-                 triaging: false,
+                 ...patch,
                  last_message_at: new Date().toISOString(),
-                 last_message_from_client_at: new Date().toISOString()
+                 last_message_from_client_at: new Date().toISOString(),
                }).eq("id", client.id);
+             };
 
+             const finishWithStore = async (storeId: string | null, storeName?: string) => {
+               await updateClient({ store_id: storeId, triaging: false, triage_step: null });
                await supabase.from("leads").insert({
                  client_name: client.name,
                  client_phone: client.phone,
                  source: "whatsapp",
                  stage: "abordagem",
-                 store_id: null // Available to everyone
+                 store_id: storeId,
                });
+               const msg = storeName
+                 ? `Perfeito! Você será atendido(a) pela unidade *${storeName}*. Um consultor entrará em contato em breve. ✅`
+                 : `Entendido! Um de nossos consultores disponíveis entrará em contato em breve. ✅`;
+               await sendWhatsAppMessage(cleanPhone, msg, isTest);
+             };
 
-                await sendWhatsAppMessage(cleanPhone, `Entendido! Um de nossos consultores disponíveis entrará em contato em breve.`, isTest);
+             const assignToSeller = async (sellerId: string, sellerName: string, storeId: string | null) => {
+               await updateClient({
+                 assigned_seller_id: sellerId,
+                 store_id: storeId,
+                 status: 'em_atendimento',
+                 claimed_at: new Date().toISOString(),
+                 triaging: false,
+                 triage_step: null,
+               });
+               if (storeId) {
+                 await supabase.from("leads").insert({
+                   client_name: client.name,
+                   client_phone: client.phone,
+                   source: "whatsapp",
+                   stage: "abordagem",
+                   store_id: storeId,
+                   assigned_to: sellerId,
+                 });
+               }
+               await sendWhatsAppMessage(cleanPhone, `Perfeito! Você será atendido(a) por *${sellerName}*. Em instantes ele(a) entrará em contato. ✅`, isTest);
+             };
+
+             if (step === 'ask_code') {
+               const codeMatch = trimmed.match(/^\d{3,10}$/);
+               if (codeMatch) {
+                 const { data: sellerByCode } = await supabase
+                   .from("sellers").select("id, name, store_id")
+                   .eq("code", trimmed).maybeSingle();
+                 if (sellerByCode) {
+                   await assignToSeller(sellerByCode.id, sellerByCode.name, sellerByCode.store_id);
+                 } else {
+                   await sendWhatsAppMessage(cleanPhone, `Não localizei esse código. Verifique e digite novamente, ou responda *N* para continuar sem código.`, isTest);
+                 }
+               } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
+                 // Move to ask_store
+                 const { data: stores } = await supabase.from("stores").select("id, name").order("name");
+                 const list = (stores || []).map((s, i) => `${i + 1}. ${s.name}`).join("\n");
+                 await updateClient({ triage_step: 'ask_store' });
+                 await sendWhatsAppMessage(cleanPhone, `Sem problemas! Você tem alguma *loja de preferência*?\n\n${list}\n\nResponda com o *número* ou *nome* da loja, ou digite *N* para qualquer unidade.`, isTest);
+               } else {
+                 await sendWhatsAppMessage(cleanPhone, `Por favor, digite seu *código de vendedor* (ex: 1023) ou responda *N* se não tiver.`, isTest);
+               }
+             } else if (step === 'ask_store') {
+               const { data: stores } = await supabase.from("stores").select("id, name").order("name");
+               if (lower === 'n' || lower === 'nao' || lower === 'não') {
+                 await finishWithStore(null);
+               } else {
+                 let chosen = null as null | { id: string; name: string };
+                 const numMatch = trimmed.match(/^\d+$/);
+                 if (numMatch && stores) {
+                   const idx = parseInt(trimmed, 10) - 1;
+                   if (idx >= 0 && idx < stores.length) chosen = stores[idx];
+                 }
+                 if (!chosen && stores) {
+                   chosen = stores.find(s => lower.includes(s.name.toLowerCase())) || null;
+                 }
+                 if (chosen) {
+                   // Now ask if they have a specific seller in that store
+                   const { data: storeSellers } = await supabase
+                     .from("sellers").select("id, name, code")
+                     .eq("store_id", chosen.id).order("name");
+                   const sellerList = (storeSellers || [])
+                     .map(s => `• ${s.code ? `[${s.code}] ` : ''}${s.name}`).join("\n");
+                   await updateClient({ store_id: chosen.id, triage_step: 'ask_seller' });
+                   await sendWhatsAppMessage(cleanPhone, `Você escolheu *${chosen.name}*. Possui um *vendedor específico* nessa loja?\n\n${sellerList || '(sem vendedores cadastrados)'}\n\nDigite o *código* do vendedor, ou *N* para o próximo disponível.`, isTest);
+                 } else {
+                   const list = (stores || []).map((s, i) => `${i + 1}. ${s.name}`).join("\n");
+                   await sendWhatsAppMessage(cleanPhone, `Não identifiquei a loja. Por favor escolha:\n\n${list}\n\nResponda com o número ou nome, ou *N* para qualquer unidade.`, isTest);
+                 }
+               }
+             } else if (step === 'ask_seller') {
+               const storeId = client.store_id;
+               if (lower === 'n' || lower === 'nao' || lower === 'não') {
+                 // Pick first active seller from store
+                 const { data: candidates } = await supabase
+                   .from("sellers").select("id, name, store_id, user_id")
+                   .eq("store_id", storeId).order("leads_count", { ascending: true });
+                 let picked: any = null;
+                 if (candidates && candidates.length > 0) {
+                   for (const c of candidates) {
+                     if (!c.user_id) { picked = c; break; }
+                     const { data: prof } = await supabase
+                       .from("profiles").select("is_active").eq("user_id", c.user_id).maybeSingle();
+                     if (!prof || prof.is_active !== false) { picked = c; break; }
+                   }
+                   if (!picked) picked = candidates[0];
+                 }
+                 if (picked) {
+                   await assignToSeller(picked.id, picked.name, storeId);
+                 } else {
+                   const { data: store } = await supabase.from("stores").select("name").eq("id", storeId).maybeSingle();
+                   await finishWithStore(storeId, store?.name);
+                 }
+               } else {
+                 const codeMatch = trimmed.match(/^\d{3,10}$/);
+                 if (codeMatch) {
+                   const { data: sellerByCode } = await supabase
+                     .from("sellers").select("id, name, store_id")
+                     .eq("code", trimmed).maybeSingle();
+                   if (sellerByCode) {
+                     await assignToSeller(sellerByCode.id, sellerByCode.name, sellerByCode.store_id || storeId);
+                   } else {
+                     await sendWhatsAppMessage(cleanPhone, `Código não encontrado. Digite um código válido ou *N* para o próximo disponível.`, isTest);
+                   }
+                 } else {
+                   await sendWhatsAppMessage(cleanPhone, `Não entendi. Digite o *código* do vendedor (ex: 1023) ou *N* para o próximo disponível.`, isTest);
+                 }
+               }
              } else {
-                await sendWhatsAppMessage(cleanPhone, `Desculpe, não entendi. Por favor, digite o nome de uma de nossas lojas ou "Não" para qualquer unidade.`, isTest);
+               // Unknown step — restart
+               await updateClient({ triage_step: 'ask_code' });
+               await sendWhatsAppMessage(cleanPhone, `Olá novamente! Você possui o *código* de um vendedor? Digite o código ou *N* para continuar.`, isTest);
              }
            } else {
             // Update existing client
