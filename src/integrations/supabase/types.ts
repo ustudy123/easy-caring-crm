@@ -818,10 +818,14 @@ export type Database = {
       assign_client_by_seller_code: {
         Args: { _code: string; _phone: string }
         Returns: {
-          seller_id: string
-          seller_name: string
+          id: string
+          name: string
           store_id: string
         }[]
+      }
+      assign_client_with_redirection: {
+        Args: { _phone: string; _seller_id: string }
+        Returns: Json
       }
       claim_whatsapp_client: {
         Args: { _fallback_name?: string; _phone: string }
@@ -832,7 +836,7 @@ export type Database = {
         }[]
       }
       get_next_seller_for_distribution: {
-        Args: { _store_id?: string }
+        Args: { _store_id: string }
         Returns: {
           avatar: string | null
           code: string | null
