@@ -218,6 +218,35 @@ serve(async (req) => {
  
         // If incoming message (not from me, not group), handle lead distribution logic
         if (!isFromMe && cleanPhone && !isGroup) {
+          // PRIORITY: Check if message contains a seller code (ramal). If matched, route directly.
+          const codeMatch = text.match(/\b(\d{3,10})\b/);
+          if (codeMatch) {
+            const candidateCode = codeMatch[1];
+            const { data: sellerByCode } = await supabase
+              .from("sellers")
+              .select("id, name")
+              .eq("code", candidateCode)
+              .maybeSingle();
+            if (sellerByCode) {
+              const { data: assignResult, error: assignErr } = await supabase.rpc("assign_client_by_seller_code", {
+                _phone: cleanPhone,
+                _code: candidateCode,
+              });
+              if (!assignErr) {
+                console.log(`Client ${cleanPhone} routed to seller ${sellerByCode.name} via code ${candidateCode}`);
+                await sendWhatsAppMessage(
+                  cleanPhone,
+                  `Perfeito! Você será atendido(a) por ${sellerByCode.name}. Em instantes ele(a) entrará em contato. ✅`,
+                  isTest
+                );
+                return new Response(JSON.stringify({ success: true, action: "routed_by_code", seller: sellerByCode.name }), {
+                  status: 200,
+                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+              }
+            }
+          }
+
           const { data: client, error: clientError } = await supabase
             .from("clients")
             .select("*")
