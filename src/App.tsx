@@ -1,3 +1,4 @@
+import { UrgencyAlertPopup } from "@/components/UrgencyAlertPopup";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -26,10 +27,11 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <RoleProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+         <RoleProvider>
+           <Toaster />
+           <Sonner />
+           <UrgencyAlertPopup />
+           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
