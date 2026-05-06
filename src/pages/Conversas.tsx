@@ -148,6 +148,7 @@ const mockContactNames: Record<string, string> = {
     const { isAdmin, sellerId, storeId, role } = useRole();
     const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
     const [clients, setClients] = useState<any[]>([]);
+    const [stores, setStores] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState<TabType>('minhas');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -178,14 +179,15 @@ const mockContactNames: Record<string, string> = {
    const [selectedTransferSeller, setSelectedTransferSeller] = useState<string>("");
    const [isTransferring, setIsTransferring] = useState(false);
 
-   const fetchData = useCallback(async () => {
-     setLoading(true);
-     try {
-       const [msgsRes, clientsRes, sellersRes] = await Promise.all([
-          supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }),
-          supabase.from("clients").select("*, alert_status"),
-          supabase.from("sellers").select("id, name, store_id, is_active")
-       ]);
+    const fetchData = useCallback(async () => {
+      setLoading(true);
+      try {
+        const [msgsRes, clientsRes, sellersRes, storesRes] = await Promise.all([
+           supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }),
+           supabase.from("clients").select("*, alert_status"),
+           supabase.from("sellers").select("id, name, store_id, is_active"),
+           supabase.from("stores").select("id, name")
+        ]);
  
        if (msgsRes.data && msgsRes.data.length > 0) {
          setMessages(msgsRes.data as WhatsAppMessage[]);
@@ -199,9 +201,12 @@ const mockContactNames: Record<string, string> = {
          setClients(clientsRes.data);
        }
 
-       if (sellersRes.data) {
-         setSellers(sellersRes.data);
-       }
+        if (sellersRes.data) {
+          setSellers(sellersRes.data);
+        }
+        if (storesRes.data) {
+          setStores(storesRes.data);
+        }
      } catch (err) {
        console.error("Erro ao carregar dados:", err);
      } finally {
@@ -864,9 +869,14 @@ const mockContactNames: Record<string, string> = {
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 truncate">
                               <span className="text-[16px] font-normal text-foreground truncate">
-                                {name}
-                              </span>
-                              {conv.alert_status === 'critical' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" title="ALERTA CRÍTICO - ADMIN" />}
+                                 {name}
+                               </span>
+                               {conv.store_id && (
+                                 <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium shrink-0">
+                                   {stores.find(s => s.id === conv.store_id)?.name || 'Loja'}
+                                 </span>
+                               )}
+                               {conv.alert_status === 'critical' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" title="ALERTA CRÍTICO - ADMIN" />}
                               {conv.alert_status === 'red' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" title="Alerta Crítico" />}
                               {conv.alert_status === 'yellow' && <div className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" title="Alerta de Demora" />}
                             </div>
