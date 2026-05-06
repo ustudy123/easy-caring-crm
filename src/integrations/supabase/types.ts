@@ -566,6 +566,7 @@ export type Database = {
           created_at: string | null
           from_seller_id: string | null
           id: string
+          performed_by: string | null
           reason: string | null
           to_seller_id: string | null
         }
@@ -574,6 +575,7 @@ export type Database = {
           created_at?: string | null
           from_seller_id?: string | null
           id?: string
+          performed_by?: string | null
           reason?: string | null
           to_seller_id?: string | null
         }
@@ -582,6 +584,7 @@ export type Database = {
           created_at?: string | null
           from_seller_id?: string | null
           id?: string
+          performed_by?: string | null
           reason?: string | null
           to_seller_id?: string | null
         }
@@ -597,6 +600,13 @@ export type Database = {
             foreignKeyName: "service_transfers_from_seller_id_fkey"
             columns: ["from_seller_id"]
             isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_transfers_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -604,7 +614,7 @@ export type Database = {
             foreignKeyName: "service_transfers_to_seller_id_fkey"
             columns: ["to_seller_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "sellers"
             referencedColumns: ["id"]
           },
         ]
