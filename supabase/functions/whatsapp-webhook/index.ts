@@ -312,7 +312,7 @@ serve(async (req) => {
                }).eq("id", client.id);
              };
 
-              const distributeLead = async (storeId: string | null) => {
+               const distributeLead = async (storeId: string | null, reason: string = 'queue_to_seller') => {
                 // Call the new RPC for round-robin distribution
                 const { data: nextSeller, error: rpcError } = await supabase.rpc("get_next_seller_for_distribution", {
                   _store_id: storeId
@@ -321,6 +321,16 @@ serve(async (req) => {
                 if (!rpcError && nextSeller && nextSeller.length > 0) {
                   const picked = nextSeller[0];
                   await assignToSeller(picked.id, picked.name, picked.store_id);
+                  
+                  // Log queue assignment to redirection_history
+                  await supabase.from("redirection_history").insert({
+                    client_id: client.id,
+                    to_seller_id: picked.id,
+                    redirection_type: 'queue_to_seller',
+                    reason: storeId ? 'Distribuído da fila da loja' : 'Distribuído da fila geral',
+                    store_id: storeId
+                  });
+
                   // Mark as assigned to update last_assigned_at
                   await supabase.rpc("mark_seller_assigned", { _seller_id: picked.id });
                   return true;

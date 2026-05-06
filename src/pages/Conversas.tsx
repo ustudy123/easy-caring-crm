@@ -248,7 +248,7 @@ const mockContactNames: Record<string, string> = {
 
        if (updateError) throw updateError;
 
-       // 2. Record the transfer history
+        // 2. Record the transfer history (legacy)
        const { error: historyError } = await supabase
          .from("service_transfers")
          .insert({
@@ -263,6 +263,19 @@ const mockContactNames: Record<string, string> = {
          console.error("Erro ao registrar histórico de transferência:", historyError);
          // We don't fail the whole operation if history record fails, but we log it
        }
+
+        // 3. Record in unified redirection history
+        await supabase
+          .from("redirection_history")
+          .insert({
+            client_id: currentClient?.id,
+            from_seller_id: currentClient?.assigned_seller_id,
+            to_seller_id: selectedTransferSeller,
+            redirection_type: 'manual_transfer',
+            reason: transferReason || 'Transferência manual',
+            performed_by: profile.id,
+            store_id: targetSeller?.store_id || null
+          });
 
        toast.success(`Conversa transferida para ${targetSeller?.name || 'o vendedor'}`);
        setIsTransferModalOpen(false);
