@@ -277,61 +277,56 @@ const mockContactNames: Record<string, string> = {
      return () => { supabase.removeChannel(channel); };
    }, [fetchData]);
 
-   const conversations: Conversation[] = useMemo(() => {
-     const map = new Map<string, Conversation>();
-     messages.forEach((msg) => {
-       const phone = msg.phone;
-       if (!map.has(phone)) {
-         const client = clients.find(c => c.phone === phone);
-         map.set(phone, { 
-           phone, 
-           lastMessage: "", 
-           lastTimestamp: "", 
-           unreadCount: 0, 
-           messages: [],
-           assigned_seller_id: client?.assigned_seller_id,
-           store_id: client?.store_id,
+    const conversations: Conversation[] = useMemo(() => {
+      const map = new Map<string, Conversation>();
+      messages.forEach((msg) => {
+        const phone = msg.phone;
+        if (!map.has(phone)) {
+          const client = clients.find(c => c.phone === phone);
+          map.set(phone, { 
+            phone, 
+            lastMessage: "", 
+            lastTimestamp: "", 
+            unreadCount: 0, 
+            messages: [],
+            assigned_seller_id: client?.assigned_seller_id,
+            store_id: client?.store_id,
             status: client?.status,
             alert_status: client?.alert_status,
-          last_message_from_client_at: client?.last_message_from_client_at
-         });
-       }
-       const conv = map.get(phone)!;
-       conv.messages.push(msg);
-       
-       const currentTs = new Date(msg.timestamp || msg.created_at || 0).getTime();
-       const lastTs = new Date(conv.lastTimestamp || 0).getTime();
- 
-       if (!conv.lastTimestamp || currentTs >= lastTs) {
-         conv.lastTimestamp = msg.timestamp || msg.created_at || "";
-         conv.lastMessage = msg.body || "";
-       }
-       
-       if (!msg.is_from_me && !msg.is_read) conv.unreadCount++;
-     });
-     return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
+            last_message_from_client_at: client?.last_message_from_client_at
+          });
+        }
+        const conv = map.get(phone)!;
+        conv.messages.push(msg);
+        
+        const currentTs = new Date(msg.timestamp || msg.created_at || 0).getTime();
+        const lastTs = new Date(conv.lastTimestamp || 0).getTime();
+  
+        if (!conv.lastTimestamp || currentTs >= lastTs) {
+          conv.lastTimestamp = msg.timestamp || msg.created_at || "";
+          conv.lastMessage = msg.body || "";
+        }
+        
+        if (!msg.is_from_me && !msg.is_read) conv.unreadCount++;
+      });
+      return Array.from(map.values());
     }, [messages, clients]);
 
     const filteredConversations = useMemo(() => {
-      const STALE_TIME = 15 * 60 * 1000;
-      const now = new Date().getTime();
-
-      return conversations.filter((c) => {
-        const isStale = c.last_message_from_client_at && (now - new Date(c.last_message_from_client_at).getTime() > STALE_TIME);
-        
-        // Tab filtering
+      let filtered = conversations.filter((c) => {
         const isMine = c.assigned_seller_id === sellerId;
 
+        // Strict segmentation based on user requirements
         if (activeTab === 'minhas') {
           if (!isMine) return false;
         } else if (activeTab === 'loja') {
-          if (c.store_id !== storeId) return false;
-          if (c.assigned_seller_id && !isStale) return false;
-          if (isMine) return false;
+          // Linked to a specific store but not yet assigned to a seller
+          if (!c.store_id || c.assigned_seller_id) return false;
+          // For managers/sellers, only show their store's leads. Admins see all store leads.
+          if (!isAdmin && c.store_id !== storeId) return false;
         } else if (activeTab === 'geral') {
-          if (!!c.store_id) return false;
-          if (c.assigned_seller_id && !isStale) return false;
-          if (isMine) return false;
+          // Leads with no store and no seller
+          if (c.store_id || c.assigned_seller_id) return false;
         }
   
         // Search filtering
@@ -341,7 +336,20 @@ const mockContactNames: Record<string, string> = {
                c.lastMessage.toLowerCase().includes(searchLower) || 
                name.toLowerCase().includes(searchLower);
       });
-    }, [conversations, contactNames, search, activeTab, sellerId, storeId]);
+
+      // Sorting logic
+      if (activeTab === 'geral' || activeTab === 'loja') {
+        // For general/store leads, sort by oldest message first (FIFO distribution order)
+        return filtered.sort((a, b) => {
+          const aTs = a.last_message_from_client_at || a.lastTimestamp || "0";
+          const bTs = b.last_message_from_client_at || b.lastTimestamp || "0";
+          return aTs.localeCompare(bTs);
+        });
+      }
+      
+      // Default sort (Minhas): newest first
+      return filtered.sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
+    }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin]);
 
   // Monitor conversations for stale messages to trigger alert popup
   useEffect(() => {
