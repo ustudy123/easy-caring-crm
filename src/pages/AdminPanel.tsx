@@ -39,6 +39,9 @@ interface AdminUserRow {
   store_name: string | null;
   is_active: boolean;
   is_available: boolean;
+  status: string | null;
+  substitute_id: string | null;
+  substitute_name: string | null;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -402,6 +405,8 @@ function UsersTab() {
   const [editCode, setEditCode] = useState<string>("");
   const [editIsActive, setEditIsActive] = useState<boolean>(true);
   const [editIsAvailable, setEditIsAvailable] = useState<boolean>(true);
+  const [editStatus, setEditStatus] = useState<string>("active");
+  const [editSubstituteId, setEditSubstituteId] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -425,6 +430,8 @@ function UsersTab() {
     setEditCode(u.seller_code || "");
     setEditIsActive(u.is_active ?? true);
     setEditIsAvailable(u.is_available ?? true);
+    setEditStatus(u.status || "active");
+    setEditSubstituteId(u.substitute_id || "");
   };
 
   const handleSave = async () => {
@@ -442,7 +449,9 @@ function UsersTab() {
       _seller_code: editRole === "vendedor" ? (editCode.trim() || null) : null,
       _is_active: editIsActive,
       _is_available: editIsAvailable,
-    } as any);
+      _status: editStatus,
+      _substitute_id: editSubstituteId || null,
+    });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Função atribuída!");
@@ -472,9 +481,9 @@ function UsersTab() {
             <TableRow>
               <TableHead>E-mail</TableHead>
               <TableHead>Nome</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Código</TableHead>
-              <TableHead>Ativo</TableHead>
-              <TableHead>Disponível</TableHead>
+              <TableHead>Redirecionar para</TableHead>
               <TableHead>Função</TableHead>
               <TableHead>Loja</TableHead>
               <TableHead className="w-32">Ações</TableHead>
@@ -486,19 +495,31 @@ function UsersTab() {
                 <TableCell className="font-medium">{u.email}</TableCell>
                 <TableCell>{u.seller_name || u.display_name || "—"}</TableCell>
                 <TableCell>
+                  <Badge 
+                    variant={u.status === 'active' ? "success" : "secondary" as any} 
+                    className={
+                      u.status === 'active' ? "bg-green-100 text-green-700" : 
+                      u.status === 'vacation' ? "bg-orange-100 text-orange-700" : 
+                      u.status === 'away' ? "bg-yellow-100 text-yellow-700" : ""
+                    }
+                  >
+                    {u.status === 'active' ? 'Ativo' : 
+                     u.status === 'inactive' ? 'Inativo' : 
+                     u.status === 'vacation' ? 'Em férias' : 
+                     u.status === 'away' ? 'Ausente' : 'Ativo'}
+                  </Badge>
+                </TableCell>
+                <TableCell>
                   {u.seller_code ? (
                     <Badge variant="outline" className="font-mono">{u.seller_code}</Badge>
                   ) : "—"}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={u.is_active ? "success" : "secondary" as any} className={u.is_active ? "bg-green-100 text-green-700" : ""}>
-                    {u.is_active ? "Sim" : "Não"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={u.is_available ? "success" : "secondary" as any} className={u.is_available ? "bg-blue-100 text-blue-700" : ""}>
-                    {u.is_available ? "Sim" : "Não"}
-                  </Badge>
+                  {u.substitute_name ? (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <UserCheck className="h-3 w-3" /> {u.substitute_name}
+                    </div>
+                  ) : "—"}
                 </TableCell>
                 <TableCell>
                   {u.role ? (
@@ -599,6 +620,39 @@ function UsersTab() {
                         className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                       />
                       <Label htmlFor="isAvailable" className="cursor-pointer">Disponível para Leads</Label>
+                    </div>
+                  </div>
+                )}
+
+                {editRole === "vendedor" && (
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div>
+                      <Label>Status do Vendedor</Label>
+                      <Select value={editStatus} onValueChange={setEditStatus}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Ativo</SelectItem>
+                          <SelectItem value="inactive">Inativo</SelectItem>
+                          <SelectItem value="vacation">Em férias</SelectItem>
+                          <SelectItem value="away">Ausente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Substituto Responsável</Label>
+                      <Select value={editSubstituteId} onValueChange={setEditSubstituteId}>
+                        <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Nenhum (Volta para fila)</SelectItem>
+                          {users
+                            .filter(u => u.seller_id && u.user_id !== editing.user_id && u.role === 'vendedor')
+                            .map(u => (
+                              <SelectItem key={u.seller_id} value={u.seller_id!}>
+                                {u.seller_name || u.display_name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 )}
