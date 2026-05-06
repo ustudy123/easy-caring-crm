@@ -30,7 +30,6 @@ const App = () => (
          <RoleProvider>
            <Toaster />
            <Sonner />
-           <UrgencyAlertPopup />
            <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -38,6 +37,7 @@ const App = () => (
               <Route path="*" element={
                 <ProtectedRoute>
                   <CrmProvider>
+                    <UrgencyAlertPopup />
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/kanban" element={<Kanban />} />
