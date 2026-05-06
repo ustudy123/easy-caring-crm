@@ -439,6 +439,7 @@ export type Database = {
       sellers: {
         Row: {
           avatar: string | null
+          code: string | null
           conversions: number
           created_at: string
           id: string
@@ -451,6 +452,7 @@ export type Database = {
         }
         Insert: {
           avatar?: string | null
+          code?: string | null
           conversions?: number
           created_at?: string
           id?: string
@@ -463,6 +465,7 @@ export type Database = {
         }
         Update: {
           avatar?: string | null
+          code?: string | null
           conversions?: number
           created_at?: string
           id?: string
@@ -711,6 +714,7 @@ export type Database = {
       admin_assign_user_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
+          _seller_code?: string
           _seller_name?: string
           _store_id?: string
           _user_id: string
@@ -724,6 +728,7 @@ export type Database = {
           display_name: string
           email: string
           role: Database["public"]["Enums"]["app_role"]
+          seller_code: string
           seller_id: string
           seller_name: string
           store_id: string
@@ -732,6 +737,14 @@ export type Database = {
         }[]
       }
       admin_revoke_user_role: { Args: { _user_id: string }; Returns: undefined }
+      assign_client_by_seller_code: {
+        Args: { _code: string; _phone: string }
+        Returns: {
+          seller_id: string
+          seller_name: string
+          store_id: string
+        }[]
+      }
       claim_whatsapp_client: {
         Args: { _fallback_name?: string; _phone: string }
         Returns: {

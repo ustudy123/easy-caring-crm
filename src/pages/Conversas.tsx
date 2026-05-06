@@ -185,7 +185,7 @@ const mockContactNames: Record<string, string> = {
         const [msgsRes, clientsRes, sellersRes, storesRes] = await Promise.all([
            supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }),
            supabase.from("clients").select("*, alert_status"),
-           supabase.from("sellers").select("id, name, store_id, is_active"),
+           supabase.from("sellers").select("id, name, code, store_id, is_active"),
            supabase.from("stores").select("id, name")
         ]);
  
@@ -1344,7 +1344,7 @@ const mockContactNames: Record<string, string> = {
                 .filter(s => s.id !== sellerId && s.is_active !== false)
                 .map(seller => (
                   <SelectItem key={seller.id} value={seller.id}>
-                    {seller.name} {seller.store_id ? `(Loja)` : ''}
+                    {seller.code ? `[${seller.code}] ` : ''}{seller.name}
                   </SelectItem>
                 ))}
             </SelectContent>
