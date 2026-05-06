@@ -488,6 +488,78 @@ export type Database = {
           },
         ]
       }
+      redirection_history: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          from_seller_id: string | null
+          id: string
+          performed_by: string | null
+          reason: string | null
+          redirection_type: string
+          store_id: string | null
+          to_seller_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          from_seller_id?: string | null
+          id?: string
+          performed_by?: string | null
+          reason?: string | null
+          redirection_type: string
+          store_id?: string | null
+          to_seller_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          from_seller_id?: string | null
+          id?: string
+          performed_by?: string | null
+          reason?: string | null
+          redirection_type?: string
+          store_id?: string | null
+          to_seller_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redirection_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redirection_history_from_seller_id_fkey"
+            columns: ["from_seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redirection_history_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redirection_history_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redirection_history_to_seller_id_fkey"
+            columns: ["to_seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sellers: {
         Row: {
           avatar: string | null
