@@ -222,11 +222,11 @@ export default function Kanban() {
                       <span className="text-[12px] sm:text-[13px] font-bold truncate max-w-[120px] sm:max-w-none">{stage.label}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      {alertCount > 0 && (
-                        <Badge variant="destructive" className="text-[9px] font-bold px-1.5 py-0 h-5 animate-urgency-pulse rounded-full">
-                          <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />{alertCount}
-                        </Badge>
-                      )}
+                       {alertCount > 0 && (
+                         <Badge variant="destructive" className="text-[11px] font-black px-2 py-0.5 h-6 animate-urgency-pulse rounded-full shadow-lg ring-2 ring-background">
+                           <AlertTriangle className="h-3 w-3 mr-1" />{alertCount}
+                         </Badge>
+                       )}
                       <Badge variant="secondary" className="text-[10px] font-bold h-5 rounded-full">{stageLeads.length}</Badge>
                     </div>
                   </div>
