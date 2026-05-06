@@ -363,9 +363,16 @@ serve(async (req) => {
                } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
                  // Move to ask_store
                  const { data: stores } = await supabase.from("stores").select("id, name").order("name");
-                 const list = (stores || []).map((s, i) => `${i + 1}. ${s.name}`).join("\n");
-                 await updateClient({ triage_step: 'ask_store' });
-                 await sendWhatsAppMessage(cleanPhone, `Sem problemas! Você tem alguma *loja de preferência*?\n\n${list}\n\nResponda com o *número* ou *nome* da loja, ou digite *N* para qualquer unidade.`, isTest);
+                  const storeList = (stores || []).map((s, i) => `${i + 1} - ${s.name}`).join("\n");
+                  const generalOptionIndex = (stores || []).length + 1;
+                  const fullList = `${storeList}\n${generalOptionIndex} - Ainda não sei / Quero atendimento geral`;
+                  
+                  await updateClient({ triage_step: 'ask_store' });
+                  await sendWhatsAppMessage(
+                    cleanPhone, 
+                    `Para direcionarmos melhor seu atendimento, escolha a *loja ou região* mais próxima de você:\n\n${fullList}\n\nDigite apenas o *número* da opção desejada.`, 
+                    isTest
+                  );
                } else {
                  await sendWhatsAppMessage(cleanPhone, `Por favor, digite seu *código de vendedor* (ex: 1023) ou responda *N* se não tiver.`, isTest);
                }
