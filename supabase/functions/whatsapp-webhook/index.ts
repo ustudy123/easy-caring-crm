@@ -378,14 +378,16 @@ serve(async (req) => {
                }
              } else if (step === 'ask_store') {
                const { data: stores } = await supabase.from("stores").select("id, name").order("name");
-               if (lower === 'n' || lower === 'nao' || lower === 'não') {
+                const numMatch = trimmed.match(/^\d+$/);
+                const selectedIndex = numMatch ? parseInt(trimmed, 10) : -1;
+                const generalOptionIndex = (stores || []).length + 1;
+
+                if (lower === 'n' || lower === 'nao' || lower === 'não' || selectedIndex === generalOptionIndex) {
                  await finishWithStore(null);
                } else {
                  let chosen = null as null | { id: string; name: string };
-                 const numMatch = trimmed.match(/^\d+$/);
-                 if (numMatch && stores) {
-                   const idx = parseInt(trimmed, 10) - 1;
-                   if (idx >= 0 && idx < stores.length) chosen = stores[idx];
+                  if (selectedIndex > 0 && stores && selectedIndex <= stores.length) {
+                    chosen = stores[selectedIndex - 1];
                  }
                  if (!chosen && stores) {
                    chosen = stores.find(s => lower.includes(s.name.toLowerCase())) || null;
