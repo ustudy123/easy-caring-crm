@@ -298,7 +298,7 @@ serve(async (req) => {
                const { data: stores } = await supabase.from("stores").select("name");
                const storeList = stores?.map((s, i) => `${i + 1}. ${s.name}`).join("\n") || "";
                
-               const welcomeMsg = `Olá! Seja bem-vindo(a). Para melhor atendê-lo(a), você tem preferência por alguma de nossas lojas?\n\n${storeList}\n\nResponda com o nome da loja ou diga "Não" para ser atendido por qualquer unidade.`;
+                const welcomeMsg = `Olá! Seja bem-vindo(a). Para melhor atendê-lo(a), você tem preferência por alguma de nossas lojas?\n\n${storeList}\n\nResponda com o nome da loja ou diga "Não" para ser atendido por qualquer unidade.\n\n💡 Se você já tem o *código do seu vendedor*, basta digitá-lo (ex: 1023) que encaminhamos direto para ele.`;
                await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest);
              }
            } else if (client.triaging) {
