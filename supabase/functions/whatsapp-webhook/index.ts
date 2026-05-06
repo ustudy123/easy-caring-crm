@@ -392,19 +392,29 @@ serve(async (req) => {
                  if (!chosen && stores) {
                    chosen = stores.find(s => lower.includes(s.name.toLowerCase())) || null;
                  }
-                 if (chosen) {
-                   // Now ask if they have a specific seller in that store
-                   const { data: storeSellers } = await supabase
-                     .from("sellers").select("id, name, code")
-                     .eq("store_id", chosen.id).order("name");
-                   const sellerList = (storeSellers || [])
-                     .map(s => `• ${s.code ? `[${s.code}] ` : ''}${s.name}`).join("\n");
-                   await updateClient({ store_id: chosen.id, triage_step: 'ask_seller' });
-                   await sendWhatsAppMessage(cleanPhone, `Você escolheu *${chosen.name}*. Possui um *vendedor específico* nessa loja?\n\n${sellerList || '(sem vendedores cadastrados)'}\n\nDigite o *código* do vendedor, ou *N* para o próximo disponível.`, isTest);
-                 } else {
-                   const list = (stores || []).map((s, i) => `${i + 1}. ${s.name}`).join("\n");
-                   await sendWhatsAppMessage(cleanPhone, `Não identifiquei a loja. Por favor escolha:\n\n${list}\n\nResponda com o número ou nome, ou *N* para qualquer unidade.`, isTest);
-                 }
+                  if (chosen) {
+                    // Now ask if they have a specific seller in that store
+                    const { data: storeSellers } = await supabase
+                      .from("sellers").select("id, name, code")
+                      .eq("store_id", chosen.id).order("name");
+                    const sellerList = (storeSellers || [])
+                      .map(s => `👉 Código *${s.code || 'S/C'}* — ${s.name}`).join("\n");
+                    
+                    await updateClient({ store_id: chosen.id, triage_step: 'ask_seller' });
+                    
+                    const msg = `Você escolheu *${chosen.name}*. Possui um *vendedor específico* nessa loja?\n\n${sellerList || '(Nenhum vendedor disponível no momento)'}\n\n👉 Se sim, digite o *código* do vendedor.\n👉 Se não, responda com *N* para ser atendido pelo próximo disponível.`;
+                    await sendWhatsAppMessage(cleanPhone, msg, isTest);
+                  } else {
+                    const storeList = (stores || []).map((s, i) => `${i + 1} - ${s.name}`).join("\n");
+                    const generalOptionIndex = (stores || []).length + 1;
+                    const fullList = `${storeList}\n${generalOptionIndex} - Ainda não sei / Quero atendimento geral`;
+                    
+                    await sendWhatsAppMessage(
+                      cleanPhone, 
+                      `Opção inválida. Por favor, escolha uma das opções abaixo (digite apenas o número):\n\n${fullList}`, 
+                      isTest
+                    );
+                  }
                }
              } else if (step === 'ask_seller') {
                const storeId = client.store_id;
