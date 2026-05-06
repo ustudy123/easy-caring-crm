@@ -15,6 +15,8 @@ import { useRole } from "@/contexts/RoleContext";
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Label } from "@/components/ui/label";
 const ChatMessageBody = memo(({ body, chatSearch, isCurrentOccurrence }: { body: string | null; chatSearch: string; isCurrentOccurrence: boolean }) => {
   const content = useMemo(() => {
     if (!chatSearch || chatSearch.length < 2 || !body) return body || "";
@@ -177,6 +179,7 @@ const mockContactNames: Record<string, string> = {
    const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
    const [sellers, setSellers] = useState<any[]>([]);
    const [selectedTransferSeller, setSelectedTransferSeller] = useState<string>("");
+  const [transferReason, setTransferReason] = useState("");
    const [isTransferring, setIsTransferring] = useState(false);
 
     const fetchData = useCallback(async () => {
@@ -218,8 +221,22 @@ const mockContactNames: Record<string, string> = {
      setIsTransferring(true);
      try {
        const targetSeller = sellers.find(s => s.id === selectedTransferSeller);
+       const currentClient = clients.find(c => c.phone === selectedPhone);
+       const { data: { user } } = await supabase.auth.getUser();
        
-       const { error } = await supabase
+       if (!user) throw new Error("Usuário não autenticado");
+
+       // Get profile ID for the current user
+       const { data: profile } = await supabase
+         .from("profiles")
+         .select("id")
+         .eq("user_id", user.id)
+         .single();
+
+       if (!profile) throw new Error("Perfil não encontrado");
+
+       // 1. Update the client's assigned seller
+       const { error: updateError } = await supabase
          .from("clients")
          .update({ 
            assigned_seller_id: selectedTransferSeller,
@@ -229,10 +246,28 @@ const mockContactNames: Record<string, string> = {
          })
          .eq("phone", selectedPhone);
 
-       if (error) throw error;
+       if (updateError) throw updateError;
+
+       // 2. Record the transfer history
+       const { error: historyError } = await supabase
+         .from("service_transfers")
+         .insert({
+           client_id: currentClient?.id,
+           from_seller_id: currentClient?.assigned_seller_id,
+           to_seller_id: selectedTransferSeller,
+           reason: transferReason,
+           performed_by: profile.id
+         });
+
+       if (historyError) {
+         console.error("Erro ao registrar histórico de transferência:", historyError);
+         // We don't fail the whole operation if history record fails, but we log it
+       }
 
        toast.success(`Conversa transferida para ${targetSeller?.name || 'o vendedor'}`);
        setIsTransferModalOpen(false);
+       setTransferReason("");
+       setSelectedTransferSeller("");
        fetchData();
      } catch (err) {
        console.error("Erro ao transferir conversa:", err);
@@ -981,7 +1016,7 @@ const mockContactNames: Record<string, string> = {
                            {isClaiming ? (<span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 animate-spin" /> Processando...</span>) : (<span className="flex items-center gap-1.5"><UserCheck className="h-4 w-4" /> {isSelectedStale && selectedConversation?.assigned_seller_id ? "Retomar Atendimento" : "Atender Cliente"}</span>)}
                          </Button>
                        )}
-                        {(isAdmin || role === 'gerente') && (
+                        (isAdmin || role === 'gerente' || selectedConversation?.assigned_seller_id === sellerId) && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -1335,20 +1370,34 @@ const mockContactNames: Record<string, string> = {
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <Select value={selectedTransferSeller} onValueChange={setSelectedTransferSeller}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione um vendedor" />
-            </SelectTrigger>
-            <SelectContent>
-              {sellers
-                .filter(s => s.id !== sellerId && s.is_active !== false)
-                .map(seller => (
-                  <SelectItem key={seller.id} value={seller.id}>
-                    {seller.code ? `[${seller.code}] ` : ''}{seller.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Label htmlFor="seller">Novo Responsável</Label>
+            <Select value={selectedTransferSeller} onValueChange={setSelectedTransferSeller}>
+              <SelectTrigger id="seller">
+                <SelectValue placeholder="Selecione um vendedor" />
+              </SelectTrigger>
+              <SelectContent>
+                {sellers
+                  .filter(s => s.id !== sellerId && s.is_active !== false)
+                  .map(seller => (
+                    <SelectItem key={seller.id} value={seller.id}>
+                      {seller.code ? `[${seller.code}] ` : ''}{seller.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="reason">Motivo da Transferência</Label>
+            <Textarea 
+              id="reason"
+              placeholder="Descreva o motivo da transferência (opcional)"
+              value={transferReason}
+              onChange={(e) => setTransferReason(e.target.value)}
+              className="resize-none"
+              rows={3}
+            />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setIsTransferModalOpen(false)}>
