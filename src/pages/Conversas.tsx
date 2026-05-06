@@ -321,16 +321,16 @@ const mockContactNames: Record<string, string> = {
       let filtered = conversations.filter((c) => {
         const isMine = c.assigned_seller_id === sellerId;
 
-        // Strict segmentation based on user requirements
+        // Segmentação baseada nos requisitos do usuário
         if (activeTab === 'minhas') {
+          // Clientes já vinculados diretamente ao vendedor
           if (!isMine) return false;
         } else if (activeTab === 'loja') {
-          // Linked to a specific store but not yet assigned to a seller
+          // Leads vinculados a uma loja, mas sem vendedor específico
           if (!c.store_id || c.assigned_seller_id) return false;
-          // For managers/sellers, only show their store's leads. Admins see all store leads.
           if (!isAdmin && c.store_id !== storeId) return false;
         } else if (activeTab === 'geral') {
-          // Leads with no store and no seller
+          // Leads sem preferência definida (sem loja e sem vendedor)
           if (c.store_id || c.assigned_seller_id) return false;
         }
   
