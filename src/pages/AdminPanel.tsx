@@ -53,7 +53,7 @@ const ROLE_LABELS: Record<string, string> = {
 
  function ReportsTab() {
    const [stats, setStats] = useState({ activeSellers: 0, inactiveSellers: 0, pendingAlerts: 0 });
-   const [transfers, setTransfers] = useState<any[]>([]);
+    const [redirections, setRedirections] = useState<any[]>([]);
    const [slaAlerts, setSlaAlerts] = useState<any[]>([]);
    const [loading, setLoading] = useState(true);
  
@@ -61,23 +61,23 @@ const ROLE_LABELS: Record<string, string> = {
      setLoading(true);
       const ONE_HOUR_HALF_MS = 90 * 60 * 1000;
       const now = new Date().getTime();
-     const [profilesRes, alertsRes, transfersRes, slaAlertsRes] = await Promise.all([
-       supabase.from("profiles").select("id, is_active").eq("role", "vendedor"),
+      const [sellersRes, alertsRes, redirectionsRes, slaAlertsRes] = await Promise.all([
+        supabase.from("sellers").select("id, status"),
        supabase.from("clients").select("id, last_message_from_client_at").neq("alert_status", "none"),
-       supabase.from("service_transfers")
-         .select("*, client:clients(name), from_seller:profiles!service_transfers_from_seller_id_fkey(display_name), to_seller:profiles!service_transfers_to_seller_id_fkey(display_name)")
-         .order("created_at", { ascending: false })
-         .limit(20),
+        supabase.from("lead_redirections")
+          .select("*, client:clients(name), original_seller:sellers!lead_redirections_original_seller_id_fkey(name), redirected_to:sellers!lead_redirections_redirected_to_seller_id_fkey(name)")
+          .order("created_at", { ascending: false })
+          .limit(30),
        supabase.from("sla_alerts")
          .select("*, vendedor:profiles(display_name), lead:leads(phone)")
          .order("created_at", { ascending: false })
          .limit(50)
      ]);
  
-     if (profilesRes.data) {
-       const active = profilesRes.data.filter(p => p.is_active).length;
-       setStats(prev => ({ ...prev, activeSellers: active, inactiveSellers: profilesRes.data!.length - active }));
-     }
+      if (sellersRes.data) {
+        const active = sellersRes.data.filter(s => s.status === 'active').length;
+        setStats(prev => ({ ...prev, activeSellers: active, inactiveSellers: sellersRes.data!.length - active }));
+      }
      if (alertsRes.data) {
         const longWaitAlerts = alertsRes.data.filter(c => {
           if (!c.last_message_from_client_at) return false;
@@ -85,9 +85,9 @@ const ROLE_LABELS: Record<string, string> = {
         });
         setStats(prev => ({ ...prev, pendingAlerts: longWaitAlerts.length }));
      }
-     if (transfersRes.data) {
-       setTransfers(transfersRes.data);
-     }
+      if (redirectionsRes.data) {
+        setRedirections(redirectionsRes.data);
+      }
      if (slaAlertsRes.data) {
        setSlaAlerts(slaAlertsRes.data);
      }
@@ -136,42 +136,48 @@ const ROLE_LABELS: Record<string, string> = {
          </Card>
        </div>
  
-       <Card>
-         <CardHeader>
-           <CardTitle className="text-base flex items-center gap-2">
-             <History className="h-4 w-4" /> Histórico Recente de Redirecionamentos
-           </CardTitle>
-         </CardHeader>
-         <CardContent>
-           <Table>
-             <TableHeader>
-               <TableRow>
-                 <TableHead>Data</TableHead>
-                 <TableHead>Cliente</TableHead>
-                 <TableHead>De</TableHead>
-                 <TableHead>Para</TableHead>
-                 <TableHead>Motivo</TableHead>
-               </TableRow>
-             </TableHeader>
-             <TableBody>
-               {transfers.map(t => (
-                 <TableRow key={t.id}>
-                   <TableCell className="text-xs text-muted-foreground">
-                     {new Date(t.created_at).toLocaleString('pt-BR')}
-                   </TableCell>
-                   <TableCell className="font-medium">{t.client?.name || 'Desconhecido'}</TableCell>
-                   <TableCell>{t.from_seller?.display_name || 'Fila Geral'}</TableCell>
-                   <TableCell>{t.to_seller?.display_name || 'Fila Geral'}</TableCell>
-                   <TableCell className="text-xs">{t.reason}</TableCell>
-                 </TableRow>
-               ))}
-               {transfers.length === 0 && (
-                 <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Nenhum redirecionamento registrado</TableCell></TableRow>
-               )}
-             </TableBody>
-           </Table>
-         </CardContent>
-       </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <History className="h-4 w-4" /> Redirecionamentos por Ausência/Inatividade
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Vendedor Original</TableHead>
+                  <TableHead>Redirecionado para</TableHead>
+                  <TableHead>Motivo</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {redirections.map(r => (
+                  <TableRow key={r.id}>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {new Date(r.created_at).toLocaleString('pt-BR')}
+                    </TableCell>
+                    <TableCell className="font-medium">{r.client?.name || 'Desconhecido'}</TableCell>
+                    <TableCell>{r.original_seller?.name || '—'}</TableCell>
+                    <TableCell>{r.redirected_to?.name || '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px] uppercase">
+                        {r.reason === 'seller_vacation' ? 'Férias' : 
+                         r.reason === 'seller_away' ? 'Ausente' : 
+                         r.reason === 'seller_inactive' ? 'Inativo' : r.reason}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {redirections.length === 0 && (
+                  <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Nenhum redirecionamento automático registrado</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
        <Card>
          <CardHeader>
