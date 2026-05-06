@@ -148,6 +148,7 @@ const mockContactNames: Record<string, string> = {
     const { isAdmin, sellerId, storeId, role } = useRole();
     const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
     const [clients, setClients] = useState<any[]>([]);
+    const [stores, setStores] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState<TabType>('minhas');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -178,14 +179,15 @@ const mockContactNames: Record<string, string> = {
    const [selectedTransferSeller, setSelectedTransferSeller] = useState<string>("");
    const [isTransferring, setIsTransferring] = useState(false);
 
-   const fetchData = useCallback(async () => {
-     setLoading(true);
-     try {
-       const [msgsRes, clientsRes, sellersRes] = await Promise.all([
-          supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }),
-          supabase.from("clients").select("*, alert_status"),
-          supabase.from("sellers").select("id, name, store_id, is_active")
-       ]);
+    const fetchData = useCallback(async () => {
+      setLoading(true);
+      try {
+        const [msgsRes, clientsRes, sellersRes, storesRes] = await Promise.all([
+           supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }),
+           supabase.from("clients").select("*, alert_status"),
+           supabase.from("sellers").select("id, name, store_id, is_active"),
+           supabase.from("stores").select("id, name")
+        ]);
  
        if (msgsRes.data && msgsRes.data.length > 0) {
          setMessages(msgsRes.data as WhatsAppMessage[]);
@@ -199,9 +201,12 @@ const mockContactNames: Record<string, string> = {
          setClients(clientsRes.data);
        }
 
-       if (sellersRes.data) {
-         setSellers(sellersRes.data);
-       }
+        if (sellersRes.data) {
+          setSellers(sellersRes.data);
+        }
+        if (storesRes.data) {
+          setStores(storesRes.data);
+        }
      } catch (err) {
        console.error("Erro ao carregar dados:", err);
      } finally {
@@ -277,61 +282,56 @@ const mockContactNames: Record<string, string> = {
      return () => { supabase.removeChannel(channel); };
    }, [fetchData]);
 
-   const conversations: Conversation[] = useMemo(() => {
-     const map = new Map<string, Conversation>();
-     messages.forEach((msg) => {
-       const phone = msg.phone;
-       if (!map.has(phone)) {
-         const client = clients.find(c => c.phone === phone);
-         map.set(phone, { 
-           phone, 
-           lastMessage: "", 
-           lastTimestamp: "", 
-           unreadCount: 0, 
-           messages: [],
-           assigned_seller_id: client?.assigned_seller_id,
-           store_id: client?.store_id,
+    const conversations: Conversation[] = useMemo(() => {
+      const map = new Map<string, Conversation>();
+      messages.forEach((msg) => {
+        const phone = msg.phone;
+        if (!map.has(phone)) {
+          const client = clients.find(c => c.phone === phone);
+          map.set(phone, { 
+            phone, 
+            lastMessage: "", 
+            lastTimestamp: "", 
+            unreadCount: 0, 
+            messages: [],
+            assigned_seller_id: client?.assigned_seller_id,
+            store_id: client?.store_id,
             status: client?.status,
             alert_status: client?.alert_status,
-          last_message_from_client_at: client?.last_message_from_client_at
-         });
-       }
-       const conv = map.get(phone)!;
-       conv.messages.push(msg);
-       
-       const currentTs = new Date(msg.timestamp || msg.created_at || 0).getTime();
-       const lastTs = new Date(conv.lastTimestamp || 0).getTime();
- 
-       if (!conv.lastTimestamp || currentTs >= lastTs) {
-         conv.lastTimestamp = msg.timestamp || msg.created_at || "";
-         conv.lastMessage = msg.body || "";
-       }
-       
-       if (!msg.is_from_me && !msg.is_read) conv.unreadCount++;
-     });
-     return Array.from(map.values()).sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
+            last_message_from_client_at: client?.last_message_from_client_at
+          });
+        }
+        const conv = map.get(phone)!;
+        conv.messages.push(msg);
+        
+        const currentTs = new Date(msg.timestamp || msg.created_at || 0).getTime();
+        const lastTs = new Date(conv.lastTimestamp || 0).getTime();
+  
+        if (!conv.lastTimestamp || currentTs >= lastTs) {
+          conv.lastTimestamp = msg.timestamp || msg.created_at || "";
+          conv.lastMessage = msg.body || "";
+        }
+        
+        if (!msg.is_from_me && !msg.is_read) conv.unreadCount++;
+      });
+      return Array.from(map.values());
     }, [messages, clients]);
 
     const filteredConversations = useMemo(() => {
-      const STALE_TIME = 15 * 60 * 1000;
-      const now = new Date().getTime();
-
-      return conversations.filter((c) => {
-        const isStale = c.last_message_from_client_at && (now - new Date(c.last_message_from_client_at).getTime() > STALE_TIME);
-        
-        // Tab filtering
+      let filtered = conversations.filter((c) => {
         const isMine = c.assigned_seller_id === sellerId;
 
+        // Segmentação baseada nos requisitos do usuário
         if (activeTab === 'minhas') {
+          // Clientes já vinculados diretamente ao vendedor
           if (!isMine) return false;
         } else if (activeTab === 'loja') {
-          if (c.store_id !== storeId) return false;
-          if (c.assigned_seller_id && !isStale) return false;
-          if (isMine) return false;
+          // Leads vinculados a uma loja, mas sem vendedor específico
+          if (!c.store_id || c.assigned_seller_id) return false;
+          if (!isAdmin && c.store_id !== storeId) return false;
         } else if (activeTab === 'geral') {
-          if (!!c.store_id) return false;
-          if (c.assigned_seller_id && !isStale) return false;
-          if (isMine) return false;
+          // Leads sem preferência definida (sem loja e sem vendedor)
+          if (c.store_id || c.assigned_seller_id) return false;
         }
   
         // Search filtering
@@ -341,7 +341,20 @@ const mockContactNames: Record<string, string> = {
                c.lastMessage.toLowerCase().includes(searchLower) || 
                name.toLowerCase().includes(searchLower);
       });
-    }, [conversations, contactNames, search, activeTab, sellerId, storeId]);
+
+      // Sorting logic
+      if (activeTab === 'geral' || activeTab === 'loja') {
+        // For general/store leads, sort by oldest message first (FIFO distribution order)
+        return filtered.sort((a, b) => {
+          const aTs = a.last_message_from_client_at || a.lastTimestamp || "0";
+          const bTs = b.last_message_from_client_at || b.lastTimestamp || "0";
+          return aTs.localeCompare(bTs);
+        });
+      }
+      
+      // Default sort (Minhas): newest first
+      return filtered.sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
+    }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin]);
 
   // Monitor conversations for stale messages to trigger alert popup
   useEffect(() => {
@@ -795,8 +808,20 @@ const mockContactNames: Record<string, string> = {
                  Geral
                </Button>
              </div>
-           </div>
-
+            </div>
+            
+            {(activeTab === 'geral' || activeTab === 'loja') && filteredConversations.length > 0 && (
+              <div className="px-2 pb-2">
+                <Button 
+                  className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-bold gap-2 shadow-lg animate-in fade-in slide-in-from-top-2"
+                  onClick={() => handleSelectConversation(filteredConversations[0].phone)}
+                >
+                  <UserCheck className="h-5 w-5" />
+                  ATENDER PRÓXIMO ({activeTab === 'geral' ? 'GERAL' : 'LOJA'})
+                </Button>
+              </div>
+            )}
+            
           {/* Conversations list */}
           <div className="flex-1 overflow-y-auto">
             {loading ? (
@@ -844,9 +869,14 @@ const mockContactNames: Record<string, string> = {
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 truncate">
                               <span className="text-[16px] font-normal text-foreground truncate">
-                                {name}
-                              </span>
-                              {conv.alert_status === 'critical' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" title="ALERTA CRÍTICO - ADMIN" />}
+                                 {name}
+                               </span>
+                               {conv.store_id && (
+                                 <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium shrink-0">
+                                   {stores.find(s => s.id === conv.store_id)?.name || 'Loja'}
+                                 </span>
+                               )}
+                               {conv.alert_status === 'critical' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" title="ALERTA CRÍTICO - ADMIN" />}
                               {conv.alert_status === 'red' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" title="Alerta Crítico" />}
                               {conv.alert_status === 'yellow' && <div className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" title="Alerta de Demora" />}
                             </div>
