@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
- import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell } from "lucide-react";
+import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -56,43 +56,89 @@ const ROLE_LABELS: Record<string, string> = {
     const [redirections, setRedirections] = useState<any[]>([]);
    const [slaAlerts, setSlaAlerts] = useState<any[]>([]);
    const [loading, setLoading] = useState(true);
+  const [stores, setStores] = useState<any[]>([]);
+  const [sellers, setSellers] = useState<any[]>([]);
+  
+  // Filters
+  const [filterStore, setFilterStore] = useState<string>("all");
+  const [filterSeller, setFilterSeller] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterDate, setFilterDate] = useState<string>("");
+  const [filterClient, setFilterClient] = useState<string>("");
  
    const fetchReports = useCallback(async () => {
      setLoading(true);
-      const ONE_HOUR_HALF_MS = 90 * 60 * 1000;
-      const now = new Date().getTime();
-      const [sellersRes, alertsRes, redirectionsRes, slaAlertsRes] = await Promise.all([
-        supabase.from("sellers").select("id, status"),
-       supabase.from("clients").select("id, last_message_from_client_at").neq("alert_status", "none"),
-        supabase.from("lead_redirections")
-          .select("*, client:clients(name), original_seller:sellers!lead_redirections_original_seller_id_fkey(name), redirected_to:sellers!lead_redirections_redirected_to_seller_id_fkey(name)")
-          .order("created_at", { ascending: false })
-          .limit(30),
-       supabase.from("sla_alerts")
-         .select("*, vendedor:profiles(display_name), lead:leads(phone)")
-         .order("created_at", { ascending: false })
-         .limit(50)
-     ]);
+    const ONE_HOUR_HALF_MS = 90 * 60 * 1000;
+    const now = new Date().getTime();
+
+    const [sellersRes, alertsRes, slaAlertsRes, storesRes, allSellersRes] = await Promise.all([
+      supabase.from("sellers").select("id, status"),
+      supabase.from("clients").select("id, last_message_from_client_at").neq("alert_status", "none"),
+      supabase.from("sla_alerts")
+        .select("*, vendedor:profiles(display_name), lead:leads(phone)")
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase.from("stores").select("id, name").order("name"),
+      supabase.from("sellers").select("id, name").order("name")
+    ]);
+
+    // Fetch redirections with filters
+    let query = supabase
+      .from("redirection_history")
+      .select(`
+        *,
+        client:clients(name, phone),
+        from_seller:sellers!redirection_history_from_seller_id_fkey(name),
+        to_seller:sellers!redirection_history_to_seller_id_fkey(name),
+        performed_by_profile:profiles!redirection_history_performed_by_fkey(display_name),
+        store:stores(name)
+      `)
+      .order("created_at", { ascending: false });
+
+    if (filterStore !== "all") query = query.eq("store_id", filterStore);
+    if (filterSeller !== "all") {
+      query = query.or(`from_seller_id.eq.${filterSeller},to_seller_id.eq.${filterSeller}`);
+    }
+    if (filterType !== "all") query = query.eq("redirection_type", filterType);
+    if (filterDate) {
+      const date = new Date(filterDate);
+      const nextDay = new Date(date);
+      nextDay.setDate(date.getDate() + 1);
+      query = query.gte("created_at", date.toISOString()).lt("created_at", nextDay.toISOString());
+    }
+
+    const { data: redirectionsData } = await query.limit(100);
+
+    // Client filter is handled client-side if it's a search on name/phone
+    let finalRedirections = redirectionsData || [];
+    if (filterClient) {
+      const search = filterClient.toLowerCase();
+      finalRedirections = finalRedirections.filter(r => 
+        r.client?.name?.toLowerCase().includes(search) || 
+        r.client?.phone?.includes(search)
+      );
+    }
+    setRedirections(finalRedirections);
  
-      if (sellersRes.data) {
-        const active = sellersRes.data.filter(s => s.status === 'active').length;
-        setStats(prev => ({ ...prev, activeSellers: active, inactiveSellers: sellersRes.data!.length - active }));
-      }
-     if (alertsRes.data) {
-        const longWaitAlerts = alertsRes.data.filter(c => {
-          if (!c.last_message_from_client_at) return false;
-          return (now - new Date(c.last_message_from_client_at).getTime()) > ONE_HOUR_HALF_MS;
-        });
-        setStats(prev => ({ ...prev, pendingAlerts: longWaitAlerts.length }));
-     }
-      if (redirectionsRes.data) {
-        setRedirections(redirectionsRes.data);
-      }
-     if (slaAlertsRes.data) {
-       setSlaAlerts(slaAlertsRes.data);
-     }
+    if (sellersRes.data) {
+      const active = sellersRes.data.filter(s => s.status === 'active').length;
+      setStats(prev => ({ ...prev, activeSellers: active, inactiveSellers: sellersRes.data!.length - active }));
+    }
+    if (alertsRes.data) {
+      const longWaitAlerts = alertsRes.data.filter(c => {
+        if (!c.last_message_from_client_at) return false;
+        return (now - new Date(c.last_message_from_client_at).getTime()) > ONE_HOUR_HALF_MS;
+      });
+      setStats(prev => ({ ...prev, pendingAlerts: longWaitAlerts.length }));
+    }
+    if (slaAlertsRes.data) {
+      setSlaAlerts(slaAlertsRes.data);
+    }
+    if (storesRes.data) setStores(storesRes.data);
+    if (allSellersRes.data) setSellers(allSellersRes.data);
+
      setLoading(false);
-   }, []);
+  }, [filterStore, filterSeller, filterType, filterDate, filterClient]);
  
    useEffect(() => { fetchReports(); }, [fetchReports]);
  
