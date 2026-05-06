@@ -249,7 +249,7 @@ const ROLE_LABELS: Record<string, string> = {
                   <SelectItem value="inactive_seller">Vendedor Inativo</SelectItem>
                   <SelectItem value="vacation">Vendedor em Férias</SelectItem>
                   <SelectItem value="no_substitute">Sem Substituto</SelectItem>
-                  <SelectItem value="queue_to_seller">Fila -> Vendedor</SelectItem>
+                  <SelectItem value="queue_to_seller">Fila {"->"} Vendedor</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -282,12 +282,12 @@ const ROLE_LABELS: Record<string, string> = {
                 <TableRow>
                   <TableHead className="w-[150px]">Data</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Origem</TableHead>
-                  <TableHead>Destino</TableHead>
-                  <TableHead>Loja</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead className="max-w-[200px]">Motivo</TableHead>
-                  <TableHead>Autor</TableHead>
+                  <TableHead className="text-xs">Origem</TableHead>
+                  <TableHead className="text-xs">Destino</TableHead>
+                  <TableHead className="text-xs">Loja</TableHead>
+                  <TableHead className="text-xs">Tipo</TableHead>
+                  <TableHead className="text-xs max-w-[200px]">Motivo</TableHead>
+                  <TableHead className="text-xs">Autor</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
