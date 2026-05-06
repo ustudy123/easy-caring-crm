@@ -76,6 +76,7 @@ export type Database = {
           store_id: string | null
           tags: string[]
           total_purchases: number
+          triage_step: string | null
           triaging: boolean | null
         }
         Insert: {
@@ -100,6 +101,7 @@ export type Database = {
           store_id?: string | null
           tags?: string[]
           total_purchases?: number
+          triage_step?: string | null
           triaging?: boolean | null
         }
         Update: {
@@ -124,6 +126,7 @@ export type Database = {
           store_id?: string | null
           tags?: string[]
           total_purchases?: number
+          triage_step?: string | null
           triaging?: boolean | null
         }
         Relationships: [
