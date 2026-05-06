@@ -431,7 +431,8 @@ function UsersTab() {
       _role: editRole as any,
       _store_id: editRole === "admin" ? null : editStoreId,
       _seller_name: editName || null,
-    });
+      _seller_code: editRole === "vendedor" ? (editCode.trim() || null) : null,
+    } as any);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Função atribuída!");
