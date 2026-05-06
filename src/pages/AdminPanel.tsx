@@ -397,6 +397,7 @@ function UsersTab() {
   const [editRole, setEditRole] = useState<string>("vendedor");
   const [editStoreId, setEditStoreId] = useState<string>("");
   const [editName, setEditName] = useState<string>("");
+  const [editCode, setEditCode] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -417,6 +418,7 @@ function UsersTab() {
     setEditRole(u.role || "vendedor");
     setEditStoreId(u.store_id || "");
     setEditName(u.seller_name || u.display_name || "");
+    setEditCode(u.seller_code || "");
   };
 
   const handleSave = async () => {
