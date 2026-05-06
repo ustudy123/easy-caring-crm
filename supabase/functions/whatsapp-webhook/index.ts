@@ -312,20 +312,41 @@ serve(async (req) => {
                }).eq("id", client.id);
              };
 
-             const finishWithStore = async (storeId: string | null, storeName?: string) => {
-               await updateClient({ store_id: storeId, triaging: false, triage_step: null });
-               await supabase.from("leads").insert({
-                 client_name: client.name,
-                 client_phone: client.phone,
-                 source: "whatsapp",
-                 stage: "abordagem",
-                 store_id: storeId,
-               });
-               const msg = storeName
-                 ? `Perfeito! Você será atendido(a) pela unidade *${storeName}*. Um consultor entrará em contato em breve. ✅`
-                 : `Entendido! Um de nossos consultores disponíveis entrará em contato em breve. ✅`;
-               await sendWhatsAppMessage(cleanPhone, msg, isTest);
-             };
+              const distributeLead = async (storeId: string | null) => {
+                // Call the new RPC for round-robin distribution
+                const { data: nextSeller, error: rpcError } = await supabase.rpc("get_next_seller_for_distribution", {
+                  _store_id: storeId
+                });
+
+                if (!rpcError && nextSeller && nextSeller.length > 0) {
+                  const picked = nextSeller[0];
+                  await assignToSeller(picked.id, picked.name, picked.store_id);
+                  // Mark as assigned to update last_assigned_at
+                  await supabase.rpc("mark_seller_assigned", { _seller_id: picked.id });
+                  return true;
+                }
+                return false;
+              };
+
+              const finishWithStore = async (storeId: string | null, storeName?: string) => {
+                const distributed = await distributeLead(storeId);
+                
+                if (!distributed) {
+                  // Fallback: no seller available, just create the lead
+                  await updateClient({ store_id: storeId, triaging: false, triage_step: null });
+                  await supabase.from("leads").insert({
+                    client_name: client.name,
+                    client_phone: client.phone,
+                    source: "whatsapp",
+                    stage: "abordagem",
+                    store_id: storeId,
+                  });
+                  const msg = storeName
+                    ? `Perfeito! Você será atendido(a) pela unidade *${storeName}*. Um consultor entrará em contato em breve. ✅`
+                    : `Entendido! Um de nossos consultores disponíveis entrará em contato em breve. ✅`;
+                  await sendWhatsAppMessage(cleanPhone, msg, isTest);
+                }
+              };
 
              const assignToSeller = async (sellerId: string, sellerName: string, storeId: string | null) => {
                await updateClient({
@@ -416,30 +437,15 @@ serve(async (req) => {
                     );
                   }
                }
-             } else if (step === 'ask_seller') {
-               const storeId = client.store_id;
-               if (lower === 'n' || lower === 'nao' || lower === 'não') {
-                 // Pick first active seller from store
-                 const { data: candidates } = await supabase
-                   .from("sellers").select("id, name, store_id, user_id")
-                   .eq("store_id", storeId).order("leads_count", { ascending: true });
-                 let picked: any = null;
-                 if (candidates && candidates.length > 0) {
-                   for (const c of candidates) {
-                     if (!c.user_id) { picked = c; break; }
-                     const { data: prof } = await supabase
-                       .from("profiles").select("is_active").eq("user_id", c.user_id).maybeSingle();
-                     if (!prof || prof.is_active !== false) { picked = c; break; }
-                   }
-                   if (!picked) picked = candidates[0];
-                 }
-                 if (picked) {
-                   await assignToSeller(picked.id, picked.name, storeId);
-                 } else {
-                   const { data: store } = await supabase.from("stores").select("name").eq("id", storeId).maybeSingle();
-                   await finishWithStore(storeId, store?.name);
-                 }
-               } else {
+              } else if (step === 'ask_seller') {
+                const storeId = client.store_id;
+                if (lower === 'n' || lower === 'nao' || lower === 'não') {
+                  const distributed = await distributeLead(storeId);
+                  if (!distributed) {
+                    const { data: store } = await supabase.from("stores").select("name").eq("id", storeId).maybeSingle();
+                    await finishWithStore(storeId, store?.name);
+                  }
+                } else {
                  const codeMatch = trimmed.match(/^\d{3,10}$/);
                  if (codeMatch) {
                    const { data: sellerByCode } = await supabase

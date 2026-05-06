@@ -446,6 +446,9 @@ export type Database = {
           conversions: number
           created_at: string
           id: string
+          is_active: boolean | null
+          is_available: boolean | null
+          last_assigned_at: string | null
           leads_count: number
           name: string
           role: Database["public"]["Enums"]["seller_role"]
@@ -459,6 +462,9 @@ export type Database = {
           conversions?: number
           created_at?: string
           id?: string
+          is_active?: boolean | null
+          is_available?: boolean | null
+          last_assigned_at?: string | null
           leads_count?: number
           name: string
           role?: Database["public"]["Enums"]["seller_role"]
@@ -472,6 +478,9 @@ export type Database = {
           conversions?: number
           created_at?: string
           id?: string
+          is_active?: boolean | null
+          is_available?: boolean | null
+          last_assigned_at?: string | null
           leads_count?: number
           name?: string
           role?: Database["public"]["Enums"]["seller_role"]
@@ -716,6 +725,8 @@ export type Database = {
     Functions: {
       admin_assign_user_role: {
         Args: {
+          _is_active?: boolean
+          _is_available?: boolean
           _role: Database["public"]["Enums"]["app_role"]
           _seller_code?: string
           _seller_name?: string
@@ -730,6 +741,8 @@ export type Database = {
           created_at: string
           display_name: string
           email: string
+          is_active: boolean
+          is_available: boolean
           role: Database["public"]["Enums"]["app_role"]
           seller_code: string
           seller_id: string
@@ -756,6 +769,31 @@ export type Database = {
           store_id: string
         }[]
       }
+      get_next_seller_for_distribution: {
+        Args: { _store_id?: string }
+        Returns: {
+          avatar: string | null
+          code: string | null
+          conversions: number
+          created_at: string
+          id: string
+          is_active: boolean | null
+          is_available: boolean | null
+          last_assigned_at: string | null
+          leads_count: number
+          name: string
+          role: Database["public"]["Enums"]["seller_role"]
+          sla_target_minutes: number | null
+          store_id: string | null
+          user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "sellers"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_user_seller_id: { Args: { _user_id: string }; Returns: string }
       get_user_store_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
@@ -765,6 +803,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      mark_seller_assigned: { Args: { _seller_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "gerente" | "vendedor" | "suporte"

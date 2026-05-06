@@ -37,6 +37,8 @@ interface AdminUserRow {
   seller_code: string | null;
   store_id: string | null;
   store_name: string | null;
+  is_active: boolean;
+  is_available: boolean;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -398,6 +400,8 @@ function UsersTab() {
   const [editStoreId, setEditStoreId] = useState<string>("");
   const [editName, setEditName] = useState<string>("");
   const [editCode, setEditCode] = useState<string>("");
+  const [editIsActive, setEditIsActive] = useState<boolean>(true);
+  const [editIsAvailable, setEditIsAvailable] = useState<boolean>(true);
   const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -419,6 +423,8 @@ function UsersTab() {
     setEditStoreId(u.store_id || "");
     setEditName(u.seller_name || u.display_name || "");
     setEditCode(u.seller_code || "");
+    setEditIsActive(u.is_active ?? true);
+    setEditIsAvailable(u.is_available ?? true);
   };
 
   const handleSave = async () => {
@@ -434,6 +440,8 @@ function UsersTab() {
       _store_id: editRole === "admin" ? null : editStoreId,
       _seller_name: editName || null,
       _seller_code: editRole === "vendedor" ? (editCode.trim() || null) : null,
+      _is_active: editIsActive,
+      _is_available: editIsAvailable,
     } as any);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -465,6 +473,8 @@ function UsersTab() {
               <TableHead>E-mail</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Código</TableHead>
+              <TableHead>Ativo</TableHead>
+              <TableHead>Disponível</TableHead>
               <TableHead>Função</TableHead>
               <TableHead>Loja</TableHead>
               <TableHead className="w-32">Ações</TableHead>
@@ -479,6 +489,16 @@ function UsersTab() {
                   {u.seller_code ? (
                     <Badge variant="outline" className="font-mono">{u.seller_code}</Badge>
                   ) : "—"}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={u.is_active ? "success" : "secondary" as any} className={u.is_active ? "bg-green-100 text-green-700" : ""}>
+                    {u.is_active ? "Sim" : "Não"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={u.is_available ? "success" : "secondary" as any} className={u.is_available ? "bg-blue-100 text-blue-700" : ""}>
+                    {u.is_available ? "Sim" : "Não"}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   {u.role ? (
@@ -556,6 +576,30 @@ function UsersTab() {
                     <p className="text-xs text-muted-foreground mt-1">
                       Quando o cliente digitar este código no WhatsApp, será encaminhado direto para este vendedor.
                     </p>
+                  </div>
+                )}
+                {editRole === "vendedor" && (
+                  <div className="flex gap-6 py-2">
+                    <div className="flex items-center space-x-2">
+                      <input 
+                        type="checkbox" 
+                        id="isActive" 
+                        checked={editIsActive} 
+                        onChange={e => setEditIsActive(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <Label htmlFor="isActive" className="cursor-pointer">Vendedor Ativo</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input 
+                        type="checkbox" 
+                        id="isAvailable" 
+                        checked={editIsAvailable} 
+                        onChange={e => setEditIsAvailable(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <Label htmlFor="isAvailable" className="cursor-pointer">Disponível para Leads</Label>
+                    </div>
                   </div>
                 )}
                 <Button onClick={handleSave} disabled={saving} className="w-full">
