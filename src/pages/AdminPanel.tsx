@@ -34,6 +34,7 @@ interface AdminUserRow {
   role: string | null;
   seller_id: string | null;
   seller_name: string | null;
+  seller_code: string | null;
   store_id: string | null;
   store_name: string | null;
 }
