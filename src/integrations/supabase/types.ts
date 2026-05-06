@@ -792,7 +792,9 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _seller_code?: string
           _seller_name?: string
+          _status?: string
           _store_id?: string
+          _substitute_id?: string
           _user_id: string
         }
         Returns: undefined
