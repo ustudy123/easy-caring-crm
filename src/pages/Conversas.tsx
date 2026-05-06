@@ -803,8 +803,20 @@ const mockContactNames: Record<string, string> = {
                  Geral
                </Button>
              </div>
-           </div>
-
+            </div>
+            
+            {(activeTab === 'geral' || activeTab === 'loja') && filteredConversations.length > 0 && (
+              <div className="px-2 pb-2">
+                <Button 
+                  className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-bold gap-2 shadow-lg animate-in fade-in slide-in-from-top-2"
+                  onClick={() => handleSelectConversation(filteredConversations[0].phone)}
+                >
+                  <UserCheck className="h-5 w-5" />
+                  ATENDER PRÓXIMO ({activeTab === 'geral' ? 'GERAL' : 'LOJA'})
+                </Button>
+              </div>
+            )}
+            
           {/* Conversations list */}
           <div className="flex-1 overflow-y-auto">
             {loading ? (
