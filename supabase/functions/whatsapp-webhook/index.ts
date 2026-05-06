@@ -348,27 +348,20 @@ serve(async (req) => {
                 }
               };
 
-             const assignToSeller = async (sellerId: string, sellerName: string, storeId: string | null) => {
-               await updateClient({
-                 assigned_seller_id: sellerId,
-                 store_id: storeId,
-                 status: 'em_atendimento',
-                 claimed_at: new Date().toISOString(),
-                 triaging: false,
-                 triage_step: null,
-               });
-               if (storeId) {
-                 await supabase.from("leads").insert({
-                   client_name: client.name,
-                   client_phone: client.phone,
-                   source: "whatsapp",
-                   stage: "abordagem",
-                   store_id: storeId,
-                   assigned_to: sellerId,
-                 });
-               }
-               await sendWhatsAppMessage(cleanPhone, `Perfeito! Você será atendido(a) por *${sellerName}*. Em instantes ele(a) entrará em contato. ✅`, isTest);
-             };
+              const assignToSeller = async (sellerId: string, sellerName: string, storeId: string | null) => {
+                const { data: result, error: rpcErr } = await supabase.rpc("assign_client_with_redirection", {
+                  _phone: cleanPhone,
+                  _seller_id: sellerId
+                });
+
+                if (!rpcErr && result?.success) {
+                  const finalSellerName = result.seller_name || sellerName;
+                  await sendWhatsAppMessage(cleanPhone, `Perfeito! Você será atendido(a) por *${finalSellerName}*. Em instantes ele(a) entrará em contato. ✅`, isTest);
+                } else {
+                  // Fallback: if seller is inactive and has no substitute, distribute to store/general queue
+                  await finishWithStore(storeId);
+                }
+              };
 
              if (step === 'ask_code') {
                const codeMatch = trimmed.match(/^\d{3,10}$/);
@@ -473,31 +466,38 @@ serve(async (req) => {
               alert_status: 'none' // Reset alerts when new message arrives
             };
 
-            // Only update store_id if not already assigned to a seller (as per user instruction)
+            // Only update store_id if not already assigned to a seller
             if (!client.assigned_seller_id) {
               updateData.store_id = targetStoreId;
             } else {
-              // Check if the assigned seller is active
-              const { data: sellerProfile } = await supabase
-                .from("profiles")
-                .select("id, is_active, substitute_id")
+              // Check if the assigned seller's status has changed and if redirection is needed
+              const { data: seller } = await supabase
+                .from("sellers")
+                .select("status, substitute_id")
                 .eq("id", client.assigned_seller_id)
                 .maybeSingle();
 
-              if (sellerProfile) {
-                if (!sellerProfile.is_active && sellerProfile.substitute_id) {
-                  console.log(`Seller ${client.assigned_seller_id} is inactive. Redirecting to substitute ${sellerProfile.substitute_id}`);
-                  const originalSellerId = client.assigned_seller_id;
-                  updateData.assigned_seller_id = sellerProfile.substitute_id;
-                  
-                  // Log the redirection
-                  await logTransfer(client.id, originalSellerId, sellerProfile.substitute_id, "Vendedor inativo/ausente (redirecionamento automático)");
-                } else if (sellerProfile.is_active) {
-                  // Check if this lead was recently transferred and if we should return it
-                  const { data: lastTransfer } = await supabase
-                    .from("service_transfers")
-                    .select("*")
-                    .eq("client_id", client.id)
+              if (seller && seller.status !== 'active' && seller.substitute_id) {
+                console.log(`Seller ${client.assigned_seller_id} is ${seller.status}. Redirecting to substitute ${seller.substitute_id}`);
+                const originalSellerId = client.assigned_seller_id;
+                
+                const { data: redirectResult } = await supabase.rpc("assign_client_with_redirection", {
+                  _phone: cleanPhone,
+                  _seller_id: originalSellerId
+                });
+
+                if (redirectResult?.success) {
+                   console.log(`Redirection successful to ${redirectResult.seller_id}`);
+                   // No need to manually update updateData.assigned_seller_id as RPC handled it
+                }
+              } else if (seller && seller.status !== 'active' && !seller.substitute_id) {
+                // If inactive and NO substitute, what should happen for an ALREADY assigned client?
+                // Usually they stay with the seller unless the manager manually transfers.
+                // But according to "Se estiver inativo e não tiver substituto, o lead volta para a fila da loja."
+                // Let's implement this for new messages too if the seller went away.
+                console.log(`Seller ${client.assigned_seller_id} is ${seller.status} with NO substitute. Re-distributing lead.`);
+                await distributeLead(client.store_id);
+              }
                     .eq("to_seller_id", client.assigned_seller_id)
                     .order("created_at", { ascending: false })
                     .limit(1)

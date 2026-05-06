@@ -269,6 +269,55 @@ export type Database = {
           },
         ]
       }
+      lead_redirections: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          id: string
+          original_seller_id: string | null
+          reason: string
+          redirected_to_seller_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          original_seller_id?: string | null
+          reason: string
+          redirected_to_seller_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          original_seller_id?: string | null
+          reason?: string
+          redirected_to_seller_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_redirections_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_redirections_original_seller_id_fkey"
+            columns: ["original_seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_redirections_redirected_to_seller_id_fkey"
+            columns: ["redirected_to_seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           assigned_to: string | null
@@ -453,7 +502,9 @@ export type Database = {
           name: string
           role: Database["public"]["Enums"]["seller_role"]
           sla_target_minutes: number | null
+          status: string | null
           store_id: string | null
+          substitute_id: string | null
           user_id: string | null
         }
         Insert: {
@@ -469,7 +520,9 @@ export type Database = {
           name: string
           role?: Database["public"]["Enums"]["seller_role"]
           sla_target_minutes?: number | null
+          status?: string | null
           store_id?: string | null
+          substitute_id?: string | null
           user_id?: string | null
         }
         Update: {
@@ -485,7 +538,9 @@ export type Database = {
           name?: string
           role?: Database["public"]["Enums"]["seller_role"]
           sla_target_minutes?: number | null
+          status?: string | null
           store_id?: string | null
+          substitute_id?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -494,6 +549,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sellers_substitute_id_fkey"
+            columns: ["substitute_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
             referencedColumns: ["id"]
           },
         ]
@@ -730,7 +792,9 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _seller_code?: string
           _seller_name?: string
+          _status?: string
           _store_id?: string
+          _substitute_id?: string
           _user_id: string
         }
         Returns: undefined
@@ -747,8 +811,11 @@ export type Database = {
           seller_code: string
           seller_id: string
           seller_name: string
+          status: string
           store_id: string
           store_name: string
+          substitute_id: string
+          substitute_name: string
           user_id: string
         }[]
       }
@@ -756,10 +823,14 @@ export type Database = {
       assign_client_by_seller_code: {
         Args: { _code: string; _phone: string }
         Returns: {
-          seller_id: string
-          seller_name: string
+          id: string
+          name: string
           store_id: string
         }[]
+      }
+      assign_client_with_redirection: {
+        Args: { _phone: string; _seller_id: string }
+        Returns: Json
       }
       claim_whatsapp_client: {
         Args: { _fallback_name?: string; _phone: string }
@@ -770,7 +841,7 @@ export type Database = {
         }[]
       }
       get_next_seller_for_distribution: {
-        Args: { _store_id?: string }
+        Args: { _store_id: string }
         Returns: {
           avatar: string | null
           code: string | null
@@ -784,7 +855,9 @@ export type Database = {
           name: string
           role: Database["public"]["Enums"]["seller_role"]
           sla_target_minutes: number | null
+          status: string | null
           store_id: string | null
+          substitute_id: string | null
           user_id: string | null
         }[]
         SetofOptions: {
