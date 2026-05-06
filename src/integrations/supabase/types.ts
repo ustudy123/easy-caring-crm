@@ -269,6 +269,55 @@ export type Database = {
           },
         ]
       }
+      lead_redirections: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          id: string
+          original_seller_id: string | null
+          reason: string
+          redirected_to_seller_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          original_seller_id?: string | null
+          reason: string
+          redirected_to_seller_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          original_seller_id?: string | null
+          reason?: string
+          redirected_to_seller_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_redirections_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_redirections_original_seller_id_fkey"
+            columns: ["original_seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_redirections_redirected_to_seller_id_fkey"
+            columns: ["redirected_to_seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           assigned_to: string | null
@@ -453,7 +502,9 @@ export type Database = {
           name: string
           role: Database["public"]["Enums"]["seller_role"]
           sla_target_minutes: number | null
+          status: string | null
           store_id: string | null
+          substitute_id: string | null
           user_id: string | null
         }
         Insert: {
@@ -469,7 +520,9 @@ export type Database = {
           name: string
           role?: Database["public"]["Enums"]["seller_role"]
           sla_target_minutes?: number | null
+          status?: string | null
           store_id?: string | null
+          substitute_id?: string | null
           user_id?: string | null
         }
         Update: {
@@ -485,7 +538,9 @@ export type Database = {
           name?: string
           role?: Database["public"]["Enums"]["seller_role"]
           sla_target_minutes?: number | null
+          status?: string | null
           store_id?: string | null
+          substitute_id?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -494,6 +549,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sellers_substitute_id_fkey"
+            columns: ["substitute_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
             referencedColumns: ["id"]
           },
         ]
@@ -784,7 +846,9 @@ export type Database = {
           name: string
           role: Database["public"]["Enums"]["seller_role"]
           sla_target_minutes: number | null
+          status: string | null
           store_id: string | null
+          substitute_id: string | null
           user_id: string | null
         }[]
         SetofOptions: {
