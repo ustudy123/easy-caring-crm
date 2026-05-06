@@ -809,8 +809,11 @@ export type Database = {
           seller_code: string
           seller_id: string
           seller_name: string
+          status: string
           store_id: string
           store_name: string
+          substitute_id: string
+          substitute_name: string
           user_id: string
         }[]
       }
