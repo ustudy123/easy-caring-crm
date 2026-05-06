@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search } from "lucide-react";
+ import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -53,8 +53,13 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
  function ReportsTab() {
-   const [stats, setStats] = useState({ activeSellers: 0, inactiveSellers: 0, pendingAlerts: 0 });
-    const [redirections, setRedirections] = useState<any[]>([]);
+   const [stats, setStats] = useState({ 
+     activeSellers: 0, 
+     inactiveSellers: 0, 
+     pendingAlerts: 0,
+     criticalAlerts: 0
+   });
+   const [redirections, setRedirections] = useState<any[]>([]);
    const [slaAlerts, setSlaAlerts] = useState<any[]>([]);
    const [loading, setLoading] = useState(true);
   const [stores, setStores] = useState<any[]>([]);
@@ -69,21 +74,37 @@ const ROLE_LABELS: Record<string, string> = {
  
    const fetchReports = useCallback(async () => {
      setLoading(true);
-    const ONE_HOUR_HALF_MS = 90 * 60 * 1000;
-    const now = new Date().getTime();
+     const ONE_HOUR_HALF_MS = 90 * 60 * 1000;
+     const now = new Date().getTime();
 
-    const [sellersRes, alertsRes, slaAlertsRes, storesRes, allSellersRes] = await Promise.all([
-      supabase.from("sellers").select("id, status"),
-      supabase.from("clients").select("id, last_message_from_client_at").neq("alert_status", "none"),
-      supabase.from("sla_alerts")
-        .select("*, vendedor:profiles(display_name), lead:leads(phone)")
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase.from("stores").select("id, name").order("name"),
-      supabase.from("sellers").select("id, name").order("name")
-    ]);
+     const [sellersRes, clientsWithAlertsRes, slaAlertsRes, storesRes, allSellersRes] = await Promise.all([
+       supabase.from("sellers").select("id, status"),
+       supabase.from("clients").select("id, last_message_from_client_at, alert_status").neq("alert_status", "none"),
+       supabase.from("sla_alerts")
+         .select("*, vendedor:profiles(display_name), lead:leads(phone)")
+         .order("created_at", { ascending: false })
+         .limit(100),
+       supabase.from("stores").select("id, name").order("name"),
+       supabase.from("sellers").select("id, name").order("name")
+     ]);
 
-    // Fetch redirections with filters
+     // Statistics calculation
+     if (sellersRes.data) {
+       const active = sellersRes.data.filter(s => s.status === 'active').length;
+       const inactive = sellersRes.data.filter(s => s.status !== 'active').length;
+       setStats(prev => ({ ...prev, activeSellers: active, inactiveSellers: inactive }));
+     }
+
+     if (clientsWithAlertsRes.data) {
+       const pending = clientsWithAlertsRes.data.length;
+       const critical = clientsWithAlertsRes.data.filter(c => {
+         if (!c.last_message_from_client_at) return false;
+         return (now - new Date(c.last_message_from_client_at).getTime()) > ONE_HOUR_HALF_MS;
+       }).length;
+       setStats(prev => ({ ...prev, pendingAlerts: pending, criticalAlerts: critical }));
+     }
+
+     // Fetch redirections with filters
     let query = supabase
       .from("redirection_history")
       .select(`
@@ -121,17 +142,6 @@ const ROLE_LABELS: Record<string, string> = {
     }
     setRedirections(finalRedirections);
  
-    if (sellersRes.data) {
-      const active = sellersRes.data.filter(s => s.status === 'active').length;
-      setStats(prev => ({ ...prev, activeSellers: active, inactiveSellers: sellersRes.data!.length - active }));
-    }
-    if (alertsRes.data) {
-      const longWaitAlerts = alertsRes.data.filter(c => {
-        if (!c.last_message_from_client_at) return false;
-        return (now - new Date(c.last_message_from_client_at).getTime()) > ONE_HOUR_HALF_MS;
-      });
-      setStats(prev => ({ ...prev, pendingAlerts: longWaitAlerts.length }));
-    }
     if (slaAlertsRes.data) {
       setSlaAlerts(slaAlertsRes.data);
     }
@@ -156,11 +166,30 @@ const ROLE_LABELS: Record<string, string> = {
     return labels[type] || type;
   };
 
-  if (loading && redirections.length === 0) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+  const exportConversations = async () => {
+    const { data, error } = await supabase
+      .from("whatsapp_messages")
+      .select("timestamp, phone, body, is_from_me")
+      .order("timestamp", { ascending: false })
+      .limit(1000);
+    
+    if (error) { toast.error("Erro ao exportar: " + error.message); return; }
+    
+    const csv = ["Data,Telefone,Mensagem,Sentido"]
+      .concat(data.map(m => `"${new Date(m.timestamp).toLocaleString()}","${m.phone}","${m.body.replace(/"/g, '""')}","${m.is_from_me ? 'Enviada' : 'Recebida'}"`))
+      .join("\n");
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `conversas_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    toast.success("Exportação concluída!");
+  };
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -194,6 +223,17 @@ const ROLE_LABELS: Record<string, string> = {
             </div>
           </CardContent>
         </Card>
+        <Card className="border-red-200 bg-red-50/30">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-600">Alertas Graves (+1h30)</p>
+                <h3 className="text-2xl font-bold text-red-700">{stats.criticalAlerts}</h3>
+              </div>
+              <AlertCircle className="h-8 w-8 text-red-200" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -203,6 +243,9 @@ const ROLE_LABELS: Record<string, string> = {
               <History className="h-4 w-4" /> Histórico de Redirecionamentos
             </CardTitle>
             <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={exportConversations}>
+                <Download className="h-4 w-4 mr-2" /> Exportar Conversas
+              </Button>
               <Button variant="outline" size="sm" onClick={() => {
                 setFilterStore("all"); setFilterSeller("all"); setFilterType("all"); setFilterDate(""); setFilterClient("");
               }}>Limpar Filtros</Button>
