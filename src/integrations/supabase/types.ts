@@ -725,6 +725,8 @@ export type Database = {
     Functions: {
       admin_assign_user_role: {
         Args: {
+          _is_active?: boolean
+          _is_available?: boolean
           _role: Database["public"]["Enums"]["app_role"]
           _seller_code?: string
           _seller_name?: string
@@ -739,6 +741,8 @@ export type Database = {
           created_at: string
           display_name: string
           email: string
+          is_active: boolean
+          is_available: boolean
           role: Database["public"]["Enums"]["app_role"]
           seller_code: string
           seller_id: string
