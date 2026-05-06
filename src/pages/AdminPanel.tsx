@@ -464,6 +464,7 @@ function UsersTab() {
             <TableRow>
               <TableHead>E-mail</TableHead>
               <TableHead>Nome</TableHead>
+              <TableHead>Código</TableHead>
               <TableHead>Função</TableHead>
               <TableHead>Loja</TableHead>
               <TableHead className="w-32">Ações</TableHead>
@@ -474,6 +475,11 @@ function UsersTab() {
               <TableRow key={u.user_id}>
                 <TableCell className="font-medium">{u.email}</TableCell>
                 <TableCell>{u.seller_name || u.display_name || "—"}</TableCell>
+                <TableCell>
+                  {u.seller_code ? (
+                    <Badge variant="outline" className="font-mono">{u.seller_code}</Badge>
+                  ) : "—"}
+                </TableCell>
                 <TableCell>
                   {u.role ? (
                     <Badge variant="secondary">{ROLE_LABELS[u.role] || u.role}</Badge>
@@ -497,7 +503,7 @@ function UsersTab() {
               </TableRow>
             ))}
             {users.length === 0 && (
-              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum usuário cadastrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum usuário cadastrado</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
@@ -536,6 +542,20 @@ function UsersTab() {
                         {stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                  </div>
+                )}
+                {editRole === "vendedor" && (
+                  <div>
+                    <Label>Código do Vendedor (Ramal)</Label>
+                    <Input
+                      value={editCode}
+                      onChange={e => setEditCode(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="Ex: 1023"
+                      className="font-mono"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Quando o cliente digitar este código no WhatsApp, será encaminhado direto para este vendedor.
+                    </p>
                   </div>
                 )}
                 <Button onClick={handleSave} disabled={saving} className="w-full">
