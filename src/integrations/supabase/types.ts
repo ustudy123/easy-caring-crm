@@ -600,7 +600,7 @@ export type Database = {
             foreignKeyName: "service_transfers_from_seller_id_fkey"
             columns: ["from_seller_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "sellers"
             referencedColumns: ["id"]
           },
           {
@@ -614,7 +614,7 @@ export type Database = {
             foreignKeyName: "service_transfers_to_seller_id_fkey"
             columns: ["to_seller_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "sellers"
             referencedColumns: ["id"]
           },
         ]
