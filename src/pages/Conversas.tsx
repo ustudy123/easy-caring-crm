@@ -1083,7 +1083,7 @@ const mockContactNames: Record<string, string> = {
                            {isClaiming ? (<span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 animate-spin" /> Processando...</span>) : (<span className="flex items-center gap-1.5"><UserCheck className="h-4 w-4" /> {isSelectedStale && selectedConversation?.assigned_seller_id ? "Retomar Atendimento" : "Atender Cliente"}</span>)}
                          </Button>
                        )}
-                        {(isAdmin || role === 'gerente' || selectedConversation?.assigned_seller_id === sellerId) && (
+                         {(isAdmin || isGerente || selectedConversation?.assigned_seller_id === sellerId) && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
