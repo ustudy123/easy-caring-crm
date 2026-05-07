@@ -272,8 +272,10 @@ const ROLE_LABELS: Record<string, string> = {
  
        // 5. Format TXT
        let content = "";
-       const startDateStr = filterDate ? new Date(filterDate).toLocaleDateString('pt-BR') : "Início";
-       const endDateStr = filterDateEnd ? new Date(filterDateEnd).toLocaleDateString('pt-BR') : "Hoje";
+        const startDateStr = filterDate ? new Date(filterDate).toLocaleDateString('pt-BR') : "";
+        const endDateStr = filterDateEnd 
+          ? new Date(filterDateEnd).toLocaleDateString('pt-BR') 
+          : (filterDate ? new Date(filterDate).toLocaleDateString('pt-BR') : "");
  
        sortedPhones.forEach(phone => {
          const msgs = groupedMessages[phone];
