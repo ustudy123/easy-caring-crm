@@ -177,34 +177,14 @@ const ROLE_LABELS: Record<string, string> = {
   };
 
    const exportConversations = async () => {
+     if (!filterDate && !filterDateEnd) {
+       toast.error("Por favor, selecione um período (Início e Fim) para exportar.");
+       return;
+     }
+
      setLoading(true);
      try {
-       // 1. Fetch messages
-       let query = supabase
-         .from("whatsapp_messages")
-         .select("*")
-         .order("timestamp", { ascending: true });
- 
-       if (filterDate) {
-         query = query.gte("timestamp", new Date(filterDate).toISOString());
-       }
-       if (filterDateEnd) {
-         const end = new Date(filterDateEnd);
-         end.setHours(23, 59, 59, 999);
-         query = query.lte("timestamp", end.toISOString());
-       }
- 
-       const { data: messages, error: mError } = await query;
-       if (mError) throw mError;
-       if (!messages || messages.length === 0) {
-         toast.info("Nenhuma mensagem encontrada para o período selecionado.");
-         setLoading(false);
-         return;
-       }
- 
-       // 2. Fetch involved clients to get seller/store info
-       const uniquePhones = Array.from(new Set(messages.map(m => m.phone)));
-       
+       // 1. Fetch filtered clients first
        let clientQuery = supabase
          .from("clients")
          .select(`
@@ -216,42 +196,70 @@ const ROLE_LABELS: Record<string, string> = {
            store:stores!clients_store_id_fkey(name)
          `);
        
-       const { data: clients, error: cError } = await clientQuery.in("phone", uniquePhones);
-       if (cError) throw cError;
- 
-       const clientsMap = new Map(clients?.map(c => [c.phone, c]));
+       if (filterStore !== "all") clientQuery = clientQuery.eq("store_id", filterStore);
+       if (filterSeller !== "all") clientQuery = clientQuery.eq("assigned_seller_id", filterSeller);
        
-       // 3. Apply filters: Store, Seller, and Client name/phone
-       let filteredMessages = messages.filter(m => {
-         const c = clientsMap.get(m.phone);
-         if (!c) return false;
-         
-         // Store filter
-         if (filterStore !== "all" && c.store_id !== filterStore) return false;
-         
-         // Seller filter
-         if (filterSeller !== "all" && c.assigned_seller_id !== filterSeller) return false;
-         
-         // Client name/phone filter
-         if (filterClient) {
-           const search = filterClient.toLowerCase();
-           const matchesName = c.name?.toLowerCase().includes(search);
-           const matchesPhone = m.phone.includes(search);
-           if (!matchesName && !matchesPhone) return false;
-         }
-         
-         return true;
-       });
- 
-       if (filteredMessages.length === 0) {
-         toast.info("Nenhuma conversa corresponde aos filtros aplicados.");
+       const { data: clients, error: cError } = await clientQuery;
+       if (cError) throw cError;
+       if (!clients || clients.length === 0) {
+         toast.info("Nenhum cliente encontrado com os filtros de loja/vendedor.");
          setLoading(false);
          return;
        }
- 
+
+       // Client search filter (manual since it's a partial match)
+       let filteredClients = clients;
+       if (filterClient) {
+         const search = filterClient.toLowerCase();
+         filteredClients = clients.filter(c => 
+           c.name?.toLowerCase().includes(search) || 
+           c.phone.includes(search)
+         );
+       }
+
+       if (filteredClients.length === 0) {
+         toast.info("Nenhum cliente corresponde à busca.");
+         setLoading(false);
+         return;
+       }
+
+       const phoneList = filteredClients.map(c => c.phone);
+       const clientsMap = new Map(filteredClients.map(c => [c.phone, c]));
+
+       // 2. Fetch messages for these clients within the date range
+       let messageQuery = supabase
+         .from("whatsapp_messages")
+         .select("*")
+         .in("phone", phoneList)
+         .order("timestamp", { ascending: true });
+
+       if (filterDate) {
+         messageQuery = messageQuery.gte("timestamp", new Date(filterDate).toISOString());
+       }
+       
+       if (filterDateEnd) {
+         const end = new Date(filterDateEnd);
+         end.setHours(23, 59, 59, 999);
+         messageQuery = messageQuery.lte("timestamp", end.toISOString());
+       } else if (filterDate) {
+         // Single day logic if only start date is provided
+         const end = new Date(filterDate);
+         end.setHours(23, 59, 59, 999);
+         messageQuery = messageQuery.lte("timestamp", end.toISOString());
+       }
+
+       const { data: messages, error: mError } = await messageQuery;
+       if (mError) throw mError;
+
+       if (!messages || messages.length === 0) {
+         toast.info("Nenhuma mensagem encontrada para o período e filtros selecionados.");
+         setLoading(false);
+         return;
+       }
+
        // 4. Group by phone and sort by client name
        const groupedMessages: Record<string, any[]> = {};
-       filteredMessages.forEach(m => {
+       messages.forEach(m => {
          if (!groupedMessages[m.phone]) groupedMessages[m.phone] = [];
          groupedMessages[m.phone].push(m);
        });
