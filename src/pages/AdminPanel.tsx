@@ -53,6 +53,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
  function ReportsTab() {
+   const { isAdmin } = useRole();
    const [stats, setStats] = useState({ 
      activeSellers: 0, 
      inactiveSellers: 0, 
@@ -203,8 +204,8 @@ const ROLE_LABELS: Record<string, string> = {
            phone, 
            store_id,
            assigned_seller_id,
-           assigned_seller:sellers(name), 
-           store:stores(name)
+           assigned_seller:sellers!clients_assigned_seller_id_fkey(name), 
+           store:stores!clients_store_id_fkey(name)
          `);
        
        const { data: clients, error: cError } = await clientQuery.in("phone", uniquePhones);
