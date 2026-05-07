@@ -633,16 +633,24 @@ const mockContactNames: Record<string, string> = {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!messageInput.trim() || !selectedPhone || sending) return;
-    const text = messageInput.trim();
-    setMessageInput("");
-    setSending(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
-        body: { phone: selectedPhone, message: text },
-      });
+   const handleSendMessage = async () => {
+     if (!messageInput.trim() || !selectedPhone || sending) return;
+     const text = messageInput.trim();
+     setMessageInput("");
+     setSending(true);
+ 
+     const currentSeller = sellers.find(s => s.id === sellerId);
+     const { data: { user } } = await supabase.auth.getUser();
+ 
+     try {
+       const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+         body: { 
+           phone: selectedPhone, 
+           message: text,
+           senderId: user?.id,
+           senderName: currentSeller?.name || role
+         },
+       });
 
       if (error) {
         console.error("Erro ao enviar mensagem:", error);
