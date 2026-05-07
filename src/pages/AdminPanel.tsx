@@ -124,12 +124,20 @@ const ROLE_LABELS: Record<string, string> = {
       query = query.or(`from_seller_id.eq.${filterSeller},to_seller_id.eq.${filterSeller}`);
     }
     if (filterType !== "all") query = query.eq("redirection_type", filterType);
-    if (filterDate) {
-      const date = new Date(filterDate);
-      const nextDay = new Date(date);
-      nextDay.setDate(date.getDate() + 1);
-      query = query.gte("created_at", date.toISOString()).lt("created_at", nextDay.toISOString());
-    }
+     if (filterDate) {
+       query = query.gte("created_at", new Date(filterDate).toISOString());
+     }
+     if (filterDateEnd) {
+       const end = new Date(filterDateEnd);
+       end.setHours(23, 59, 59, 999);
+       query = query.lte("created_at", end.toISOString());
+     } else if (filterDate && !filterDateEnd) {
+       // If only start date is provided, show that single day
+       const date = new Date(filterDate);
+       const nextDay = new Date(date);
+       nextDay.setDate(date.getDate() + 1);
+       query = query.lt("created_at", nextDay.toISOString());
+     }
 
     const { data: redirectionsData } = await query.limit(100);
 
@@ -151,7 +159,7 @@ const ROLE_LABELS: Record<string, string> = {
     if (allSellersRes.data) setSellers(allSellersRes.data);
 
      setLoading(false);
-  }, [filterStore, filterSeller, filterType, filterDate, filterClient]);
+   }, [filterStore, filterSeller, filterType, filterDate, filterDateEnd, filterClient]);
  
    useEffect(() => { fetchReports(); }, [fetchReports]);
  
