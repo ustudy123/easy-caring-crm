@@ -610,12 +610,17 @@ const mockContactNames: Record<string, string> = {
       else if (file.type.startsWith('video/')) mediaType = 'video';
       else if (file.type.startsWith('audio/')) mediaType = 'audio';
 
+      const currentSeller = sellers.find(s => s.id === sellerId);
+      const { data: { user } } = await supabase.auth.getUser();
+
       const { error: invokeError } = await supabase.functions.invoke("send-whatsapp", {
         body: { 
           phone: selectedPhone, 
           message: "", 
           mediaUrl: publicUrl,
-          mediaType: mediaType
+          mediaType: mediaType,
+          senderId: user?.id,
+          senderName: currentSeller?.name || role
         },
       });
 
