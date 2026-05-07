@@ -476,9 +476,20 @@ serve(async (req) => {
               alert_status: 'none' // Reset alerts when new message arrives
             };
 
-            // Only update store_id if not already assigned to a seller
+            // Rule 1: Conversation must always have a current responsible.
+            // Rule 6: If returning and unassigned, try to distribute or restart triage.
             if (!client.assigned_seller_id) {
-              updateData.store_id = targetStoreId;
+              console.log(`Returning client ${cleanPhone} has no assigned seller. Distributing...`);
+              const distributed = await distributeLead(client.store_id || targetStoreId);
+              
+              if (!distributed) {
+                // If cannot distribute now (no sellers active), restart triage to ask for code or store
+                updateData.triaging = true;
+                updateData.triage_step = 'ask_code';
+                const msg = `Olá! 👋 Bem-vindo de volta.\n\nVocê já possui o *código (ramal)* de um vendedor?\n\n👉 Se *sim*, digite o código.\n👉 Se *não*, responda com *N* para continuar.`;
+                await sendWhatsAppMessage(cleanPhone, msg, isTest);
+              }
+              updateData.store_id = client.store_id || targetStoreId;
             } else {
               // Check if the assigned seller's status has changed and if redirection is needed
               const { data: seller } = await supabase

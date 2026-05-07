@@ -832,6 +832,8 @@ export type Database = {
           message_id: string
           phone: string
           raw_data: Json | null
+          sender_id: string | null
+          sender_name: string | null
           timestamp: string | null
         }
         Insert: {
@@ -845,6 +847,8 @@ export type Database = {
           message_id: string
           phone: string
           raw_data?: Json | null
+          sender_id?: string | null
+          sender_name?: string | null
           timestamp?: string | null
         }
         Update: {
@@ -858,6 +862,8 @@ export type Database = {
           message_id?: string
           phone?: string
           raw_data?: Json | null
+          sender_id?: string | null
+          sender_name?: string | null
           timestamp?: string | null
         }
         Relationships: []

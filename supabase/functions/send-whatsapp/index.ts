@@ -13,7 +13,7 @@ serve(async (req) => {
 
   try {
      const body = await req.json();
-     const { phone, message, mediaUrl, mediaType } = body;
+      const { phone, message, mediaUrl, mediaType, senderId, senderName } = body;
 
     if (!phone || (!message && !mediaUrl)) {
       return new Response(JSON.stringify({ error: "phone and (message or mediaUrl) are required" }), {
@@ -88,6 +88,8 @@ serve(async (req) => {
       media_type: mediaType,
       is_from_me: true,
       timestamp: new Date().toISOString(),
+      sender_id: senderId,
+      sender_name: senderName
     });
 
     // Update client metadata for response tracking

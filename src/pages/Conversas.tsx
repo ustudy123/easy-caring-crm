@@ -75,7 +75,7 @@ interface WhatsAppMessage {
   alert_status?: 'none' | 'yellow' | 'red' | 'transferred' | 'critical';
  }
  
- type TabType = 'minhas' | 'loja' | 'geral';
+ type TabType = 'minhas' | 'loja' | 'geral' | 'todas';
 
 // ── Helpers ──
 function formatMessageDate(dateStr: string) {
@@ -147,7 +147,7 @@ const mockContactNames: Record<string, string> = {
 
 // ── Component ──
  export default function Conversas() {
-    const { isAdmin, sellerId, storeId, role } = useRole();
+    const { isAdmin, isGerente, sellerId, storeId, role } = useRole();
     const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
     const [clients, setClients] = useState<any[]>([]);
     const [stores, setStores] = useState<any[]>([]);
@@ -380,6 +380,10 @@ const mockContactNames: Record<string, string> = {
         } else if (activeTab === 'geral') {
           // Leads sem preferência definida (sem loja e sem vendedor)
           if (c.store_id || c.assigned_seller_id) return false;
+        } else if (activeTab === 'todas') {
+          // Acesso administrativo para ver tudo
+          if (!isAdmin && !isGerente) return false;
+          if (isGerente && !isAdmin && c.store_id !== storeId) return false;
         }
   
         // Search filtering
@@ -391,7 +395,7 @@ const mockContactNames: Record<string, string> = {
       });
 
       // Sorting logic
-      if (activeTab === 'geral' || activeTab === 'loja') {
+      if (activeTab === 'geral' || activeTab === 'loja' || activeTab === 'todas') {
         // For general/store leads, sort by oldest message first (FIFO distribution order)
         return filtered.sort((a, b) => {
           const aTs = a.last_message_from_client_at || a.lastTimestamp || "0";
@@ -402,7 +406,7 @@ const mockContactNames: Record<string, string> = {
       
       // Default sort (Minhas): newest first
       return filtered.sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
-    }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin]);
+     }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente]);
 
   // Monitor conversations for stale messages to trigger alert popup
   useEffect(() => {
@@ -606,12 +610,17 @@ const mockContactNames: Record<string, string> = {
       else if (file.type.startsWith('video/')) mediaType = 'video';
       else if (file.type.startsWith('audio/')) mediaType = 'audio';
 
+      const currentSeller = sellers.find(s => s.id === sellerId);
+      const { data: { user } } = await supabase.auth.getUser();
+
       const { error: invokeError } = await supabase.functions.invoke("send-whatsapp", {
         body: { 
           phone: selectedPhone, 
           message: "", 
           mediaUrl: publicUrl,
-          mediaType: mediaType
+          mediaType: mediaType,
+          senderId: user?.id,
+          senderName: currentSeller?.name || role
         },
       });
 
@@ -629,16 +638,24 @@ const mockContactNames: Record<string, string> = {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!messageInput.trim() || !selectedPhone || sending) return;
-    const text = messageInput.trim();
-    setMessageInput("");
-    setSending(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
-        body: { phone: selectedPhone, message: text },
-      });
+   const handleSendMessage = async () => {
+     if (!messageInput.trim() || !selectedPhone || sending) return;
+     const text = messageInput.trim();
+     setMessageInput("");
+     setSending(true);
+ 
+     const currentSeller = sellers.find(s => s.id === sellerId);
+     const { data: { user } } = await supabase.auth.getUser();
+ 
+     try {
+       const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+         body: { 
+           phone: selectedPhone, 
+           message: text,
+           senderId: user?.id,
+           senderName: currentSeller?.name || role
+         },
+       });
 
       if (error) {
         console.error("Erro ao enviar mensagem:", error);
@@ -720,14 +737,19 @@ const mockContactNames: Record<string, string> = {
        .from('whatsapp_media')
        .getPublicUrl(filePath);
 
-     const { error: invokeError } = await supabase.functions.invoke("send-whatsapp", {
-       body: { 
-         phone: selectedPhone, 
-         message: "", 
-         mediaUrl: publicUrl,
-         mediaType: 'audio'
-       },
-     });
+      const currentSeller = sellers.find(s => s.id === sellerId);
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { error: invokeError } = await supabase.functions.invoke("send-whatsapp", {
+        body: { 
+          phone: selectedPhone, 
+          message: "", 
+          mediaUrl: publicUrl,
+          mediaType: 'audio',
+          senderId: user?.id,
+          senderName: currentSeller?.name || role
+        },
+      });
 
      if (invokeError) throw invokeError;
 
@@ -818,7 +840,7 @@ const mockContactNames: Record<string, string> = {
                />
              </div>
              
-             <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap">
                <Button 
                  variant="ghost" 
                  size="sm" 
@@ -843,19 +865,33 @@ const mockContactNames: Record<string, string> = {
                  <Store className="h-3.5 w-3.5" />
                  Loja
                </Button>
-               <Button 
-                 variant="ghost" 
-                 size="sm" 
-                 onClick={() => setActiveTab('geral')}
-                 className={cn(
-                   "flex-1 text-[11px] h-8 gap-1.5 rounded-md transition-all",
-                   activeTab === 'geral' ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:bg-muted"
-                 )}
-               >
-                 <Users className="h-3.5 w-3.5" />
-                 Geral
-               </Button>
-             </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setActiveTab('geral')}
+                  className={cn(
+                    "flex-1 text-[11px] h-8 gap-1.5 rounded-md transition-all",
+                    activeTab === 'geral' ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  Geral
+                </Button>
+                {(isAdmin || isGerente) && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setActiveTab('todas')}
+                    className={cn(
+                      "flex-1 text-[11px] h-8 gap-1.5 rounded-md transition-all min-w-[70px]",
+                      activeTab === 'todas' ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    <MoreVertical className="h-3.5 w-3.5" />
+                    Todas
+                  </Button>
+                )}
+              </div>
             </div>
             
             {(activeTab === 'geral' || activeTab === 'loja') && filteredConversations.length > 0 && (
