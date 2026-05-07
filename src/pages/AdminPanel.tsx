@@ -53,6 +53,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
  function ReportsTab() {
+   const { isAdmin } = useRole();
    const [stats, setStats] = useState({ 
      activeSellers: 0, 
      inactiveSellers: 0, 
@@ -69,7 +70,8 @@ const ROLE_LABELS: Record<string, string> = {
   const [filterStore, setFilterStore] = useState<string>("all");
   const [filterSeller, setFilterSeller] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
-  const [filterDate, setFilterDate] = useState<string>("");
+   const [filterDate, setFilterDate] = useState<string>("");
+   const [filterDateEnd, setFilterDateEnd] = useState<string>("");
   const [filterClient, setFilterClient] = useState<string>("");
  
    const fetchReports = useCallback(async () => {
@@ -122,12 +124,20 @@ const ROLE_LABELS: Record<string, string> = {
       query = query.or(`from_seller_id.eq.${filterSeller},to_seller_id.eq.${filterSeller}`);
     }
     if (filterType !== "all") query = query.eq("redirection_type", filterType);
-    if (filterDate) {
-      const date = new Date(filterDate);
-      const nextDay = new Date(date);
-      nextDay.setDate(date.getDate() + 1);
-      query = query.gte("created_at", date.toISOString()).lt("created_at", nextDay.toISOString());
-    }
+     if (filterDate) {
+       query = query.gte("created_at", new Date(filterDate).toISOString());
+     }
+     if (filterDateEnd) {
+       const end = new Date(filterDateEnd);
+       end.setHours(23, 59, 59, 999);
+       query = query.lte("created_at", end.toISOString());
+     } else if (filterDate && !filterDateEnd) {
+       // If only start date is provided, show that single day
+       const date = new Date(filterDate);
+       const nextDay = new Date(date);
+       nextDay.setDate(date.getDate() + 1);
+       query = query.lt("created_at", nextDay.toISOString());
+     }
 
     const { data: redirectionsData } = await query.limit(100);
 
@@ -149,7 +159,7 @@ const ROLE_LABELS: Record<string, string> = {
     if (allSellersRes.data) setSellers(allSellersRes.data);
 
      setLoading(false);
-  }, [filterStore, filterSeller, filterType, filterDate, filterClient]);
+   }, [filterStore, filterSeller, filterType, filterDate, filterDateEnd, filterClient]);
  
    useEffect(() => { fetchReports(); }, [fetchReports]);
  
@@ -166,26 +176,136 @@ const ROLE_LABELS: Record<string, string> = {
     return labels[type] || type;
   };
 
-  const exportConversations = async () => {
-    const { data, error } = await supabase
-      .from("whatsapp_messages")
-      .select("timestamp, phone, body, is_from_me")
-      .order("timestamp", { ascending: false })
-      .limit(1000);
-    
-    if (error) { toast.error("Erro ao exportar: " + error.message); return; }
-    
-    const csv = ["Data,Telefone,Mensagem,Sentido"]
-      .concat(data.map(m => `"${new Date(m.timestamp).toLocaleString()}","${m.phone}","${m.body.replace(/"/g, '""')}","${m.is_from_me ? 'Enviada' : 'Recebida'}"`))
-      .join("\n");
-    
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `conversas_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    toast.success("Exportação concluída!");
-  };
+   const exportConversations = async () => {
+     setLoading(true);
+     try {
+       // 1. Fetch messages
+       let query = supabase
+         .from("whatsapp_messages")
+         .select("*")
+         .order("timestamp", { ascending: true });
+ 
+       if (filterDate) {
+         query = query.gte("timestamp", new Date(filterDate).toISOString());
+       }
+       if (filterDateEnd) {
+         const end = new Date(filterDateEnd);
+         end.setHours(23, 59, 59, 999);
+         query = query.lte("timestamp", end.toISOString());
+       }
+ 
+       const { data: messages, error: mError } = await query;
+       if (mError) throw mError;
+       if (!messages || messages.length === 0) {
+         toast.info("Nenhuma mensagem encontrada para o período selecionado.");
+         setLoading(false);
+         return;
+       }
+ 
+       // 2. Fetch involved clients to get seller/store info
+       const uniquePhones = Array.from(new Set(messages.map(m => m.phone)));
+       
+       let clientQuery = supabase
+         .from("clients")
+         .select(`
+           name, 
+           phone, 
+           store_id,
+           assigned_seller_id,
+           assigned_seller:sellers!clients_assigned_seller_id_fkey(name), 
+           store:stores!clients_store_id_fkey(name)
+         `);
+       
+       const { data: clients, error: cError } = await clientQuery.in("phone", uniquePhones);
+       if (cError) throw cError;
+ 
+       const clientsMap = new Map(clients?.map(c => [c.phone, c]));
+       
+       // 3. Apply filters: Store, Seller, and Client name/phone
+       let filteredMessages = messages.filter(m => {
+         const c = clientsMap.get(m.phone);
+         if (!c) return false;
+         
+         // Store filter
+         if (filterStore !== "all" && c.store_id !== filterStore) return false;
+         
+         // Seller filter
+         if (filterSeller !== "all" && c.assigned_seller_id !== filterSeller) return false;
+         
+         // Client name/phone filter
+         if (filterClient) {
+           const search = filterClient.toLowerCase();
+           const matchesName = c.name?.toLowerCase().includes(search);
+           const matchesPhone = m.phone.includes(search);
+           if (!matchesName && !matchesPhone) return false;
+         }
+         
+         return true;
+       });
+ 
+       if (filteredMessages.length === 0) {
+         toast.info("Nenhuma conversa corresponde aos filtros aplicados.");
+         setLoading(false);
+         return;
+       }
+ 
+       // 4. Group by phone and sort by client name
+       const groupedMessages: Record<string, any[]> = {};
+       filteredMessages.forEach(m => {
+         if (!groupedMessages[m.phone]) groupedMessages[m.phone] = [];
+         groupedMessages[m.phone].push(m);
+       });
+ 
+       const sortedPhones = Object.keys(groupedMessages).sort((a, b) => {
+         const nameA = clientsMap.get(a)?.name || "";
+         const nameB = clientsMap.get(b)?.name || "";
+         return nameA.localeCompare(nameB);
+       });
+ 
+       // 5. Format TXT
+       let content = "";
+       const startDateStr = filterDate ? new Date(filterDate).toLocaleDateString('pt-BR') : "Início";
+       const endDateStr = filterDateEnd ? new Date(filterDateEnd).toLocaleDateString('pt-BR') : "Hoje";
+ 
+       sortedPhones.forEach(phone => {
+         const msgs = groupedMessages[phone];
+         const client = clientsMap.get(phone);
+         const clientName = client?.name || "Desconhecido";
+         const storeName = client?.store?.name || "Geral";
+         const sellerName = client?.assigned_seller?.name || "Não atribuído";
+ 
+         content += `====================================\n`;
+         content += `CLIENTE: ${clientName}\n`;
+         content += `TELEFONE: ${phone}\n`;
+         content += `LOJA: ${storeName}\n`;
+         content += `VENDEDOR RESPONSÁVEL: ${sellerName}\n`;
+         content += `PERÍODO: ${startDateStr} a ${endDateStr}\n`;
+         content += `====================================\n\n`;
+ 
+         msgs.forEach(m => {
+           const ts = new Date(m.timestamp).toLocaleString('pt-BR', {
+             day: '2-digit', month: '2-digit', year: 'numeric',
+             hour: '2-digit', minute: '2-digit'
+           });
+           const sender = m.is_from_me ? (sellerName !== "Não atribuído" ? sellerName : "Vendedor") : "Cliente";
+           content += `[${ts}] ${sender}: ${m.body}\n`;
+         });
+         content += `\n`;
+       });
+ 
+       const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+       const link = document.createElement("a");
+       link.href = URL.createObjectURL(blob);
+       link.download = `relatorio_conversas_${new Date().toISOString().split('T')[0]}.txt`;
+       link.click();
+       toast.success("Exportação concluída!");
+     } catch (err: any) {
+       console.error("Export error:", err);
+       toast.error("Erro ao exportar: " + err.message);
+     } finally {
+       setLoading(false);
+     }
+   };
 
   return (
     <div className="space-y-6">
@@ -242,23 +362,25 @@ const ROLE_LABELS: Record<string, string> = {
             <CardTitle className="text-base flex items-center gap-2">
               <History className="h-4 w-4" /> Histórico de Redirecionamentos
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" onClick={exportConversations}>
-                <Download className="h-4 w-4 mr-2" /> Exportar Conversas
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => {
-                setFilterStore("all"); setFilterSeller("all"); setFilterType("all"); setFilterDate(""); setFilterClient("");
-              }}>Limpar Filtros</Button>
+             <div className="flex flex-wrap items-center gap-2">
+               {isAdmin && (
+                 <Button variant="outline" size="sm" onClick={exportConversations} disabled={loading}>
+                   <Download className="h-4 w-4 mr-2" /> Exportar TXT
+                 </Button>
+               )}
+               <Button variant="outline" size="sm" onClick={() => {
+                 setFilterStore("all"); setFilterSeller("all"); setFilterType("all"); setFilterDate(""); setFilterDateEnd(""); setFilterClient("");
+               }}>Limpar Filtros</Button>
               <Button variant="ghost" size="sm" onClick={fetchReports}>
                 <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-            <div className="space-y-1">
-              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Loja</Label>
+         <CardContent className="space-y-4">
+           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+             <div className="space-y-1">
+               <Label className="text-[10px] uppercase text-muted-foreground font-bold">Loja</Label>
               <Select value={filterStore} onValueChange={setFilterStore}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Todas as Lojas" />
@@ -297,15 +419,24 @@ const ROLE_LABELS: Record<string, string> = {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Data</Label>
-              <Input 
-                type="date" 
-                className="h-8 text-xs" 
-                value={filterDate} 
-                onChange={e => setFilterDate(e.target.value)} 
-              />
-            </div>
+             <div className="space-y-1">
+               <Label className="text-[10px] uppercase text-muted-foreground font-bold">Início</Label>
+               <Input 
+                 type="date" 
+                 className="h-8 text-xs" 
+                 value={filterDate} 
+                 onChange={e => setFilterDate(e.target.value)} 
+               />
+             </div>
+             <div className="space-y-1">
+               <Label className="text-[10px] uppercase text-muted-foreground font-bold">Fim</Label>
+               <Input 
+                 type="date" 
+                 className="h-8 text-xs" 
+                 value={filterDateEnd} 
+                 onChange={e => setFilterDateEnd(e.target.value)} 
+               />
+             </div>
             <div className="space-y-1">
               <Label className="text-[10px] uppercase text-muted-foreground font-bold">Cliente</Label>
               <div className="relative">
