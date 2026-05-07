@@ -147,7 +147,7 @@ const mockContactNames: Record<string, string> = {
 
 // ── Component ──
  export default function Conversas() {
-    const { isAdmin, isGerente, sellerId, storeId, role } = useRole();
+     const { isAdmin, isGerente, isVendedor, sellerId, storeId, role } = useRole();
     const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
     const [clients, setClients] = useState<any[]>([]);
     const [stores, setStores] = useState<any[]>([]);
@@ -365,34 +365,52 @@ const mockContactNames: Record<string, string> = {
       return Array.from(map.values());
     }, [messages, clients]);
 
-    const filteredConversations = useMemo(() => {
-      let filtered = conversations.filter((c) => {
-        const isMine = c.assigned_seller_id === sellerId;
-
-        // Segmentação baseada nos requisitos do usuário
-        if (activeTab === 'minhas') {
-          // Clientes já vinculados diretamente ao vendedor
-          if (!isMine) return false;
-        } else if (activeTab === 'loja') {
-          // Leads vinculados a uma loja, mas sem vendedor específico
-          if (!c.store_id || c.assigned_seller_id) return false;
-          if (!isAdmin && c.store_id !== storeId) return false;
-        } else if (activeTab === 'geral') {
-          // Leads sem preferência definida (sem loja e sem vendedor)
-          if (c.store_id || c.assigned_seller_id) return false;
-        } else if (activeTab === 'todas') {
-          // Acesso administrativo para ver tudo
-          if (!isAdmin && !isGerente) return false;
-          if (isGerente && !isAdmin && c.store_id !== storeId) return false;
-        }
-  
-        // Search filtering
-        const name = contactNames[c.phone] || "";
-        const searchLower = search.toLowerCase();
-        return c.phone.includes(search) || 
-               c.lastMessage.toLowerCase().includes(searchLower) || 
-               name.toLowerCase().includes(searchLower);
-      });
+     const filteredConversations = useMemo(() => {
+       let filtered = conversations.filter((c) => {
+         const isMine = c.assigned_seller_id === sellerId;
+ 
+         // Controle de acesso baseado no perfil e na aba
+         if (isVendedor) {
+           if (activeTab === 'minhas') {
+             if (!isMine) return false;
+           } else if (activeTab === 'loja') {
+             if (!c.store_id || c.assigned_seller_id || c.store_id !== storeId) return false;
+           } else if (activeTab === 'geral') {
+             if (c.store_id || c.assigned_seller_id) return false;
+           } else {
+             return false; // Vendedor não vê "todas"
+           }
+         } else if (isGerente) {
+           if (activeTab === 'minhas') {
+             if (!isMine) return false;
+           } else if (activeTab === 'loja') {
+             // Ver todos os leads da sua loja (atribuídos ou não)
+             if (c.store_id !== storeId) return false;
+           } else if (activeTab === 'geral') {
+             // Leads sem loja e sem vendedor
+             if (c.store_id || c.assigned_seller_id) return false;
+           } else if (activeTab === 'todas') {
+             // Todas as conversas da sua loja
+             if (c.store_id !== storeId && !isMine) return false;
+           }
+         } else if (isAdmin) {
+           if (activeTab === 'minhas') {
+             if (!isMine) return false;
+           } else if (activeTab === 'loja') {
+             if (!c.store_id || c.assigned_seller_id) return false;
+           } else if (activeTab === 'geral') {
+             if (c.store_id || c.assigned_seller_id) return false;
+           }
+           // 'todas' tab shows everything for admin
+         }
+   
+         // Search filtering
+         const name = contactNames[c.phone] || "";
+         const searchLower = search.toLowerCase();
+         return c.phone.includes(search) || 
+                c.lastMessage.toLowerCase().includes(searchLower) || 
+                name.toLowerCase().includes(searchLower);
+       });
 
       // Sorting logic
       if (activeTab === 'geral' || activeTab === 'loja' || activeTab === 'todas') {
@@ -1065,7 +1083,7 @@ const mockContactNames: Record<string, string> = {
                            {isClaiming ? (<span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 animate-spin" /> Processando...</span>) : (<span className="flex items-center gap-1.5"><UserCheck className="h-4 w-4" /> {isSelectedStale && selectedConversation?.assigned_seller_id ? "Retomar Atendimento" : "Atender Cliente"}</span>)}
                          </Button>
                        )}
-                        {(isAdmin || role === 'gerente' || selectedConversation?.assigned_seller_id === sellerId) && (
+                         {(isAdmin || isGerente || selectedConversation?.assigned_seller_id === sellerId) && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
