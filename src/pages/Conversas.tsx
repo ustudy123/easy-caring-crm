@@ -984,27 +984,27 @@ const mockContactNames: Record<string, string> = {
                                {conv.alert_status === 'yellow' && <div className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" title="Alerta de Demora" />}
                              </div>
                              <div className="flex items-center gap-2">
-                               {(activeTab === 'geral' || activeTab === 'loja') && (
-                                 <Button 
-                                   size="sm" 
-                                   variant="secondary"
-                                   className="h-7 px-2 text-[10px] bg-green-600 hover:bg-green-700 text-white font-bold"
-                                   onClick={async (e) => {
-                                     e.stopPropagation();
-                                     setSelectedPhone(conv.phone);
-                                     // We need to wait for state update or pass phone to handleClaimLead
-                                     // But since setSelectedPhone is async, we can improve handleClaimLead to accept phone
-                                   }}
-                                 >
-                                   ATENDER
-                                 </Button>
-                               )}
-                               <span className={cn(
-                              "text-[12px] shrink-0",
-                              conv.unreadCount > 0 ? "text-[hsl(var(--wa-green))]" : "text-muted-foreground"
-                            )}>
-                              {conv.lastTimestamp && formatMessageDate(conv.lastTimestamp)}
-                            </span>
+                              {(activeTab === 'geral' || activeTab === 'loja') && (
+                                <Button 
+                                  size="sm" 
+                                  variant="secondary"
+                                  className="h-7 px-2 text-[10px] bg-green-600 hover:bg-green-700 text-white font-bold"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    handleSelectConversation(conv.phone);
+                                    handleClaimLead(conv.phone);
+                                  }}
+                                >
+                                  ATENDER
+                                </Button>
+                              )}
+                              <span className={cn(
+                                "text-[12px] shrink-0",
+                                conv.unreadCount > 0 ? "text-[hsl(var(--wa-green))]" : "text-muted-foreground"
+                              )}>
+                                {conv.lastTimestamp && formatMessageDate(conv.lastTimestamp)}
+                              </span>
+                            </div>
                           </div>
                           <div className="flex items-center gap-1 mt-0.5">
                             {lastMsgIsFromMe && (
