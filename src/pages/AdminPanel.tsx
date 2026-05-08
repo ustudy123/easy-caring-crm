@@ -79,9 +79,10 @@ const ROLE_LABELS: Record<string, string> = {
      const ONE_HOUR_HALF_MS = 90 * 60 * 1000;
      const now = new Date().getTime();
 
-     const [sellersRes, clientsWithAlertsRes, slaAlertsRes, storesRes, allSellersRes] = await Promise.all([
+     const ONE_HOUR_MS = 60 * 60 * 1000;
+     const [sellersRes, leadsRes, slaAlertsRes, storesRes, allSellersRes] = await Promise.all([
        supabase.from("sellers").select("id, status"),
-       supabase.from("clients").select("id, last_message_from_client_at, alert_status").neq("alert_status", "none"),
+       supabase.from("leads").select("id, updated_at, stage"),
        supabase.from("sla_alerts")
          .select("*, vendedor:profiles(display_name), lead:leads(phone)")
          .order("created_at", { ascending: false })
@@ -97,14 +98,19 @@ const ROLE_LABELS: Record<string, string> = {
        setStats(prev => ({ ...prev, activeSellers: active, inactiveSellers: inactive }));
      }
 
-     if (clientsWithAlertsRes.data) {
-       const pending = clientsWithAlertsRes.data.length;
-       const critical = clientsWithAlertsRes.data.filter(c => {
-         if (!c.last_message_from_client_at) return false;
-         return (now - new Date(c.last_message_from_client_at).getTime()) > ONE_HOUR_HALF_MS;
-       }).length;
-       setStats(prev => ({ ...prev, pendingAlerts: pending, criticalAlerts: critical }));
-     }
+      if (leadsRes.data) {
+        // Match Kanban urgency logic: exclude fechamento/pos_venda; idle since updated_at
+        const eligible = leadsRes.data.filter((l: any) => l.stage !== 'fechamento' && l.stage !== 'pos_venda');
+        const pending = eligible.filter((l: any) => {
+          const idle = now - new Date(l.updated_at).getTime();
+          return idle >= ONE_HOUR_MS; // warning + critical
+        }).length;
+        const critical = eligible.filter((l: any) => {
+          const idle = now - new Date(l.updated_at).getTime();
+          return idle >= ONE_HOUR_HALF_MS;
+        }).length;
+        setStats(prev => ({ ...prev, pendingAlerts: pending, criticalAlerts: critical }));
+      }
 
      // Fetch redirections with filters
     let query = supabase
