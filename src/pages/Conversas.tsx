@@ -539,9 +539,10 @@ const mockContactNames: Record<string, string> = {
 
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
 
-    const handleClaimLead = async () => {
-      if (!selectedPhone) {
-        console.warn("Missing selectedPhone:", { selectedPhone });
+    const handleClaimLead = async (phoneToClaim?: string) => {
+      const targetPhone = phoneToClaim || selectedPhone;
+      if (!targetPhone) {
+        console.warn("Missing phone to claim:", { targetPhone, selectedPhone });
         return;
       }
       setIsClaiming(true);
@@ -553,8 +554,8 @@ const mockContactNames: Record<string, string> = {
 
         const { data: claimResult, error: claimError } = await (supabase as any)
           .rpc("claim_whatsapp_client", {
-            _phone: selectedPhone,
-            _fallback_name: `Cliente ${formatPhone(selectedPhone)}`,
+            _phone: targetPhone,
+            _fallback_name: `Cliente ${formatPhone(targetPhone)}`,
           });
 
         if (claimError) throw claimError;
@@ -571,9 +572,9 @@ const mockContactNames: Record<string, string> = {
         toast.success("Você assumiu este atendimento!");
         // Force an immediate update of the local state before fetching
         setClients(prev => {
-          const existing = prev.find(c => c.phone === selectedPhone);
+          const existing = prev.find(c => c.phone === targetPhone);
           if (existing) {
-            return prev.map(c => c.phone === selectedPhone ? { 
+            return prev.map(c => c.phone === targetPhone ? { 
               ...c, 
               assigned_seller_id: realSellerId, 
               store_id: realStoreId,
@@ -582,8 +583,8 @@ const mockContactNames: Record<string, string> = {
             } : c);
           } else {
             return [...prev, { 
-              phone: selectedPhone, 
-              name: `Cliente ${formatPhone(selectedPhone)}`,
+              phone: targetPhone, 
+              name: `Cliente ${formatPhone(targetPhone)}`,
               assigned_seller_id: realSellerId, 
               status: 'em_atendimento',
               claimed_at: new Date().toISOString(),
