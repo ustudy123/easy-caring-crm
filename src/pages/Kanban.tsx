@@ -1,11 +1,12 @@
-import { useState } from "react";
+ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { useCrm } from "@/contexts/CrmContext";
+ import { useCrm } from "@/contexts/CrmContext";
+ import { useToast } from "@/hooks/use-toast";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle, X, FileText, GripVertical } from "lucide-react";
+ import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle, X, FileText, GripVertical, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +65,56 @@ const stageHeaderGradient: Record<KanbanStage, string> = {
 
 export default function Kanban() {
   const navigate = useNavigate();
-  const { leads, setLeads, addLead, updateLead, deleteLead, loading } = useCrm();
+   const { leads, setLeads, addLead, updateLead, deleteLead, loading, sellers } = useCrm();
+   const { toast } = useToast();
+   const [userSeller, setUserSeller] = useState<any>(null);
+   useEffect(() => {
+     const fetchUserSeller = async () => {
+       const { data: { user } } = await supabase.auth.getUser();
+       if (user) {
+         const { data: profile } = await supabase
+           .from("profiles")
+           .select("*, seller:sellers(*)")
+           .eq("id", user.id)
+           .maybeSingle();
+         
+         if (profile?.seller) {
+           setUserSeller(profile.seller);
+         }
+       }
+     };
+     fetchUserSeller();
+   }, []);
+
+   const handleAcceptLead = async (leadId: string) => {
+     if (!userSeller) {
+       toast({
+         title: "Erro ao assumir lead",
+         description: "Você precisa estar vinculado a um perfil de vendedor para assumir leads.",
+         variant: "destructive",
+       });
+       return;
+     }
+
+     const { data, error } = await supabase.rpc("accept_lead", {
+       _lead_id: leadId,
+       _seller_id: userSeller.id
+     });
+
+     if (error) {
+       toast({
+         title: "Erro ao assumir lead",
+         description: error.message,
+         variant: "destructive",
+       });
+     } else {
+       toast({
+         title: "Lead assumido!",
+         description: "Agora você é o responsável por este atendimento.",
+       });
+     }
+   };
+
   const [search, setSearch] = useState("");
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -285,30 +335,40 @@ export default function Kanban() {
                                              {config.label}
                                            </div>
                                          )}
-                                        {/* Header row */}
-                                        <div className="flex items-start justify-between gap-2">
-                                          <div className="flex items-center gap-2 min-w-0">
-                                            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stageBgMap[stage.key]} text-[10px] font-extrabold`}>
-                                              {lead.clientName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                          {/* Header row */}
+                                          <div className="flex items-start justify-between gap-2">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stageBgMap[stage.key]} text-[10px] font-extrabold`}>
+                                                {lead.clientName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                              </div>
+                                              <p className="text-[13px] font-bold text-foreground leading-tight truncate">{lead.clientName}</p>
                                             </div>
-                                            <p className="text-[13px] font-bold text-foreground leading-tight truncate">{lead.clientName}</p>
+                                            <div className="flex items-center gap-1 shrink-0">
+                                              {!lead.assignedTo && userSeller && (
+                                                <Button 
+                                                  size="sm" 
+                                                  variant="outline" 
+                                                  className="h-7 text-[10px] px-2 rounded-lg bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500 hover:text-white transition-all font-bold"
+                                                  onClick={(e) => { e.stopPropagation(); handleAcceptLead(lead.id); }}
+                                                >
+                                                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Atender
+                                                </Button>
+                                              )}
+                                              {urgency !== "ok" && (
+                                                <div className="flex flex-col items-end">
+                                                  <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-black ${config.badgeClass} animate-bounce`}>
+                                                    <Clock className="h-3 w-3" /> {idleTime}
+                                                  </span>
+                                                </div>
+                                              )}
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-muted"
+                                              >
+                                                <Pencil className="h-3 w-3 text-muted-foreground" />
+                                              </button>
+                                            </div>
                                           </div>
-                                          <div className="flex items-center gap-1 shrink-0">
-                                             {urgency !== "ok" && (
-                                               <div className="flex flex-col items-end">
-                                                 <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-black ${config.badgeClass} animate-bounce`}>
-                                                   <Clock className="h-3 w-3" /> {idleTime}
-                                                 </span>
-                                               </div>
-                                             )}
-                                            <button
-                                              onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
-                                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-muted"
-                                            >
-                                              <Pencil className="h-3 w-3 text-muted-foreground" />
-                                            </button>
-                                          </div>
-                                        </div>
 
                                         {/* Contact info */}
                                         <div className="mt-2 space-y-1">
