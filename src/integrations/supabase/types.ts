@@ -873,6 +873,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_lead: {
+        Args: { _lead_id: string; _seller_id: string }
+        Returns: Json
+      }
       admin_assign_user_role: {
         Args: {
           _is_active?: boolean
