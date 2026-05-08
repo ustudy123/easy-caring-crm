@@ -1,8 +1,9 @@
-import { useState } from "react";
+ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { useCrm } from "@/contexts/CrmContext";
+ import { useCrm } from "@/contexts/CrmContext";
+ import { useToast } from "@/hooks/use-toast";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
  import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle, X, FileText, GripVertical, CheckCircle2 } from "lucide-react";
