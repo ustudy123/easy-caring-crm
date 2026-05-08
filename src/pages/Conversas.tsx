@@ -539,9 +539,10 @@ const mockContactNames: Record<string, string> = {
 
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
 
-    const handleClaimLead = async () => {
-      if (!selectedPhone) {
-        console.warn("Missing selectedPhone:", { selectedPhone });
+    const handleClaimLead = async (phoneToClaim?: string) => {
+      const targetPhone = phoneToClaim || selectedPhone;
+      if (!targetPhone) {
+        console.warn("Missing phone to claim:", { targetPhone, selectedPhone });
         return;
       }
       setIsClaiming(true);
@@ -553,8 +554,8 @@ const mockContactNames: Record<string, string> = {
 
         const { data: claimResult, error: claimError } = await (supabase as any)
           .rpc("claim_whatsapp_client", {
-            _phone: selectedPhone,
-            _fallback_name: `Cliente ${formatPhone(selectedPhone)}`,
+            _phone: targetPhone,
+            _fallback_name: `Cliente ${formatPhone(targetPhone)}`,
           });
 
         if (claimError) throw claimError;
@@ -571,9 +572,9 @@ const mockContactNames: Record<string, string> = {
         toast.success("Você assumiu este atendimento!");
         // Force an immediate update of the local state before fetching
         setClients(prev => {
-          const existing = prev.find(c => c.phone === selectedPhone);
+          const existing = prev.find(c => c.phone === targetPhone);
           if (existing) {
-            return prev.map(c => c.phone === selectedPhone ? { 
+            return prev.map(c => c.phone === targetPhone ? { 
               ...c, 
               assigned_seller_id: realSellerId, 
               store_id: realStoreId,
@@ -582,8 +583,8 @@ const mockContactNames: Record<string, string> = {
             } : c);
           } else {
             return [...prev, { 
-              phone: selectedPhone, 
-              name: `Cliente ${formatPhone(selectedPhone)}`,
+              phone: targetPhone, 
+              name: `Cliente ${formatPhone(targetPhone)}`,
               assigned_seller_id: realSellerId, 
               status: 'em_atendimento',
               claimed_at: new Date().toISOString(),
@@ -980,14 +981,30 @@ const mockContactNames: Record<string, string> = {
                                )}
                                {conv.alert_status === 'critical' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" title="ALERTA CRÍTICO - ADMIN" />}
                               {conv.alert_status === 'red' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" title="Alerta Crítico" />}
-                              {conv.alert_status === 'yellow' && <div className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" title="Alerta de Demora" />}
+                               {conv.alert_status === 'yellow' && <div className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" title="Alerta de Demora" />}
+                             </div>
+                             <div className="flex items-center gap-2">
+                              {(activeTab === 'geral' || activeTab === 'loja') && (
+                                <Button 
+                                  size="sm" 
+                                  variant="secondary"
+                                  className="h-7 px-2 text-[10px] bg-green-600 hover:bg-green-700 text-white font-bold"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    handleSelectConversation(conv.phone);
+                                    handleClaimLead(conv.phone);
+                                  }}
+                                >
+                                  ATENDER
+                                </Button>
+                              )}
+                              <span className={cn(
+                                "text-[12px] shrink-0",
+                                conv.unreadCount > 0 ? "text-[hsl(var(--wa-green))]" : "text-muted-foreground"
+                              )}>
+                                {conv.lastTimestamp && formatMessageDate(conv.lastTimestamp)}
+                              </span>
                             </div>
-                            <span className={cn(
-                              "text-[12px] shrink-0",
-                              conv.unreadCount > 0 ? "text-[hsl(var(--wa-green))]" : "text-muted-foreground"
-                            )}>
-                              {conv.lastTimestamp && formatMessageDate(conv.lastTimestamp)}
-                            </span>
                           </div>
                           <div className="flex items-center gap-1 mt-0.5">
                             {lastMsgIsFromMe && (
@@ -1077,7 +1094,7 @@ const mockContactNames: Record<string, string> = {
                        {(!selectedConversation.assigned_seller_id || (isSelectedStale && selectedConversation.assigned_seller_id !== sellerId)) && (
                          <Button
                            size="sm"
-                           onClick={handleClaimLead} disabled={isClaiming} aria-busy={isClaiming} aria-live="polite"
+                            onClick={() => handleClaimLead()} disabled={isClaiming} aria-busy={isClaiming} aria-live="polite"
                            className="bg-white text-[hsl(var(--wa-header))] hover:bg-white/90 font-semibold h-8 px-3"
                          >
                            {isClaiming ? (<span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 animate-spin" /> Processando...</span>) : (<span className="flex items-center gap-1.5"><UserCheck className="h-4 w-4" /> {isSelectedStale && selectedConversation?.assigned_seller_id ? "Retomar Atendimento" : "Atender Cliente"}</span>)}
