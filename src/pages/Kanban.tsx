@@ -334,48 +334,40 @@ export default function Kanban() {
                                              {config.label}
                                            </div>
                                          )}
-                                         {/* Header row */}
-                                         <div className="flex items-start justify-between gap-2">
-                                           <div className="flex items-center gap-2 min-w-0">
-                                             <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stageBgMap[stage.key]} text-[10px] font-extrabold`}>
-                                               {lead.clientName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                                             </div>
-                                             <p className="text-[13px] font-bold text-foreground leading-tight truncate">{lead.clientName}</p>
-                                           </div>
-                                           <div className="flex items-center gap-1 shrink-0">
-                                             {!lead.assignedTo && userSeller && (
-                                               <Button 
-                                                 size="sm" 
-                                                 variant="outline" 
-                                                 className="h-7 text-[10px] px-2 rounded-lg bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500 hover:text-white transition-all font-bold"
-                                                 onClick={(e) => { e.stopPropagation(); handleAcceptLead(lead.id); }}
-                                               >
-                                                 <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Atender
-                                               </Button>
-                                             )}
-                                              {urgency !== "ok" && (
-                                          <div className="flex items-center gap-2 min-w-0">
-                                            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stageBgMap[stage.key]} text-[10px] font-extrabold`}>
-                                              {lead.clientName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                          {/* Header row */}
+                                          <div className="flex items-start justify-between gap-2">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stageBgMap[stage.key]} text-[10px] font-extrabold`}>
+                                                {lead.clientName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                              </div>
+                                              <p className="text-[13px] font-bold text-foreground leading-tight truncate">{lead.clientName}</p>
                                             </div>
-                                            <p className="text-[13px] font-bold text-foreground leading-tight truncate">{lead.clientName}</p>
+                                            <div className="flex items-center gap-1 shrink-0">
+                                              {!lead.assignedTo && userSeller && (
+                                                <Button 
+                                                  size="sm" 
+                                                  variant="outline" 
+                                                  className="h-7 text-[10px] px-2 rounded-lg bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500 hover:text-white transition-all font-bold"
+                                                  onClick={(e) => { e.stopPropagation(); handleAcceptLead(lead.id); }}
+                                                >
+                                                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Atender
+                                                </Button>
+                                              )}
+                                              {urgency !== "ok" && (
+                                                <div className="flex flex-col items-end">
+                                                  <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-black ${config.badgeClass} animate-bounce`}>
+                                                    <Clock className="h-3 w-3" /> {idleTime}
+                                                  </span>
+                                                </div>
+                                              )}
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-muted"
+                                              >
+                                                <Pencil className="h-3 w-3 text-muted-foreground" />
+                                              </button>
+                                            </div>
                                           </div>
-                                          <div className="flex items-center gap-1 shrink-0">
-                                             {urgency !== "ok" && (
-                                               <div className="flex flex-col items-end">
-                                                 <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-black ${config.badgeClass} animate-bounce`}>
-                                                   <Clock className="h-3 w-3" /> {idleTime}
-                                                 </span>
-                                               </div>
-                                             )}
-                                            <button
-                                              onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
-                                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-muted"
-                                            >
-                                              <Pencil className="h-3 w-3 text-muted-foreground" />
-                                            </button>
-                                          </div>
-                                        </div>
 
                                         {/* Contact info */}
                                         <div className="mt-2 space-y-1">
