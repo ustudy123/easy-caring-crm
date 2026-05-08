@@ -1094,7 +1094,7 @@ const mockContactNames: Record<string, string> = {
                        {(!selectedConversation.assigned_seller_id || (isSelectedStale && selectedConversation.assigned_seller_id !== sellerId)) && (
                          <Button
                            size="sm"
-                           onClick={handleClaimLead} disabled={isClaiming} aria-busy={isClaiming} aria-live="polite"
+                            onClick={() => handleClaimLead()} disabled={isClaiming} aria-busy={isClaiming} aria-live="polite"
                            className="bg-white text-[hsl(var(--wa-header))] hover:bg-white/90 font-semibold h-8 px-3"
                          >
                            {isClaiming ? (<span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 animate-spin" /> Processando...</span>) : (<span className="flex items-center gap-1.5"><UserCheck className="h-4 w-4" /> {isSelectedStale && selectedConversation?.assigned_seller_id ? "Retomar Atendimento" : "Atender Cliente"}</span>)}
