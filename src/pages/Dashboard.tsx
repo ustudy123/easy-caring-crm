@@ -277,7 +277,7 @@ export default function Dashboard() {
               <Card 
                 tabIndex={0}
                 className="group relative overflow-hidden border border-border/50 shadow-sm hover:shadow-md hover:border-border transition-all duration-300 glass-card"
-                style={{ borderLeft: `3px solid hsl(var(--${kpi.iconColor.split('-')[1]}))` }}
+                style={{ borderLeft: `3px solid hsl(var(--${kpi.iconColor.replace('text-', '')}))` }}
               >
                 <CardContent className="p-3 sm:p-5">
                   <div className="flex items-start justify-between">
@@ -317,9 +317,9 @@ export default function Dashboard() {
 
         {/* Funnel — waterfall visualization */}
         <motion.div variants={item}>
-          <Card className="border border-border/50 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+          <Card className="border border-border/50 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-default">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 </div>
@@ -340,48 +340,42 @@ export default function Dashboard() {
                       const isHovered = hoveredFunnel === i;
 
                       return (
-                        <div
-                          key={stage.name}
-                          className="relative flex items-center w-full group/funnel"
-                          onMouseEnter={() => setHoveredFunnel(i)}
-                          onMouseLeave={() => setHoveredFunnel(null)}
-                        >
-                          {/* Stage label left - more compact on mobile */}
-                          <div className="w-14 sm:w-28 shrink-0 text-right pr-2 sm:pr-4">
-                            <span className="text-[8px] sm:text-[11px] font-bold text-muted-foreground leading-tight uppercase tracking-tighter sm:tracking-normal">{stage.name}</span>
-                          </div>
-                          {/* Bar */}
-                          <div className="flex-1 flex items-center gap-1.5 sm:gap-3">
-                            <div className="flex-1 relative">
-                              <motion.div
-                                className="h-6 sm:h-9 rounded-sm sm:rounded-lg flex items-center justify-end pr-1.5 sm:pr-3 transition-all cursor-pointer"
-                                style={{
-                                  width: `${widthPct}%`,
-                                  backgroundColor: stage.color,
-                                  boxShadow: isHovered ? `0 4px 16px ${stage.color}40` : 'none',
-                                }}
-                                initial={{ width: 0 }}
-                                animate={{ width: `${widthPct}%` }}
-                                transition={{ duration: 0.6, delay: i * 0.08, ease: "easeOut" }}
-                              >
-                                <span className="text-[9px] sm:text-xs font-bold text-white tabular-nums">{stage.leads}</span>
-                              </motion.div>
-                            </div>
-                            {/* Conversion arrow */}
-                            {convRate !== null && (
-                              <span className={`text-[8px] sm:text-[11px] font-black tabular-nums w-7 sm:w-10 shrink-0 ${convRate >= 50 ? 'text-success' : 'text-destructive'}`}>
-                                {convRate}%
-                              </span>
-                            )}
-                            {convRate === null && <span className="w-7 sm:w-10 shrink-0" />}
-                          </div>
-                          {/* Tooltip on hover */}
-                          {isHovered && (
-                            <div className="absolute left-32 -top-2 z-20">
+                        <TooltipProvider key={stage.name}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="relative flex items-center w-full group/funnel cursor-help">
+                                <div className="w-14 sm:w-28 shrink-0 text-right pr-2 sm:pr-4">
+                                  <span className="text-[8px] sm:text-[11px] font-bold text-muted-foreground leading-tight uppercase tracking-tighter sm:tracking-normal">{stage.name}</span>
+                                </div>
+                                <div className="flex-1 flex items-center gap-1.5 sm:gap-3">
+                                  <div className="flex-1 relative">
+                                    <motion.div
+                                      className="h-6 sm:h-9 rounded-sm sm:rounded-lg flex items-center justify-end pr-1.5 sm:pr-3 transition-all"
+                                      style={{
+                                        width: `${widthPct}%`,
+                                        backgroundColor: stage.color,
+                                      }}
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${widthPct}%` }}
+                                      transition={{ duration: 0.6, delay: i * 0.08, ease: "easeOut" }}
+                                    >
+                                      <span className="text-[9px] sm:text-xs font-bold text-white tabular-nums">{stage.leads}</span>
+                                    </motion.div>
+                                  </div>
+                                  {convRate !== null && (
+                                    <span className={`text-[8px] sm:text-[11px] font-black tabular-nums w-7 sm:w-10 shrink-0 ${convRate >= 50 ? 'text-success' : 'text-destructive'}`}>
+                                      {convRate}%
+                                    </span>
+                                  )}
+                                  {convRate === null && <span className="w-7 sm:w-10 shrink-0" />}
+                                </div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
                               <FunnelTooltip stage={stage.name} count={stage.leads} value={stage.valor} convRate={convRate} />
-                            </div>
-                          )}
-                        </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       );
                     })}
                   </div>
@@ -416,9 +410,9 @@ export default function Dashboard() {
 
         {/* Timeline area chart */}
         <motion.div variants={item}>
-          <Card className="border border-border/50 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+          <Card className="border border-border/50 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-default">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-info/10">
                   <CalendarDays className="h-3.5 w-3.5 text-info" />
                 </div>
@@ -474,9 +468,9 @@ export default function Dashboard() {
         {/* Charts row — horizontal bar + donut */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           <motion.div variants={item} className="lg:col-span-2">
-            <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow cursor-default">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary/10">
                     <BarChart3 className="h-3.5 w-3.5 text-secondary" />
                   </div>
@@ -522,9 +516,9 @@ export default function Dashboard() {
           </motion.div>
 
           <motion.div variants={item}>
-            <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow cursor-default">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-success/10">
                     <MessageCircle className="h-3.5 w-3.5 text-success" />
                   </div>
@@ -591,9 +585,9 @@ export default function Dashboard() {
 
         {/* Sellers performance */}
         <motion.div variants={item}>
-          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow cursor-default">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-info/10">
                   <Users className="h-3.5 w-3.5 text-info" />
                 </div>
@@ -628,9 +622,9 @@ export default function Dashboard() {
 
         {/* Upcoming follow-ups */}
         <motion.div variants={item}>
-          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow cursor-default">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning/10">
                   <CalendarDays className="h-3.5 w-3.5 text-warning" />
                 </div>

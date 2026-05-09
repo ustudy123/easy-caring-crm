@@ -269,7 +269,7 @@ export default function Kanban() {
                   className="flex-shrink-0 w-[85vw] sm:w-[280px] lg:w-[276px] flex flex-col snap-center sm:snap-start"
                 >
                   {/* Column header */}
-                  <div className={`flex items-center justify-between rounded-t-xl sm:rounded-t-2xl p-3 sm:p-3.5 bg-gradient-to-b ${stageHeaderGradient[stage.key]} border border-b border-border/40 border-b-kanban-${stage.key === 'abordagem' ? 'approach' : stage.key === 'sondagem' ? 'probing' : stage.key === 'recomendacao_tecnica' ? 'recommendation' : stage.key === 'demonstracao_valor' ? 'demonstration' : stage.key === 'contorno_objecoes' ? 'objections' : stage.key === 'cross_sell' ? 'crosssell' : stage.key === 'fechamento' ? 'closing' : 'postsale'}/20`}>
+                  <div className={`flex items-center justify-between rounded-t-xl sm:rounded-t-2xl p-3 sm:p-3.5 bg-gradient-to-b ${stageHeaderGradient[stage.key]} border-x border-t border-b border-border/40 border-b-kanban-${stage.key === 'abordagem' ? 'approach' : stage.key === 'sondagem' ? 'probing' : stage.key === 'recomendacao_tecnica' ? 'recommendation' : stage.key === 'demonstracao_valor' ? 'demonstration' : stage.key === 'contorno_objecoes' ? 'objections' : stage.key === 'cross_sell' ? 'crosssell' : stage.key === 'fechamento' ? 'closing' : 'postsale'}/20`}>
                     <div className="flex items-center gap-2.5">
                       <div className={`h-2.5 w-2.5 rounded-full ${stageDotMap[stage.key]} ring-2 ring-background shadow-sm`} />
                       <span className="text-[12px] sm:text-[13px] font-bold truncate max-w-[120px] sm:max-w-none">{stage.label}</span>
@@ -362,7 +362,7 @@ export default function Kanban() {
                                               )}
                                               {urgency !== "ok" && (
                                                 <div className="flex flex-col items-end">
-                                                  <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-black ${config.badgeClass} animate-bounce`}>
+                                                   <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-black ${config.badgeClass}`}>
                                                     <Clock className="h-3 w-3" /> {idleTime}
                                                   </span>
                                                 </div>
