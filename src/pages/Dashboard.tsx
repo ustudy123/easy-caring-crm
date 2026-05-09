@@ -383,13 +383,13 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
                   </div>
                   {/* Summary stats */}
                   <div className="mt-4 sm:mt-5 flex flex-wrap gap-4 sm:gap-8 justify-center border-t border-border/40 pt-3 sm:pt-4">
-                    <div className="text-center">
+                     <div className="text-center min-w-[80px]">
                       <p className="text-lg sm:text-2xl font-extrabold text-foreground tabular-nums">
                         {funnelData[0]?.leads || 0} → {funnelData[funnelData.length - 1]?.leads || 0}
                       </p>
                       <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Início → Fechado</p>
                     </div>
-                    <div className="text-center">
+                     <div className="text-center min-w-[80px]">
                       <p className="text-lg sm:text-2xl font-extrabold gradient-text tabular-nums">
                         {funnelData[0]?.leads > 0
                           ? `${Math.round((funnelData[funnelData.length - 1]?.leads / funnelData[0]?.leads) * 100)}%`
@@ -397,7 +397,7 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
                       </p>
                       <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Conversão Total</p>
                     </div>
-                    <div className="text-center">
+                     <div className="text-center min-w-[80px]">
                       <p className="text-lg sm:text-2xl font-extrabold text-foreground tabular-nums">
                         R$ {funnelData.reduce((a, b) => a + b.valor, 0).toLocaleString("pt-BR")}
                       </p>
@@ -569,11 +569,11 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 justify-center">
+                     <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-4 justify-center">
                       {sourceData.map((s, i) => (
                         <div key={s.name} className="flex items-center gap-1.5 text-xs">
                           <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SOURCE_COLORS[i] }} />
-                          <span className="text-muted-foreground">{s.name}</span>
+                           <span className="text-muted-foreground whitespace-nowrap">{s.name}</span>
                           <span className="font-semibold text-foreground tabular-nums">{s.value}</span>
                         </div>
                       ))}
