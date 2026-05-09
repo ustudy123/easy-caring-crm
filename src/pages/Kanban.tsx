@@ -135,6 +135,76 @@ export default function Kanban() {
     setFilterUrgency("all");
   };
 
+  const handleTransferLead = async (sellerId: string, reason: string) => {
+    if (!transferringLead) return;
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!profile) return;
+
+    const targetSeller = sellers.find(s => s.id === sellerId);
+
+    const { error: updateError } = await supabase
+      .from("leads")
+      .update({ assigned_to: sellerId, store_id: targetSeller?.store_id || transferringLead.storeId })
+      .eq("id", transferringLead.id);
+
+    if (updateError) {
+      toast({ title: "Erro ao transferir", description: updateError.message, variant: "destructive" });
+      return;
+    }
+
+    // Record in redirection history
+    const { data: clientData } = await supabase.from("clients").select("id").eq("phone", transferringLead.clientPhone).maybeSingle();
+    
+    await supabase.from("redirection_history").insert({
+      client_id: clientData?.id,
+      from_seller_id: transferringLead.assignedTo,
+      to_seller_id: sellerId,
+      redirection_type: 'manual_transfer',
+      reason: reason || 'Transferência manual via Kanban',
+      performed_by: profile.id,
+      store_id: targetSeller?.store_id || null
+    });
+
+    toast({ title: "Lead transferido", description: `Transferido para ${targetSeller?.name}` });
+    setTransferringLead(null);
+    // Force context refresh by updating lead in state
+    updateLead({ ...transferringLead, assignedTo: sellerId, storeId: targetSeller?.store_id || transferringLead.storeId });
+  };
+
+  const handleRequestPricing = async (lead: Lead) => {
+    const { error: updateError } = await supabase
+      .from("leads")
+      .update({ stage: 'precificacao_especial' })
+      .eq("id", lead.id);
+
+    if (updateError) {
+      toast({ title: "Erro", description: updateError.message, variant: "destructive" });
+      return;
+    }
+
+    await supabase.from("pricing_support_requests").insert({
+      lead_id: lead.id,
+      seller_id: userSeller?.id,
+      status: 'pending'
+    });
+
+    toast({ 
+      title: "Solicitação enviada!", 
+      description: "O André foi notificado para análise de precificação especial.",
+    });
+    
+    updateLead({ ...lead, stage: 'precificacao_especial' });
+  };
+
   const moveToNextStage = (lead: Lead) => {
     const stageKeys = KANBAN_STAGES.map(s => s.key);
     const idx = stageKeys.indexOf(lead.stage);
