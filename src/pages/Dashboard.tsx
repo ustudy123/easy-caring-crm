@@ -13,7 +13,8 @@ import {
   PieChart, Pie, Cell, CartesianGrid, Area, AreaChart, LabelList,
 } from "recharts";
 import { motion } from "framer-motion";
-import { forwardRef, useEffect, useMemo, useState } from "react";
+ import { forwardRef, useEffect, useMemo, useState, Suspense, lazy } from "react";
+ import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -108,7 +109,8 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
   );
 }
 
-export default function Dashboard() {
+ export default function Dashboard() {
+   const isMobile = useIsMobile();
   const { leads, followUps } = useCrm();
   const sellers = useSellers();
   const avgResponseMin = useAvgResponseTime();
@@ -371,7 +373,7 @@ export default function Dashboard() {
                                 </div>
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent side="right">
+                             <TooltipContent side={isMobile ? "top" : "right"}>
                               <FunnelTooltip stage={stage.name} count={stage.leads} value={stage.valor} convRate={convRate} />
                             </TooltipContent>
                           </Tooltip>
@@ -485,7 +487,7 @@ export default function Dashboard() {
                     <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 60 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                       <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                      <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={window.innerWidth < 640 ? 60 : 90} />
+                       <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={isMobile ? 60 : 90} />
                       <RTooltip
                         formatter={(value: number, name: string) =>
                           name === "Valor" ? `R$ ${value.toLocaleString("pt-BR")}` : value
@@ -602,7 +604,7 @@ export default function Dashboard() {
                   <BarChart data={sellerData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={window.innerWidth < 640 ? 50 : 70} />
+                     <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={isMobile ? 55 : 75} />
                     <RTooltip
                       contentStyle={{
                         background: "hsl(var(--card))",
@@ -652,7 +654,7 @@ export default function Dashboard() {
                           <p className="text-xs text-muted-foreground line-clamp-1">{f.description}</p>
                         </div>
                       </div>
-                      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap sm:text-right pl-12 sm:pl-0 tabular-nums">
+                       <span className="text-xs font-medium text-muted-foreground whitespace-nowrap sm:text-right pl-[48px] sm:pl-0 tabular-nums">
                         {new Date(f.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
