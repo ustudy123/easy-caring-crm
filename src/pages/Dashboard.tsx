@@ -282,8 +282,8 @@ export default function Dashboard() {
                 <CardContent className="p-3 sm:p-5">
                   <div className="flex items-start justify-between">
                     <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                      <p className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground tracking-[0.12em] truncate">{kpi.label}</p>
-                      <p className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight tabular-nums leading-none mt-1 sm:mt-2">{kpi.value}</p>
+                       <p className="text-[8px] sm:text-[10px] font-semibold text-muted-foreground tracking-[0.12em] truncate uppercase">{kpi.label}</p>
+                       <p className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight tabular-nums leading-none mt-1 sm:mt-2">{kpi.value}</p>
                     </div>
                     <div className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-lg sm:rounded-xl ${kpi.iconBg} group-hover:scale-105 transition-transform`}>
                       <kpi.icon className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${kpi.iconColor}`} />
@@ -344,11 +344,11 @@ export default function Dashboard() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="relative flex items-center w-full group/funnel cursor-help">
-                                <div className="w-14 sm:w-28 shrink-0 text-right pr-2 sm:pr-4">
-                                  <span className="text-[8px] sm:text-[11px] font-bold text-muted-foreground leading-tight uppercase tracking-tighter sm:tracking-normal">{stage.name}</span>
+                                 <div className="w-16 sm:w-28 shrink-0 text-right pr-2 sm:pr-4">
+                                   <span className="text-[9px] sm:text-[11px] font-bold text-muted-foreground leading-tight uppercase tracking-tighter sm:tracking-normal line-clamp-1">{stage.name}</span>
                                 </div>
                                 <div className="flex-1 flex items-center gap-1.5 sm:gap-3">
-                                  <div className="flex-1 relative">
+                                   <div className="flex-1 relative min-w-[60px]">
                                     <motion.div
                                       className="h-6 sm:h-9 rounded-sm sm:rounded-lg flex items-center justify-end pr-1.5 sm:pr-3 transition-all"
                                       style={{
@@ -484,8 +484,8 @@ export default function Dashboard() {
                   <ResponsiveContainer width="100%" height={320}>
                     <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 60 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                      <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                      <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={90} />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                      <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={window.innerWidth < 640 ? 60 : 90} />
                       <RTooltip
                         formatter={(value: number, name: string) =>
                           name === "Valor" ? `R$ ${value.toLocaleString("pt-BR")}` : value
@@ -601,8 +601,8 @@ export default function Dashboard() {
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={sellerData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={70} />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={window.innerWidth < 640 ? 50 : 70} />
                     <RTooltip
                       contentStyle={{
                         background: "hsl(var(--card))",
