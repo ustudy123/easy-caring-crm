@@ -274,6 +274,53 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
           </div>
         </motion.div>
 
+        {/* SLA Alerts Section - Real Time */}
+        {notifications.length > 0 && (
+          <motion.div variants={item} className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs sm:text-sm font-extrabold text-foreground flex items-center gap-2 uppercase tracking-wider">
+                <AlertTriangle className="h-4 w-4 text-warning" /> 
+                Alertas de SLA Ativos 
+                <Badge variant="destructive" className="ml-1 rounded-full px-2 py-0 h-5 text-[10px] animate-pulse">
+                  {notifications.length}
+                </Badge>
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {notifications.map((notif) => (
+                <Card key={notif.id} className={`border-l-4 ${notif.type === 'sla_critical' ? 'border-l-destructive' : 'border-l-warning'} glass-card hover:shadow-md transition-all group`}>
+                  <CardContent className="p-4 flex items-start gap-3">
+                    <div className={`mt-1 h-8 w-8 rounded-lg shrink-0 flex items-center justify-center ${notif.type === 'sla_critical' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'}`}>
+                      {notif.type === 'sla_critical' ? <ShieldAlert className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-bold text-foreground leading-tight">{notif.title}</p>
+                      <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{notif.message}</p>
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ptBR })}
+                        </span>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="h-7 text-[10px] font-bold text-success hover:bg-success/10 rounded-lg gap-1.5"
+                          onClick={() => {
+                            markNotificationRead(notif.id);
+                            toast.success("Alerta marcado como resolvido.");
+                          }}
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Resolver
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* KPIs — glassmorphism cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
           {kpis.map((kpi) => (
