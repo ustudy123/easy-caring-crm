@@ -67,6 +67,7 @@ export default {
           demonstration: "hsl(var(--kanban-demonstration))",
           objections: "hsl(var(--kanban-objections))",
           crosssell: "hsl(var(--kanban-crosssell))",
+          pricing: "hsl(var(--kanban-pricing))",
           closing: "hsl(var(--kanban-closing))",
           postsale: "hsl(var(--kanban-postsale))",
         },

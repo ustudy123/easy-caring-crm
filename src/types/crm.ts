@@ -1,4 +1,4 @@
-export type KanbanStage = 'abordagem' | 'sondagem' | 'recomendacao_tecnica' | 'demonstracao_valor' | 'contorno_objecoes' | 'cross_sell' | 'fechamento' | 'pos_venda';
+export type KanbanStage = 'abordagem' | 'sondagem' | 'recomendacao_tecnica' | 'demonstracao_valor' | 'contorno_objecoes' | 'cross_sell' | 'precificacao_especial' | 'fechamento' | 'pos_venda';
 
 export interface Lead {
   id: string;
@@ -74,6 +74,7 @@ export interface Seller {
   name: string;
   avatar?: string;
   role: 'vendedor' | 'gerente';
+  store_id?: string;
   leadsCount: number;
   conversions: number;
 }
@@ -85,6 +86,7 @@ export const KANBAN_STAGES: { key: KanbanStage; label: string; color: string }[]
   { key: 'demonstracao_valor', label: 'Demonstração', color: 'kanban-demonstration' },
   { key: 'contorno_objecoes', label: 'Objeções', color: 'kanban-objections' },
   { key: 'cross_sell', label: 'Cross-sell', color: 'kanban-crosssell' },
+  { key: 'precificacao_especial', label: 'Precificação Especial', color: 'kanban-pricing' },
   { key: 'fechamento', label: 'Fechamento', color: 'kanban-closing' },
   { key: 'pos_venda', label: 'Pós-Venda', color: 'kanban-postsale' },
 ];

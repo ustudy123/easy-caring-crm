@@ -6,7 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
  import { useToast } from "@/hooks/use-toast";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
- import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, MapPin, Package } from "lucide-react";
+import { 
+  Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
+  AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
+  MapPin, Package, Forward, Zap, Loader2 
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +22,12 @@ import { getUrgencyLevel, getUrgencyConfig, formatIdleTime } from "@/lib/leadUrg
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { 
+  Dialog, DialogContent, DialogHeader, DialogTitle, 
+  DialogDescription, DialogFooter 
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const stageColorMap: Record<KanbanStage, string> = {
   abordagem: "border-l-kanban-approach",
@@ -26,6 +36,7 @@ const stageColorMap: Record<KanbanStage, string> = {
   demonstracao_valor: "border-l-kanban-demonstration",
   contorno_objecoes: "border-l-kanban-objections",
   cross_sell: "border-l-kanban-crosssell",
+  precificacao_especial: "border-l-kanban-pricing",
   fechamento: "border-l-kanban-closing",
   pos_venda: "border-l-kanban-postsale",
 };
@@ -37,6 +48,7 @@ const stageBgMap: Record<KanbanStage, string> = {
   demonstracao_valor: "bg-kanban-demonstration/8 text-kanban-demonstration",
   contorno_objecoes: "bg-kanban-objections/8 text-kanban-objections",
   cross_sell: "bg-kanban-crosssell/8 text-kanban-crosssell",
+  precificacao_especial: "bg-kanban-pricing/8 text-kanban-pricing",
   fechamento: "bg-kanban-closing/8 text-kanban-closing",
   pos_venda: "bg-kanban-postsale/8 text-kanban-postsale",
 };
@@ -48,6 +60,7 @@ const stageDotMap: Record<KanbanStage, string> = {
   demonstracao_valor: "bg-kanban-demonstration",
   contorno_objecoes: "bg-kanban-objections",
   cross_sell: "bg-kanban-crosssell",
+  precificacao_especial: "bg-kanban-pricing",
   fechamento: "bg-kanban-closing",
   pos_venda: "bg-kanban-postsale",
 };
@@ -59,6 +72,7 @@ const stageHeaderGradient: Record<KanbanStage, string> = {
   demonstracao_valor: "from-kanban-demonstration/15 to-kanban-demonstration/5",
   contorno_objecoes: "from-kanban-objections/15 to-kanban-objections/5",
   cross_sell: "from-kanban-crosssell/15 to-kanban-crosssell/5",
+  precificacao_especial: "from-kanban-pricing/15 to-kanban-pricing/5",
   fechamento: "from-kanban-closing/15 to-kanban-closing/5",
   pos_venda: "from-kanban-postsale/15 to-kanban-postsale/5",
 };
@@ -118,6 +132,10 @@ export default function Kanban() {
   const [search, setSearch] = useState("");
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [transferringLead, setTransferringLead] = useState<Lead | null>(null);
+  const [transferSellerId, setTransferSellerId] = useState("");
+  const [transferReason, setTransferReason] = useState("");
+  const [isTransferring, setIsTransferring] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [filterSource, setFilterSource] = useState<string>("all");
   const [filterUrgency, setFilterUrgency] = useState<string>("all");
@@ -128,6 +146,76 @@ export default function Kanban() {
   const clearFilters = () => {
     setFilterSource("all");
     setFilterUrgency("all");
+  };
+
+  const handleTransferLead = async (sellerId: string, reason: string) => {
+    if (!transferringLead) return;
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!profile) return;
+
+    const targetSeller = sellers.find(s => s.id === sellerId);
+
+    const { error: updateError } = await supabase
+      .from("leads")
+      .update({ assigned_to: sellerId, store_id: targetSeller?.store_id || transferringLead.storeId })
+      .eq("id", transferringLead.id);
+
+    if (updateError) {
+      toast({ title: "Erro ao transferir", description: updateError.message, variant: "destructive" });
+      return;
+    }
+
+    // Record in redirection history
+    const { data: clientData } = await supabase.from("clients").select("id").eq("phone", transferringLead.clientPhone).maybeSingle();
+    
+    await supabase.from("redirection_history").insert({
+      client_id: clientData?.id,
+      from_seller_id: transferringLead.assignedTo,
+      to_seller_id: sellerId,
+      redirection_type: 'manual_transfer',
+      reason: reason || 'Transferência manual via Kanban',
+      performed_by: profile.id,
+      store_id: targetSeller?.store_id || null
+    });
+
+    toast({ title: "Lead transferido", description: `Transferido para ${targetSeller?.name}` });
+    setTransferringLead(null);
+    // Force context refresh by updating lead in state
+    updateLead({ ...transferringLead, assignedTo: sellerId, storeId: targetSeller?.store_id || transferringLead.storeId });
+  };
+
+  const handleRequestPricing = async (lead: Lead) => {
+    const { error: updateError } = await supabase
+      .from("leads")
+      .update({ stage: 'precificacao_especial' })
+      .eq("id", lead.id);
+
+    if (updateError) {
+      toast({ title: "Erro", description: updateError.message, variant: "destructive" });
+      return;
+    }
+
+    await supabase.from("pricing_support_requests").insert({
+      lead_id: lead.id,
+      seller_id: userSeller?.id,
+      status: 'pending'
+    });
+
+    toast({ 
+      title: "Solicitação enviada!", 
+      description: "O André foi notificado para análise de precificação especial.",
+    });
+    
+    updateLead({ ...lead, stage: 'precificacao_especial' });
   };
 
   const moveToNextStage = (lead: Lead) => {
@@ -367,12 +455,30 @@ export default function Kanban() {
                                                   </span>
                                                 </div>
                                               )}
-                                              <button
-                                                onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
-                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-muted"
-                                              >
-                                                <Pencil className="h-3 w-3 text-muted-foreground" />
-                                              </button>
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                                                  {lead.stage !== 'precificacao_especial' && lead.stage !== 'fechamento' && lead.stage !== 'pos_venda' && (
+                                                    <button
+                                                      onClick={(e) => { e.stopPropagation(); handleRequestPricing(lead); }}
+                                                      className="p-1 rounded-lg hover:bg-yellow-100 text-yellow-600"
+                                                      title="Precificação Especial"
+                                                    >
+                                                      <Zap className="h-3 w-3" />
+                                                    </button>
+                                                  )}
+                                                  <button
+                                                    onClick={(e) => { e.stopPropagation(); setTransferringLead(lead); }}
+                                                    className="p-1 rounded-lg hover:bg-blue-100 text-blue-600"
+                                                    title="Transferir"
+                                                  >
+                                                    <Forward className="h-3 w-3" />
+                                                  </button>
+                                                  <button
+                                                    onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
+                                                    className="p-1 rounded-lg hover:bg-muted"
+                                                  >
+                                                    <Pencil className="h-3 w-3 text-muted-foreground" />
+                                                  </button>
+                                                </div>
                                             </div>
                                           </div>
 
@@ -478,6 +584,68 @@ export default function Kanban() {
         onOpenChange={(open) => !open && setPendingDeleteId(null)}
         onConfirm={() => { if (pendingDeleteId) { deleteLead(pendingDeleteId); setPendingDeleteId(null); } }}
       />
+
+      <Dialog open={!!transferringLead} onOpenChange={(open) => !open && setTransferringLead(null)}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Forward className="h-5 w-5 text-primary" /> Transferir Lead
+            </DialogTitle>
+            <DialogDescription>
+              Selecione para quem deseja transferir o atendimento de <strong>{transferringLead?.clientName}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Vendedor de Destino</Label>
+              <Select value={transferSellerId} onValueChange={setTransferSellerId}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Selecione um vendedor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {sellers.filter(s => s.id !== transferringLead?.assignedTo).map(s => (
+                    <SelectItem key={s.id} value={s.id}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{s.name}</span>
+                        <span className="text-[10px] text-muted-foreground">ID: {s.id.slice(0, 8)}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Motivo (opcional)</Label>
+              <Textarea 
+                placeholder="Descreva o motivo da transferência..."
+                className="rounded-xl resize-none h-20"
+                value={transferReason}
+                onChange={(e) => setTransferReason(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setTransferringLead(null)} className="rounded-xl">Cancelar</Button>
+            <Button 
+              className="rounded-xl gap-2" 
+              disabled={!transferSellerId || isTransferring}
+              onClick={async () => {
+                setIsTransferring(true);
+                await handleTransferLead(transferSellerId, transferReason);
+                setIsTransferring(false);
+                setTransferSellerId("");
+                setTransferReason("");
+              }}
+            >
+              {isTransferring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Forward className="h-4 w-4" />}
+              Transferir Agora
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
