@@ -55,11 +55,16 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 px-4 py-8 sm:py-12">
-      <div className="w-full max-w-md animate-fade-up">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 px-4 py-8 sm:py-12 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: 'radial-gradient(circle, hsl(var(--border)) 1px, transparent 1px)',
+        backgroundSize: '28px 28px',
+        opacity: 0.5,
+      }} />
+      <div className="w-full max-w-md animate-fade-up relative z-10">
         {/* Brand */}
         <div className="flex flex-col items-center mb-6 sm:mb-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary shadow-lg shadow-primary/20 mb-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary shadow-lg shadow-primary/20 mb-3 ring-1 ring-primary/20">
             <svg width="24" height="24" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <rect x="2" y="2" width="11" height="11" rx="2" fill="white" fillOpacity="0.95" />
               <rect x="15" y="2" width="11" height="11" rx="2" fill="white" fillOpacity="0.5" />
@@ -71,7 +76,7 @@ export default function Login() {
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">Gestão Comercial Inteligente</p>
         </div>
 
-        <Card className="shadow-xl border-border/50 backdrop-blur-sm bg-card/95">
+        <Card className="shadow-2xl border-border/40 backdrop-blur-sm bg-card/95">
           <CardHeader className="space-y-1.5 pb-4">
             <CardTitle className="text-lg sm:text-xl font-bold tracking-tight">
               {isForgot ? "Recuperar senha" : isSignUp ? "Criar conta" : "Bem-vindo de volta"}
@@ -156,7 +161,7 @@ export default function Login() {
               )}
               <Button
                 type="submit"
-                className="w-full h-10 font-semibold shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+                className="w-full h-10 font-semibold shadow-sm hover:shadow-md transition-all active:scale-[0.98] bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 border-0"
                 disabled={loading}
                 aria-busy={loading}
               >
