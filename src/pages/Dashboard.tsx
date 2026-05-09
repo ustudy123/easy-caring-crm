@@ -4,9 +4,10 @@ import { useCrm } from "@/contexts/CrmContext";
 import { useSellers } from "@/hooks/useSellers";
 import { KANBAN_STAGES } from "@/types/crm";
 import {
-  TrendingUp, Users, Clock, Target, ArrowUpRight, ArrowDownRight,
-  Phone, MessageCircle, CalendarDays, Sparkles, BarChart3,
-} from "lucide-react";
+   TrendingUp, Users, Clock, Target, ArrowUpRight, ArrowDownRight,
+   Phone, MessageCircle, CalendarDays, Sparkles, BarChart3,
+ } from "lucide-react";
+ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer,
   PieChart, Pie, Cell, CartesianGrid, Area, AreaChart, LabelList,
@@ -167,10 +168,10 @@ export default function Dashboard() {
 
   // KPI semantic colors: icon bg only
   const kpis = [
-    { label: "LEADS ATIVOS", value: activeLeads, icon: Users, change: activeChange.text, positive: activeChange.positive, iconColor: "text-primary", iconBg: "bg-primary/10" },
-    { label: "TAXA DE CONVERSÃO", value: `${conversionRate}%`, icon: Target, change: convChange.text, positive: convChange.positive, iconColor: "text-success", iconBg: "bg-success/10" },
-    { label: "TEMPO MÉDIO RESPOSTA", value: responseLabel, icon: Clock, change: "", positive: true, iconColor: "text-warning", iconBg: "bg-warning/10" },
-    { label: "FOLLOW-UPS PENDENTES", value: pendingFollowUps, icon: Phone, change: `${pendingFollowUps}`, positive: false, iconColor: "text-destructive", iconBg: "bg-destructive/10" },
+    { label: "LEADS ATIVOS", value: activeLeads, icon: Users, change: activeChange.text, positive: activeChange.positive, iconColor: "text-primary", iconBg: "bg-primary/10", key: 'activeLeads' },
+    { label: "TAXA DE CONVERSÃO", value: `${conversionRate}%`, icon: Target, change: convChange.text, positive: convChange.positive, iconColor: "text-success", iconBg: "bg-success/10", key: 'conversionRate' },
+    { label: "TEMPO MÉDIO RESPOSTA", value: responseLabel, icon: Clock, change: "", positive: true, iconColor: "text-warning", iconBg: "bg-warning/10", key: 'responseTime' },
+    { label: "FOLLOW-UPS PENDENTES", value: pendingFollowUps, icon: Phone, change: `${pendingFollowUps}`, positive: pendingFollowUps === 0, iconColor: "text-destructive", iconBg: "bg-destructive/10", key: 'pendingFollowUps' },
   ];
 
   // Funnel data
@@ -273,7 +274,11 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
           {kpis.map((kpi) => (
             <motion.div key={kpi.label} variants={item}>
-              <Card className="group relative overflow-hidden border border-border/50 shadow-sm hover:shadow-md hover:border-border transition-all duration-300 glass-card">
+              <Card 
+                tabIndex={0}
+                className="group relative overflow-hidden border border-border/50 shadow-sm hover:shadow-md hover:border-border transition-all duration-300 glass-card"
+                style={{ borderLeft: `3px solid hsl(var(--${kpi.iconColor.split('-')[1]}))` }}
+              >
                 <CardContent className="p-3 sm:p-5">
                   <div className="flex items-start justify-between">
                     <div className="space-y-0.5 sm:space-y-1 min-w-0">
@@ -286,7 +291,11 @@ export default function Dashboard() {
                   </div>
                   {kpi.change && (
                     <div className="mt-2 sm:mt-3 flex items-center gap-1">
-                      {kpi.positive ? (
+                      {kpi.key === 'pendingFollowUps' ? (
+                        <span className="flex items-center gap-0.5 text-[10px] sm:text-xs font-bold text-warning">
+                          <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />{kpi.change}
+                        </span>
+                      ) : kpi.positive ? (
                         <span className="flex items-center gap-0.5 text-[10px] sm:text-xs font-bold text-success">
                           <ArrowUpRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />{kpi.change}
                         </span>
@@ -295,11 +304,11 @@ export default function Dashboard() {
                           <ArrowDownRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />{kpi.change}
                         </span>
                       )}
-                      <span className="text-[9px] sm:text-[10px] text-muted-foreground hidden sm:inline">vs período anterior</span>
+                      <span className="text-[9px] sm:text-[10px] text-muted-foreground hidden sm:inline">
+                        {kpi.key === 'pendingFollowUps' ? 'pendentes' : 'vs período anterior'}
+                      </span>
                     </div>
                   )}
-                  {/* Left accent border */}
-                  <div className={`absolute left-0 top-0 h-full w-1 ${kpi.iconBg.replace('/10', '')} opacity-60 rounded-l-lg`} />
                 </CardContent>
               </Card>
             </motion.div>
