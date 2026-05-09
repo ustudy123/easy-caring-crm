@@ -26,6 +26,7 @@ const stageColorMap: Record<KanbanStage, string> = {
   demonstracao_valor: "border-l-kanban-demonstration",
   contorno_objecoes: "border-l-kanban-objections",
   cross_sell: "border-l-kanban-crosssell",
+  precificacao_especial: "border-l-kanban-pricing",
   fechamento: "border-l-kanban-closing",
   pos_venda: "border-l-kanban-postsale",
 };
@@ -37,6 +38,7 @@ const stageBgMap: Record<KanbanStage, string> = {
   demonstracao_valor: "bg-kanban-demonstration/8 text-kanban-demonstration",
   contorno_objecoes: "bg-kanban-objections/8 text-kanban-objections",
   cross_sell: "bg-kanban-crosssell/8 text-kanban-crosssell",
+  precificacao_especial: "bg-kanban-pricing/8 text-kanban-pricing",
   fechamento: "bg-kanban-closing/8 text-kanban-closing",
   pos_venda: "bg-kanban-postsale/8 text-kanban-postsale",
 };
@@ -48,6 +50,7 @@ const stageDotMap: Record<KanbanStage, string> = {
   demonstracao_valor: "bg-kanban-demonstration",
   contorno_objecoes: "bg-kanban-objections",
   cross_sell: "bg-kanban-crosssell",
+  precificacao_especial: "bg-kanban-pricing",
   fechamento: "bg-kanban-closing",
   pos_venda: "bg-kanban-postsale",
 };
@@ -59,6 +62,7 @@ const stageHeaderGradient: Record<KanbanStage, string> = {
   demonstracao_valor: "from-kanban-demonstration/15 to-kanban-demonstration/5",
   contorno_objecoes: "from-kanban-objections/15 to-kanban-objections/5",
   cross_sell: "from-kanban-crosssell/15 to-kanban-crosssell/5",
+  precificacao_especial: "from-kanban-pricing/15 to-kanban-pricing/5",
   fechamento: "from-kanban-closing/15 to-kanban-closing/5",
   pos_venda: "from-kanban-postsale/15 to-kanban-postsale/5",
 };
