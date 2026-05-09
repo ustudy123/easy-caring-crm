@@ -122,6 +122,7 @@ export default function Kanban() {
   const [search, setSearch] = useState("");
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [transferringLead, setTransferringLead] = useState<Lead | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [filterSource, setFilterSource] = useState<string>("all");
   const [filterUrgency, setFilterUrgency] = useState<string>("all");
