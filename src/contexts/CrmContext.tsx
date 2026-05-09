@@ -52,8 +52,13 @@ function mapLeadFromDb(row: any): Lead {
     tags: row.tags || [],
     notes: row.notes || "",
     createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    nextFollowUp: row.next_follow_up || undefined,
+     updatedAt: row.updated_at,
+     nextFollowUp: row.next_follow_up || undefined,
+     clientType: row.client_type || undefined,
+     companyWorkSite: row.company_work_site || undefined,
+     interestProducts: row.interest_products || undefined,
+     storeName: row.store_name || undefined,
+     storeId: row.store_id || undefined,
   };
 }
 
@@ -199,8 +204,13 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       assigned_to: lead.assignedTo || null,
       source: lead.source,
       tags: lead.tags,
-      notes: lead.notes,
-      next_follow_up: lead.nextFollowUp || null,
+       notes: lead.notes,
+       next_follow_up: lead.nextFollowUp || null,
+       client_type: lead.clientType || null,
+       company_work_site: lead.companyWorkSite || null,
+       interest_products: lead.interestProducts || null,
+       store_name: lead.storeName || null,
+       store_id: lead.storeId || null,
     });
     if (error) {
       console.error("Error adding lead:", error);
@@ -219,8 +229,13 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       assigned_to: lead.assignedTo || null,
       source: lead.source,
       tags: lead.tags,
-      notes: lead.notes,
-      next_follow_up: lead.nextFollowUp || null,
+       notes: lead.notes,
+       next_follow_up: lead.nextFollowUp || null,
+       client_type: lead.clientType || null,
+       company_work_site: lead.companyWorkSite || null,
+       interest_products: lead.interestProducts || null,
+       store_name: lead.storeName || null,
+       store_id: lead.storeId || null,
     }).eq("id", lead.id);
     if (error) console.error("Error updating lead:", error);
   }, []);
