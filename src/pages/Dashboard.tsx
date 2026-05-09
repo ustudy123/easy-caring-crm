@@ -245,6 +245,7 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
 
   const greetingHour = new Date().getHours();
   const greeting = greetingHour < 12 ? "Bom dia" : greetingHour < 18 ? "Boa tarde" : "Boa noite";
+  const { notifications, markNotificationRead } = useCrm();
 
   return (
     <AppLayout title="Dashboard">
