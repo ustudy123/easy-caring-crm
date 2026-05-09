@@ -168,9 +168,20 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       .channel("notifications-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, (payload) => {
         if (payload.eventType === "INSERT") {
-          setNotifications((prev) => [payload.new as Notification, ...prev]);
+          const newNotif = payload.new as Notification;
+          if (!newNotif.is_read) {
+            setNotifications((prev) => {
+              if (prev.some(n => n.id === newNotif.id)) return prev;
+              return [newNotif, ...prev];
+            });
+          }
         } else if (payload.eventType === "UPDATE") {
-          setNotifications((prev) => prev.map((n) => n.id === payload.new.id ? payload.new as Notification : n));
+          const updatedNotif = payload.new as Notification;
+          if (updatedNotif.is_read) {
+            setNotifications((prev) => prev.filter((n) => n.id !== updatedNotif.id));
+          } else {
+            setNotifications((prev) => prev.map((n) => n.id === updatedNotif.id ? updatedNotif : n));
+          }
         } else if (payload.eventType === "DELETE") {
           setNotifications((prev) => prev.filter((n) => n.id !== payload.old.id));
         }
@@ -288,14 +299,64 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const newLeadsCount = leads.filter((l) => l.stage === "abordagem").length;
   const pendingFollowUpsCount = followUps.filter((f) => !f.completed).length;
   const negotiationCount = leads.filter((l) => l.stage === "contorno_objecoes").length;
-  const slaAlertsCount = notifications.length;
+  // Get current user's role and ID to filter notifications
+  // Note: Since context initialization is complex, we filter notifications in the getter
+  const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
+
+  useEffect(() => {
+    const filterNotifs = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setFilteredNotifications([]);
+        return;
+      }
+
+      const [rolesRes, sellerRes, profileRes] = await Promise.all([
+        supabase.from("user_roles").select("role").eq("user_id", user.id),
+        supabase.from("sellers").select("id, store_id").eq("user_id", user.id).maybeSingle(),
+        supabase.from("profiles").select("id, store_id").eq("user_id", user.id).maybeSingle()
+      ]);
+
+      const userRoles = rolesRes.data?.map(r => r.role) || [];
+      const userStoreId = sellerRes.data?.store_id || profileRes.data?.store_id;
+      const userSellerId = sellerRes.data?.id;
+
+      const filtered = notifications.filter(n => {
+        // If specific user_id, must match
+        if (n.user_id && n.user_id !== user.id) return false;
+        
+        // If admin, see all SLA alerts
+        if (userRoles.includes('admin')) return true;
+
+        // If gerente, see alerts for their store
+        if (userRoles.includes('gerente')) {
+          return !n.store_id || n.store_id === userStoreId;
+        }
+
+        // If vendedor, see alerts targeted to them or their client
+        if (userRoles.includes('vendedor')) {
+          if (n.role_target === 'vendedor') {
+             return n.metadata?.seller_id === userSellerId || !n.metadata?.seller_id;
+          }
+        }
+        
+        return n.role_target ? userRoles.includes(n.role_target as any) : true;
+      });
+      
+      setFilteredNotifications(filtered);
+    };
+
+    filterNotifs();
+  }, [notifications]);
+
+  const slaAlertsCount = filteredNotifications.length;
 
   return (
     <CrmContext.Provider
       value={{
         leads, setLeads, addLead, updateLead, deleteLead,
         followUps, setFollowUps, addFollowUp, updateFollowUp, deleteFollowUp,
-       sellers, notifications, slaAlertsCount,
+        sellers, notifications: filteredNotifications, slaAlertsCount,
         newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount, loading,
         markNotificationRead
       }}

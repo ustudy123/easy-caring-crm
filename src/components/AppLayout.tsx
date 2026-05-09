@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle, Sun, Moon, AlertTriangle, ShieldAlert } from "lucide-react";
+import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle, Sun, Moon, AlertTriangle, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCrm, Notification } from "@/contexts/CrmContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -195,9 +195,23 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                     <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${notif.type === 'sla_critical' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'}`}>
                       {notif.type === 'sla_critical' ? <ShieldAlert className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground">{notif.title}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{notif.message}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-foreground">{notif.title}</p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 rounded-full hover:bg-success/20 text-success"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markNotificationRead(notif.id);
+                          }}
+                          title="Resolver alerta"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{notif.message}</p>
                     </div>
                   </div>
                 ))}
