@@ -96,7 +96,7 @@ export function AppSidebar() {
           <NavLink
             to={item.url}
             end={item.url === "/"}
-            title={collapsed ? item.title : undefined}
+              title={collapsed ? item.title : item.title}
             aria-current={isActive ? "page" : undefined}
             aria-label={badge > 0 ? `${item.title}, ${badge} novos` : item.title}
             className={cn(
