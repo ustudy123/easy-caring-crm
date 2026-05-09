@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useCrm } from "@/contexts/CrmContext";
 import { useRole } from "@/contexts/RoleContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { getUrgencyLevel, formatIdleTime } from "@/lib/leadUrgency";
 import { Lead } from "@/types/crm";
 import {
@@ -17,8 +18,26 @@ import { AlertTriangle, Clock } from "lucide-react";
 export function UrgencyAlertPopup() {
   const { leads } = useCrm();
   const { role, sellerId, isAdmin, isGerente, isVendedor } = useRole();
+  const { user } = useAuth();
+  const storageKey = user ? `urgency_dismissed_${user.id}` : null;
   const [activeAlert, setActiveAlert] = useState<Lead | null>(null);
   const [dismissedLeads, setDismissedLeads] = useState<Set<string>>(new Set());
+
+  // Load dismissed leads from localStorage on mount / user change
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as string[];
+        setDismissedLeads(new Set(parsed));
+      } else {
+        setDismissedLeads(new Set());
+      }
+    } catch {
+      setDismissedLeads(new Set());
+    }
+  }, [storageKey]);
 
   useEffect(() => {
     if (!leads.length || !role) return;
@@ -57,7 +76,15 @@ export function UrgencyAlertPopup() {
 
   const handleDismiss = () => {
     if (activeAlert) {
-      setDismissedLeads((prev) => new Set([...prev, activeAlert.id]));
+      setDismissedLeads((prev) => {
+        const next = new Set([...prev, activeAlert.id]);
+        if (storageKey) {
+          try {
+            localStorage.setItem(storageKey, JSON.stringify([...next]));
+          } catch {}
+        }
+        return next;
+      });
       setActiveAlert(null);
     }
   };
