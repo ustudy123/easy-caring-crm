@@ -51,24 +51,26 @@
           let notificationRole = null;
           let notificationMessage = "";
 
-          if (diffMins >= 90) { // 1h 30m - Critical Alert (Admin)
+          if (diffMins >= 90) { // 1h 30m - Alerta Crítico (Admin)
             if (newStatus !== 'critical') {
               newStatus = 'critical';
               notificationType = 'sla_critical';
               notificationRole = 'admin';
-              notificationMessage = `ALERTA CRÍTICO: Cliente ${client.name} (${client.phone}) sem resposta há 1h30. Cobrar Gestor!`;
+              notificationMessage = `🚨 ALERTA CRÍTICO: Cliente ${client.name} (${client.phone}) sem resposta há mais de 1h30. Ação imediata necessária!`;
             }
-          } else if (diffMins >= 60) { // 1h - Red Alert (Manager)
+          } else if (diffMins >= 60) { // 1h - Alerta Vermelho (Gerente)
             if (newStatus !== 'red' && newStatus !== 'critical') {
               newStatus = 'red';
               notificationType = 'sla_red';
-              notificationRole = 'manager';
-              notificationMessage = `ALERTA VERMELHO: Cliente ${client.name} (${client.phone}) sem resposta há 1h.`;
+              notificationRole = 'gerente';
+              notificationMessage = `🔴 ALERTA VERMELHO: Cliente ${client.name} (${client.phone}) aguardando há mais de 1h.`;
             }
-          } else if (diffMins >= 30) { // 30 mins - Yellow Alert (Seller)
+          } else if (diffMins >= 30) { // 30 mins - Alerta Amarelo (Vendedor)
             if (newStatus === 'none') {
               newStatus = 'yellow';
-              // Seller is usually notified via the UI, but we could add a notification here too
+              notificationType = 'sla_yellow';
+              notificationRole = 'vendedor';
+              notificationMessage = `🟡 ALERTA AMARELO: O cliente ${client.name} está aguardando há 30 minutos.`;
             }
           }
 
@@ -81,6 +83,7 @@
             await supabase.from("clients").update(updateData).eq("id", client.id);
 
             if (notificationType && notificationRole) {
+              // Enviar para tabela geral de notificações
               await supabase.from("notifications").insert({
                 type: notificationType,
                 role_target: notificationRole,
@@ -88,6 +91,15 @@
                 title: "Alerta de SLA",
                 message: notificationMessage,
                 metadata: { client_id: client.id, phone: client.phone, diffMins }
+              });
+
+              // Registrar no histórico de alertas SLA para auditoria
+              await supabase.from("sla_alerts").insert({
+                client_id: client.id,
+                seller_id: client.assigned_seller_id,
+                alert_level: newStatus === 'critical' ? 'crítico' : (newStatus === 'red' ? 'vermelho' : 'amarelo'),
+                alert_type: notificationRole,
+                message: notificationMessage
               });
             }
 
