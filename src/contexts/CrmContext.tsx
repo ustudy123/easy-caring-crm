@@ -168,9 +168,20 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       .channel("notifications-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, (payload) => {
         if (payload.eventType === "INSERT") {
-          setNotifications((prev) => [payload.new as Notification, ...prev]);
+          const newNotif = payload.new as Notification;
+          if (!newNotif.is_read) {
+            setNotifications((prev) => {
+              if (prev.some(n => n.id === newNotif.id)) return prev;
+              return [newNotif, ...prev];
+            });
+          }
         } else if (payload.eventType === "UPDATE") {
-          setNotifications((prev) => prev.map((n) => n.id === payload.new.id ? payload.new as Notification : n));
+          const updatedNotif = payload.new as Notification;
+          if (updatedNotif.is_read) {
+            setNotifications((prev) => prev.filter((n) => n.id !== updatedNotif.id));
+          } else {
+            setNotifications((prev) => prev.map((n) => n.id === updatedNotif.id ? updatedNotif : n));
+          }
         } else if (payload.eventType === "DELETE") {
           setNotifications((prev) => prev.filter((n) => n.id !== payload.old.id));
         }
