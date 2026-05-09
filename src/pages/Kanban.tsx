@@ -133,6 +133,9 @@ export default function Kanban() {
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [transferringLead, setTransferringLead] = useState<Lead | null>(null);
+  const [transferSellerId, setTransferSellerId] = useState("");
+  const [transferReason, setTransferReason] = useState("");
+  const [isTransferring, setIsTransferring] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [filterSource, setFilterSource] = useState<string>("all");
   const [filterUrgency, setFilterUrgency] = useState<string>("all");
