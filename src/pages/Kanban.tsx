@@ -194,11 +194,14 @@ export default function Kanban() {
                     <SelectTrigger className="h-8 text-xs rounded-lg"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas</SelectItem>
-                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                      <SelectItem value="instagram">Instagram</SelectItem>
-                      <SelectItem value="meta">Meta Ads</SelectItem>
-                      <SelectItem value="google">Google</SelectItem>
-                      <SelectItem value="indicacao">Indicação</SelectItem>
+                       <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                       <SelectItem value="instagram">Instagram</SelectItem>
+                       <SelectItem value="meta">Meta Ads</SelectItem>
+                       <SelectItem value="google">Google</SelectItem>
+                       <SelectItem value="site">Site</SelectItem>
+                       <SelectItem value="indicacao">Indicação</SelectItem>
+                       <SelectItem value="loja">Loja</SelectItem>
+                       <SelectItem value="campanha">Campanha</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
