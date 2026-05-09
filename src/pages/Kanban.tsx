@@ -442,12 +442,30 @@ export default function Kanban() {
                                                   </span>
                                                 </div>
                                               )}
-                                              <button
-                                                onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
-                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-muted"
-                                              >
-                                                <Pencil className="h-3 w-3 text-muted-foreground" />
-                                              </button>
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                                                  {lead.stage !== 'precificacao_especial' && lead.stage !== 'fechamento' && lead.stage !== 'pos_venda' && (
+                                                    <button
+                                                      onClick={(e) => { e.stopPropagation(); handleRequestPricing(lead); }}
+                                                      className="p-1 rounded-lg hover:bg-yellow-100 text-yellow-600"
+                                                      title="Precificação Especial"
+                                                    >
+                                                      <Zap className="h-3 w-3" />
+                                                    </button>
+                                                  )}
+                                                  <button
+                                                    onClick={(e) => { e.stopPropagation(); setTransferringLead(lead); }}
+                                                    className="p-1 rounded-lg hover:bg-blue-100 text-blue-600"
+                                                    title="Transferir"
+                                                  ) : (
+                                                    <Forward className="h-3 w-3" />
+                                                  </button>
+                                                  <button
+                                                    onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
+                                                    className="p-1 rounded-lg hover:bg-muted"
+                                                  >
+                                                    <Pencil className="h-3 w-3 text-muted-foreground" />
+                                                  </button>
+                                                </div>
                                             </div>
                                           </div>
 
