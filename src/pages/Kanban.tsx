@@ -362,7 +362,7 @@ export default function Kanban() {
                                               )}
                                               {urgency !== "ok" && (
                                                 <div className="flex flex-col items-end">
-                                                  <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-black ${config.badgeClass} animate-bounce`}>
+                                                   <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-black ${config.badgeClass}`}>
                                                     <Clock className="h-3 w-3" /> {idleTime}
                                                   </span>
                                                 </div>
