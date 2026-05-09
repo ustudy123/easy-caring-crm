@@ -147,6 +147,14 @@
     @apply bg-background text-foreground antialiased transition-colors duration-300;
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
+
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 /* Urgency pulse animation */
