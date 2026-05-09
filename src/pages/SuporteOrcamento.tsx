@@ -389,6 +389,21 @@ export default function SuporteOrcamento() {
                                        "{req.description}"
                                      </p>
                                    )}
+                                    
+                                    {req.pdfUrl && (
+                                      <div className="flex items-center gap-1.5 mt-1 bg-primary/5 p-1 rounded border border-primary/10">
+                                        <FileIcon className="h-3 w-3 text-primary" />
+                                        <a 
+                                          href={req.pdfUrl} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="text-[9px] text-primary hover:underline truncate max-w-[200px]"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          {req.pdfName || "Anexo PDF"}
+                                        </a>
+                                      </div>
+                                    )}
  
                                    <div className="flex items-center justify-between pt-1.5 border-t border-border/40 mt-1.5">
                                      <div className="flex items-center gap-1.5 text-primary/80">
