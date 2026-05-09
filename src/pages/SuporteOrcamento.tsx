@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
- import { FileText, DollarSign, AlertTriangle, Clock, CheckCircle, Send, Search, Filter, GripVertical, User, MessageSquare } from "lucide-react";
+ import { FileText, DollarSign, AlertTriangle, Clock, CheckCircle, Send, Search, Filter, GripVertical, User, MessageSquare, Paperclip, FileIcon } from "lucide-react";
  import { Lead } from "@/types/crm";
 import { toast } from "sonner";
  import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
@@ -23,6 +23,8 @@ interface SupportRequest {
   description: string;
   status: "pendente" | "em_analise" | "concluido";
   createdAt: string;
+  pdfUrl?: string;
+  pdfName?: string;
 }
 
 export default function SuporteOrcamento() {
@@ -65,6 +67,7 @@ export default function SuporteOrcamento() {
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [requestType, setRequestType] = useState<RequestType>("orcamento");
   const [description, setDescription] = useState("");
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
 
   // Leads that are in relevant stages
   const relevantLeads = leads.filter(
@@ -90,6 +93,8 @@ export default function SuporteOrcamento() {
       description,
       status: "pendente",
       createdAt: new Date().toISOString(),
+      pdfName: pdfFile?.name,
+      pdfUrl: pdfFile ? URL.createObjectURL(pdfFile) : undefined,
     };
 
     setRequests((prev) => [newRequest, ...prev]);
@@ -108,6 +113,7 @@ export default function SuporteOrcamento() {
     setShowForm(false);
     setSelectedLeadId("");
     setDescription("");
+    setPdfFile(null);
   };
 
    const updateRequestStatus = (id: string, status: SupportRequest["status"]) => {
@@ -284,6 +290,35 @@ export default function SuporteOrcamento() {
                   rows={3}
                 />
               </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Anexar PDF (opcional)</label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Input
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    id="pdf-upload"
+                    onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                  />
+                  <label
+                    htmlFor="pdf-upload"
+                    className="flex items-center gap-2 px-3 py-2 bg-muted hover:bg-muted/80 rounded-md cursor-pointer border border-input transition-colors text-xs font-medium"
+                  >
+                    <Paperclip className="h-3.5 w-3.5" />
+                    {pdfFile ? pdfFile.name : "Selecionar arquivo PDF"}
+                  </label>
+                  {pdfFile && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setPdfFile(null)}
+                      className="h-8 px-2 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                    >
+                      Remover
+                    </Button>
+                  )}
+                </div>
+              </div>
               <div className="flex gap-2 justify-end">
                 <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>Cancelar</Button>
                 <Button size="sm" onClick={handleSubmit}>
@@ -354,6 +389,21 @@ export default function SuporteOrcamento() {
                                        "{req.description}"
                                      </p>
                                    )}
+                                    
+                                    {req.pdfUrl && (
+                                      <div className="flex items-center gap-1.5 mt-1 bg-primary/5 p-1 rounded border border-primary/10">
+                                        <FileIcon className="h-3 w-3 text-primary" />
+                                        <a 
+                                          href={req.pdfUrl} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="text-[9px] text-primary hover:underline truncate max-w-[200px]"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          {req.pdfName || "Anexo PDF"}
+                                        </a>
+                                      </div>
+                                    )}
  
                                    <div className="flex items-center justify-between pt-1.5 border-t border-border/40 mt-1.5">
                                      <div className="flex items-center gap-1.5 text-primary/80">
