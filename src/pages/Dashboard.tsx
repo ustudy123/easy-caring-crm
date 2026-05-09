@@ -13,7 +13,8 @@ import {
   PieChart, Pie, Cell, CartesianGrid, Area, AreaChart, LabelList,
 } from "recharts";
 import { motion } from "framer-motion";
-import { forwardRef, useEffect, useMemo, useState } from "react";
+ import { forwardRef, useEffect, useMemo, useState, Suspense, lazy } from "react";
+ import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -108,7 +109,8 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
   );
 }
 
-export default function Dashboard() {
+ export default function Dashboard() {
+   const isMobile = useIsMobile();
   const { leads, followUps } = useCrm();
   const sellers = useSellers();
   const avgResponseMin = useAvgResponseTime();
@@ -282,8 +284,8 @@ export default function Dashboard() {
                 <CardContent className="p-3 sm:p-5">
                   <div className="flex items-start justify-between">
                     <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                      <p className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground tracking-[0.12em] truncate">{kpi.label}</p>
-                      <p className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight tabular-nums leading-none mt-1 sm:mt-2">{kpi.value}</p>
+                       <p className="text-[8px] sm:text-[10px] font-semibold text-muted-foreground tracking-[0.12em] truncate uppercase">{kpi.label}</p>
+                       <p className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight tabular-nums leading-none mt-1 sm:mt-2">{kpi.value}</p>
                     </div>
                     <div className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-lg sm:rounded-xl ${kpi.iconBg} group-hover:scale-105 transition-transform`}>
                       <kpi.icon className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${kpi.iconColor}`} />
@@ -344,11 +346,11 @@ export default function Dashboard() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="relative flex items-center w-full group/funnel cursor-help">
-                                <div className="w-14 sm:w-28 shrink-0 text-right pr-2 sm:pr-4">
-                                  <span className="text-[8px] sm:text-[11px] font-bold text-muted-foreground leading-tight uppercase tracking-tighter sm:tracking-normal">{stage.name}</span>
+                                 <div className="w-16 sm:w-28 shrink-0 text-right pr-2 sm:pr-4">
+                                   <span className="text-[9px] sm:text-[11px] font-bold text-muted-foreground leading-tight uppercase tracking-tighter sm:tracking-normal line-clamp-1">{stage.name}</span>
                                 </div>
                                 <div className="flex-1 flex items-center gap-1.5 sm:gap-3">
-                                  <div className="flex-1 relative">
+                                   <div className="flex-1 relative min-w-[60px]">
                                     <motion.div
                                       className="h-6 sm:h-9 rounded-sm sm:rounded-lg flex items-center justify-end pr-1.5 sm:pr-3 transition-all"
                                       style={{
@@ -371,7 +373,7 @@ export default function Dashboard() {
                                 </div>
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent side="right">
+                             <TooltipContent side={isMobile ? "top" : "right"}>
                               <FunnelTooltip stage={stage.name} count={stage.leads} value={stage.valor} convRate={convRate} />
                             </TooltipContent>
                           </Tooltip>
@@ -381,13 +383,13 @@ export default function Dashboard() {
                   </div>
                   {/* Summary stats */}
                   <div className="mt-4 sm:mt-5 flex flex-wrap gap-4 sm:gap-8 justify-center border-t border-border/40 pt-3 sm:pt-4">
-                    <div className="text-center">
+                     <div className="text-center min-w-[80px]">
                       <p className="text-lg sm:text-2xl font-extrabold text-foreground tabular-nums">
                         {funnelData[0]?.leads || 0} → {funnelData[funnelData.length - 1]?.leads || 0}
                       </p>
                       <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Início → Fechado</p>
                     </div>
-                    <div className="text-center">
+                     <div className="text-center min-w-[80px]">
                       <p className="text-lg sm:text-2xl font-extrabold gradient-text tabular-nums">
                         {funnelData[0]?.leads > 0
                           ? `${Math.round((funnelData[funnelData.length - 1]?.leads / funnelData[0]?.leads) * 100)}%`
@@ -395,7 +397,7 @@ export default function Dashboard() {
                       </p>
                       <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Conversão Total</p>
                     </div>
-                    <div className="text-center">
+                     <div className="text-center min-w-[80px]">
                       <p className="text-lg sm:text-2xl font-extrabold text-foreground tabular-nums">
                         R$ {funnelData.reduce((a, b) => a + b.valor, 0).toLocaleString("pt-BR")}
                       </p>
@@ -484,8 +486,8 @@ export default function Dashboard() {
                   <ResponsiveContainer width="100%" height={320}>
                     <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 60 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                      <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                      <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={90} />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                       <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={isMobile ? 60 : 90} />
                       <RTooltip
                         formatter={(value: number, name: string) =>
                           name === "Valor" ? `R$ ${value.toLocaleString("pt-BR")}` : value
@@ -567,11 +569,11 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 justify-center">
+                     <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-4 justify-center">
                       {sourceData.map((s, i) => (
                         <div key={s.name} className="flex items-center gap-1.5 text-xs">
                           <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SOURCE_COLORS[i] }} />
-                          <span className="text-muted-foreground">{s.name}</span>
+                           <span className="text-muted-foreground whitespace-nowrap">{s.name}</span>
                           <span className="font-semibold text-foreground tabular-nums">{s.value}</span>
                         </div>
                       ))}
@@ -601,8 +603,8 @@ export default function Dashboard() {
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={sellerData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={70} />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                     <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={isMobile ? 55 : 75} />
                     <RTooltip
                       contentStyle={{
                         background: "hsl(var(--card))",
@@ -652,7 +654,7 @@ export default function Dashboard() {
                           <p className="text-xs text-muted-foreground line-clamp-1">{f.description}</p>
                         </div>
                       </div>
-                      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap sm:text-right pl-12 sm:pl-0 tabular-nums">
+                       <span className="text-xs font-medium text-muted-foreground whitespace-nowrap sm:text-right pl-[48px] sm:pl-0 tabular-nums">
                         {new Date(f.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
