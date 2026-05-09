@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle, Sun, Moon, AlertTriangle, ShieldAlert } from "lucide-react";
+import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle, Sun, Moon, AlertTriangle, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCrm, Notification } from "@/contexts/CrmContext";
 import { supabase } from "@/integrations/supabase/client";
