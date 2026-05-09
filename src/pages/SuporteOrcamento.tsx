@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
- import { FileText, DollarSign, AlertTriangle, Clock, CheckCircle, Send, Search, Filter, GripVertical, User, MessageSquare } from "lucide-react";
+ import { FileText, DollarSign, AlertTriangle, Clock, CheckCircle, Send, Search, Filter, GripVertical, User, MessageSquare, Paperclip, FileIcon } from "lucide-react";
  import { Lead } from "@/types/crm";
 import { toast } from "sonner";
  import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
@@ -23,6 +23,8 @@ interface SupportRequest {
   description: string;
   status: "pendente" | "em_analise" | "concluido";
   createdAt: string;
+  pdfUrl?: string;
+  pdfName?: string;
 }
 
 export default function SuporteOrcamento() {
@@ -65,6 +67,7 @@ export default function SuporteOrcamento() {
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [requestType, setRequestType] = useState<RequestType>("orcamento");
   const [description, setDescription] = useState("");
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
 
   // Leads that are in relevant stages
   const relevantLeads = leads.filter(
@@ -90,6 +93,8 @@ export default function SuporteOrcamento() {
       description,
       status: "pendente",
       createdAt: new Date().toISOString(),
+      pdfName: pdfFile?.name,
+      pdfUrl: pdfFile ? URL.createObjectURL(pdfFile) : undefined,
     };
 
     setRequests((prev) => [newRequest, ...prev]);
@@ -108,6 +113,7 @@ export default function SuporteOrcamento() {
     setShowForm(false);
     setSelectedLeadId("");
     setDescription("");
+    setPdfFile(null);
   };
 
    const updateRequestStatus = (id: string, status: SupportRequest["status"]) => {
