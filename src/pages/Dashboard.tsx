@@ -6,6 +6,7 @@ import { KANBAN_STAGES } from "@/types/crm";
 import {
    TrendingUp, Users, Clock, Target, ArrowUpRight, ArrowDownRight,
    Phone, MessageCircle, CalendarDays, Sparkles, BarChart3,
+   AlertTriangle, ShieldAlert, CheckCircle2,
  } from "lucide-react";
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
