@@ -24,8 +24,9 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
   const { toast } = useToast();
   const sellers = useSellers();
   const [form, setForm] = useState({
-    clientName: "", clientPhone: "", clientEmail: "", value: "",
-    source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "abordagem" as KanbanStage,
+     clientName: "", clientPhone: "", clientEmail: "", value: "",
+     source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "abordagem" as KanbanStage,
+     clientType: "", companyWorkSite: "", interestProducts: "", storeName: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -39,8 +40,12 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
         source: lead.source,
         assignedTo: lead.assignedTo,
         tags: lead.tags.join(", "),
-        notes: lead.notes,
-        stage: lead.stage,
+         notes: lead.notes,
+         stage: lead.stage,
+         clientType: lead.clientType || "",
+         companyWorkSite: lead.companyWorkSite || "",
+         interestProducts: lead.interestProducts || "",
+         storeName: lead.storeName || "",
       });
       setErrors({});
     }
@@ -74,8 +79,12 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
       assignedTo: form.assignedTo || "",
       source: form.source,
       tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-      notes: form.notes.trim(),
-      updatedAt: new Date().toISOString(),
+       notes: form.notes.trim(),
+       updatedAt: new Date().toISOString(),
+       clientType: form.clientType,
+       companyWorkSite: form.companyWorkSite.trim(),
+       interestProducts: form.interestProducts.trim(),
+       storeName: form.storeName.trim(),
     };
     onSubmit(updatedLead);
     toast({ title: "Lead atualizado!", description: `${updatedLead.clientName} foi atualizado.` });
@@ -101,6 +110,30 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
               <Label>Nome do cliente *</Label>
               <Input value={form.clientName} onChange={(e) => update("clientName", e.target.value)} maxLength={100} />
               {errors.clientName && <p className="text-xs text-destructive">{errors.clientName}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Tipo de Cliente</Label>
+              <Select value={form.clientType} onValueChange={(v) => update("clientType", v)}>
+                <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Pintor">Pintor</SelectItem>
+                  <SelectItem value="Arquiteto/Escritório">Arquiteto/Escritório</SelectItem>
+                  <SelectItem value="Consumidor Final">Consumidor Final</SelectItem>
+                  <SelectItem value="Empresa/Obra">Empresa/Obra</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Empresa/Obra (Local)</Label>
+              <Input value={form.companyWorkSite} onChange={(e) => update("companyWorkSite", e.target.value)} />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Interesse/Produto/Projeto</Label>
+              <Input value={form.interestProducts} onChange={(e) => update("interestProducts", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Loja/Região Taeco</Label>
+              <Input value={form.storeName} onChange={(e) => update("storeName", e.target.value)} />
             </div>
             <div className="space-y-1.5">
               <Label>Telefone *</Label>
