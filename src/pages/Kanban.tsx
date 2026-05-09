@@ -269,7 +269,7 @@ export default function Kanban() {
                   className="flex-shrink-0 w-[85vw] sm:w-[280px] lg:w-[276px] flex flex-col snap-center sm:snap-start"
                 >
                   {/* Column header */}
-                  <div className={`flex items-center justify-between rounded-t-xl sm:rounded-t-2xl p-3 sm:p-3.5 bg-gradient-to-b ${stageHeaderGradient[stage.key]} border border-b-0 border-border/40`}>
+                  <div className={`flex items-center justify-between rounded-t-xl sm:rounded-t-2xl p-3 sm:p-3.5 bg-gradient-to-b ${stageHeaderGradient[stage.key]} border border-b border-border/40 border-b-kanban-${stage.key === 'abordagem' ? 'approach' : stage.key === 'sondagem' ? 'probing' : stage.key === 'recomendacao_tecnica' ? 'recommendation' : stage.key === 'demonstracao_valor' ? 'demonstration' : stage.key === 'contorno_objecoes' ? 'objections' : stage.key === 'cross_sell' ? 'crosssell' : stage.key === 'fechamento' ? 'closing' : 'postsale'}/20`}>
                     <div className="flex items-center gap-2.5">
                       <div className={`h-2.5 w-2.5 rounded-full ${stageDotMap[stage.key]} ring-2 ring-background shadow-sm`} />
                       <span className="text-[12px] sm:text-[13px] font-bold truncate max-w-[120px] sm:max-w-none">{stage.label}</span>
@@ -280,7 +280,7 @@ export default function Kanban() {
                            <AlertTriangle className="h-3 w-3 mr-1" />{alertCount}
                          </Badge>
                        )}
-                      <Badge variant="secondary" className="text-[10px] font-bold h-5 rounded-full">{stageLeads.length}</Badge>
+                      <Badge variant="secondary" className="text-[11px] font-bold tabular-nums bg-foreground/8 rounded-full px-2 py-0.5 h-auto border-0">{stageLeads.length}</Badge>
                     </div>
                   </div>
                   {/* Value summary */}
@@ -325,7 +325,7 @@ export default function Kanban() {
                                          border border-border/30 border-l-0
                                          shadow-sm
                                          transition-all duration-200
-                                         hover:shadow-md hover:border-primary/20 hover:bg-primary/5
+                                         hover:shadow-md hover:-translate-y-0.5 hover:border-primary/20 hover:bg-primary/5
                                          !cursor-pointer active:cursor-grabbing
                                          group
                                          ${stageColorMap[stage.key]} 
@@ -348,13 +348,16 @@ export default function Kanban() {
                                             </div>
                                             <div className="flex items-center gap-1 shrink-0">
                                               {!lead.assignedTo && userSeller && (
-                                                <Button 
-                                                  size="sm" 
-                                                  variant="outline" 
-                                                  className="h-7 text-[10px] px-2 rounded-lg bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500 hover:text-white transition-all font-bold"
-                                                  onClick={(e) => { e.stopPropagation(); handleAcceptLead(lead.id); }}
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  className="h-7 text-[10px] font-bold px-3 rounded-lg border-primary/40 text-primary hover:bg-primary/5"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleAcceptLead(lead.id);
+                                                  }}
                                                 >
-                                                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Atender
+                                                  Assumir Lead
                                                 </Button>
                                               )}
                                               {urgency !== "ok" && (
