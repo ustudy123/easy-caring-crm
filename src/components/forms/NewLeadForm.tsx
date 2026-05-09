@@ -127,11 +127,14 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
               <Select value={form.source} onValueChange={(v) => update("source", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                  <SelectItem value="instagram">Instagram</SelectItem>
-                  <SelectItem value="meta">Meta Ads</SelectItem>
-                  <SelectItem value="google">Google</SelectItem>
-                  <SelectItem value="indicacao">Indicação</SelectItem>
+                   <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                   <SelectItem value="instagram">Instagram</SelectItem>
+                   <SelectItem value="meta">Meta Ads</SelectItem>
+                   <SelectItem value="google">Google</SelectItem>
+                   <SelectItem value="site">Site</SelectItem>
+                   <SelectItem value="indicacao">Indicação</SelectItem>
+                   <SelectItem value="loja">Loja</SelectItem>
+                   <SelectItem value="campanha">Campanha</SelectItem>
                 </SelectContent>
               </Select>
             </div>
