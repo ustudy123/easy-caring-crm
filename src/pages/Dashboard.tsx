@@ -309,7 +309,8 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
                           size="sm" 
                           variant="ghost" 
                           className="h-7 text-[10px] font-bold text-success hover:bg-success/10 rounded-lg gap-1.5"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             markNotificationRead(notif.id);
                             toast.success("Alerta marcado como resolvido.");
                           }}
