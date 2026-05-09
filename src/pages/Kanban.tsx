@@ -584,6 +584,68 @@ export default function Kanban() {
         onOpenChange={(open) => !open && setPendingDeleteId(null)}
         onConfirm={() => { if (pendingDeleteId) { deleteLead(pendingDeleteId); setPendingDeleteId(null); } }}
       />
+
+      <Dialog open={!!transferringLead} onOpenChange={(open) => !open && setTransferringLead(null)}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Forward className="h-5 w-5 text-primary" /> Transferir Lead
+            </DialogTitle>
+            <DialogDescription>
+              Selecione para quem deseja transferir o atendimento de <strong>{transferringLead?.clientName}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Vendedor de Destino</Label>
+              <Select value={transferSellerId} onValueChange={setTransferSellerId}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Selecione um vendedor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {sellers.filter(s => s.id !== transferringLead?.assignedTo).map(s => (
+                    <SelectItem key={s.id} value={s.id}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{s.name}</span>
+                        <span className="text-[10px] text-muted-foreground">ID: {s.id.slice(0, 8)}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Motivo (opcional)</Label>
+              <Textarea 
+                placeholder="Descreva o motivo da transferência..."
+                className="rounded-xl resize-none h-20"
+                value={transferReason}
+                onChange={(e) => setTransferReason(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setTransferringLead(null)} className="rounded-xl">Cancelar</Button>
+            <Button 
+              className="rounded-xl gap-2" 
+              disabled={!transferSellerId || isTransferring}
+              onClick={async () => {
+                setIsTransferring(true);
+                await handleTransferLead(transferSellerId, transferReason);
+                setIsTransferring(false);
+                setTransferSellerId("");
+                setTransferReason("");
+              }}
+            >
+              {isTransferring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Forward className="h-4 w-4" />}
+              Transferir Agora
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
