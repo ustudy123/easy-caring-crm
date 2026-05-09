@@ -96,6 +96,7 @@ export function AppSidebar() {
           <NavLink
             to={item.url}
             end={item.url === "/"}
+            title={collapsed ? item.title : undefined}
             aria-current={isActive ? "page" : undefined}
             aria-label={badge > 0 ? `${item.title}, ${badge} novos` : item.title}
             className={cn(
@@ -114,7 +115,7 @@ export function AppSidebar() {
             <div className="relative shrink-0">
               <item.icon
                 aria-hidden="true"
-                className={cn("h-4 w-4 transition-colors", isActive ? "text-sidebar-foreground" : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground/85")}
+                className={cn("h-4 w-4 transition-colors", isActive ? "text-primary" : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground/85")}
                 strokeWidth={1.5}
               />
               {collapsed && badge > 0 && (
@@ -215,6 +216,7 @@ export function AppSidebar() {
             <SidebarMenuButton asChild className="h-auto p-0">
               <NavLink
                 to="/configuracoes"
+                title={collapsed ? "Configurações" : undefined}
                 className={cn(
                   "flex items-center transition-colors duration-150",
                   collapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
