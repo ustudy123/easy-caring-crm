@@ -340,7 +340,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
           }
         }
         
-        return n.role_target ? userRoles.includes(n.role_target) : true;
+        return n.role_target ? userRoles.includes(n.role_target as any) : true;
       });
       
       setFilteredNotifications(filtered);
