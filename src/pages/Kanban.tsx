@@ -456,7 +456,7 @@ export default function Kanban() {
                                                     onClick={(e) => { e.stopPropagation(); setTransferringLead(lead); }}
                                                     className="p-1 rounded-lg hover:bg-blue-100 text-blue-600"
                                                     title="Transferir"
-                                                  ) : (
+                                                  >
                                                     <Forward className="h-3 w-3" />
                                                   </button>
                                                   <button
