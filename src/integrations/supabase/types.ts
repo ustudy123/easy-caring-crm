@@ -443,6 +443,51 @@ export type Database = {
           },
         ]
       }
+      pricing_support_requests: {
+        Row: {
+          created_at: string | null
+          id: string
+          lead_id: string | null
+          notes: string | null
+          seller_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          seller_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          seller_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_support_requests_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pricing_support_requests_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -999,6 +1044,7 @@ export type Database = {
         | "recomendacao_tecnica"
         | "demonstracao_valor"
         | "contorno_objecoes"
+        | "precificacao_especial"
         | "cross_sell"
         | "fechamento"
         | "pos_venda"
@@ -1147,6 +1193,7 @@ export const Constants = {
         "recomendacao_tecnica",
         "demonstracao_valor",
         "contorno_objecoes",
+        "precificacao_especial",
         "cross_sell",
         "fechamento",
         "pos_venda",
