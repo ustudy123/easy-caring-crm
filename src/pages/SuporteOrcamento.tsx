@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
- import { FileText, DollarSign, AlertTriangle, Clock, CheckCircle, Send, Search, Filter, GripVertical, User, MessageSquare, Paperclip, FileIcon } from "lucide-react";
+  import { FileText, DollarSign, AlertTriangle, Clock, CheckCircle, Send, Search, Filter, GripVertical, User, MessageSquare, Paperclip, FileIcon, Phone, Mail, MapPin, Briefcase, Package, Tag } from "lucide-react";
  import { Lead } from "@/types/crm";
 import { toast } from "sonner";
  import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
@@ -363,9 +363,11 @@ export default function SuporteOrcamento() {
                              <p className="text-[10px] font-medium">Nenhuma solicitação</p>
                            </div>
                          )}
-                         {colRequests.map((req, index) => (
-                           <Draggable key={req.id} draggableId={req.id} index={index}>
-                             {(provided, snapshot) => (
+                          {colRequests.map((req, index) => {
+                            const lead = leads.find(l => l.id === req.leadId);
+                            return (
+                            <Draggable key={req.id} draggableId={req.id} index={index}>
+                              {(provided, snapshot) => (
                                <Card
                                  ref={provided.innerRef}
                                  {...provided.draggableProps}
@@ -374,21 +376,61 @@ export default function SuporteOrcamento() {
                                     snapshot.isDragging ? "rotate-2 shadow-xl ring-2 ring-primary/20" : ""
                                   }`}
                                >
-                                 <CardContent className="p-3 space-y-2">
-                                   <div className="flex items-start justify-between gap-2">
-                                     <span className="text-xs font-bold truncate leading-tight flex-1">
-                                       {req.clientName}
-                                     </span>
-                                     <Badge variant="outline" className="text-[9px] h-4 px-1 shrink-0 bg-muted/50">
-                                       {req.type === "orcamento" ? "ORC" : "PREC"}
-                                     </Badge>
-                                   </div>
-                                   
-                                   {req.description && (
-                                     <p className="text-[10px] text-muted-foreground line-clamp-2 italic">
-                                       "{req.description}"
-                                     </p>
-                                   )}
+                                  <CardContent className="p-3 space-y-2.5">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <span className="text-xs font-bold truncate leading-tight flex-1">
+                                        {req.clientName}
+                                      </span>
+                                      <Badge variant="outline" className="text-[9px] h-4 px-1 shrink-0 bg-muted/50">
+                                        {req.type === "orcamento" ? "ORC" : "PREC"}
+                                      </Badge>
+                                    </div>
+                                    
+                                    {/* Detailed Client Info */}
+                                    {lead && (
+                                      <div className="space-y-1 bg-muted/20 p-2 rounded-lg border border-border/10">
+                                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                          <Phone className="h-2.5 w-2.5 shrink-0" />
+                                          <span>{lead.clientPhone}</span>
+                                        </div>
+                                        {lead.clientEmail && (
+                                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                            <Mail className="h-2.5 w-2.5 shrink-0" />
+                                            <span className="truncate">{lead.clientEmail}</span>
+                                          </div>
+                                        )}
+                                        {lead.clientType && (
+                                          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-foreground/80">
+                                            <Briefcase className="h-2.5 w-2.5 shrink-0" />
+                                            <span>{lead.clientType}</span>
+                                          </div>
+                                        )}
+                                        {lead.companyWorkSite && (
+                                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground italic">
+                                            <Briefcase className="h-2.5 w-2.5 shrink-0" />
+                                            <span>Obra: {lead.companyWorkSite}</span>
+                                          </div>
+                                        )}
+                                        {(lead.storeName || lead.source) && (
+                                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                            <MapPin className="h-2.5 w-2.5 shrink-0" />
+                                            <span>{lead.storeName || lead.source}</span>
+                                          </div>
+                                        )}
+                                        {lead.interestProducts && (
+                                          <div className="flex items-center gap-1.5 text-[10px] text-primary font-medium">
+                                            <Package className="h-2.5 w-2.5 shrink-0" />
+                                            <span>{lead.interestProducts}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                    
+                                    {req.description && (
+                                      <p className="text-[10px] text-muted-foreground line-clamp-2 italic">
+                                        "{req.description}"
+                                      </p>
+                                    )}
                                     
                                     {req.pdfUrl && (
                                       <div className="flex items-center gap-1.5 mt-1 bg-primary/5 p-1 rounded border border-primary/10">
@@ -440,7 +482,8 @@ export default function SuporteOrcamento() {
                                </Card>
                              )}
                            </Draggable>
-                         ))}
+                          );
+                        })}
                          {provided.placeholder}
                        </div>
                      )}

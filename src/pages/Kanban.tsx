@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
  import { useToast } from "@/hooks/use-toast";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
- import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle, X, FileText, GripVertical, CheckCircle2 } from "lucide-react";
+ import { Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, MapPin, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -194,11 +194,14 @@ export default function Kanban() {
                     <SelectTrigger className="h-8 text-xs rounded-lg"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas</SelectItem>
-                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                      <SelectItem value="instagram">Instagram</SelectItem>
-                      <SelectItem value="meta">Meta Ads</SelectItem>
-                      <SelectItem value="google">Google</SelectItem>
-                      <SelectItem value="indicacao">Indicação</SelectItem>
+                       <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                       <SelectItem value="instagram">Instagram</SelectItem>
+                       <SelectItem value="meta">Meta Ads</SelectItem>
+                       <SelectItem value="google">Google</SelectItem>
+                       <SelectItem value="site">Site</SelectItem>
+                       <SelectItem value="indicacao">Indicação</SelectItem>
+                       <SelectItem value="loja">Loja</SelectItem>
+                       <SelectItem value="campanha">Campanha</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -370,20 +373,48 @@ export default function Kanban() {
                                             </div>
                                           </div>
 
-                                        {/* Contact info */}
-                                        <div className="mt-2 space-y-1">
-                                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                            <Phone className="h-3 w-3 shrink-0" />
-                                            <span>{lead.clientPhone}</span>
-                                          </div>
-                                          {lead.clientEmail && (
-                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                              <Mail className="h-3 w-3 shrink-0" />
-                                              <span className="truncate">{lead.clientEmail}</span>
-                                            </div>
-                                          )}
-                                        </div>
+                                         {/* Detailed Info */}
+                                         <div className="mt-2.5 space-y-1.5 border-t border-border/10 pt-2.5">
+                                           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                             <Phone className="h-3 w-3 shrink-0 text-primary/60" />
+                                             <span className="font-medium">{lead.clientPhone}</span>
+                                           </div>
+                                           
+                                           {lead.clientEmail && (
+                                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                               <Mail className="h-3 w-3 shrink-0 text-primary/60" />
+                                               <span className="truncate">{lead.clientEmail}</span>
+                                             </div>
+                                           )}
 
+                                           {lead.clientType && (
+                                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                               <Briefcase className="h-3 w-3 shrink-0 text-primary/60" />
+                                               <span className="font-semibold text-foreground/80">{lead.clientType}</span>
+                                             </div>
+                                           )}
+
+                                           {lead.companyWorkSite && (
+                                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground italic">
+                                               <Briefcase className="h-3 w-3 shrink-0 text-primary/60" />
+                                               <span>Obra: {lead.companyWorkSite}</span>
+                                             </div>
+                                           )}
+
+                                           {lead.storeName && (
+                                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                               <MapPin className="h-3 w-3 shrink-0 text-primary/60" />
+                                               <span>{lead.storeName}</span>
+                                             </div>
+                                           )}
+
+                                           {lead.interestProducts && (
+                                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                               <Package className="h-3 w-3 shrink-0 text-primary/60" />
+                                               <span className="text-primary font-medium">{lead.interestProducts}</span>
+                                             </div>
+                                           )}
+                                         </div>
                                         {/* Value + Source */}
                                         <div className="mt-2.5 flex items-center justify-between">
                                           <div className="flex items-center gap-1 text-xs font-bold text-foreground">

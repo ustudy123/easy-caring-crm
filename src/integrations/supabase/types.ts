@@ -324,13 +324,17 @@ export type Database = {
           client_email: string | null
           client_name: string
           client_phone: string
+          client_type: string | null
+          company_work_site: string | null
           created_at: string
           id: string
+          interest_products: string | null
           next_follow_up: string | null
           notes: string
           source: string
           stage: Database["public"]["Enums"]["kanban_stage"]
           store_id: string | null
+          store_name: string | null
           tags: string[]
           updated_at: string
           value: number
@@ -340,13 +344,17 @@ export type Database = {
           client_email?: string | null
           client_name: string
           client_phone: string
+          client_type?: string | null
+          company_work_site?: string | null
           created_at?: string
           id?: string
+          interest_products?: string | null
           next_follow_up?: string | null
           notes?: string
           source?: string
           stage?: Database["public"]["Enums"]["kanban_stage"]
           store_id?: string | null
+          store_name?: string | null
           tags?: string[]
           updated_at?: string
           value?: number
@@ -356,13 +364,17 @@ export type Database = {
           client_email?: string | null
           client_name?: string
           client_phone?: string
+          client_type?: string | null
+          company_work_site?: string | null
           created_at?: string
           id?: string
+          interest_products?: string | null
           next_follow_up?: string | null
           notes?: string
           source?: string
           stage?: Database["public"]["Enums"]["kanban_stage"]
           store_id?: string | null
+          store_name?: string | null
           tags?: string[]
           updated_at?: string
           value?: number

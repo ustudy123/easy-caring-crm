@@ -13,7 +13,12 @@ export interface Lead {
   notes: string;
   createdAt: string;
   updatedAt: string;
-  nextFollowUp?: string;
+   nextFollowUp?: string;
+   clientType?: string;
+   companyWorkSite?: string;
+   interestProducts?: string;
+   storeName?: string;
+   storeId?: string;
 }
 
 export interface Client {
