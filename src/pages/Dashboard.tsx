@@ -12,7 +12,12 @@ import {
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer,
   PieChart, Pie, Cell, CartesianGrid, Area, AreaChart, LabelList,
-} from "recharts";
+ } from "recharts";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
  import { forwardRef, useEffect, useMemo, useState, Suspense, lazy } from "react";
  import { useIsMobile } from "@/hooks/use-mobile";
