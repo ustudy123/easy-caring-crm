@@ -796,7 +796,7 @@ function UsersTab() {
       _is_active: editIsActive,
       _is_available: editIsAvailable,
       _status: editStatus,
-      _substitute_id: editSubstituteId || null,
+      _substitute_id: editSubstituteId && editSubstituteId !== "none" ? editSubstituteId : null,
     });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -986,10 +986,10 @@ function UsersTab() {
                     </div>
                     <div>
                       <Label>Substituto Responsável</Label>
-                      <Select value={editSubstituteId} onValueChange={setEditSubstituteId}>
+                      <Select value={editSubstituteId || "none"} onValueChange={setEditSubstituteId}>
                         <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum (Volta para fila)</SelectItem>
+                          <SelectItem value="none">Nenhum (Volta para fila)</SelectItem>
                           {users
                             .filter(u => u.seller_id && u.user_id !== editing.user_id && u.role === 'vendedor')
                             .map(u => (
