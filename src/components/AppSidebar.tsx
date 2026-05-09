@@ -153,10 +153,10 @@ export function AppSidebar() {
           {/* Geometric monogram — sharp square mark */}
           <div className="flex h-7 w-7 shrink-0 items-center justify-center">
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2" y="2" width="11" height="11" rx="1" fill="hsl(var(--sidebar-foreground))" fillOpacity="0.9" />
-              <rect x="15" y="2" width="11" height="11" rx="1" fill="hsl(var(--sidebar-foreground))" fillOpacity="0.3" />
-              <rect x="2" y="15" width="11" height="11" rx="1" fill="hsl(var(--sidebar-foreground))" fillOpacity="0.3" />
-              <rect x="15" y="15" width="11" height="11" rx="1" fill="hsl(var(--sidebar-foreground))" fillOpacity="0.6" />
+               <rect x="2" y="2" width="11" height="11" rx="1" fill="hsl(var(--primary))" fillOpacity="0.9" />
+               <rect x="15" y="2" width="11" height="11" rx="1" fill="hsl(var(--primary))" fillOpacity="0.3" />
+               <rect x="2" y="15" width="11" height="11" rx="1" fill="hsl(var(--primary))" fillOpacity="0.3" />
+               <rect x="15" y="15" width="11" height="11" rx="1" fill="hsl(var(--primary))" fillOpacity="0.6" />
             </svg>
           </div>
           {!collapsed && (
@@ -178,7 +178,7 @@ export function AppSidebar() {
         )}
         {collapsed && (
           <div className="mt-2 flex justify-center">
-            <div className="h-px w-4" style={{ background: "hsl(var(--sidebar-foreground) / 0.08)" }} />
+            <div className="h-px w-6" style={{ background: "hsl(var(--sidebar-foreground) / 0.08)" }} />
           </div>
         )}
       </SidebarHeader>
@@ -243,17 +243,17 @@ export function AppSidebar() {
         {!collapsed ? (
           <div className="group/footer flex items-center gap-2.5 rounded-md px-4 py-2.5">
             {/* Monochrome square avatar */}
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-[#2D3250] text-[11px] font-semibold text-[#9CA3AF]">
-              {firstName[0].toUpperCase()}
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-[12px] font-medium text-[#C9CBD6]">
-                {firstName}
-              </span>
-              <span className="truncate text-[11px] text-[#4B5270]">
-                {user?.email}
-              </span>
-            </div>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-sidebar-accent text-[11px] font-semibold text-sidebar-foreground/80">
+            {firstName[0].toUpperCase()}
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-[12px] font-medium text-sidebar-foreground/80">
+              {firstName}
+            </span>
+            <span className="truncate text-[11px] text-sidebar-foreground/30">
+              {user?.email}
+            </span>
+          </div>
             <button
               onClick={async () => { await signOut(); navigate("/login"); }}
               className="rounded-md p-1 text-sidebar-foreground/0 transition-all duration-200 group-hover/footer:text-sidebar-foreground/40 hover:!text-sidebar-foreground/70"
