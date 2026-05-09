@@ -317,9 +317,9 @@ export default function Dashboard() {
 
         {/* Funnel — waterfall visualization */}
         <motion.div variants={item}>
-          <Card className="border border-border/50 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+          <Card className="border border-border/50 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-default">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 </div>
@@ -410,9 +410,9 @@ export default function Dashboard() {
 
         {/* Timeline area chart */}
         <motion.div variants={item}>
-          <Card className="border border-border/50 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+          <Card className="border border-border/50 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-default">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-info/10">
                   <CalendarDays className="h-3.5 w-3.5 text-info" />
                 </div>
@@ -468,9 +468,9 @@ export default function Dashboard() {
         {/* Charts row — horizontal bar + donut */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           <motion.div variants={item} className="lg:col-span-2">
-            <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow cursor-default">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary/10">
                     <BarChart3 className="h-3.5 w-3.5 text-secondary" />
                   </div>
@@ -516,9 +516,9 @@ export default function Dashboard() {
           </motion.div>
 
           <motion.div variants={item}>
-            <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow cursor-default">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-success/10">
                     <MessageCircle className="h-3.5 w-3.5 text-success" />
                   </div>
@@ -585,9 +585,9 @@ export default function Dashboard() {
 
         {/* Sellers performance */}
         <motion.div variants={item}>
-          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow cursor-default">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-info/10">
                   <Users className="h-3.5 w-3.5 text-info" />
                 </div>
@@ -622,9 +622,9 @@ export default function Dashboard() {
 
         {/* Upcoming follow-ups */}
         <motion.div variants={item}>
-          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow cursor-default">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning/10">
                   <CalendarDays className="h-3.5 w-3.5 text-warning" />
                 </div>
