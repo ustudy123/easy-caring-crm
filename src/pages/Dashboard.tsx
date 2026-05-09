@@ -277,7 +277,7 @@ export default function Dashboard() {
               <Card 
                 tabIndex={0}
                 className="group relative overflow-hidden border border-border/50 shadow-sm hover:shadow-md hover:border-border transition-all duration-300 glass-card"
-                style={{ borderLeft: `3px solid hsl(var(--${kpi.iconColor.split('-')[1]}))` }}
+                style={{ borderLeft: `3px solid hsl(var(--${kpi.iconColor.replace('text-', '')}))` }}
               >
                 <CardContent className="p-3 sm:p-5">
                   <div className="flex items-start justify-between">
