@@ -12,7 +12,162 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
- import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download } from "lucide-react";
+ import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight } from "lucide-react";
+ function CitelIntegrationTab() {
+   const [exploreData, setExploreData] = useState<any>(null);
+   const [loading, setLoading] = useState(false);
+   const [phone, setPhone] = useState("");
+ 
+   const runExplore = async () => {
+     setLoading(true);
+     try {
+       const { data, error } = await supabase.functions.invoke('citel-explore', {
+         body: { phone: phone || undefined }
+       });
+       if (error) throw error;
+       setExploreData(data);
+       toast.success("Dados da API Citel carregados com sucesso!");
+     } catch (err: any) {
+       console.error("Explore error:", err);
+       toast.error("Erro ao conectar com API Citel: " + (err.message || "Verifique as configurações das Secrets"));
+     } finally {
+       setLoading(false);
+     }
+   };
+ 
+   const JsonView = ({ data }: { data: any }) => {
+     const [isOpen, setIsOpen] = useState(false);
+     if (!data || typeof data !== 'object') return <span>{String(data)}</span>;
+ 
+     return (
+       <div className="pl-4 border-l ml-2">
+         <button 
+           onClick={() => setIsOpen(!isOpen)} 
+           className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
+         >
+           {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+           {Array.isArray(data) ? `Array(${data.length})` : 'Object'}
+         </button>
+         {isOpen && (
+           <pre className="mt-2 text-[10px] bg-slate-50 p-2 rounded overflow-auto max-h-60">
+             {JSON.stringify(data, null, 2)}
+           </pre>
+         )}
+       </div>
+     );
+   };
+ 
+   return (
+     <div className="space-y-6">
+       <Card>
+         <CardHeader>
+           <div className="flex items-center justify-between">
+             <div>
+               <CardTitle className="text-base flex items-center gap-2">
+                 <Database className="h-4 w-4" /> Integração ERP Citel (Diagnóstico)
+               </CardTitle>
+               <p className="text-sm text-muted-foreground">
+                 Visualize todos os dados disponíveis na API do seu ERP Citel.
+               </p>
+             </div>
+             <Button onClick={runExplore} disabled={loading}>
+               {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+               Explorar API Agora
+             </Button>
+           </div>
+         </CardHeader>
+         <CardContent className="space-y-4">
+           <div className="flex items-end gap-4 max-w-md">
+             <div className="flex-1 space-y-1">
+               <Label>Telefone para teste (opcional)</Label>
+               <Input 
+                 placeholder="Ex: 11999999999" 
+                 value={phone} 
+                 onChange={e => setPhone(e.target.value)} 
+               />
+             </div>
+           </div>
+ 
+           {!exploreData && !loading && (
+             <div className="py-12 text-center border-2 border-dashed rounded-lg bg-muted/20">
+               <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-20" />
+               <p className="text-muted-foreground">Clique em "Explorar API Agora" para carregar os dados brutos do sistema Citel.</p>
+             </div>
+           )}
+ 
+           {exploreData && (
+             <div className="space-y-6 animate-in fade-in slide-in-from-top-2">
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <Card className="bg-slate-50">
+                   <CardContent className="pt-4">
+                     <p className="text-[10px] uppercase font-bold text-muted-foreground">API URL</p>
+                     <p className="text-xs font-mono truncate">{exploreData.apiUrl}</p>
+                   </CardContent>
+                 </Card>
+                 <Card className="bg-slate-50">
+                   <CardContent className="pt-4">
+                     <p className="text-[10px] uppercase font-bold text-muted-foreground">Swagger/Docs</p>
+                     <p className="text-xs">{exploreData.swagger?.found ? `Encontrado (${exploreData.swagger.totalPaths} caminhos)` : 'Não encontrado'}</p>
+                   </CardContent>
+                 </Card>
+                 <Card className="bg-slate-50">
+                   <CardContent className="pt-4">
+                     <p className="text-[10px] uppercase font-bold text-muted-foreground">Conexão</p>
+                      <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">Ativa</Badge>
+                   </CardContent>
+                 </Card>
+               </div>
+ 
+               <div className="space-y-4">
+                 <h4 className="font-semibold text-sm border-b pb-2">Amostras de Dados (Brutos)</h4>
+                 
+                 {Object.entries(exploreData.samples || {}).map(([category, samples]: [string, any]) => (
+                   <div key={category} className="space-y-2">
+                     <h5 className="text-xs font-bold uppercase text-primary">{category}</h5>
+                     {Array.isArray(samples) && samples.length > 0 ? (
+                       <div className="space-y-2">
+                         {samples.map((s: any, idx: number) => (
+                           <div key={idx} className="border rounded-md p-3 bg-white">
+                             <div className="flex items-center justify-between mb-2">
+                               <Badge variant="outline" className="text-[10px] font-mono">{s.path}</Badge>
+                               <Badge variant={s.status >= 200 && s.status < 300 ? "outline" : "destructive"} className={cn("text-[10px]", s.status >= 200 && s.status < 300 && "bg-green-50 text-green-700 border-green-200")}>
+                                 HTTP {s.status}
+                               </Badge>
+                             </div>
+                             <div className="space-y-2">
+                               <div>
+                                 <p className="text-[10px] text-muted-foreground font-bold mb-1">ESTRUTURA (SHAPE)</p>
+                                 <JsonView data={s.shape} />
+                               </div>
+                               {s.preview && (
+                                 <div>
+                                   <p className="text-[10px] text-muted-foreground font-bold mb-1">EXEMPLO DE RESPOSTA</p>
+                                   <JsonView data={s.preview} />
+                                 </div>
+                               )}
+                               {s.raw && (
+                                 <div className="mt-2 text-[10px] text-red-500 bg-red-50 p-2 rounded">
+                                   {typeof s.raw === 'string' ? s.raw : JSON.stringify(s.raw)}
+                                 </div>
+                               )}
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                     ) : (
+                       <p className="text-xs text-muted-foreground italic pl-4">Nenhum dado encontrado para esta categoria.</p>
+                     )}
+                   </div>
+                 ))}
+               </div>
+             </div>
+           )}
+         </CardContent>
+       </Card>
+     </div>
+   );
+ }
+ 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -583,12 +738,14 @@ export default function AdminPanel() {
           <TabsTrigger value="stores" className="gap-1.5"><Store className="h-3.5 w-3.5" /> Lojas</TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Usuários & Papéis</TabsTrigger>
           <TabsTrigger value="reports" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Relatórios</TabsTrigger>
+          <TabsTrigger value="citel" className="gap-1.5"><Database className="h-3.5 w-3.5" /> API Citel</TabsTrigger>
           <TabsTrigger value="logs" className="gap-1.5"><Terminal className="h-3.5 w-3.5" /> Webhook Logs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stores"><StoresTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="reports"><ReportsTab /></TabsContent>
+        <TabsContent value="citel"><CitelIntegrationTab /></TabsContent>
         <TabsContent value="logs"><WebhookLogsTab /></TabsContent>
       </Tabs>
     </AppLayout>
