@@ -113,7 +113,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
                  <Card className="bg-slate-50">
                    <CardContent className="pt-4">
                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Conexão</p>
-                     <Badge variant="success" className="bg-green-100 text-green-700">Ativa</Badge>
+                      <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">Ativa</Badge>
                    </CardContent>
                  </Card>
                </div>
@@ -130,7 +130,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
                            <div key={idx} className="border rounded-md p-3 bg-white">
                              <div className="flex items-center justify-between mb-2">
                                <Badge variant="outline" className="text-[10px] font-mono">{s.path}</Badge>
-                               <Badge variant={s.status >= 200 && s.status < 300 ? "success" : "destructive" as any} className="text-[10px]">
+                               <Badge variant={s.status >= 200 && s.status < 300 ? "outline" : "destructive"} className={cn("text-[10px]", s.status >= 200 && s.status < 300 && "bg-green-50 text-green-700 border-green-200")}>
                                  HTTP {s.status}
                                </Badge>
                              </div>
