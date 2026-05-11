@@ -308,23 +308,36 @@ serve(async (req) => {
             });
           };
 
-           if (!client) {
-             // 1. First message from a new client: Start URA flow at step "ask_code"
-             const { error: createError } = await supabase.from("clients").upsert({
-               name: senderName,
-               phone: cleanPhone,
-               status: 'novo',
-               triaging: true,
-               triage_step: 'ask_code',
-               last_message_at: new Date().toISOString(),
-               last_message_from_client_at: new Date().toISOString()
-             }, { onConflict: 'phone' }).select("id").single();
+            if (!client) {
+              // 1. First message from a new client: Try to identify them via ERP Citel first
+              const erpClient = await searchCitelClient(cleanPhone);
+              
+              const clientData = {
+                name: erpClient?.nome || erpClient?.razao_social || senderName,
+                phone: cleanPhone,
+                email: erpClient?.email || null,
+                address: erpClient?.endereco || erpClient?.logradouro || null,
+                city: erpClient?.cidade || null,
+                total_purchases: erpClient?.total_compras || erpClient?.valor_total || 0,
+                status: 'novo',
+                triaging: true,
+                triage_step: 'ask_code',
+                last_message_at: new Date().toISOString(),
+                last_message_from_client_at: new Date().toISOString(),
+                notes: erpClient ? `Cliente identificado via ERP Citel. ID: ${erpClient.id || 'N/A'}` : null,
+                tags: erpClient ? ['erp_citel'] : []
+              };
 
-             if (!createError) {
-               const welcomeMsg = `Olá! 👋 Você está falando com a *TF Tintas*.\n\nVocê já possui o *código (ramal)* de um vendedor?\n\n👉 Se *sim*, digite o código agora (ex: 1023).\n👉 Se *não*, responda com *N* para continuar.`;
-               await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest);
-             }
-           } else if (client.triaging) {
+              const { error: createError } = await supabase.from("clients").upsert(clientData, { onConflict: 'phone' }).select("id").single();
+ 
+              if (!createError) {
+                const greeting = erpClient 
+                  ? `Olá, *${erpClient.nome || erpClient.razao_social}*! 👋`
+                  : `Olá! 👋`;
+                const welcomeMsg = `${greeting} Você está falando com a *TF Tintas*.\n\nVocê já possui o *código (ramal)* de um vendedor?\n\n👉 Se *sim*, digite o código agora (ex: 1023).\n👉 Se *não*, responda com *N* para continuar.`;
+                await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest);
+              }
+            } else if (client.triaging) {
              // URA-style step machine
              const step = client.triage_step || 'ask_code';
              const trimmed = text.trim();
