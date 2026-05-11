@@ -22,11 +22,10 @@ serve(async (req) => {
       });
     }
 
-    const whatsappApiUrl = Deno.env.get("WHATSAPP_API_URL");
-    const whatsappApiKey = Deno.env.get("WHATSAPP_API_KEY");
+    const whatsappApiUrl = Deno.env.get("WHATSAPP_API_URL"); // Z-API URL format: https://api.z-api.io/instances/ID/token/TOKEN
 
-    if (!whatsappApiUrl || !whatsappApiKey) {
-      return new Response(JSON.stringify({ error: "WhatsApp API not configured" }), {
+    if (!whatsappApiUrl) {
+      return new Response(JSON.stringify({ error: "WhatsApp API (Z-API) not configured. Please set WHATSAPP_API_URL." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -35,36 +34,36 @@ serve(async (req) => {
     const cleanPhone = phone.replace(/\D/g, "");
     const baseUrl = whatsappApiUrl.replace(/\/+$/, "");
     
-     let endpoint = `${baseUrl}/send/text`;
-     let apiBody: any;
+    let endpoint = `${baseUrl}/send-text`;
+    let apiBody: any;
 
-     if (mediaUrl) {
-       endpoint = `${baseUrl}/send/media`;
-       // The API seems to expect 'file' for media url based on common UAZAPI patterns and log errors
-       apiBody = {
-         number: cleanPhone,
-         file: mediaUrl,
-         type: mediaType || 'image',
-         caption: message || '',
-       };
-     } else {
-       apiBody = {
-         number: cleanPhone,
-         text: message,
-       };
-     }
+    if (mediaUrl) {
+      // Z-API handles image, video, audio separately, but we'll focus on image as it's common
+      endpoint = `${baseUrl}/send-image`;
+      apiBody = {
+        phone: cleanPhone,
+        image: mediaUrl,
+        caption: message || '',
+      };
+    } else {
+      apiBody = {
+        phone: cleanPhone,
+        message: message,
+      };
+    }
+
+    console.log(`Sending message via Z-API to ${cleanPhone}...`);
 
     const apiResponse = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "token": whatsappApiKey,
       },
-       body: JSON.stringify(apiBody),
+      body: JSON.stringify(apiBody),
     });
 
     const apiData = await apiResponse.json();
-    console.log("uazapi response:", JSON.stringify(apiData));
+    console.log("Z-API response:", JSON.stringify(apiData));
 
     if (!apiResponse.ok) {
       return new Response(JSON.stringify({ error: "Failed to send message", details: apiData }), {
@@ -78,7 +77,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const messageId = apiData?.key?.id || apiData?.id || crypto.randomUUID();
+    const messageId = apiData?.messageId || apiData?.zaapId || apiData?.id || crypto.randomUUID();
 
     await supabase.from("whatsapp_messages").insert({
       message_id: messageId,

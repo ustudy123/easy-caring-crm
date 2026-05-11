@@ -1,0 +1,5 @@
+-- No schema changes needed, only edge function logic updates.
+-- The user will need to update environment variables in the dashboard:
+-- WHATSAPP_API_URL: https://api.z-api.io/instances/YOUR_INSTANCE_ID/token/YOUR_TOKEN
+-- WHATSAPP_API_KEY: (if needed, but usually token is in URL for Z-API)
+-- Or better, we can structure the URL in the function.
