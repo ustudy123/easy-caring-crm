@@ -17,6 +17,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
    const [exploreData, setExploreData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [listing, setListing] = useState(false);
+  const [listData, setListData] = useState<any>(null);
+  const [listSearch, setListSearch] = useState("");
   const runSync = async () => {
     if (!confirm("Isso irá importar todos os clientes da Citel para o seu banco de dados. Deseja continuar?")) return;
     setSyncing(true);
@@ -54,6 +57,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
        setLoading(false);
      }
    };
+
+  const runListAll = async () => {
+    setListing(true);
+    setListData(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('citel-list-all');
+      if (error) throw error;
+      if (data?.success) {
+        setListData(data);
+        toast.success(`${data.total} clientes carregados da API Citel.`);
+      } else {
+        toast.error(data?.message || "Não foi possível listar clientes.");
+        setListData(data);
+      }
+    } catch (err: any) {
+      console.error("List all error:", err);
+      toast.error("Erro ao listar clientes: " + (err.message || "Verifique as Secrets"));
+    } finally {
+      setListing(false);
+    }
+  };
  
    const JsonView = ({ data }: { data: any }) => {
      const [isOpen, setIsOpen] = useState(false);
@@ -95,6 +119,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
                   {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                   Sincronização Total
                 </Button>
+                 <Button variant="outline" onClick={runListAll} disabled={listing || syncing || loading}>
+                   {listing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Users className="h-4 w-4 mr-2" />}
+                   Listar Todos os Clientes
+                 </Button>
                 <Button onClick={runExplore} disabled={loading || syncing}>
                   {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                   Explorar API Agora
@@ -103,16 +131,79 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
            </div>
          </CardHeader>
          <CardContent className="space-y-4">
-           <div className="flex items-end gap-4 max-w-md">
-             <div className="flex-1 space-y-1">
-               <Label>Telefone para teste (opcional)</Label>
-               <Input 
-                 placeholder="Ex: 11999999999" 
-                 value={phone} 
-                 onChange={e => setPhone(e.target.value)} 
-               />
-             </div>
-           </div>
+            <div className="flex items-end gap-4 max-w-md">
+              <div className="flex-1 space-y-1">
+                <Label>Telefone para teste (opcional, somente "Explorar API")</Label>
+                <Input
+                  placeholder="Deixe vazio para listar todos os clientes"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {listData?.success && Array.isArray(listData.clients) && (
+              <div className="space-y-3 animate-in fade-in">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <h4 className="font-semibold text-sm">Clientes da API Citel</h4>
+                    <p className="text-xs text-muted-foreground">
+                      {listData.total} registros • endpoint: <span className="font-mono">{listData.endpoint}</span>
+                    </p>
+                  </div>
+                  <Input
+                    placeholder="Filtrar por nome, telefone, cidade, documento..."
+                    value={listSearch}
+                    onChange={(e) => setListSearch(e.target.value)}
+                    className="max-w-xs"
+                  />
+                </div>
+                <div className="border rounded-md max-h-[480px] overflow-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-card">
+                      <TableRow>
+                        <TableHead className="text-[10px]">ID</TableHead>
+                        <TableHead className="text-[10px]">Nome</TableHead>
+                        <TableHead className="text-[10px]">Telefone</TableHead>
+                        <TableHead className="text-[10px]">E-mail</TableHead>
+                        <TableHead className="text-[10px]">Cidade</TableHead>
+                        <TableHead className="text-[10px]">Documento</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(listData.clients as any[])
+                        .filter((c) => {
+                          if (!listSearch.trim()) return true;
+                          const q = listSearch.toLowerCase();
+                          return [c.name, c.phone, c.email, c.city, c.document, c.id]
+                            .some((v: any) => v && String(v).toLowerCase().includes(q));
+                        })
+                        .slice(0, 500)
+                        .map((c, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="text-xs font-mono">{c.id || "—"}</TableCell>
+                            <TableCell className="text-xs font-medium">{c.name}</TableCell>
+                            <TableCell className="text-xs font-mono">{c.phone || "—"}</TableCell>
+                            <TableCell className="text-xs">{c.email || "—"}</TableCell>
+                            <TableCell className="text-xs">{c.city || "—"}</TableCell>
+                            <TableCell className="text-xs font-mono">{c.document || "—"}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                {listData.total > 500 && (
+                  <p className="text-[11px] text-muted-foreground">Exibindo os primeiros 500 de {listData.total}. Use o filtro para refinar.</p>
+                )}
+              </div>
+            )}
+
+            {listData && !listData.success && (
+              <div className="border border-destructive/30 rounded-md p-3 bg-destructive/5 text-xs">
+                <p className="font-semibold mb-2">Falha ao listar clientes</p>
+                <pre className="text-[10px] overflow-auto max-h-40">{JSON.stringify(listData, null, 2)}</pre>
+              </div>
+            )}
  
            {!exploreData && !loading && (
              <div className="py-12 text-center border-2 border-dashed rounded-lg bg-muted/20">
