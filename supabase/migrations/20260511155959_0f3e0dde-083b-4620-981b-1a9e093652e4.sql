@@ -1,0 +1,1 @@
+UPDATE public.clients SET assigned_seller_id = NULL, triaging = false, triage_step = NULL WHERE phone LIKE '%957783553%';
