@@ -54,11 +54,13 @@ serve(async (req) => {
 
     console.log(`Sending message via Z-API to ${cleanPhone}...`);
 
+    const clientToken = Deno.env.get("ZAPI_CLIENT_TOKEN");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (clientToken) headers["Client-Token"] = clientToken;
+
     const apiResponse = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(apiBody),
     });
 
