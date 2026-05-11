@@ -196,11 +196,39 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const markNotificationRead = useCallback(async (id: string) => {
-    setNotifications((prev) => prev.filter(n => n.id !== id));
-    const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
-    if (error) console.error("Error marking notification as read:", error);
-  }, []);
+   const markNotificationRead = useCallback(async (id: string) => {
+     const notif = notifications.find(n => n.id === id);
+     setNotifications((prev) => prev.filter(n => n.id !== id));
+     
+     // Mark notification as read
+     const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+     if (error) console.error("Error marking notification as read:", error);
+ 
+     // If it's an SLA notification, mark the alert as resolved in sla_alerts
+     if (notif && notif.type.startsWith('sla_')) {
+       const clientId = notif.metadata?.client_id;
+       if (clientId) {
+         // Resolve the SLA alert
+         const { error: slaError } = await supabase
+           .from("sla_alerts")
+           .update({ resolved_at: new Date().toISOString() })
+           .eq("lead_id", clientId)
+           .is("resolved_at", null);
+         
+         if (slaError) console.error("Error resolving SLA alert:", slaError);
+ 
+         // Also mark all other SLA notifications for this client as read
+         const otherNotifIds = notifications
+           .filter(n => n.id !== id && n.type.startsWith('sla_') && n.metadata?.client_id === clientId)
+           .map(n => n.id);
+         
+         if (otherNotifIds.length > 0) {
+           await supabase.from("notifications").update({ is_read: true }).in("id", otherNotifIds);
+           setNotifications(prev => prev.filter(n => !otherNotifIds.includes(n.id)));
+         }
+       }
+     }
+   }, [notifications]);
 
   const addLead = useCallback(async (lead: Lead) => {
     // Optimistic update

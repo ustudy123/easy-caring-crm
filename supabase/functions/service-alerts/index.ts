@@ -51,14 +51,12 @@
           let notificationRole = null;
           let notificationMessage = "";
 
-          if (diffMins >= 90) { // 1h 30m - Alerta Crítico (Admin)
-            if (newStatus !== 'critical') {
-              newStatus = 'critical';
-              notificationType = 'sla_critical';
-              notificationRole = 'admin';
-              notificationMessage = `🚨 ALERTA CRÍTICO: Cliente ${client.name} (${client.phone}) sem resposta há mais de 1h30. Ação imediata necessária!`;
-            }
-          } else if (diffMins >= 60) { // 1h - Alerta Vermelho (Gerente)
+           if (diffMins >= 90) {
+             newStatus = 'critical';
+             notificationType = 'sla_critical';
+             notificationRole = 'admin';
+             notificationMessage = `🚨 ALERTA CRÍTICO: Cliente ${client.name} (${client.phone}) sem resposta há mais de 1h30. Ação imediata necessária!`;
+           } else if (diffMins >= 60) {
             if (newStatus !== 'red' && newStatus !== 'critical') {
               newStatus = 'red';
               notificationType = 'sla_red';
@@ -74,7 +72,7 @@
             }
           }
 
-          if (newStatus !== client.alert_status) {
+           if (newStatus !== client.alert_status || newStatus === 'critical') {
             const updateData: any = { 
               alert_status: newStatus,
               alert_notified_at: now.toISOString()
@@ -82,26 +80,83 @@
             
             await supabase.from("clients").update(updateData).eq("id", client.id);
 
-            if (notificationType && notificationRole) {
-              // Enviar para tabela geral de notificações
-              await supabase.from("notifications").insert({
-                type: notificationType,
-                role_target: notificationRole,
-                store_id: client.store_id,
-                title: "Alerta de SLA",
-                message: notificationMessage,
-                metadata: { client_id: client.id, phone: client.phone, diffMins }
-              });
+             // Check for existing unresolved SLA alert if it's critical
+             let shouldNotify = newStatus !== client.alert_status;
+             let existingAlertId = null;
+ 
+             if (newStatus === 'critical') {
+             const { data: latestAlerts } = await supabase
+               .from("sla_alerts")
+               .select("id, last_reminder_at, created_at, resolved_at")
+               .eq("lead_id", client.id)
+               .order("created_at", { ascending: false })
+               .limit(1);
+ 
+             if (latestAlerts && latestAlerts.length > 0) {
+               const latest = latestAlerts[0];
+               if (!latest.resolved_at) {
+                 // Unresolved: Check for reminder
+                 existingAlertId = latest.id;
+                 const lastReminder = latest.last_reminder_at || latest.created_at;
+                 const lastReminderDate = new Date(lastReminder);
+                 const minsSinceLastReminder = (now.getTime() - lastReminderDate.getTime()) / (1000 * 60);
+                 
+                 if (minsSinceLastReminder >= 15) { // Re-alert every 15 mins for critical
+                   shouldNotify = true;
+                   notificationMessage = `🚨 LEMBRETE CRÍTICO: Cliente ${client.name} (${client.phone}) continua sem resposta há ${diffMins} min!`;
+                 } else {
+                   shouldNotify = false;
+                 }
+               } else {
+                 // Resolved: Only re-alert if resolved more than 30 mins ago and still not answered
+                 const resolvedDate = new Date(latest.resolved_at);
+                 const minsSinceResolution = (now.getTime() - resolvedDate.getTime()) / (1000 * 60);
+                 
+                 if (minsSinceResolution >= 30) {
+                   shouldNotify = true;
+                   existingAlertId = null; // Create a new one
+                 } else {
+                   shouldNotify = false;
+                 }
+               }
+             } else {
+               shouldNotify = true; // No alerts at all
+             }
+             }
+ 
+              if (shouldNotify && notificationType && notificationRole) {
+                // If it's a reminder, mark previous notifications for this client as read
+                if (existingAlertId) {
+                  await supabase
+                    .from("notifications")
+                    .update({ is_read: true })
+                    .eq("type", notificationType)
+                    .eq("role_target", notificationRole)
+                    .eq("is_read", false)
+                    .contains("metadata", { client_id: client.id });
+                    
+                 await supabase.from("sla_alerts").update({ last_reminder_at: now.toISOString() }).eq("id", existingAlertId);
+                }
 
-              // Registrar no histórico de alertas SLA para auditoria
-              await supabase.from("sla_alerts").insert({
-                client_id: client.id,
-                seller_id: client.assigned_seller_id,
-                alert_level: newStatus === 'critical' ? 'crítico' : (newStatus === 'red' ? 'vermelho' : 'amarelo'),
-                alert_type: notificationRole,
-                message: notificationMessage
-              });
-            }
+                await supabase.from("notifications").insert({
+                  type: notificationType,
+                  role_target: notificationRole,
+                  store_id: client.store_id,
+                  title: "Alerta de SLA",
+                  message: notificationMessage,
+                  metadata: { client_id: client.id, phone: client.phone, diffMins, is_reminder: !!existingAlertId }
+                });
+ 
+                if (!existingAlertId) {
+                 await supabase.from("sla_alerts").insert({
+                   lead_id: client.id,
+                   vendedor_id: client.assigned_seller_id,
+                   alert_level: newStatus === 'critical' ? 'crítico' : (newStatus === 'red' ? 'vermelho' : 'amarelo'),
+                   alert_type: notificationRole,
+                   message: notificationMessage
+                 });
+               }
+             }
 
             processed.push({ id: client.id, old: client.alert_status, new: newStatus });
           }
