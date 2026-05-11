@@ -35,8 +35,8 @@ type NavItem = { title: string; url: string; icon: React.ComponentType<any>; bad
 
 const allMainNav: NavItem[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, badgeKey: null, roles: ["admin", "gerente"] },
-  { title: "Kanban", url: "/kanban", icon: Columns3, badgeKey: "newLeads" },
-  { title: "Clientes", url: "/clientes", icon: Users, badgeKey: null },
+   { title: "Kanban", url: "/kanban", icon: Columns3, badgeKey: "newLeads" },
+   { title: "Clientes", url: "/clientes", icon: Users, badgeKey: null, roles: ["admin", "gerente"] },
   { title: "Agenda", url: "/agenda", icon: CalendarDays, badgeKey: "pendingFollowUps" },
 ];
 

@@ -10,6 +10,32 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+  // Function to search client in Citel ERP
+  async function searchCitelClient(phone: string) {
+    const CITEL_API_URL = Deno.env.get("CITEL_API_URL");
+    const CITEL_API_KEY = Deno.env.get("CITEL_API_KEY");
+    if (!CITEL_API_URL || !CITEL_API_KEY) return null;
+
+    try {
+      // Common patterns for Citel ERP API endpoints
+      const endpoints = ["/api/clientes", "/clientes", "/v1/clientes"];
+      for (const endpoint of endpoints) {
+        const response = await fetch(`${CITEL_API_URL}${endpoint}?telefone=${phone}`, {
+          headers: { "Authorization": `Bearer ${CITEL_API_KEY}`, "Content-Type": "application/json" }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // Logic depends on API response structure, usually an array or single object
+          const client = Array.isArray(data) ? data[0] : (data.clientes ? data.clientes[0] : data);
+          if (client && (client.nome || client.razao_social)) return client;
+        }
+      }
+    } catch (e) {
+      console.error("Error searching Citel client:", e);
+    }
+    return null;
+  }
+
  // Function to send message via uazapi
  async function sendWhatsAppMessage(phone: string, text: string, isTest: boolean = false) {
     if (isTest) {
@@ -282,23 +308,36 @@ serve(async (req) => {
             });
           };
 
-           if (!client) {
-             // 1. First message from a new client: Start URA flow at step "ask_code"
-             const { error: createError } = await supabase.from("clients").upsert({
-               name: senderName,
-               phone: cleanPhone,
-               status: 'novo',
-               triaging: true,
-               triage_step: 'ask_code',
-               last_message_at: new Date().toISOString(),
-               last_message_from_client_at: new Date().toISOString()
-             }, { onConflict: 'phone' }).select("id").single();
+            if (!client) {
+              // 1. First message from a new client: Try to identify them via ERP Citel first
+              const erpClient = await searchCitelClient(cleanPhone);
+              
+              const clientData = {
+                name: erpClient?.nome || erpClient?.razao_social || senderName,
+                phone: cleanPhone,
+                email: erpClient?.email || null,
+                address: erpClient?.endereco || erpClient?.logradouro || null,
+                city: erpClient?.cidade || null,
+                total_purchases: erpClient?.total_compras || erpClient?.valor_total || 0,
+                status: 'novo',
+                triaging: true,
+                triage_step: 'ask_code',
+                last_message_at: new Date().toISOString(),
+                last_message_from_client_at: new Date().toISOString(),
+                notes: erpClient ? `Cliente identificado via ERP Citel. ID: ${erpClient.id || 'N/A'}` : null,
+                tags: erpClient ? ['erp_citel'] : []
+              };
 
-             if (!createError) {
-               const welcomeMsg = `Olá! 👋 Você está falando com a *TF Tintas*.\n\nVocê já possui o *código (ramal)* de um vendedor?\n\n👉 Se *sim*, digite o código agora (ex: 1023).\n👉 Se *não*, responda com *N* para continuar.`;
-               await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest);
-             }
-           } else if (client.triaging) {
+              const { error: createError } = await supabase.from("clients").upsert(clientData, { onConflict: 'phone' }).select("id").single();
+ 
+              if (!createError) {
+                const greeting = erpClient 
+                  ? `Olá, *${erpClient.nome || erpClient.razao_social}*! 👋`
+                  : `Olá! 👋`;
+                const welcomeMsg = `${greeting} Você está falando com a *TF Tintas*.\n\nVocê já possui o *código (ramal)* de um vendedor?\n\n👉 Se *sim*, digite o código agora (ex: 1023).\n👉 Se *não*, responda com *N* para continuar.`;
+                await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest);
+              }
+            } else if (client.triaging) {
              // URA-style step machine
              const step = client.triage_step || 'ask_code';
              const trimmed = text.trim();
