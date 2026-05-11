@@ -200,7 +200,7 @@ serve(async (req) => {
        console.log("Event Data:", JSON.stringify(data));
 
         // Z-API uses "ReceivedMessage" for incoming messages
-         const isMessageEvent = event === "ReceivedMessage" || event === "messages" || event === "message" || event === "chats";
+        const isMessageEvent = event === "ReceivedMessage" || event === "ReceivedCallback" || event === "messages" || event === "message" || event === "chats";
 
        if (isMessageEvent) {
           // Z-API uses 'phone' directly for incoming messages
