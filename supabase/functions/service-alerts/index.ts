@@ -85,17 +85,19 @@
              let existingAlertId = null;
  
              if (newStatus === 'critical') {
-               const { data: existingAlerts } = await supabase
-                 .from("sla_alerts")
-                 .select("id, last_reminder_at, created_at")
-                 .eq("lead_id", client.id)
-                 .is("resolved_at", null)
-                 .order("created_at", { ascending: false })
-                 .limit(1);
+             const { data: latestAlerts } = await supabase
+               .from("sla_alerts")
+               .select("id, last_reminder_at, created_at, resolved_at")
+               .eq("lead_id", client.id)
+               .order("created_at", { ascending: false })
+               .limit(1);
  
-               if (existingAlerts && existingAlerts.length > 0) {
-                 existingAlertId = existingAlerts[0].id;
-                 const lastReminder = existingAlerts[0].last_reminder_at || existingAlerts[0].created_at;
+             if (latestAlerts && latestAlerts.length > 0) {
+               const latest = latestAlerts[0];
+               if (!latest.resolved_at) {
+                 // Unresolved: Check for reminder
+                 existingAlertId = latest.id;
+                 const lastReminder = latest.last_reminder_at || latest.created_at;
                  const lastReminderDate = new Date(lastReminder);
                  const minsSinceLastReminder = (now.getTime() - lastReminderDate.getTime()) / (1000 * 60);
                  
@@ -103,11 +105,23 @@
                    shouldNotify = true;
                    notificationMessage = `🚨 LEMBRETE CRÍTICO: Cliente ${client.name} (${client.phone}) continua sem resposta há ${diffMins} min!`;
                  } else {
-                   shouldNotify = false; // Already alerted recently
+                   shouldNotify = false;
                  }
                } else {
-                 shouldNotify = true; // First time critical
+                 // Resolved: Only re-alert if resolved more than 30 mins ago and still not answered
+                 const resolvedDate = new Date(latest.resolved_at);
+                 const minsSinceResolution = (now.getTime() - resolvedDate.getTime()) / (1000 * 60);
+                 
+                 if (minsSinceResolution >= 30) {
+                   shouldNotify = true;
+                   existingAlertId = null; // Create a new one
+                 } else {
+                   shouldNotify = false;
+                 }
                }
+             } else {
+               shouldNotify = true; // No alerts at all
+             }
              }
  
              if (shouldNotify && notificationType && notificationRole) {
