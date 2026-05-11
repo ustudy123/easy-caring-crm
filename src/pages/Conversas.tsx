@@ -804,9 +804,24 @@ const mockContactNames: Record<string, string> = {
         },
       });
 
-     if (invokeError) throw invokeError;
+      if (invokeError) throw invokeError;
 
-     toast.dismiss(loadingToast);
+      // Adicionar áudio localmente para feedback instantâneo
+      const newMessage: WhatsAppMessage = {
+        id: `temp-audio-${Date.now()}`,
+        message_id: `temp-audio-${Date.now()}`,
+        phone: selectedPhone,
+        body: "",
+        is_from_me: true,
+        media_url: publicUrl,
+        media_type: 'audio',
+        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      };
+
+      setMessages(prev => [...prev, newMessage]);
+
+      toast.dismiss(loadingToast);
      toast.success("Áudio enviado com sucesso!");
    } catch (err: any) {
      console.error("Erro ao enviar áudio:", err);
