@@ -10,12 +10,16 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   const apiUrl = (Deno.env.get("CITEL_API_URL") ?? "").replace(/\/+$/, "");
   const auth = btoa(`${Deno.env.get("CITEL_USER")}:${Deno.env.get("CITEL_PASSWORD")}`);
+  console.log("[probe] fetching swagger from", apiUrl);
   const r = await fetch(`${apiUrl}/v2/api-docs`, { headers: { Authorization: `Basic ${auth}`, Accept: "application/json" } });
+  console.log("[probe] swagger status", r.status);
   const doc: any = await r.json();
+  console.log("[probe] paths count", Object.keys(doc?.paths ?? {}).length);
   const out: any[] = [];
   for (const [p, defs] of Object.entries(doc?.paths ?? {})) {
     const lower = p.toLowerCase();
     if (!lower.includes("client")) continue;
+    console.log("[probe] match path", p);
     for (const [m, info] of Object.entries(defs as any)) {
       if (m !== "get") continue;
       const params = (info as any).parameters ?? [];
