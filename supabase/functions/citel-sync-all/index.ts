@@ -118,6 +118,9 @@ Deno.serve(async (req) => {
     for (const url of listEndpoints) {
       const r = await tryFetch(url, auth);
       const arr = r.ok ? extractArray(r.data) : [];
+      console.log(`[sync-all] try ${url} → status=${r.status} count=${arr.length}`);
+      if (r.ok && arr[0]) console.log(`[sync-all] sample keys:`, Object.keys(arr[0] as object).slice(0, 30));
+      if (!r.ok) console.log(`[sync-all] error body:`, typeof r.data === "string" ? r.data.slice(0, 300) : JSON.stringify(r.data).slice(0, 300));
       attempts.push({
         url,
         status: r.status,
@@ -133,6 +136,7 @@ Deno.serve(async (req) => {
     }
 
     if (!workingBase) {
+      console.log("[sync-all] NO WORKING ENDPOINT. Swagger:", swaggerUrl, "Discovered paths:", discoveredPaths);
       return json({
         success: false,
         count: 0,
