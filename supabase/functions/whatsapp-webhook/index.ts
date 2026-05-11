@@ -10,6 +10,32 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+  // Function to search client in Citel ERP
+  async function searchCitelClient(phone: string) {
+    const CITEL_API_URL = Deno.env.get("CITEL_API_URL");
+    const CITEL_API_KEY = Deno.env.get("CITEL_API_KEY");
+    if (!CITEL_API_URL || !CITEL_API_KEY) return null;
+
+    try {
+      // Common patterns for Citel ERP API endpoints
+      const endpoints = ["/api/clientes", "/clientes", "/v1/clientes"];
+      for (const endpoint of endpoints) {
+        const response = await fetch(`${CITEL_API_URL}${endpoint}?telefone=${phone}`, {
+          headers: { "Authorization": `Bearer ${CITEL_API_KEY}`, "Content-Type": "application/json" }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // Logic depends on API response structure, usually an array or single object
+          const client = Array.isArray(data) ? data[0] : (data.clientes ? data.clientes[0] : data);
+          if (client && (client.nome || client.razao_social)) return client;
+        }
+      }
+    } catch (e) {
+      console.error("Error searching Citel client:", e);
+    }
+    return null;
+  }
+
  // Function to send message via uazapi
  async function sendWhatsAppMessage(phone: string, text: string, isTest: boolean = false) {
     if (isTest) {
