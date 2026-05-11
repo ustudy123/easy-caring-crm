@@ -1,8 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
- // WhatsApp API config (uazapi)
- const WHATSAPP_API_URL = "https://ipazua.uazapi.com";
+ // WhatsApp API config (Z-API)
+ // WHATSAPP_API_URL should be set in environment variables: https://api.z-api.io/instances/ID/token/TOKEN
  const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
 const corsHeaders = {
@@ -36,19 +36,25 @@ const corsHeaders = {
     return null;
   }
 
- // Function to send message via uazapi
+ // Function to send message via Z-API
  async function sendWhatsAppMessage(phone: string, text: string, isTest: boolean = false) {
+    const apiBaseUrl = Deno.env.get("WHATSAPP_API_URL");
+    if (!apiBaseUrl) {
+      console.error("WHATSAPP_API_URL not set");
+      return { error: "API not configured" };
+    }
+
     if (isTest) {
       console.log(`[TEST MODE] Would send WhatsApp message to ${phone}: ${text}`);
       return { success: true, message: "Test mode: message not sent to real API" };
     }
    try {
-     const response = await fetch(`${WHATSAPP_API_URL}/message/sendText?token=${Deno.env.get("WHATSAPP_API_TOKEN")}`, {
+     const response = await fetch(`${apiBaseUrl.replace(/\/+$/, "")}/send-text`, {
        method: "POST",
        headers: { "Content-Type": "application/json" },
        body: JSON.stringify({
-         chatId: `${phone}@s.whatsapp.net`,
-         text: text
+         phone: phone,
+         message: text
        })
      });
      return await response.json();
@@ -180,36 +186,37 @@ serve(async (req) => {
 
       console.log("Full Request Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())));
  
-        // uazapi webhook structure: 
-        // Format A: { event: "message", data: { chatid, text, ... } }
-        // Format B: { EventType: "chats", chat: { wa_chatid, wa_lastMessageTextVote, name, ... } }
-        const event = body.event || body.type || body.action || body.EventType;
-        const data = body.data || body.chat || body;
+        // Z-API webhook structure: 
+        // Received message: { type: "ReceivedMessage", phone: "...", text: { message: "..." }, ... }
+        // See: https://developer.z-api.io/en/webhooks/received-message
+        const event = body.type || body.event || body.EventType;
+        const data = body;
        
        console.log("Detected Event:", event);
        console.log("Event Data:", JSON.stringify(data));
 
-       // Handle incoming message (uazapi sends "message" singular; also support legacy formats)
-        const isMessageEvent = event === "messages" || event === "message" || event === "messages.upsert" || event === "chats";
-       
+        // Z-API uses "ReceivedMessage" for incoming messages
+         const isMessageEvent = event === "ReceivedMessage" || event === "messages" || event === "message" || event === "chats";
+
        if (isMessageEvent) {
-         // uazapi: phone comes from sender or chatid (e.g. "5511957783553@s.whatsapp.net")
-          const rawPhone = data.wa_chatid || data.sender || data.chatid || data.from || data.remoteJid || data.key?.remoteJid || "";
+          // Z-API uses 'phone' directly for incoming messages
+           const rawPhone = data.phone || data.wa_chatid || data.sender || data.chatid || data.from || "";
          const cleanPhone = rawPhone.toString()
            .replace("@s.whatsapp.net", "")
            .replace("@c.us", "")
            .replace("@g.us", "")
            .replace(/[^0-9]/g, "");
 
-         // uazapi: text is in data.text (not data.body)
-          const text = data.wa_lastMessageTextVote || data.text || data.body || data.message?.conversation || data.content || "[mensagem sem texto]";
-         const messageId = data.messageid || data.id || data.key?.id || crypto.randomUUID();
-         const isFromMe = data.fromMe || data.key?.fromMe || false;
-          const isGroup = data.wa_isGroup || data.isGroup || rawPhone.includes("@g.us");
-         // uazapi uses messageTimestamp in milliseconds
-          const rawTs = data.wa_lastMsgTimestamp || data.messageTimestamp || data.timestamp || Date.now();
-         const tsMs = rawTs > 1e12 ? rawTs : rawTs * 1000;
-          const senderName = data.name || data.wa_name || data.senderName || data.pushName || data.notifyName || `Cliente ${cleanPhone}`;
+          // Z-API text is usually in text.message
+           const text = data.text?.message || data.wa_lastMessageTextVote || data.text || data.body || data.message?.conversation || "[mensagem sem texto]";
+          const messageId = data.messageId || data.messageid || data.id || crypto.randomUUID();
+          const isFromMe = data.fromMe || false;
+           const isGroup = data.isGroup || rawPhone.includes("-") || false;
+
+          // Z-API uses ISO strings or timestamps
+           const rawTs = data.waitingMessage || data.momment || Date.now();
+          const tsMs = typeof rawTs === 'string' ? new Date(rawTs).getTime() : (rawTs > 1e12 ? rawTs : rawTs * 1000);
+           const senderName = data.senderName || data.name || data.pushName || `Cliente ${cleanPhone}`;
        const isTest = body.test_mode === true;
 
          console.log(`Parsed → phone: ${cleanPhone} | fromMe: ${isFromMe} | isGroup: ${isGroup} | text: "${text}"`);
