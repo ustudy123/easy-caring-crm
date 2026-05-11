@@ -153,7 +153,12 @@ function getZApiBaseUrl() {
  }
 
 // Function to generate AI auto-reply for existing clients
-async function generateAutoReply(text: string, recentMessages: { body: string; is_from_me: boolean }[], clientName: string) {
+async function generateAutoReply(
+  text: string,
+  recentMessages: { body: string; is_from_me: boolean }[],
+  clientName: string,
+  clientCtx: { storeName?: string | null; sellerName?: string | null; interestProducts?: string | null } = {}
+) {
   if (!OPENAI_API_KEY) {
     console.error("OPENAI_API_KEY not set for auto-reply");
     return null;
@@ -168,20 +173,36 @@ async function generateAutoReply(text: string, recentMessages: { body: string; i
   // Add the current message
   history.push({ role: "user", content: text });
 
+  const knownStore = clientCtx.storeName ? `loja preferida: ${clientCtx.storeName}` : null;
+  const knownSeller = clientCtx.sellerName ? `vendedor responsável: ${clientCtx.sellerName}` : null;
+  const knownInterest = clientCtx.interestProducts ? `interesse/produto: ${clientCtx.interestProducts}` : null;
+  const knownLines = [knownStore, knownSeller, knownInterest].filter(Boolean).join("\n- ");
+
+  const missing: string[] = [];
+  if (!clientCtx.storeName) missing.push("PREFERÊNCIA DE LOJA/UNIDADE (qual loja/unidade da TF Tintas o cliente prefere)");
+  if (!clientCtx.sellerName) missing.push("CÓDIGO (RAMAL) DE VENDEDOR (se já tem um vendedor da TF Tintas, peça o código; se não, basta confirmar)");
+  if (!clientCtx.interestProducts) missing.push("INTERESSE/PRODUTO (ex.: tinta para parede, ferramentas, material elétrico, hidráulica, acabamentos)");
+
   const systemPrompt = `Você é o Assistente Virtual da *TF Tintas*, uma loja de materiais de construção, tintas, ferragens, acabamentos e itens para obra e reforma.
-O nome do cliente é ${clientName}. Seja educado, prestativo, cordial e breve (máximo 2-3 frases por resposta).
+O nome do cliente é ${clientName}. Seja educado, cordial e MUITO breve (1 a 2 frases curtas).
 
-REGRAS IMPORTANTES:
+REGRAS ABSOLUTAS:
 - NUNCA diga que não vendemos tintas ou materiais de construção — esse é exatamente o nosso ramo.
-- NUNCA mencione intercâmbio, educação, viagens ou qualquer outro segmento que não seja materiais de construção/tintas.
-- Se o cliente mandar saudação (oi, olá, bom dia), cumprimente-o pelo nome e siga o roteiro abaixo.
+- NUNCA mencione intercâmbio, educação, viagens, idiomas ou qualquer outro segmento.
+- NUNCA envie uma resposta genérica do tipo "Como posso ajudar?" sem fazer a pergunta de triagem pendente.
+- Faça SEMPRE UMA pergunta por vez, na ordem listada em "INFORMAÇÕES PENDENTES".
 
-ROTEIRO DE TRIAGEM (siga em ordem, uma pergunta por vez):
-1. Se ainda não souber, pergunte se o cliente já tem *preferência por alguma de nossas lojas/unidades*.
-2. Em seguida, pergunte se ele já tem *código (ramal) de algum vendedor* da TF Tintas. Se sim, peça o código.
-3. Depois, pergunte qual é o *interesse/produto* dele (ex.: tinta para parede, ferramentas, material elétrico, hidráulica, acabamentos, etc.) para podermos direcionar ao consultor certo.
+INFORMAÇÕES JÁ CONHECIDAS DO CLIENTE:
+${knownLines ? `- ${knownLines}` : "- (nenhuma)"}
 
-Se não souber responder algo específico sobre preço/estoque/pedido, diga que vai encaminhar para um consultor humano.`;
+INFORMAÇÕES PENDENTES (faça uma de cada vez, na ordem):
+${missing.length ? missing.map((m, i) => `${i + 1}. ${m}`).join("\n") : "(nenhuma — pode atender normalmente o pedido do cliente)"}
+
+COMO RESPONDER AGORA:
+${missing.length
+    ? `Cumprimente brevemente pelo nome (apenas se o cliente acabou de mandar saudação) e faça SOMENTE a próxima pergunta pendente da lista acima. Não pule etapas. Não pergunte tudo de uma vez.`
+    : `Responda diretamente à pergunta/necessidade do cliente. Se for pedido de preço, estoque ou orçamento, diga que vai encaminhar para um consultor humano.`}
+`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -196,7 +217,7 @@ Se não souber responder algo específico sobre preço/estoque/pedido, diga que 
           { role: "system", content: systemPrompt },
           ...history
         ],
-        temperature: 0.7,
+        temperature: 0.2,
         max_tokens: 200
       })
     });
@@ -630,10 +651,24 @@ serve(async (req) => {
                 .order("timestamp", { ascending: false })
                 .limit(10);
 
+              // Fetch context: store name, assigned seller name, and known interest
+              let storeName: string | null = null;
+              let sellerName: string | null = null;
+              if (client.store_id) {
+                const { data: s } = await supabase.from("stores").select("name").eq("id", client.store_id).maybeSingle();
+                storeName = s?.name || null;
+              }
+              if (client.assigned_seller_id) {
+                const { data: sel } = await supabase.from("sellers").select("name").eq("id", client.assigned_seller_id).maybeSingle();
+                sellerName = sel?.name || null;
+              }
+              const interestProducts = (client as any).interest_products || (client as any).interest || null;
+
               const aiReply = await generateAutoReply(
                 text,
                 (recentMsgs || []).reverse(),
-                client.name || senderName
+                client.name || senderName,
+                { storeName, sellerName, interestProducts }
               );
 
               if (aiReply) {
