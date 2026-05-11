@@ -15,7 +15,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight } from "lucide-react";
  function CitelIntegrationTab() {
    const [exploreData, setExploreData] = useState<any>(null);
-   const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const runSync = async () => {
+    if (!confirm("Isso irá importar todos os clientes da Citel para o seu banco de dados. Deseja continuar?")) return;
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('citel-sync-all');
+      if (error) throw error;
+      if (data.success) {
+        toast.success(`Sincronização concluída! ${data.count} clientes importados/atualizados.`);
+      } else {
+        toast.error(data.message || "Erro na sincronização");
+      }
+    } catch (err: any) {
+      console.error("Sync error:", err);
+      toast.error("Erro ao sincronizar: " + (err.message || "Verifique os logs"));
+    } finally {
+      setSyncing(false);
+    }
+  };
+
    const [phone, setPhone] = useState("");
  
    const runExplore = async () => {
@@ -70,10 +90,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
                  Visualize todos os dados disponíveis na API do seu ERP Citel.
                </p>
              </div>
-             <Button onClick={runExplore} disabled={loading}>
-               {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-               Explorar API Agora
-             </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={runSync} disabled={syncing || loading}>
+                  {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                  Sincronização Total
+                </Button>
+                <Button onClick={runExplore} disabled={loading || syncing}>
+                  {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                  Explorar API Agora
+                </Button>
+              </div>
            </div>
          </CardHeader>
          <CardContent className="space-y-4">
