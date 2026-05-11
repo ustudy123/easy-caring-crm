@@ -49,9 +49,13 @@ const corsHeaders = {
       return { success: true, message: "Test mode: message not sent to real API" };
     }
    try {
+     const clientToken = Deno.env.get("ZAPI_CLIENT_TOKEN");
+     const headers: Record<string, string> = { "Content-Type": "application/json" };
+     if (clientToken) headers["Client-Token"] = clientToken;
+
      const response = await fetch(`${apiBaseUrl.replace(/\/+$/, "")}/send-text`, {
        method: "POST",
-       headers: { "Content-Type": "application/json" },
+       headers,
        body: JSON.stringify({
          phone: phone,
          message: text
