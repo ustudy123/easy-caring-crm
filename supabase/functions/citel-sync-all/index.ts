@@ -35,18 +35,26 @@
  
    try {
      const authHeader = req.headers.get("Authorization") ?? "";
-     const supabase = createClient(
+     if (!authHeader.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
+
+     const userClient = createClient(
        Deno.env.get("SUPABASE_URL") ?? "",
-       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
        { global: { headers: { Authorization: authHeader } } }
      );
- 
-     // Verify Admin
-     const { data: { user } } = await supabase.auth.getUser();
-     if (!user) return json({ error: "Unauthorized" }, 401);
-     
-     const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-     if (profile?.role !== "admin") return json({ error: "Forbidden" }, 403);
+     const { data: userData, error: userErr } = await userClient.auth.getUser();
+     if (userErr || !userData?.user) return json({ error: "Unauthorized" }, 401);
+
+     const supabase = createClient(
+       Deno.env.get("SUPABASE_URL") ?? "",
+       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+     );
+
+     const { data: isAdmin } = await supabase.rpc("has_role", {
+       _user_id: userData.user.id,
+       _role: "admin",
+     });
+     if (!isAdmin) return json({ error: "Forbidden" }, 403);
  
      const apiUrl = (Deno.env.get("CITEL_API_URL") ?? "").replace(/\/+$/, "");
      const erpUser = Deno.env.get("CITEL_USER") ?? "";
