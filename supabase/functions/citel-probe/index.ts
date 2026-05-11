@@ -8,7 +8,14 @@ const json = (b: unknown, s = 200) => new Response(JSON.stringify(b, null, 2), {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  const apiUrl = (Deno.env.get("CITEL_API_URL") ?? "").replace(/\/+$/, "");
+  const apiUrl = (Deno.env.get("CITEL_API_URL") ?? "")
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/swagger-ui(\.html)?$/i, "")
+    .replace(/\/swagger\/index\.html$/i, "")
+    .replace(/\/swagger$/i, "")
+    .replace(/\/doc(s)?$/i, "")
+    .replace(/\/+$/, "");
   const auth = btoa(`${Deno.env.get("CITEL_USER")}:${Deno.env.get("CITEL_PASSWORD")}`);
   console.log("[probe] fetching swagger from", apiUrl);
   const r = await fetch(`${apiUrl}/v2/api-docs`, { headers: { Authorization: `Basic ${auth}`, Accept: "application/json" } });
