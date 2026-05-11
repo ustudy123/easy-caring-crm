@@ -645,6 +645,21 @@ const mockContactNames: Record<string, string> = {
 
       if (invokeError) throw invokeError;
 
+      // Adicionar mensagem localmente para feedback instantâneo
+      const newMessage: WhatsAppMessage = {
+        id: `temp-file-${Date.now()}`,
+        message_id: `temp-file-${Date.now()}`,
+        phone: selectedPhone,
+        body: messageInput || `[Arquivo: ${mediaType || 'mídia'}]`,
+        is_from_me: true,
+        media_url: publicUrl,
+        media_type: mediaType,
+        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      };
+
+      setMessages(prev => [...prev, newMessage]);
+
       toast.dismiss(loadingToast);
       toast.success("Arquivo enviado com sucesso!");
     } catch (err: any) {
@@ -676,13 +691,32 @@ const mockContactNames: Record<string, string> = {
          },
        });
 
-      if (error) {
-        console.error("Erro ao enviar mensagem:", error);
-        toast.error("Erro ao enviar mensagem. Tente novamente.");
-        setMessageInput(text);
-      } else {
-        toast.success("Mensagem enviada com sucesso!");
-      }
+       if (error) {
+         console.error("Erro ao enviar mensagem:", error);
+         toast.error("Erro ao enviar mensagem. Tente novamente.");
+         setMessageInput(text);
+       } else {
+         // Adicionar mensagem localmente para feedback instantâneo
+         const newMessage: WhatsAppMessage = {
+           id: `temp-${Date.now()}`,
+           message_id: `temp-${Date.now()}`,
+           phone: selectedPhone,
+           body: text,
+           is_from_me: true,
+           timestamp: new Date().toISOString(),
+           created_at: new Date().toISOString()
+         };
+         
+         setMessages(prev => {
+           if (prev.some(m => m.body === text && m.is_from_me && 
+               Math.abs(new Date(m.timestamp || m.created_at || 0).getTime() - new Date().getTime()) < 5000)) {
+             return prev;
+           }
+           return [...prev, newMessage];
+         });
+
+         toast.success("Mensagem enviada com sucesso!");
+       }
     } catch (err) {
       console.error("Erro ao enviar mensagem:", err);
       toast.error("Falha na conexão. Verifique sua internet.");
@@ -770,9 +804,24 @@ const mockContactNames: Record<string, string> = {
         },
       });
 
-     if (invokeError) throw invokeError;
+      if (invokeError) throw invokeError;
 
-     toast.dismiss(loadingToast);
+      // Adicionar áudio localmente para feedback instantâneo
+      const newMessage: WhatsAppMessage = {
+        id: `temp-audio-${Date.now()}`,
+        message_id: `temp-audio-${Date.now()}`,
+        phone: selectedPhone,
+        body: "",
+        is_from_me: true,
+        media_url: publicUrl,
+        media_type: 'audio',
+        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      };
+
+      setMessages(prev => [...prev, newMessage]);
+
+      toast.dismiss(loadingToast);
      toast.success("Áudio enviado com sucesso!");
    } catch (err: any) {
      console.error("Erro ao enviar áudio:", err);
