@@ -645,6 +645,21 @@ const mockContactNames: Record<string, string> = {
 
       if (invokeError) throw invokeError;
 
+      // Adicionar mensagem localmente para feedback instantâneo
+      const newMessage: WhatsAppMessage = {
+        id: `temp-file-${Date.now()}`,
+        message_id: `temp-file-${Date.now()}`,
+        phone: selectedPhone,
+        body: messageInput || `[Arquivo: ${mediaType || 'mídia'}]`,
+        is_from_me: true,
+        media_url: publicUrl,
+        media_type: mediaType,
+        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      };
+
+      setMessages(prev => [...prev, newMessage]);
+
       toast.dismiss(loadingToast);
       toast.success("Arquivo enviado com sucesso!");
     } catch (err: any) {
