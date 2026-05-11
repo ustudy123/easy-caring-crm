@@ -594,17 +594,22 @@ serve(async (req) => {
             // Rule 1: Conversation must always have a current responsible.
             // Rule 6: If returning and unassigned, try to distribute or restart triage.
             if (!client.assigned_seller_id) {
-              console.log(`Returning client ${cleanPhone} has no assigned seller. Distributing...`);
-              const distributed = await distributeLead(client.store_id || targetStoreId);
-              
-              if (!distributed) {
-                // If cannot distribute now (no sellers active), restart triage to ask for code or store
-                updateData.triaging = true;
-                updateData.triage_step = 'ask_code';
-                const msg = `Olá! 👋 Bem-vindo de volta.\n\nVocê já possui o *código (ramal)* de um vendedor?\n\n👉 Se *sim*, digite o código.\n👉 Se *não*, responda com *N* para continuar.`;
-                await sendWhatsAppMessage(cleanPhone, msg, isTest);
-              }
+              // ALWAYS restart triage (URA) for unassigned clients so they go through:
+              // 1) seller code  →  2) store preference (with options)  →  3) queue
+              console.log(`Returning client ${cleanPhone} has no assigned seller. Restarting triage URA.`);
+              updateData.triaging = true;
+              updateData.triage_step = 'ask_code';
               updateData.store_id = client.store_id || targetStoreId;
+
+              const greetingName = client.name && !client.name.startsWith('Cliente ') ? `, *${client.name}*` : '';
+              const msg = `Olá${greetingName}! 👋 Você está falando com a *TF Tintas*.\n\nAntes de continuar, preciso te direcionar para o atendimento certo.\n\nVocê já possui o *código (ramal)* de um vendedor?\n\n👉 Se *sim*, digite o código agora (ex: 1023).\n👉 Se *não*, responda com *N* para continuar.`;
+              await sendWhatsAppMessage(cleanPhone, msg, isTest);
+
+              await supabase.from("clients").update(updateData).eq("id", client.id);
+              return new Response(JSON.stringify({ success: true, action: "triage_restarted" }), {
+                status: 200,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
             } else {
               // Check if the assigned seller's status has changed and if redirection is needed
               const { data: seller } = await supabase
