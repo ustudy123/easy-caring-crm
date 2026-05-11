@@ -70,7 +70,14 @@ Deno.serve(async (req) => {
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user) return json({ error: "Unauthorized" }, 401);
 
-    const apiUrl = (Deno.env.get("CITEL_API_URL") ?? "").replace(/\/+$/, "");
+    let apiUrl = (Deno.env.get("CITEL_API_URL") ?? "").replace(/\/+$/, "");
+    // Normaliza: remove sufixos comuns de Swagger UI / docs caso o secret aponte para a página de documentação.
+    apiUrl = apiUrl
+      .replace(/\/swagger-ui(\.html)?$/i, "")
+      .replace(/\/swagger\/index\.html$/i, "")
+      .replace(/\/swagger$/i, "")
+      .replace(/\/doc(s)?$/i, "")
+      .replace(/\/+$/, "");
     const erpUser = Deno.env.get("CITEL_USER") ?? "";
     const erpPass = Deno.env.get("CITEL_PASSWORD") ?? "";
     if (!apiUrl || !erpUser || !erpPass) return json({ error: "Integração CITEL não configurada" }, 500);
@@ -82,6 +89,9 @@ Deno.serve(async (req) => {
       `${apiUrl}/swagger.json`,
       `${apiUrl}/v2/api-docs`,
       `${apiUrl}/openapi.json`,
+      `${apiUrl}/doc/swagger.json`,
+      `${apiUrl}/doc/v2/api-docs`,
+      `${apiUrl}/doc/openapi.json`,
     ];
     let swaggerDoc: any = null;
     for (const u of swaggerCandidates) {
@@ -101,12 +111,19 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Determina base path do Swagger (ex.: "/api") para montar URLs corretas.
+    const swaggerBasePath = (typeof swaggerDoc?.basePath === "string" ? swaggerDoc.basePath : "")
+      .replace(/\/+$/, "");
+
     const listEndpoints = Array.from(new Set([
+      ...discoveredPaths.map((p) => `${apiUrl}${swaggerBasePath}${p}`),
       ...discoveredPaths.map((p) => `${apiUrl}${p}`),
       `${apiUrl}/api/clientes`,
       `${apiUrl}/api/customers`,
       `${apiUrl}/api/Clientes`,
       `${apiUrl}/api/v1/clientes`,
+      `${apiUrl}/clientes`,
+      `${apiUrl}/customers`,
     ]));
 
     let workingBase: string | null = null;
