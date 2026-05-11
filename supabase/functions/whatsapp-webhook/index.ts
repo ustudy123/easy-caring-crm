@@ -10,6 +10,32 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function getZApiBaseUrl() {
+  const rawUrl = Deno.env.get("WHATSAPP_API_URL")?.trim();
+  const instanceToken = Deno.env.get("WHATSAPP_API_KEY")?.trim();
+
+  if (!rawUrl) return null;
+
+  let baseUrl = rawUrl.replace(/\/+$/, "");
+  baseUrl = baseUrl.replace(/\/send-(text|image|video|audio|file|document)$/i, "");
+
+  if (baseUrl.includes("/token/")) {
+    return baseUrl;
+  }
+
+  if (instanceToken) {
+    if (/\/token$/i.test(baseUrl)) {
+      return `${baseUrl}/${instanceToken}`;
+    }
+
+    if (/\/instances\/[^/]+$/i.test(baseUrl)) {
+      return `${baseUrl}/token/${instanceToken}`;
+    }
+  }
+
+  return baseUrl;
+}
+
   // Function to search client in Citel ERP
   async function searchCitelClient(phone: string) {
     const CITEL_API_URL = Deno.env.get("CITEL_API_URL");
@@ -38,7 +64,7 @@ const corsHeaders = {
 
  // Function to send message via Z-API
  async function sendWhatsAppMessage(phone: string, text: string, isTest: boolean = false) {
-    const apiBaseUrl = Deno.env.get("WHATSAPP_API_URL");
+    const apiBaseUrl = getZApiBaseUrl();
     if (!apiBaseUrl) {
       console.error("WHATSAPP_API_URL not set");
       return { error: "API not configured" };
@@ -53,7 +79,7 @@ const corsHeaders = {
      const headers: Record<string, string> = { "Content-Type": "application/json" };
      if (clientToken) headers["Client-Token"] = clientToken;
 
-     const response = await fetch(`${apiBaseUrl.replace(/\/+$/, "")}/send-text`, {
+      const response = await fetch(`${apiBaseUrl.replace(/\/+$/, "")}/send-text`, {
        method: "POST",
        headers,
        body: JSON.stringify({
@@ -61,7 +87,17 @@ const corsHeaders = {
          message: text
        })
      });
-     return await response.json();
+      const responseText = await response.text();
+      let responseData: any = {};
+
+      try {
+        responseData = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        responseData = { raw: responseText };
+      }
+
+      console.log("Z-API send-text response:", JSON.stringify(responseData));
+      return response.ok ? responseData : { error: true, details: responseData, status: response.status };
    } catch (e) {
      console.error("Error sending WhatsApp message:", e);
    }
