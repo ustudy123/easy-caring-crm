@@ -124,19 +124,30 @@
              }
              }
  
-             if (shouldNotify && notificationType && notificationRole) {
-               await supabase.from("notifications").insert({
-                 type: notificationType,
-                 role_target: notificationRole,
-                 store_id: client.store_id,
-                 title: "Alerta de SLA",
-                 message: notificationMessage,
-                 metadata: { client_id: client.id, phone: client.phone, diffMins, is_reminder: !!existingAlertId }
-               });
- 
-               if (existingAlertId) {
+              if (shouldNotify && notificationType && notificationRole) {
+                // If it's a reminder, mark previous notifications for this client as read
+                if (existingAlertId) {
+                  await supabase
+                    .from("notifications")
+                    .update({ is_read: true })
+                    .eq("type", notificationType)
+                    .eq("role_target", notificationRole)
+                    .eq("is_read", false)
+                    .filter("metadata->>client_id", "eq", client.id);
+                    
                  await supabase.from("sla_alerts").update({ last_reminder_at: now.toISOString() }).eq("id", existingAlertId);
-               } else {
+                }
+
+                await supabase.from("notifications").insert({
+                  type: notificationType,
+                  role_target: notificationRole,
+                  store_id: client.store_id,
+                  title: "Alerta de SLA",
+                  message: notificationMessage,
+                  metadata: { client_id: client.id, phone: client.phone, diffMins, is_reminder: !!existingAlertId }
+                });
+ 
+                if (!existingAlertId) {
                  await supabase.from("sla_alerts").insert({
                    lead_id: client.id,
                    vendedor_id: client.assigned_seller_id,
