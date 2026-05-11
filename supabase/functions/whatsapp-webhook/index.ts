@@ -651,10 +651,24 @@ serve(async (req) => {
                 .order("timestamp", { ascending: false })
                 .limit(10);
 
+              // Fetch context: store name, assigned seller name, and known interest
+              let storeName: string | null = null;
+              let sellerName: string | null = null;
+              if (client.store_id) {
+                const { data: s } = await supabase.from("stores").select("name").eq("id", client.store_id).maybeSingle();
+                storeName = s?.name || null;
+              }
+              if (client.assigned_seller_id) {
+                const { data: sel } = await supabase.from("sellers").select("name").eq("id", client.assigned_seller_id).maybeSingle();
+                sellerName = sel?.name || null;
+              }
+              const interestProducts = (client as any).interest_products || (client as any).interest || null;
+
               const aiReply = await generateAutoReply(
                 text,
                 (recentMsgs || []).reverse(),
-                client.name || senderName
+                client.name || senderName,
+                { storeName, sellerName, interestProducts }
               );
 
               if (aiReply) {
