@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2, TrendingUp } from "lucide-react";
+ import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2, TrendingUp, RefreshCw, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -37,17 +37,50 @@ export default function Clientes() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [clients, setClients] = useState<Client[]>([]);
+   const [clients, setClients] = useState<Client[]>([]);
+   const [isSyncing, setIsSyncing] = useState(false);
   const [showNewClient, setShowNewClient] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
-  useEffect(() => {
-    const fetchClients = async () => {
-      const { data } = await supabase.from("clients").select("*").order("created_at", { ascending: false });
-      if (data) setClients(data.map(mapClientFromDb));
-    };
-    fetchClients();
-  }, []);
+   const fetchClients = async () => {
+     const { data } = await supabase.from("clients").select("*").order("created_at", { ascending: false });
+     if (data) setClients(data.map(mapClientFromDb));
+   };
+
+   useEffect(() => {
+     fetchClients();
+   }, []);
+
+   const handleSyncAll = async () => {
+     setIsSyncing(true);
+     try {
+       const { data, error } = await supabase.functions.invoke('citel-sync-all');
+       if (error) throw error;
+       
+       if (data.success) {
+         toast({
+           title: "Sincronização concluída",
+           description: `${data.count} clientes foram sincronizados com o ERP Citel.`,
+         });
+         fetchClients();
+       } else {
+         toast({
+           title: "Falha na sincronização",
+           description: data.message || "Não foi possível sincronizar com o ERP.",
+           variant: "destructive"
+         });
+       }
+     } catch (error: any) {
+       console.error("Sync error:", error);
+       toast({
+         title: "Erro de conexão",
+         description: "Erro ao chamar a função de sincronização: " + (error.message || "Erro desconhecido"),
+         variant: "destructive"
+       });
+     } finally {
+       setIsSyncing(false);
+     }
+   };
 
   const addClient = async (client: Client) => {
     setClients((prev) => [client, ...prev]);
@@ -95,15 +128,27 @@ export default function Clientes() {
     <AppLayout title="Clientes">
       <div className="space-y-5">
         {/* Header */}
-        <motion.div variants={fadeIn} initial="hidden" animate="show" className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar por nome, telefone ou tag..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-card/80 backdrop-blur-sm border-border/60 focus:border-primary/40" />
-          </div>
-          <Button size="sm" className="bg-gradient-to-r from-primary to-[hsl(262,60%,55%)] hover:opacity-90 text-primary-foreground shadow-md" onClick={() => setShowNewClient(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Novo Cliente
-          </Button>
-        </motion.div>
+         <motion.div variants={fadeIn} initial="hidden" animate="show" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1 w-full sm:w-auto">
+             <div className="relative w-full sm:max-w-sm">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+               <Input placeholder="Buscar por nome, telefone ou tag..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-card/80 backdrop-blur-sm border-border/60 focus:border-primary/40" />
+             </div>
+             <Button 
+               size="sm" 
+               variant="outline"
+               className="w-full sm:w-auto border-primary/20 hover:bg-primary/5 text-primary"
+               onClick={handleSyncAll}
+               disabled={isSyncing}
+             >
+               {isSyncing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+               Sincronizar ERP
+             </Button>
+           </div>
+           <Button size="sm" className="w-full sm:w-auto bg-gradient-to-r from-primary to-[hsl(262,60%,55%)] hover:opacity-90 text-primary-foreground shadow-md" onClick={() => setShowNewClient(true)}>
+             <Plus className="h-3.5 w-3.5 mr-1" /> Novo Cliente
+           </Button>
+         </motion.div>
 
         {/* KPI Cards */}
         <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
