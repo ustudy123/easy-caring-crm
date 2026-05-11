@@ -208,6 +208,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
      if (notif && notif.type.startsWith('sla_')) {
        const clientId = notif.metadata?.client_id;
        if (clientId) {
+         // Resolve the SLA alert
          const { error: slaError } = await supabase
            .from("sla_alerts")
            .update({ resolved_at: new Date().toISOString() })
@@ -215,6 +216,16 @@ export function CrmProvider({ children }: { children: ReactNode }) {
            .is("resolved_at", null);
          
          if (slaError) console.error("Error resolving SLA alert:", slaError);
+ 
+         // Also mark all other SLA notifications for this client as read
+         const otherNotifIds = notifications
+           .filter(n => n.id !== id && n.type.startsWith('sla_') && n.metadata?.client_id === clientId)
+           .map(n => n.id);
+         
+         if (otherNotifIds.length > 0) {
+           await supabase.from("notifications").update({ is_read: true }).in("id", otherNotifIds);
+           setNotifications(prev => prev.filter(n => !otherNotifIds.includes(n.id)));
+         }
        }
      }
    }, [notifications]);
