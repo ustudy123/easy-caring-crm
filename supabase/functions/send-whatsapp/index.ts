@@ -6,6 +6,32 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function getZApiBaseUrl() {
+  const rawUrl = Deno.env.get("WHATSAPP_API_URL")?.trim();
+  const instanceToken = Deno.env.get("WHATSAPP_API_KEY")?.trim();
+
+  if (!rawUrl) return null;
+
+  let baseUrl = rawUrl.replace(/\/+$/, "");
+  baseUrl = baseUrl.replace(/\/send-(text|image|video|audio|file|document)$/i, "");
+
+  if (baseUrl.includes("/token/")) {
+    return baseUrl;
+  }
+
+  if (instanceToken) {
+    if (/\/token$/i.test(baseUrl)) {
+      return `${baseUrl}/${instanceToken}`;
+    }
+
+    if (/\/instances\/[^/]+$/i.test(baseUrl)) {
+      return `${baseUrl}/token/${instanceToken}`;
+    }
+  }
+
+  return baseUrl;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -22,7 +48,7 @@ serve(async (req) => {
       });
     }
 
-    const whatsappApiUrl = Deno.env.get("WHATSAPP_API_URL"); // Z-API URL format: https://api.z-api.io/instances/ID/token/TOKEN
+    const whatsappApiUrl = getZApiBaseUrl();
 
     if (!whatsappApiUrl) {
       return new Response(JSON.stringify({ error: "WhatsApp API (Z-API) not configured. Please set WHATSAPP_API_URL." }), {
@@ -64,12 +90,22 @@ serve(async (req) => {
       body: JSON.stringify(apiBody),
     });
 
-    const apiData = await apiResponse.json();
+    const responseText = await apiResponse.text();
+    let apiData: any = {};
+
+    try {
+      apiData = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      apiData = { raw: responseText };
+    }
+
     console.log("Z-API response:", JSON.stringify(apiData));
 
-    if (!apiResponse.ok) {
+    const apiReturnedError = !apiResponse.ok || !!apiData?.error;
+
+    if (apiReturnedError) {
       return new Response(JSON.stringify({ error: "Failed to send message", details: apiData }), {
-        status: apiResponse.status,
+        status: apiResponse.ok ? 502 : apiResponse.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
