@@ -790,8 +790,10 @@ export type Database = {
           alert_type: string
           created_at: string
           id: string
+          last_reminder_at: string | null
           lead_id: string | null
           message: string
+          resolved_at: string | null
           vendedor_id: string | null
         }
         Insert: {
@@ -799,8 +801,10 @@ export type Database = {
           alert_type: string
           created_at?: string
           id?: string
+          last_reminder_at?: string | null
           lead_id?: string | null
           message: string
+          resolved_at?: string | null
           vendedor_id?: string | null
         }
         Update: {
@@ -808,8 +812,10 @@ export type Database = {
           alert_type?: string
           created_at?: string
           id?: string
+          last_reminder_at?: string | null
           lead_id?: string | null
           message?: string
+          resolved_at?: string | null
           vendedor_id?: string | null
         }
         Relationships: [
