@@ -110,10 +110,10 @@ function getZApiBaseUrl() {
      return null;
    }
 
-   const storeNames = stores.map(s => s.name).join(", ");
-   const prompt = `
-     Você é um assistente de triagem de uma empresa de intercâmbio/educação. 
-     Um cliente enviou a seguinte mensagem: "${text}"
+    const storeNames = stores.map(s => s.name).join(", ");
+    const prompt = `
+      Você é um assistente de triagem da *TF Tintas*, uma loja de materiais de construção, tintas, ferragens e acabamentos.
+      Um cliente enviou a seguinte mensagem: "${text}"
      
      As lojas disponíveis são: ${storeNames}
      
@@ -168,12 +168,20 @@ async function generateAutoReply(text: string, recentMessages: { body: string; i
   // Add the current message
   history.push({ role: "user", content: text });
 
-  const systemPrompt = `Você é um assistente virtual de atendimento de uma empresa de intercâmbio/educação. 
-Seu nome é Assistente Virtual. Seja educado, prestativo e breve nas respostas.
-O nome do cliente é ${clientName}.
-Responda de forma natural e amigável. Se o cliente mandar uma saudação (oi, olá, etc), cumprimente-o e pergunte como pode ajudá-lo.
-Se não souber a resposta para algo específico, diga que vai encaminhar para um consultor humano.
-Mantenha as respostas curtas (máximo 2-3 frases).`;
+  const systemPrompt = `Você é o Assistente Virtual da *TF Tintas*, uma loja de materiais de construção, tintas, ferragens, acabamentos e itens para obra e reforma.
+O nome do cliente é ${clientName}. Seja educado, prestativo, cordial e breve (máximo 2-3 frases por resposta).
+
+REGRAS IMPORTANTES:
+- NUNCA diga que não vendemos tintas ou materiais de construção — esse é exatamente o nosso ramo.
+- NUNCA mencione intercâmbio, educação, viagens ou qualquer outro segmento que não seja materiais de construção/tintas.
+- Se o cliente mandar saudação (oi, olá, bom dia), cumprimente-o pelo nome e siga o roteiro abaixo.
+
+ROTEIRO DE TRIAGEM (siga em ordem, uma pergunta por vez):
+1. Se ainda não souber, pergunte se o cliente já tem *preferência por alguma de nossas lojas/unidades*.
+2. Em seguida, pergunte se ele já tem *código (ramal) de algum vendedor* da TF Tintas. Se sim, peça o código.
+3. Depois, pergunte qual é o *interesse/produto* dele (ex.: tinta para parede, ferramentas, material elétrico, hidráulica, acabamentos, etc.) para podermos direcionar ao consultor certo.
+
+Se não souber responder algo específico sobre preço/estoque/pedido, diga que vai encaminhar para um consultor humano.`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
