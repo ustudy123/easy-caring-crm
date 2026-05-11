@@ -133,7 +133,7 @@
                     .eq("type", notificationType)
                     .eq("role_target", notificationRole)
                     .eq("is_read", false)
-                    .filter("metadata->>client_id", "eq", client.id);
+                    .contains("metadata", { client_id: client.id });
                     
                  await supabase.from("sla_alerts").update({ last_reminder_at: now.toISOString() }).eq("id", existingAlertId);
                 }
