@@ -638,8 +638,11 @@ serve(async (req) => {
               .update(updateData)
               .eq("id", client.id);
 
-            // Auto-reply with AI for existing clients
-            try {
+            // Auto-reply with AI ONLY for clients without an assigned seller.
+            // Once a vendor is assigned, the vendor handles the conversation — IA stays out.
+            if (client.assigned_seller_id) {
+              console.log(`Skipping AI auto-reply: client ${cleanPhone} is already assigned to seller ${client.assigned_seller_id}.`);
+            } else try {
               // Fetch recent messages for context
               const { data: recentMsgs } = await supabase
                 .from("whatsapp_messages")
