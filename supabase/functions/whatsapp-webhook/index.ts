@@ -338,7 +338,7 @@ serve(async (req) => {
                 console.log(`Client ${cleanPhone} routed to seller ${sellerByCode.name} via code ${candidateCode}`);
                 await sendWhatsAppMessage(
                   cleanPhone,
-                  `Perfeito! Você será atendido(a) por ${sellerByCode.name}. Em instantes ele(a) entrará em contato. ✅`,
+                  `Perfeito! Recebemos seu contato. Em instantes um de nossos consultores entrará em contato com você. ✅`,
                   isTest
                 );
                 return new Response(JSON.stringify({ success: true, action: "routed_by_code", seller: sellerByCode.name }), {
@@ -466,9 +466,9 @@ serve(async (req) => {
                     stage: "abordagem",
                     store_id: storeId,
                   });
-                  const msg = storeName
-                    ? `Perfeito! Você será atendido(a) pela unidade *${storeName}*. Um consultor entrará em contato em breve. ✅`
-                    : `Entendido! Um de nossos consultores disponíveis entrará em contato em breve. ✅`;
+                   const msg = storeName
+                     ? `Perfeito! Recebemos sua escolha pela unidade *${storeName}*. Em instantes um de nossos consultores entrará em contato com você. ✅`
+                     : `Entendido! Em instantes um de nossos consultores entrará em contato com você. ✅`;
                   await sendWhatsAppMessage(cleanPhone, msg, isTest);
                 }
               };
