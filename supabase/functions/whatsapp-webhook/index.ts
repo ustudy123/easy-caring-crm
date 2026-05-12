@@ -338,7 +338,7 @@ serve(async (req) => {
                 console.log(`Client ${cleanPhone} routed to seller ${sellerByCode.name} via code ${candidateCode}`);
                 await sendWhatsAppMessage(
                   cleanPhone,
-                  `Perfeito! Você será atendido(a) por ${sellerByCode.name}. Em instantes ele(a) entrará em contato. ✅`,
+                  `Perfeito! Recebemos seu contato. Em instantes um de nossos consultores entrará em contato com você. ✅`,
                   isTest
                 );
                 return new Response(JSON.stringify({ success: true, action: "routed_by_code", seller: sellerByCode.name }), {
@@ -466,9 +466,9 @@ serve(async (req) => {
                     stage: "abordagem",
                     store_id: storeId,
                   });
-                  const msg = storeName
-                    ? `Perfeito! Você será atendido(a) pela unidade *${storeName}*. Um consultor entrará em contato em breve. ✅`
-                    : `Entendido! Um de nossos consultores disponíveis entrará em contato em breve. ✅`;
+                   const msg = storeName
+                     ? `Perfeito! Recebemos sua escolha pela unidade *${storeName}*. Em instantes um de nossos consultores entrará em contato com você. ✅`
+                     : `Entendido! Em instantes um de nossos consultores entrará em contato com você. ✅`;
                   await sendWhatsAppMessage(cleanPhone, msg, isTest);
                 }
               };
@@ -479,9 +479,8 @@ serve(async (req) => {
                   _seller_id: sellerId
                 });
 
-                if (!rpcErr && result?.success) {
-                  const finalSellerName = result.seller_name || sellerName;
-                  await sendWhatsAppMessage(cleanPhone, `Perfeito! Você será atendido(a) por *${finalSellerName}*. Em instantes ele(a) entrará em contato. ✅`, isTest);
+              if (!rpcErr && result?.success) {
+                  await sendWhatsAppMessage(cleanPhone, `Perfeito! Recebemos seu contato. Em instantes um de nossos consultores entrará em contato com você. ✅`, isTest);
                 } else {
                   // Fallback: if seller is inactive and has no substitute, distribute to store/general queue
                   await finishWithStore(storeId);
@@ -531,19 +530,12 @@ serve(async (req) => {
                  if (!chosen && stores) {
                    chosen = stores.find(s => lower.includes(s.name.toLowerCase())) || null;
                  }
-                  if (chosen) {
-                    // Now ask if they have a specific seller in that store
-                    const { data: storeSellers } = await supabase
-                      .from("sellers").select("id, name, code")
-                      .eq("store_id", chosen.id).order("name");
-                    const sellerList = (storeSellers || [])
-                      .map(s => `👉 Código *${s.code || 'S/C'}* — ${s.name}`).join("\n");
-                    
-                    await updateClient({ store_id: chosen.id, triage_step: 'ask_seller' });
-                    
-                    const msg = `Você escolheu *${chosen.name}*. Possui um *vendedor específico* nessa loja?\n\n${sellerList || '(Nenhum vendedor disponível no momento)'}\n\n👉 Se sim, digite o *código* do vendedor.\n👉 Se não, responda com *N* para ser atendido pelo próximo disponível.`;
-                    await sendWhatsAppMessage(cleanPhone, msg, isTest);
-                  } else {
+                   if (chosen) {
+                     // Direct hand-off: don't list sellers, don't ask about interest.
+                     // The seller will introduce themselves and ask what the client needs.
+                     await updateClient({ store_id: chosen.id });
+                     await finishWithStore(chosen.id, chosen.name);
+                   } else {
                     const storeList = (stores || []).map((s, i) => `${i + 1} - ${s.name}`).join("\n");
                     const generalOptionIndex = (stores || []).length + 1;
                     const fullList = `${storeList}\n${generalOptionIndex} - Ainda não sei / Quero atendimento geral`;
@@ -646,8 +638,11 @@ serve(async (req) => {
               .update(updateData)
               .eq("id", client.id);
 
-            // Auto-reply with AI for existing clients
-            try {
+            // Auto-reply with AI ONLY for clients without an assigned seller.
+            // Once a vendor is assigned, the vendor handles the conversation — IA stays out.
+            if (client.assigned_seller_id) {
+              console.log(`Skipping AI auto-reply: client ${cleanPhone} is already assigned to seller ${client.assigned_seller_id}.`);
+            } else try {
               // Fetch recent messages for context
               const { data: recentMsgs } = await supabase
                 .from("whatsapp_messages")
