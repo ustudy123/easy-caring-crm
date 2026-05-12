@@ -1,0 +1,1 @@
+UPDATE clients SET triaging = true, triage_step = 'ask_store', assigned_seller_id = NULL WHERE phone = '5511999999999';
