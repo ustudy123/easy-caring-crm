@@ -3,7 +3,6 @@ import {
   Columns3,
   Users,
   CalendarDays,
-  Megaphone,
   MessageSquare,
   Settings,
   ChevronRight,
@@ -41,7 +40,6 @@ const allMainNav: NavItem[] = [
 ];
 
 const allToolsNav: NavItem[] = [
-  { title: "Campanhas", url: "/campanhas", icon: Megaphone, badgeKey: "negotiation", roles: ["admin", "gerente"] },
   { title: "Conversas", url: "/conversas", icon: MessageSquare, badgeKey: "whatsapp" },
   { title: "Suporte Orçamento", url: "/suporte-orcamento", icon: FileText, badgeKey: null, roles: ["admin", "suporte"] },
   { title: "Admin", url: "/admin", icon: ShieldCheck, badgeKey: null, roles: ["admin"] },
