@@ -479,9 +479,8 @@ serve(async (req) => {
                   _seller_id: sellerId
                 });
 
-                if (!rpcErr && result?.success) {
-                  const finalSellerName = result.seller_name || sellerName;
-                  await sendWhatsAppMessage(cleanPhone, `Perfeito! Você será atendido(a) por *${finalSellerName}*. Em instantes ele(a) entrará em contato. ✅`, isTest);
+              if (!rpcErr && result?.success) {
+                  await sendWhatsAppMessage(cleanPhone, `Perfeito! Recebemos seu contato. Em instantes um de nossos consultores entrará em contato com você. ✅`, isTest);
                 } else {
                   // Fallback: if seller is inactive and has no substitute, distribute to store/general queue
                   await finishWithStore(storeId);
@@ -531,19 +530,12 @@ serve(async (req) => {
                  if (!chosen && stores) {
                    chosen = stores.find(s => lower.includes(s.name.toLowerCase())) || null;
                  }
-                  if (chosen) {
-                    // Now ask if they have a specific seller in that store
-                    const { data: storeSellers } = await supabase
-                      .from("sellers").select("id, name, code")
-                      .eq("store_id", chosen.id).order("name");
-                    const sellerList = (storeSellers || [])
-                      .map(s => `👉 Código *${s.code || 'S/C'}* — ${s.name}`).join("\n");
-                    
-                    await updateClient({ store_id: chosen.id, triage_step: 'ask_seller' });
-                    
-                    const msg = `Você escolheu *${chosen.name}*. Possui um *vendedor específico* nessa loja?\n\n${sellerList || '(Nenhum vendedor disponível no momento)'}\n\n👉 Se sim, digite o *código* do vendedor.\n👉 Se não, responda com *N* para ser atendido pelo próximo disponível.`;
-                    await sendWhatsAppMessage(cleanPhone, msg, isTest);
-                  } else {
+                   if (chosen) {
+                     // Direct hand-off: don't list sellers, don't ask about interest.
+                     // The seller will introduce themselves and ask what the client needs.
+                     await updateClient({ store_id: chosen.id });
+                     await finishWithStore(chosen.id, chosen.name);
+                   } else {
                     const storeList = (stores || []).map((s, i) => `${i + 1} - ${s.name}`).join("\n");
                     const generalOptionIndex = (stores || []).length + 1;
                     const fullList = `${storeList}\n${generalOptionIndex} - Ainda não sei / Quero atendimento geral`;
