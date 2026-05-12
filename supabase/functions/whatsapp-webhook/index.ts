@@ -526,25 +526,21 @@ serve(async (req) => {
                  let chosen = null as null | { id: string; name: string };
                   if (selectedIndex > 0 && stores && selectedIndex <= stores.length) {
                     chosen = stores[selectedIndex - 1];
-                 }
-                 if (!chosen && stores) {
-                   chosen = stores.find(s => lower.includes(s.name.toLowerCase())) || null;
-                 }
-                   if (chosen) {
-                     // Direct hand-off: don't list sellers, don't ask about interest.
-                     // The seller will introduce themselves and ask what the client needs.
-                     await updateClient({ store_id: chosen.id });
-                     await finishWithStore(chosen.id, chosen.name);
-                   } else {
-                    const storeList = (stores || []).map((s, i) => `${i + 1} - ${s.name}`).join("\n");
-                    const generalOptionIndex = (stores || []).length + 1;
-                    const fullList = `${storeList}\n${generalOptionIndex} - Ainda não sei / Quero atendimento geral`;
-                    
-                    await sendWhatsAppMessage(
-                      cleanPhone, 
-                      `Opção inválida. Por favor, escolha uma das opções abaixo (digite apenas o número):\n\n${fullList}`, 
-                      isTest
-                    );
+                  }
+                  if (!chosen && stores) {
+                    chosen = stores.find(s => lower.includes(s.name.toLowerCase())) || null;
+                  }
+                  
+                  if (chosen) {
+                    // Direct hand-off: don't list sellers, don't ask about interest.
+                    await updateClient({ store_id: chosen.id });
+                    await finishWithStore(chosen.id, chosen.name);
+                  } else {
+                    // Fallback for unexpected text or invalid option during store choice:
+                    // Instead of blocking with "Opção inválida", we treat it as "Atendimento Geral"
+                    // to keep the triage moving and ensure the client reaches a seller.
+                    console.log(`Fallback: client ${cleanPhone} sent unexpected text "${text}" during store choice. Routing to general.`);
+                    await finishWithStore(null);
                   }
                }
               } else if (step === 'ask_seller') {
