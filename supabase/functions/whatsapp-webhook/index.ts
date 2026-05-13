@@ -537,10 +537,18 @@ serve(async (req) => {
                     await finishWithStore(chosen.id, chosen.name);
                   } else {
                     // Fallback for unexpected text or invalid option during store choice:
-                    // Instead of blocking with "Opção inválida", we treat it as "Atendimento Geral"
-                    // to keep the triage moving and ensure the client reaches a seller.
-                    console.log(`Fallback: client ${cleanPhone} sent unexpected text "${text}" during store choice. Routing to general.`);
-                    await finishWithStore(null);
+                    // We show the menu again with clear numbering to guide the user.
+                    console.log(`Fallback: client ${cleanPhone} sent unexpected text "${text}" during store choice. Showing menu again.`);
+                    
+                    const storeList = (stores || []).map((s, i) => `${i + 1} - ${s.name}`).join("\n");
+                    const generalOptionIndex = (stores || []).length + 1;
+                    const fullList = `${storeList}\n${generalOptionIndex} - Ainda não sei / Quero atendimento geral`;
+                    
+                    await sendWhatsAppMessage(
+                      cleanPhone, 
+                      `Ainda não consegui identificar sua escolha. 🧐\n\nPor favor, escolha uma das opções abaixo digitando apenas o *número*:\n\n${fullList}`, 
+                      isTest
+                    );
                   }
                }
               } else if (step === 'ask_seller') {
