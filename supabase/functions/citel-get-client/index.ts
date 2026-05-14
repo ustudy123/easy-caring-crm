@@ -114,8 +114,10 @@ Deno.serve(async (req) => {
 
     // --- Tenta endpoints prováveis ---
     const candidates = [
-      `${apiUrl}/api/clientes?telefone=${encodeURIComponent(phone)}`,
-      `${apiUrl}/api/customers?phone=${encodeURIComponent(phone)}`,
+      `${apiUrl}/cliente/telefone?numero=${encodeURIComponent(phone)}`,
+      `${apiUrl}/cliente?telefone=${encodeURIComponent(phone)}`,
+      `${apiUrl}/cliente?numero=${encodeURIComponent(phone)}`,
+      `${apiUrl}/cliente?celular=${encodeURIComponent(phone)}`,
     ];
 
     let last: { status: number; data: unknown } | null = null;
