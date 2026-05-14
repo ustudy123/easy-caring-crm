@@ -31,29 +31,52 @@ Deno.serve(async (req) => {
       signal: ctrl.signal
     });
     console.log("[probe] swagger status", r.status);
-    const doc: any = await r.json();
-    console.log("[probe] paths count", Object.keys(doc?.paths ?? {}).length);
-    
-    const out: any[] = [];
-    for (const [p, defs] of Object.entries(doc?.paths ?? {})) {
-      const lower = p.toLowerCase();
-      if (!lower.includes("client")) continue;
-      for (const [m, info] of Object.entries(defs as any)) {
-        if (m !== "get") continue;
-        const params = (info as any).parameters ?? [];
-        out.push({ 
-          path: p, 
-          params: params.map((x: any) => ({ 
-            name: x.name, 
-            in: x.in, 
-            required: !!x.required, 
-            type: x.type || x.schema?.type,
-            description: x.description 
-          })) 
-        });
-      }
-    }
-    return json({ reachable: true, count: out.length, endpoints: out });
+     const doc: any = await r.json();
+     const paths = doc?.paths ?? {};
+     console.log("[probe] paths count", Object.keys(paths).length);
+     
+     const clientEndpoints: any[] = [];
+     const phoneEndpoints: any[] = [];
+     
+     for (const [p, defs] of Object.entries(paths)) {
+       const lowerPath = p.toLowerCase();
+       const isClientRelated = lowerPath.includes("client");
+       
+       for (const [m, info] of Object.entries(defs as any)) {
+         if (m !== "get") continue;
+         const params = (info as any).parameters ?? [];
+         const mappedParams = params.map((x: any) => ({ 
+           name: x.name, 
+           in: x.in, 
+           required: !!x.required, 
+           type: x.type || x.schema?.type,
+           description: x.description 
+         }));
+
+         const hasPhoneParam = mappedParams.some((par: any) => 
+           /telefone|fone|celular|contato/i.test(par.name)
+         );
+         const hasPhonePath = /telefone|fone|celular|contato/i.test(p);
+
+         const endpointInfo = { path: p, method: m, params: mappedParams };
+
+         if (isClientRelated) {
+           clientEndpoints.push(endpointInfo);
+         }
+         
+         if (hasPhoneParam || hasPhonePath) {
+           phoneEndpoints.push(endpointInfo);
+         }
+       }
+     }
+
+     return json({ 
+       reachable: true, 
+       clientCount: clientEndpoints.length,
+       phoneCount: phoneEndpoints.length,
+       clientEndpoints,
+       phoneEndpoints 
+     });
   } catch (e: any) {
     console.error("[probe] error", e);
     return json({ reachable: false, error: e.message, type: e.name }, 200);

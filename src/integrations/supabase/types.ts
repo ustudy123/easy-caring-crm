@@ -63,6 +63,7 @@ export type Database = {
           claimed_at: string | null
           created_at: string
           email: string | null
+          erp_id: string | null
           id: string
           last_contact: string | null
           last_message_at: string | null
@@ -88,6 +89,7 @@ export type Database = {
           claimed_at?: string | null
           created_at?: string
           email?: string | null
+          erp_id?: string | null
           id?: string
           last_contact?: string | null
           last_message_at?: string | null
@@ -113,6 +115,7 @@ export type Database = {
           claimed_at?: string | null
           created_at?: string
           email?: string | null
+          erp_id?: string | null
           id?: string
           last_contact?: string | null
           last_message_at?: string | null

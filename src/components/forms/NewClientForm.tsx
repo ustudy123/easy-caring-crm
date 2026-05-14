@@ -46,24 +46,37 @@ export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormPro
         body: { phone: form.phone },
       });
       if (error) throw error;
-      if (data?.found && data.client) {
-        setForm((p) => ({
-          ...p,
-          name: p.name || data.client.name || "",
-          email: p.email || data.client.email || "",
-          address: p.address || data.client.address || "",
-          city: p.city || data.client.city || "",
-        }));
-        toast({
-          title: "Cliente encontrado no ERP",
-          description: "Campos preenchidos automaticamente.",
-        });
-      } else {
-        toast({
-          title: "Cliente não encontrado",
-          description: "Nenhum registro no ERP para este telefone — preencha manualmente.",
-        });
-      }
+       if (data?.found && data.client) {
+         setForm((p) => ({
+           ...p,
+           name: p.name || data.client.name || "",
+           email: p.email || data.client.email || "",
+           address: p.address || data.client.address || "",
+           city: p.city || data.client.city || "",
+         }));
+         
+         const strategyLabels: Record<string, string> = {
+           cache: "Encontrado localmente (cache)",
+           endpoint: "Encontrado via endpoint direto",
+           scan: `Encontrado via varredura (página ${data.page})`,
+         };
+
+         toast({
+           title: "Cliente encontrado no ERP",
+           description: strategyLabels[data.strategy] || "Dados preenchidos automaticamente.",
+         });
+       } else if (data?.reason === "erp_unreachable") {
+         toast({
+           title: "ERP Indisponível",
+           description: "Não foi possível conectar ao CITEL no momento.",
+           variant: "destructive",
+         });
+       } else {
+         toast({
+           title: "Cliente não encontrado",
+           description: "Nenhum registro no ERP para este telefone após varredura profunda.",
+         });
+       }
     } catch (err) {
       console.error("[NewClientForm] ERP lookup failed", err);
       toast({
