@@ -88,16 +88,21 @@ Deno.serve(async (req) => {
     if (!authHeader.startsWith("Bearer ")) {
       return json({ error: "Missing authorization" }, 401);
     }
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const { data: userData, error: userErr } = await supabase.auth.getUser();
-    if (userErr || !userData?.user) {
-      console.error("[citel-get-client] auth error", userErr);
-      return json({ error: "Unauthorized" }, 401);
-    }
+     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+       global: { headers: { Authorization: authHeader } },
+     });
+     const { data: userData, error: userErr } = await userClient.auth.getUser();
+     if (userErr || !userData?.user) {
+       console.error("[citel-get-client] auth error", userErr);
+       return json({ error: "Unauthorized" }, 401);
+     }
+
+     // Cliente com privilégios para ler/escrever cache independente de RLS
+     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
      // --- Body ---
      const body = await req.json().catch(() => null) as { phone?: string } | null;
@@ -107,7 +112,7 @@ Deno.serve(async (req) => {
      }
  
      // --- 1. Cache Local ---
-     const { data: localClient } = await supabase
+     const { data: localClient } = await adminClient
        .from("clients")
        .select("*")
        .eq("phone", phone)
@@ -172,7 +177,7 @@ Deno.serve(async (req) => {
            const client = mapErpClient(arr[0] as Record<string, unknown>);
            if (client.name || client.erpId) {
              // Salva no cache
-             await supabase.from("clients").upsert({
+             await adminClient.from("clients").upsert({
                phone: phone,
                name: client.name,
                email: client.email,
@@ -211,7 +216,7 @@ Deno.serve(async (req) => {
          if (possiblePhones.some(raw => phoneMatches(raw, phone))) {
            console.log("[citel-get-client] match found on page", p);
            // Salva no cache
-           await supabase.from("clients").upsert({
+           await adminClient.from("clients").upsert({
              phone: phone,
              name: c.name,
              email: c.email,
