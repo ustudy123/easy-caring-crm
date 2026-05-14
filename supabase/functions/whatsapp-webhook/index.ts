@@ -386,8 +386,8 @@ serve(async (req) => {
 
             if (!client) {
               // 1. First message from a new client: Try to identify them via ERP Citel first
-              const erpClient = await searchCitelClient(cleanPhone);
-              
+              const erpClient = await searchCitelClient(cleanPhone, supabase);
+
               const clientData = {
                 name: erpClient?.nome || erpClient?.razao_social || senderName,
                 phone: cleanPhone,
