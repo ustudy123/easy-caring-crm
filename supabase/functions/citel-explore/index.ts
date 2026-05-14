@@ -144,7 +144,17 @@ Deno.serve(async (req) => {
     const extraPaths = Array.isArray(body?.extraPaths) ? body!.extraPaths! : [];
 
     // --- Secrets ---
-    const apiUrl = (Deno.env.get("CITEL_API_URL") ?? "").replace(/\/+$/, "");
+    // Sanitiza a URL base removendo sufixos comuns de documentação (Swagger UI).
+    // Isso evita que o cliente concatene endpoints depois de "/doc/swagger-ui.html",
+    // resultando em 404 do tipo "/doc/swagger-ui.html/api/clientes".
+    const apiUrl = (Deno.env.get("CITEL_API_URL") ?? "")
+      .trim()
+      .replace(/\/+$/, "")
+      .replace(/\/swagger-ui(\.html)?$/i, "")
+      .replace(/\/swagger\/index\.html$/i, "")
+      .replace(/\/swagger$/i, "")
+      .replace(/\/doc(s)?$/i, "")
+      .replace(/\/+$/, "");
     const user = Deno.env.get("CITEL_USER") ?? "";
     const password = Deno.env.get("CITEL_PASSWORD") ?? "";
     if (!apiUrl || !user || !password) {
