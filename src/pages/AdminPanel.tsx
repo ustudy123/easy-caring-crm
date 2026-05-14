@@ -41,22 +41,34 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 
    const [phone, setPhone] = useState("");
  
-   const runExplore = async () => {
-     setLoading(true);
-     try {
-       const { data, error } = await supabase.functions.invoke('citel-explore', {
-         body: { phone: phone || undefined }
-       });
-       if (error) throw error;
-       setExploreData(data);
-       toast.success("Dados da API Citel carregados com sucesso!");
-     } catch (err: any) {
-       console.error("Explore error:", err);
-       toast.error("Erro ao conectar com API Citel: " + (err.message || "Verifique as configurações das Secrets"));
-     } finally {
-       setLoading(false);
-     }
-   };
+  const runExplore = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('citel-explore', {
+        body: { phone: phone || undefined }
+      });
+      if (error) throw error;
+      setExploreData(data);
+      
+      // Lógica de feedback aprimorada conforme plano
+      if (data.clientesStatus === "unreachable") {
+        toast.warning("ERP CITEL inacessível (Timeout). Verifique o firewall ou se o servidor está online.");
+      } else if (data.clientesStatus === "needs_filter") {
+        toast.warning("ERP exige um filtro obrigatório. Verifique os parâmetros listados abaixo.");
+      } else if (data.clientesStatus === "not_found" && phone) {
+        toast.warning(`Diagnóstico concluído, mas o telefone ${phone} não retornou nenhum registro.`);
+      } else if (data.samples?.clientes?.every((s: any) => s.status >= 400)) {
+        toast.warning("Diagnóstico concluído, mas todos os endpoints de cliente retornaram erro.");
+      } else {
+        toast.success("Dados da API Citel carregados com sucesso!");
+      }
+    } catch (err: any) {
+      console.error("Explore error:", err);
+      toast.error("Erro ao conectar com API Citel: " + (err.message || "Verifique as configurações das Secrets"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const runListAll = async () => {
     setListing(true);
@@ -227,15 +239,48 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
                      <p className="text-xs">{exploreData.swagger?.found ? `Encontrado (${exploreData.swagger.totalPaths} caminhos)` : 'Não encontrado'}</p>
                    </CardContent>
                  </Card>
-                 <Card className="bg-slate-50">
-                   <CardContent className="pt-4">
-                     <p className="text-[10px] uppercase font-bold text-muted-foreground">Conexão</p>
-                      <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">Ativa</Badge>
-                   </CardContent>
-                 </Card>
-               </div>
- 
-               <div className="space-y-4">
+                  <Card className={cn("bg-slate-50", exploreData.clientesStatus === "unreachable" && "bg-red-50")}>
+                    <CardContent className="pt-4">
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Conexão</p>
+                      {exploreData.clientesStatus === "unreachable" ? (
+                        <Badge variant="destructive" className="animate-pulse">Offline / Timeout</Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">Ativa</Badge>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {exploreData.swagger?.clientParams && exploreData.swagger.clientParams.length > 0 && (
+                  <Card className="bg-blue-50/30 border-blue-100">
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-xs flex items-center gap-2 text-blue-800">
+                        <Filter className="h-3 w-3" /> Parâmetros aceitos por /cliente* (Swagger)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pb-4">
+                      <div className="space-y-3">
+                        {exploreData.swagger.clientParams.map((cp: any, i: number) => (
+                          <div key={i} className="space-y-1">
+                            <p className="text-[10px] font-mono font-bold text-blue-900">{cp.path}</p>
+                            <div className="grid grid-cols-1 gap-1">
+                              {cp.params.map((p: any, pi: number) => (
+                                <div key={pi} className="text-[10px] flex items-center gap-2 bg-white/50 p-1 rounded border border-blue-100">
+                                  <Badge variant="outline" className="text-[9px] h-4 py-0 px-1">{p.name}</Badge>
+                                  <span className="text-muted-foreground">in: {p.in}</span>
+                                  {p.required && <Badge variant="destructive" className="text-[8px] h-3 py-0 px-1">Obrigatório</Badge>}
+                                  <span className="text-muted-foreground truncate">{p.description}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <div className="space-y-4">
                  <h4 className="font-semibold text-sm border-b pb-2">Amostras de Dados (Brutos)</h4>
                  
                  {Object.entries(exploreData.samples || {}).map(([category, samples]: [string, any]) => (

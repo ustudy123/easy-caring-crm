@@ -2,17 +2,12 @@
 // Busca cliente no ERP CITEL por telefone (Basic Auth server-side).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+const json = (body: unknown, status = 200) => 
+  new Response(JSON.stringify(body), { 
+    status, 
+    headers: { ...corsHeaders, "Content-Type": "application/json" } 
   });
 
 function normalizePhone(raw: string): string {
@@ -38,30 +33,40 @@ function mapErpClient(raw: Record<string, unknown>) {
   };
 }
 
-async function tryFetch(url: string, auth: string) {
+async function tryFetch(url: string, auth: string, timeoutMs = 10000) {
   console.log("[citel-get-client] GET", url);
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      Accept: "application/json",
-    },
-  });
-  const text = await res.text();
-  let data: unknown = null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  
   try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        Accept: "application/json",
+      },
+      signal: ctrl.signal,
+    });
+    const text = await res.text();
+    let data: unknown = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = text;
+    }
+    console.log("[citel-get-client] status", res.status, "url", url);
+    return { ok: res.ok, status: res.status, data };
+  } catch (e: any) {
+    console.error("[citel-get-client] fetch error", url, e.name, e.message);
+    return { ok: false, status: 0, error: e.name, message: e.message };
+  } finally {
+    clearTimeout(timer);
   }
-  console.log("[citel-get-client] status", res.status, "url", url);
-  return { ok: res.ok, status: res.status, data };
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
@@ -120,8 +125,11 @@ Deno.serve(async (req) => {
       `${apiUrl}/cliente?celular=${encodeURIComponent(phone)}`,
     ];
 
-    let last: { status: number; data: unknown } | null = null;
+    let last: { status: number; data?: unknown; error?: string } | null = null;
+    let anyNetworkSuccess = false;
+
     for (const url of candidates) {
+      anyNetworkSuccess = false;
       try {
         const r = await tryFetch(url, auth);
         last = { status: r.status, data: r.data };
@@ -137,19 +145,24 @@ Deno.serve(async (req) => {
                   : [];
           if (arr.length === 0) continue;
           const client = mapErpClient(arr[0] as Record<string, unknown>);
-          if (!client.name && !client.email && !client.address) continue;
+          // Se temos nome ou ID, consideramos sucesso
+          if (!client.name && !client.erpId) continue;
           return json({ found: true, client });
         }
-        if (r.status !== 404) {
+        if (r.status > 0) anyNetworkSuccess = true;
+        if (r.status !== 404 && r.status !== 400) {
           console.error("[citel-get-client] ERP error", r.status, r.data);
         }
       } catch (e) {
-        console.error("[citel-get-client] fetch failed", url, e);
+        // J\u00e1 tratado no tryFetch
       }
     }
 
+    if (!anyNetworkSuccess && last?.status === 0) {
+      return json({ found: false, reason: "erp_unreachable", detail: last?.error });
+    }
     console.log("[citel-get-client] no match; last response", last?.status);
-    return json({ found: false });
+    return json({ found: false, reason: "not_found" });
   } catch (e) {
     console.error("[citel-get-client] unexpected", e);
     return json({ error: "Erro ao consultar ERP" }, 500);

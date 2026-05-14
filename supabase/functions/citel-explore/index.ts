@@ -14,17 +14,12 @@
 // Requer usuário autenticado (verify_jwt = true no config.toml).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body, null, 2), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+const json = (body: unknown, status = 200) => 
+  new Response(JSON.stringify(body, null, 2), { 
+    status, 
+    headers: { ...corsHeaders, "Content-Type": "application/json" } 
   });
 
 function normalizePhone(raw: string): string {
@@ -63,7 +58,7 @@ async function authedFetch(url: string, auth: string, timeoutMs = 10_000) {
       signal: ctrl.signal,
     });
     const text = await res.text();
-    let data: unknown = null;
+    let data: any = null;
     try {
       data = text ? JSON.parse(text) : null;
     } catch {
@@ -71,7 +66,7 @@ async function authedFetch(url: string, auth: string, timeoutMs = 10_000) {
     }
     return { ok: res.ok, status: res.status, data };
   } catch (e) {
-    return { ok: false, status: 0, data: `fetch_error: ${(e as Error).message}` };
+    return { ok: false, status: 0, data: (e as Error).message };
   } finally {
     clearTimeout(timer);
   }
@@ -112,9 +107,7 @@ function categorize(paths: { path: string; methods: string[] }[]) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
@@ -256,11 +249,38 @@ Deno.serve(async (req) => {
         sample("extra", extraPaths),
       ]);
 
+    // --- 3) Calcula status real dos clientes ---
+    let clientesStatus = "not_found";
+    const has2xx = clientesSamples.some(s => s.status >= 200 && s.status < 300);
+    const allUnreachable = clientesSamples.every(s => s.status === 0);
+    const anyNeedsFilter = clientesSamples.some(s => 
+      s.status === 400 && 
+      typeof s.raw === 'string' && 
+      (s.raw.toLowerCase().includes("filtro") || s.raw.toLowerCase().includes("filter"))
+    );
+
+    if (has2xx) {
+      clientesStatus = "ok";
+    } else if (allUnreachable && clientesSamples.length > 0) {
+      clientesStatus = "unreachable";
+    } else if (anyNeedsFilter) {
+      clientesStatus = "needs_filter";
+    }
+
+    // Tenta obter params do probe localmente se poss\u00edvel (opcional)
+    let clientParams = [];
+    if (swaggerDoc) {
+      clientParams = allPaths
+        .filter(p => p.path.toLowerCase().includes("client"))
+        .map(p => ({ path: p.path, params: (swaggerDoc as any).paths[p.path]?.get?.parameters || [] }));
+    }
+
     return json({
       apiUrl,
       swagger: {
         found: !!swaggerDoc,
         url: swaggerUrl,
+        clientParams,
         totalPaths: allPaths.length,
         categorized,
       },
@@ -270,6 +290,7 @@ Deno.serve(async (req) => {
         produtos: produtosSamples,
         extra: extraSamples,
       },
+      clientesStatus,
       note:
         "Função temporária de diagnóstico. Remover após ajuste do mapeamento.",
     });

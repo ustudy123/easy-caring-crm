@@ -36,25 +36,25 @@ function getZApiBaseUrl() {
   return baseUrl;
 }
 
-  // Function to search client in Citel ERP
-  async function searchCitelClient(phone: string) {
-    const CITEL_API_URL = Deno.env.get("CITEL_API_URL");
-    const CITEL_API_KEY = Deno.env.get("CITEL_API_KEY");
-    if (!CITEL_API_URL || !CITEL_API_KEY) return null;
-
+  // Function to search client in Citel ERP via shared Edge Function
+  async function searchCitelClient(phone: string, supabase: any) {
     try {
-      // Common patterns for Citel ERP API endpoints
-      const endpoints = ["/api/clientes", "/clientes", "/v1/clientes"];
-      for (const endpoint of endpoints) {
-        const response = await fetch(`${CITEL_API_URL}${endpoint}?telefone=${phone}`, {
-          headers: { "Authorization": `Bearer ${CITEL_API_KEY}`, "Content-Type": "application/json" }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          // Logic depends on API response structure, usually an array or single object
-          const client = Array.isArray(data) ? data[0] : (data.clientes ? data.clientes[0] : data);
-          if (client && (client.nome || client.razao_social)) return client;
-        }
+      const { data, error } = await supabase.functions.invoke('citel-get-client', {
+        body: { phone }
+      });
+      if (error) {
+        console.error("Error invoking citel-get-client:", error);
+        return null;
+      }
+      if (data?.found && data.client) {
+        // Adapta o formato retornado pelo citel-get-client para o esperado pelo webhook
+        return {
+          nome: data.client.name,
+          email: data.client.email,
+          endereco: data.client.address,
+          cidade: data.client.city,
+          id: data.client.erpId
+        };
       }
     } catch (e) {
       console.error("Error searching Citel client:", e);
@@ -386,8 +386,8 @@ serve(async (req) => {
 
             if (!client) {
               // 1. First message from a new client: Try to identify them via ERP Citel first
-              const erpClient = await searchCitelClient(cleanPhone);
-              
+              const erpClient = await searchCitelClient(cleanPhone, supabase);
+
               const clientData = {
                 name: erpClient?.nome || erpClient?.razao_social || senderName,
                 phone: cleanPhone,
