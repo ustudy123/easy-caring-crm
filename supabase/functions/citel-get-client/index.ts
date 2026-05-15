@@ -55,11 +55,11 @@ function mapErpClient(raw: Record<string, any>) {
   ].filter(Boolean);
 
   return {
-    erpId: pickStr(raw, "id", "codigo", "code", "cod", "codCliente", "cod_cliente", "idCliente"),
+    erpId: pickStr(raw, "codigoCliente", "codigo_cliente", "id", "codigo", "code", "cod", "codCliente", "cod_cliente", "idCliente", "autoIncrem"),
     name: pickStr(raw, "nome", "name", "razaoSocial", "razao_social", "fantasia") || "Cliente ERP",
     email: pickStr(raw, "email", "e_mail", "eMail") || pickFromNestedArray(raw, "clienteCompradorPrincipal", "emailCompraPrincipal"),
     address: addressParts.length ? addressParts.join(", ") : pickStr(raw, "address"),
-    city: pickStr(raw, "cidade", "city", "municipio"),
+    city: (raw.cidade && typeof raw.cidade === "object" ? pickStr(raw.cidade as any, "nomeCidade", "nome", "name") : pickStr(raw, "cidade", "city", "municipio")),
   };
 }
 
