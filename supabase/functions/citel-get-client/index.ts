@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
       const r = await tryFetch(url, headers, 30_000);
       lastStatus = r.status;
       lastError = (r as any).error;
-      console.log(`[citel-get-client] status=${r.status} ok=${r.ok}`);
+      console.log(`[citel-get-client] status=${r.status} ok=${r.ok} bodyPreview=${JSON.stringify(r.data).slice(0, 500)}`);
 
       if (!r.ok) continue;
 
@@ -143,9 +143,11 @@ Deno.serve(async (req) => {
       const single = items.length > 0
         ? items[0]
         : (r.data && typeof r.data === "object" && !Array.isArray(r.data) ? r.data : null);
+      console.log(`[citel-get-client] items.length=${items.length} hasSingle=${!!single}`);
       if (!single) continue;
 
       const c = mapErpClient(single);
+      console.log(`[citel-get-client] mapped erpId=${c.erpId} name=${c.name}`);
       if (!c.erpId) continue;
 
       await adminClient.from("clients").upsert({
