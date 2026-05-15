@@ -149,6 +149,7 @@
      let reachable = false;
  
      while (pages < 500) {
+       console.log(`[citel-get-client] Scanning page ${pages + 1}...`);
        const r = await tryFetch(currentUrl, baseHeaders, 25000);
        if (r.status > 0) reachable = true;
        if (!r.ok) break;
