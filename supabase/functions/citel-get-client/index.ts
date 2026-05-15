@@ -60,6 +60,10 @@ function mapErpClient(raw: Record<string, any>) {
     email: pickStr(raw, "email", "e_mail", "eMail") || pickFromNestedArray(raw, "clienteCompradorPrincipal", "emailCompraPrincipal"),
     address: addressParts.length ? addressParts.join(", ") : pickStr(raw, "address"),
     city: (raw.cidade && typeof raw.cidade === "object" ? pickStr(raw.cidade as any, "nomeCidade", "nome", "name") : pickStr(raw, "cidade", "city", "municipio")),
+    cpfCnpj: pickStr(raw, "cpfCnpj", "cpf_cnpj", "cnpj", "cpf", "documento", "cnpjCpf"),
+    zipCode: pickStr(raw, "cep", "zipCode", "zip_code", "codigoPostal"),
+    creditLimit: pickStr(raw, "limiteCredito", "limite_credito", "creditLimit", "limite"),
+    lastPurchase: pickStr(raw, "ultimaCompra", "ultima_compra", "dataUltimaCompra", "data_ultima_compra", "lastPurchase", "lastPurchaseDate"),
   };
 }
 
