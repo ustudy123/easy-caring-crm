@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
   const [listing, setListing] = useState(false);
   const [listData, setListData] = useState<any>(null);
   const [listSearch, setListSearch] = useState("");
+  const [clientResult, setClientResult] = useState<any>(null);
   const runSwaggerDump = async () => {
     setDumping(true);
     try {
