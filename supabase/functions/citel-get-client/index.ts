@@ -156,7 +156,7 @@
 
     // Tenta cada variante de header até conseguir uma resposta válida (status > 0)
     for (const headers of headerVariants) {
-      let currentUrl = appendQuery(endpoint, { paginacao: 200 });
+      let currentUrl = appendQuery(endpoint, { paginacao: 50 });
       pages = 0;
       totalScanned = 0;
 
@@ -194,7 +194,7 @@
 
         const token = continuationToken(r.data);
         if (!token) break;
-        currentUrl = appendQuery(endpoint, { paginacao: 200, continuationToken: token });
+        currentUrl = appendQuery(endpoint, { paginacao: 50, continuationToken: token });
       }
       
       // Se conseguimos ao menos uma resposta válida (mesmo que vazia), paramos de tentar variantes
