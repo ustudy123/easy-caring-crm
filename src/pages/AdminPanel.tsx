@@ -65,6 +65,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
  
    const runExplore = async () => {
      setLoading(true);
+     setClientResult(null);
      try {
        // Se houver telefone, primeiro tentamos a busca robusta no get-client
        if (phone) {
@@ -75,13 +76,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
          if (!searchError && searchData?.found) {
            const strategyLabels: Record<string, string> = {
              cache: "Encontrado no cache local",
+             direct: `Encontrado via /cliente/telefone (número usado: ${searchData.numeroUsado})`,
              scan: `Encontrado via varredura profunda (página ${searchData.page})`,
            };
            toast.success(`Cliente localizado: ${searchData.client.name}. ${strategyLabels[searchData.strategy] || ""}`);
+           setClientResult({ ...searchData, queriedPhone: phone });
          } else if (searchData?.reason === "erp_unreachable") {
            toast.error("ERP CITEL inacessível. Verifique a conexão.");
+           setClientResult({ found: false, reason: "erp_unreachable", queriedPhone: phone, error: searchData.error });
          } else if (searchData?.reason === "not_found") {
-           toast.warning(`Diagnóstico concluído: o telefone ${phone} não existe no ERP (varredura de ${searchData.totalScanned || 0} registros em ${searchData.pagesScanned || 0} páginas).`);
+           toast.warning(`Telefone ${phone} não encontrado no ERP.`);
+           setClientResult({ found: false, reason: "not_found", queriedPhone: phone, lastStatus: searchData.lastStatus });
          }
        }
 
