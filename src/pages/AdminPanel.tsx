@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
  function CitelIntegrationTab() {
   const [syncing, setSyncing] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [searchData, setSearchData] = useState<any>(null);
 
   const runSync = async () => {
@@ -39,22 +39,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
   };
 
   const runSearch = async () => {
-    if (name.trim().length < 2) {
-      toast.warning("Digite ao menos 2 caracteres do nome.");
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 10) {
+      toast.warning("Digite um telefone válido (mín. 10 dígitos).");
       return;
     }
     setSearching(true);
     setSearchData(null);
     try {
-      const { data, error } = await supabase.functions.invoke('citel-search-name', { body: { name: name.trim() } });
+      const { data, error } = await supabase.functions.invoke('citel-get-client', { body: { phone: digits } });
       if (error) throw error;
-      setSearchData(data);
+      setSearchData({ ...data, queriedPhone: digits });
       if (data.found) {
-        toast.success(`${data.total} cliente(s) encontrado(s).`);
+        toast.success(`Cliente encontrado: ${data.client?.name || "(sem nome)"}`);
       } else if (data.reason === "erp_unreachable") {
         toast.error("ERP CITEL inacessível. Verifique a conexão.");
       } else {
-        toast.warning("Nenhum cliente encontrado com esse nome.");
+        toast.warning("Nenhum cliente encontrado com esse telefone.");
       }
     } catch (err: any) {
       console.error("Search error:", err);
@@ -74,7 +75,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
                 <Database className="h-4 w-4" /> Integração ERP Citel
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Busque clientes do ERP por nome ou sincronize a base completa.
+                Busque clientes do ERP por telefone ou sincronize a base completa.
               </p>
             </div>
             <Button variant="outline" onClick={runSync} disabled={syncing || searching}>
@@ -86,66 +87,51 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
         <CardContent className="space-y-4">
           <div className="flex items-end gap-3 max-w-2xl">
             <div className="flex-1 space-y-1">
-              <Label>Buscar cliente por nome no ERP</Label>
+              <Label>Buscar cliente por telefone no ERP</Label>
               <Input
-                placeholder="Ex: Maria, João Silva, Construtora..."
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: 21973615596 (somente dígitos ou com DDD)"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
               />
             </div>
             <Button onClick={runSearch} disabled={searching || syncing}>
               {searching ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
-              Procurar por nome
+              Procurar por telefone
             </Button>
           </div>
 
-          {searchData?.found && Array.isArray(searchData.results) && searchData.results.length > 0 && (
-            <div className="space-y-2 animate-in fade-in">
-              <p className="text-xs text-muted-foreground">
-                {searchData.total} resultado(s) para <strong>"{searchData.query}"</strong>
-              </p>
-              <div className="border rounded-md max-h-[480px] overflow-auto">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-card">
-                    <TableRow>
-                      <TableHead className="text-[10px]">ID ERP</TableHead>
-                      <TableHead className="text-[10px]">Nome</TableHead>
-                      <TableHead className="text-[10px]">Documento</TableHead>
-                      <TableHead className="text-[10px]">Telefone</TableHead>
-                      <TableHead className="text-[10px]">E-mail</TableHead>
-                      <TableHead className="text-[10px]">Cidade</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {searchData.results.map((c: any, idx: number) => (
-                      <TableRow key={idx}>
-                        <TableCell className="text-xs font-mono">{c.erpId || "—"}</TableCell>
-                        <TableCell className="text-xs font-medium">{c.name}</TableCell>
-                        <TableCell className="text-xs font-mono">{c.document || "—"}</TableCell>
-                        <TableCell className="text-xs font-mono">{c.phone || "—"}</TableCell>
-                        <TableCell className="text-xs">{c.email || "—"}</TableCell>
-                        <TableCell className="text-xs">{c.city || "—"}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+          {searchData?.found && searchData.client && (
+            <Card className="border-emerald-300 bg-emerald-50/40 animate-in fade-in">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm flex items-center gap-2 text-emerald-800">
+                  <Database className="h-4 w-4" /> Cliente encontrado para {searchData.queriedPhone}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div><span className="font-semibold">Nome:</span> {searchData.client.name || "—"}</div>
+                  <div><span className="font-semibold">ID ERP:</span> <code className="text-xs bg-white px-1.5 py-0.5 rounded border">{searchData.client.erpId || "—"}</code></div>
+                  <div><span className="font-semibold">E-mail:</span> {searchData.client.email || "—"}</div>
+                  <div><span className="font-semibold">Cidade:</span> {searchData.client.city || "—"}</div>
+                  <div className="md:col-span-2"><span className="font-semibold">Endereço:</span> {searchData.client.address || "—"}</div>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {searchData && !searchData.found && (
             <div className="py-8 text-center border-2 border-dashed rounded-lg bg-muted/20 text-sm text-muted-foreground">
               {searchData.reason === "erp_unreachable"
                 ? "ERP inacessível no momento. Tente novamente em alguns segundos."
-                : `Nenhum cliente encontrado para "${searchData.query || name}".`}
+                : `Nenhum cliente encontrado para o telefone "${searchData.queriedPhone || phone}".`}
             </div>
           )}
 
           {!searchData && !searching && (
             <div className="py-10 text-center border-2 border-dashed rounded-lg bg-muted/20">
               <Database className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-20" />
-              <p className="text-sm text-muted-foreground">Digite parte do nome do cliente e clique em "Procurar por nome".</p>
+              <p className="text-sm text-muted-foreground">Digite um telefone e clique em "Procurar por telefone".</p>
             </div>
           )}
         </CardContent>
