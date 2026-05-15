@@ -41,34 +41,49 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 
    const [phone, setPhone] = useState("");
  
-  const runExplore = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('citel-explore', {
-        body: { phone: phone || undefined }
-      });
-      if (error) throw error;
-      setExploreData(data);
-      
-      // Lógica de feedback aprimorada conforme plano
-      if (data.clientesStatus === "unreachable") {
-        toast.warning("ERP CITEL inacessível (Timeout). Verifique o firewall ou se o servidor está online.");
-      } else if (data.clientesStatus === "needs_filter") {
-        toast.warning("ERP exige um filtro obrigatório. Verifique os parâmetros listados abaixo.");
-      } else if (data.clientesStatus === "not_found" && phone) {
-        toast.warning(`Diagnóstico concluído, mas o telefone ${phone} não retornou nenhum registro.`);
-      } else if (data.samples?.clientes?.every((s: any) => s.status >= 400)) {
-        toast.warning("Diagnóstico concluído, mas todos os endpoints de cliente retornaram erro.");
-      } else {
-        toast.success("Dados da API Citel carregados com sucesso!");
-      }
-    } catch (err: any) {
-      console.error("Explore error:", err);
-      toast.error("Erro ao conectar com API Citel: " + (err.message || "Verifique as configurações das Secrets"));
-    } finally {
-      setLoading(false);
-    }
-  };
+   const runExplore = async () => {
+     setLoading(true);
+     try {
+       // Se houver telefone, primeiro tentamos a busca robusta no get-client
+       if (phone) {
+         const { data: searchData, error: searchError } = await supabase.functions.invoke('citel-get-client', {
+           body: { phone }
+         });
+         
+         if (!searchError && searchData?.found) {
+           const strategyLabels: Record<string, string> = {
+             cache: "Encontrado no cache local",
+             scan: `Encontrado via varredura profunda (página ${searchData.page})`,
+           };
+           toast.success(`Cliente localizado: ${searchData.client.name}. ${strategyLabels[searchData.strategy] || ""}`);
+         } else if (searchData?.reason === "erp_unreachable") {
+           toast.error("ERP CITEL inacessível. Verifique a conexão.");
+         } else if (searchData?.reason === "not_found") {
+           toast.warning(`Diagnóstico concluído: o telefone ${phone} não existe no ERP (varredura de ${searchData.totalScanned || 0} registros em ${searchData.pagesScanned || 0} páginas).`);
+         }
+       }
+
+       // Sempre rodamos o explore para atualizar a lista de caminhos/swagger
+       const { data, error } = await supabase.functions.invoke('citel-explore', {
+         body: { phone: phone || undefined }
+       });
+       if (error) throw error;
+       setExploreData(data);
+
+       if (!phone) {
+         if (data.clientesStatus === "unreachable") {
+           toast.warning("ERP CITEL inacessível (Timeout). Verifique o firewall ou se o servidor está online.");
+         } else {
+           toast.success("Estrutura da API Citel carregada com sucesso!");
+         }
+       }
+     } catch (err: any) {
+       console.error("Explore error:", err);
+       toast.error("Erro ao conectar com API Citel: " + (err.message || "Verifique as configurações das Secrets"));
+     } finally {
+       setLoading(false);
+     }
+   };
 
   const runListAll = async () => {
     setListing(true);
