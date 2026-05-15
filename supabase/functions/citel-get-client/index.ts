@@ -98,6 +98,7 @@
      try { data = text ? JSON.parse(text) : null; } catch { data = text; }
      return { ok: res.ok, status: res.status, data };
    } catch (e: any) {
+    console.error(`[citel-get-client] fetch error for ${url}: ${e.message}`);
      return { ok: false, status: 0, error: e.message };
    } finally {
      clearTimeout(timer);
