@@ -112,8 +112,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                   <div><span className="font-semibold">Nome:</span> {searchData.client.name || "—"}</div>
                   <div><span className="font-semibold">ID ERP:</span> <code className="text-xs bg-white px-1.5 py-0.5 rounded border">{searchData.client.erpId || "—"}</code></div>
+                  <div><span className="font-semibold">CPF/CNPJ:</span> {searchData.client.cpfCnpj || "—"}</div>
+                  <div>
+                    <span className="font-semibold">Limite de Crédito:</span>{" "}
+                    {searchData.client.creditLimit
+                      ? Number(searchData.client.creditLimit).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                      : "—"}
+                  </div>
                   <div><span className="font-semibold">E-mail:</span> {searchData.client.email || "—"}</div>
                   <div><span className="font-semibold">Cidade:</span> {searchData.client.city || "—"}</div>
+                  <div><span className="font-semibold">CEP:</span> {searchData.client.zipCode || "—"}</div>
+                  <div>
+                    <span className="font-semibold">Última compra:</span>{" "}
+                    {searchData.client.lastPurchase
+                      ? new Date(searchData.client.lastPurchase).toLocaleDateString("pt-BR")
+                      : "—"}
+                  </div>
                   <div className="md:col-span-2"><span className="font-semibold">Endereço:</span> {searchData.client.address || "—"}</div>
                 </div>
               </CardContent>
