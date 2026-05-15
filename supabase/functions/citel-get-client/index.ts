@@ -106,15 +106,7 @@ Deno.serve(async (req) => {
     const targetPhone = normalizePhone(body?.phone ?? "");
     if (targetPhone.length < 10) return json({ error: "Telefone muito curto" }, 400);
 
-    // 1. Cache local
-    const { data: local } = await adminClient.from("clients").select("*").eq("phone", targetPhone).maybeSingle();
-    if (local?.erp_id) {
-      return json({
-        found: true,
-        strategy: "cache",
-        client: { erpId: local.erp_id, name: local.name, email: local.email, address: local.address, city: local.city },
-      });
-    }
+    // 1. Cache local desativado temporariamente (faltavam campos novos: cpfCnpj, cep, limite, última compra)
 
     // 2. Chamada direta ao endpoint /cliente/telefone (descoberto via Swagger)
     const apiUrl = cleanApiBase(Deno.env.get("CITEL_API_URL") ?? "");
