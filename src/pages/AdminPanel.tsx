@@ -14,33 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight } from "lucide-react";
  function CitelIntegrationTab() {
-  const [exploreData, setExploreData] = useState<any>(null);
-  const [swaggerDump, setSwaggerDump] = useState<any>(null);
-  const [dumping, setDumping] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [listing, setListing] = useState(false);
-  const [listData, setListData] = useState<any>(null);
-  const [listSearch, setListSearch] = useState("");
-  const [clientResult, setClientResult] = useState<any>(null);
-  const runSwaggerDump = async () => {
-    setDumping(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('citel-swagger-dump');
-      if (error) throw error;
-      setSwaggerDump(data);
-      if (data.success) {
-        toast.success("Swagger extraído com sucesso!");
-      } else {
-        toast.error("Não foi possível encontrar o Swagger automaticamente.");
-      }
-    } catch (err: any) {
-      console.error("Swagger dump error:", err);
-      toast.error("Erro ao extrair Swagger: " + (err.message || "Verifique os logs"));
-    } finally {
-      setDumping(false);
-    }
-  };
+  const [searching, setSearching] = useState(false);
+  const [name, setName] = useState("");
+  const [searchData, setSearchData] = useState<any>(null);
 
   const runSync = async () => {
     if (!confirm("Isso irá importar todos os clientes da Citel para o seu banco de dados. Deseja continuar?")) return;
@@ -61,415 +38,121 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
     }
   };
 
-   const [phone, setPhone] = useState("");
- 
-   const runExplore = async () => {
-     setLoading(true);
-     setClientResult(null);
-     try {
-       // Se houver telefone, primeiro tentamos a busca robusta no get-client
-       if (phone) {
-         const { data: searchData, error: searchError } = await supabase.functions.invoke('citel-get-client', {
-           body: { phone }
-         });
-         
-         if (!searchError && searchData?.found) {
-           const strategyLabels: Record<string, string> = {
-             cache: "Encontrado no cache local",
-             direct: `Encontrado via /cliente/telefone (número usado: ${searchData.numeroUsado})`,
-             scan: `Encontrado via varredura profunda (página ${searchData.page})`,
-           };
-           toast.success(`Cliente localizado: ${searchData.client.name}. ${strategyLabels[searchData.strategy] || ""}`);
-           setClientResult({ ...searchData, queriedPhone: phone });
-         } else if (searchData?.reason === "erp_unreachable") {
-           toast.error("ERP CITEL inacessível. Verifique a conexão.");
-           setClientResult({ found: false, reason: "erp_unreachable", queriedPhone: phone, error: searchData.error });
-         } else if (searchData?.reason === "not_found") {
-           toast.warning(`Telefone ${phone} não encontrado no ERP.`);
-           setClientResult({ found: false, reason: "not_found", queriedPhone: phone, lastStatus: searchData.lastStatus });
-         }
-       }
-
-       // Sempre rodamos o explore para atualizar a lista de caminhos/swagger
-       const { data, error } = await supabase.functions.invoke('citel-explore', {
-         body: { phone: phone || undefined }
-       });
-       if (error) throw error;
-       setExploreData(data);
-
-       if (!phone) {
-         if (data.clientesStatus === "unreachable") {
-           toast.warning("ERP CITEL inacessível (Timeout). Verifique o firewall ou se o servidor está online.");
-         } else {
-           toast.success("Estrutura da API Citel carregada com sucesso!");
-         }
-       }
-     } catch (err: any) {
-       console.error("Explore error:", err);
-       toast.error("Erro ao conectar com API Citel: " + (err.message || "Verifique as configurações das Secrets"));
-     } finally {
-       setLoading(false);
-     }
-   };
-
-  const runListAll = async () => {
-    setListing(true);
-    setListData(null);
+  const runSearch = async () => {
+    if (name.trim().length < 2) {
+      toast.warning("Digite ao menos 2 caracteres do nome.");
+      return;
+    }
+    setSearching(true);
+    setSearchData(null);
     try {
-      const { data, error } = await supabase.functions.invoke('citel-list-all');
+      const { data, error } = await supabase.functions.invoke('citel-search-name', { body: { name: name.trim() } });
       if (error) throw error;
-      if (data?.success) {
-        setListData(data);
-        toast.success(`${data.total} clientes carregados da API Citel.`);
+      setSearchData(data);
+      if (data.found) {
+        toast.success(`${data.total} cliente(s) encontrado(s).`);
+      } else if (data.reason === "erp_unreachable") {
+        toast.error("ERP CITEL inacessível. Verifique a conexão.");
       } else {
-        toast.error(data?.message || "Não foi possível listar clientes.");
-        setListData(data);
+        toast.warning("Nenhum cliente encontrado com esse nome.");
       }
     } catch (err: any) {
-      console.error("List all error:", err);
-      toast.error("Erro ao listar clientes: " + (err.message || "Verifique as Secrets"));
+      console.error("Search error:", err);
+      toast.error("Erro ao buscar: " + (err.message || "Verifique os logs"));
     } finally {
-      setListing(false);
+      setSearching(false);
     }
   };
- 
-   const JsonView = ({ data }: { data: any }) => {
-     const [isOpen, setIsOpen] = useState(false);
-     if (!data || typeof data !== 'object') return <span>{String(data)}</span>;
- 
-     return (
-       <div className="pl-4 border-l ml-2">
-         <button 
-           onClick={() => setIsOpen(!isOpen)} 
-           className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
-         >
-           {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-           {Array.isArray(data) ? `Array(${data.length})` : 'Object'}
-         </button>
-         {isOpen && (
-           <pre className="mt-2 text-[10px] bg-slate-50 p-2 rounded overflow-auto max-h-60">
-             {JSON.stringify(data, null, 2)}
-           </pre>
-         )}
-       </div>
-     );
-   };
- 
-   return (
-     <div className="space-y-6">
-       <Card>
-         <CardHeader>
-           <div className="flex items-center justify-between">
-             <div>
-               <CardTitle className="text-base flex items-center gap-2">
-                 <Database className="h-4 w-4" /> Integração ERP Citel (Diagnóstico)
-               </CardTitle>
-               <p className="text-sm text-muted-foreground">
-                 Visualize todos os dados disponíveis na API do seu ERP Citel.
-               </p>
-             </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={runSync} disabled={syncing || loading}>
-                  {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                  Sincronização Total
-                </Button>
-                 <Button variant="outline" onClick={runSwaggerDump} disabled={dumping || syncing || loading}>
-                   {dumping ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Terminal className="h-4 w-4 mr-2" />}
-                   Dump Swagger
-                 </Button>
-                 <Button variant="outline" onClick={runListAll} disabled={listing || syncing || loading}>
-                   {listing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Users className="h-4 w-4 mr-2" />}
-                   Listar Todos os Clientes
-                 </Button>
-                <Button onClick={runExplore} disabled={loading || syncing}>
-                  {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                  Explorar API Agora
-                </Button>
-              </div>
-           </div>
-         </CardHeader>
-         <CardContent className="space-y-4">
-            <div className="flex items-end gap-4 max-w-md">
-              <div className="flex-1 space-y-1">
-                <Label>Telefone para teste (opcional, somente "Explorar API")</Label>
-                <Input
-                  placeholder="Deixe vazio para listar todos os clientes"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                />
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Database className="h-4 w-4" /> Integração ERP Citel
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Busque clientes do ERP por nome ou sincronize a base completa.
+              </p>
+            </div>
+            <Button variant="outline" onClick={runSync} disabled={syncing || searching}>
+              {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Sincronização Total
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-end gap-3 max-w-2xl">
+            <div className="flex-1 space-y-1">
+              <Label>Buscar cliente por nome no ERP</Label>
+              <Input
+                placeholder="Ex: Maria, João Silva, Construtora..."
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
+              />
+            </div>
+            <Button onClick={runSearch} disabled={searching || syncing}>
+              {searching ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+              Procurar por nome
+            </Button>
+          </div>
+
+          {searchData?.found && Array.isArray(searchData.results) && searchData.results.length > 0 && (
+            <div className="space-y-2 animate-in fade-in">
+              <p className="text-xs text-muted-foreground">
+                {searchData.total} resultado(s) para <strong>"{searchData.query}"</strong>
+              </p>
+              <div className="border rounded-md max-h-[480px] overflow-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-card">
+                    <TableRow>
+                      <TableHead className="text-[10px]">ID ERP</TableHead>
+                      <TableHead className="text-[10px]">Nome</TableHead>
+                      <TableHead className="text-[10px]">Documento</TableHead>
+                      <TableHead className="text-[10px]">Telefone</TableHead>
+                      <TableHead className="text-[10px]">E-mail</TableHead>
+                      <TableHead className="text-[10px]">Cidade</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {searchData.results.map((c: any, idx: number) => (
+                      <TableRow key={idx}>
+                        <TableCell className="text-xs font-mono">{c.erpId || "—"}</TableCell>
+                        <TableCell className="text-xs font-medium">{c.name}</TableCell>
+                        <TableCell className="text-xs font-mono">{c.document || "—"}</TableCell>
+                        <TableCell className="text-xs font-mono">{c.phone || "—"}</TableCell>
+                        <TableCell className="text-xs">{c.email || "—"}</TableCell>
+                        <TableCell className="text-xs">{c.city || "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             </div>
+          )}
 
-            {clientResult && (
-              <Card className={clientResult.found ? "border-emerald-300 bg-emerald-50/40" : "border-rose-300 bg-rose-50/40"}>
-                <CardHeader className="py-3">
-                  <CardTitle className={`text-sm flex items-center gap-2 ${clientResult.found ? "text-emerald-800" : "text-rose-800"}`}>
-                    <UserCheck className="h-4 w-4" />
-                    {clientResult.found
-                      ? `Cliente encontrado para ${clientResult.queriedPhone}`
-                      : `Cliente NÃO encontrado para ${clientResult.queriedPhone}`}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {clientResult.found ? (
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                        <div><span className="font-semibold">Nome:</span> {clientResult.client.name || "—"}</div>
-                        <div><span className="font-semibold">ID ERP:</span> <code className="text-xs bg-white px-1.5 py-0.5 rounded border">{clientResult.client.erpId || "—"}</code></div>
-                        <div><span className="font-semibold">E-mail:</span> {clientResult.client.email || "—"}</div>
-                        <div><span className="font-semibold">Cidade:</span> {clientResult.client.city || "—"}</div>
-                        <div className="md:col-span-2"><span className="font-semibold">Endereço:</span> {clientResult.client.address || "—"}</div>
-                        <div className="md:col-span-2 text-xs text-muted-foreground">
-                          Estratégia: <Badge variant="outline">{clientResult.strategy}</Badge>
-                          {clientResult.numeroUsado && <> · número consultado: <code>{clientResult.numeroUsado}</code></>}
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-sm space-y-1">
-                      <p>Motivo: <Badge variant="outline">{clientResult.reason}</Badge></p>
-                      {clientResult.lastStatus !== undefined && <p className="text-xs text-muted-foreground">HTTP retornado pelo ERP: {clientResult.lastStatus}</p>}
-                      {clientResult.error && <p className="text-xs text-muted-foreground">Erro: {clientResult.error}</p>}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+          {searchData && !searchData.found && (
+            <div className="py-8 text-center border-2 border-dashed rounded-lg bg-muted/20 text-sm text-muted-foreground">
+              {searchData.reason === "erp_unreachable"
+                ? "ERP inacessível no momento. Tente novamente em alguns segundos."
+                : `Nenhum cliente encontrado para "${searchData.query || name}".`}
+            </div>
+          )}
 
-            {swaggerDump && (
-              <Card className="border-amber-200 bg-amber-50/30">
-                <CardHeader className="py-3">
-                  <CardTitle className="text-sm flex items-center gap-2 text-amber-800">
-                    <Terminal className="h-4 w-4" /> Resultado do Dump Swagger
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {swaggerDump.success ? (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <p className="text-[10px] uppercase font-bold text-muted-foreground">Endpoint Encontrado</p>
-                          <p className="text-xs font-mono break-all">{swaggerDump.workingUrl}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[10px] uppercase font-bold text-muted-foreground">Total de Paths</p>
-                          <p className="text-xs">{swaggerDump.analysis.totalPaths}</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-xs font-bold">Endpoints de Telefone/Busca Identificados:</p>
-                        <div className="space-y-2 max-h-40 overflow-auto border rounded p-2 bg-white">
-                          {swaggerDump.analysis.phoneSearchEndpoints.map((e: any, i: number) => (
-                            <div key={i} className="text-[10px] border-b pb-1 last:border-0">
-                              <p className="font-mono text-blue-700">{e.path}</p>
-                              <p className="text-muted-foreground">Params: {e.params.map((p: any) => `${p.name} (${p.in})`).join(", ")}</p>
-                            </div>
-                          ))}
-                          {swaggerDump.analysis.phoneSearchEndpoints.length === 0 && <p className="text-[10px] italic">Nenhum identificado automaticamente.</p>}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-xs font-bold">JSON Cru (Preview):</p>
-                        <ScrollArea className="h-40 w-full border rounded-md bg-white p-2">
-                          <pre className="text-[10px]">{swaggerDump.fullDocRawPreview}</pre>
-                        </ScrollArea>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-xs space-y-2">
-                      <p className="text-destructive font-bold">Falha ao localizar Swagger.</p>
-                      <p>Tentativas:</p>
-                      <div className="space-y-1">
-                        {swaggerDump.attempts?.map((a: any, i: number) => (
-                          <div key={i} className="flex justify-between font-mono bg-white p-1 rounded border">
-                            <span>{a.url}</span>
-                            <Badge variant={a.status === 200 ? "outline" : "destructive"}>{a.status}</Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {listData?.success && Array.isArray(listData.clients) && (
-              <div className="space-y-3 animate-in fade-in">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div>
-                    <h4 className="font-semibold text-sm">Clientes da API Citel</h4>
-                    <p className="text-xs text-muted-foreground">
-                      {listData.total} registros • endpoint: <span className="font-mono">{listData.endpoint}</span>
-                    </p>
-                  </div>
-                  <Input
-                    placeholder="Filtrar por nome, telefone, cidade, documento..."
-                    value={listSearch}
-                    onChange={(e) => setListSearch(e.target.value)}
-                    className="max-w-xs"
-                  />
-                </div>
-                <div className="border rounded-md max-h-[480px] overflow-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-card">
-                      <TableRow>
-                        <TableHead className="text-[10px]">ID</TableHead>
-                        <TableHead className="text-[10px]">Nome</TableHead>
-                        <TableHead className="text-[10px]">Telefone</TableHead>
-                        <TableHead className="text-[10px]">E-mail</TableHead>
-                        <TableHead className="text-[10px]">Cidade</TableHead>
-                        <TableHead className="text-[10px]">Documento</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(listData.clients as any[])
-                        .filter((c) => {
-                          if (!listSearch.trim()) return true;
-                          const q = listSearch.toLowerCase();
-                          return [c.name, c.phone, c.email, c.city, c.document, c.id]
-                            .some((v: any) => v && String(v).toLowerCase().includes(q));
-                        })
-                        .slice(0, 500)
-                        .map((c, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell className="text-xs font-mono">{c.id || "—"}</TableCell>
-                            <TableCell className="text-xs font-medium">{c.name}</TableCell>
-                            <TableCell className="text-xs font-mono">{c.phone || "—"}</TableCell>
-                            <TableCell className="text-xs">{c.email || "—"}</TableCell>
-                            <TableCell className="text-xs">{c.city || "—"}</TableCell>
-                            <TableCell className="text-xs font-mono">{c.document || "—"}</TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </div>
-                {listData.total > 500 && (
-                  <p className="text-[11px] text-muted-foreground">Exibindo os primeiros 500 de {listData.total}. Use o filtro para refinar.</p>
-                )}
-              </div>
-            )}
-
-            {listData && !listData.success && (
-              <div className="border border-destructive/30 rounded-md p-3 bg-destructive/5 text-xs">
-                <p className="font-semibold mb-2">Falha ao listar clientes</p>
-                <pre className="text-[10px] overflow-auto max-h-40">{JSON.stringify(listData, null, 2)}</pre>
-              </div>
-            )}
- 
-           {!exploreData && !loading && (
-             <div className="py-12 text-center border-2 border-dashed rounded-lg bg-muted/20">
-               <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-20" />
-               <p className="text-muted-foreground">Clique em "Explorar API Agora" para carregar os dados brutos do sistema Citel.</p>
-             </div>
-           )}
- 
-           {exploreData && (
-             <div className="space-y-6 animate-in fade-in slide-in-from-top-2">
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                 <Card className="bg-slate-50">
-                   <CardContent className="pt-4">
-                     <p className="text-[10px] uppercase font-bold text-muted-foreground">API URL</p>
-                     <p className="text-xs font-mono truncate">{exploreData.apiUrl}</p>
-                   </CardContent>
-                 </Card>
-                 <Card className="bg-slate-50">
-                   <CardContent className="pt-4">
-                     <p className="text-[10px] uppercase font-bold text-muted-foreground">Swagger/Docs</p>
-                     <p className="text-xs">{exploreData.swagger?.found ? `Encontrado (${exploreData.swagger.totalPaths} caminhos)` : 'Não encontrado'}</p>
-                   </CardContent>
-                 </Card>
-                  <Card className={cn("bg-slate-50", exploreData.clientesStatus === "unreachable" && "bg-red-50")}>
-                    <CardContent className="pt-4">
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Conexão</p>
-                      {exploreData.clientesStatus === "unreachable" ? (
-                        <Badge variant="destructive" className="animate-pulse">Offline / Timeout</Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">Ativa</Badge>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {exploreData.swagger?.clientParams && exploreData.swagger.clientParams.length > 0 && (
-                  <Card className="bg-blue-50/30 border-blue-100">
-                    <CardHeader className="py-3">
-                      <CardTitle className="text-xs flex items-center gap-2 text-blue-800">
-                        <Filter className="h-3 w-3" /> Parâmetros aceitos por /cliente* (Swagger)
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pb-4">
-                      <div className="space-y-3">
-                        {exploreData.swagger.clientParams.map((cp: any, i: number) => (
-                          <div key={i} className="space-y-1">
-                            <p className="text-[10px] font-mono font-bold text-blue-900">{cp.path}</p>
-                            <div className="grid grid-cols-1 gap-1">
-                              {cp.params.map((p: any, pi: number) => (
-                                <div key={pi} className="text-[10px] flex items-center gap-2 bg-white/50 p-1 rounded border border-blue-100">
-                                  <Badge variant="outline" className="text-[9px] h-4 py-0 px-1">{p.name}</Badge>
-                                  <span className="text-muted-foreground">in: {p.in}</span>
-                                  {p.required && <Badge variant="destructive" className="text-[8px] h-3 py-0 px-1">Obrigatório</Badge>}
-                                  <span className="text-muted-foreground truncate">{p.description}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <div className="space-y-4">
-                 <h4 className="font-semibold text-sm border-b pb-2">Amostras de Dados (Brutos)</h4>
-                 
-                 {Object.entries(exploreData.samples || {}).map(([category, samples]: [string, any]) => (
-                   <div key={category} className="space-y-2">
-                     <h5 className="text-xs font-bold uppercase text-primary">{category}</h5>
-                     {Array.isArray(samples) && samples.length > 0 ? (
-                       <div className="space-y-2">
-                         {samples.map((s: any, idx: number) => (
-                           <div key={idx} className="border rounded-md p-3 bg-white">
-                             <div className="flex items-center justify-between mb-2">
-                               <Badge variant="outline" className="text-[10px] font-mono">{s.path}</Badge>
-                               <Badge variant={s.status >= 200 && s.status < 300 ? "outline" : "destructive"} className={cn("text-[10px]", s.status >= 200 && s.status < 300 && "bg-green-50 text-green-700 border-green-200")}>
-                                 HTTP {s.status}
-                               </Badge>
-                             </div>
-                             <div className="space-y-2">
-                               <div>
-                                 <p className="text-[10px] text-muted-foreground font-bold mb-1">ESTRUTURA (SHAPE)</p>
-                                 <JsonView data={s.shape} />
-                               </div>
-                               {s.preview && (
-                                 <div>
-                                   <p className="text-[10px] text-muted-foreground font-bold mb-1">EXEMPLO DE RESPOSTA</p>
-                                   <JsonView data={s.preview} />
-                                 </div>
-                               )}
-                               {s.raw && (
-                                 <div className="mt-2 text-[10px] text-red-500 bg-red-50 p-2 rounded">
-                                   {typeof s.raw === 'string' ? s.raw : JSON.stringify(s.raw)}
-                                 </div>
-                               )}
-                             </div>
-                           </div>
-                         ))}
-                       </div>
-                     ) : (
-                       <p className="text-xs text-muted-foreground italic pl-4">Nenhum dado encontrado para esta categoria.</p>
-                     )}
-                   </div>
-                 ))}
-               </div>
-             </div>
-           )}
-         </CardContent>
-       </Card>
-     </div>
-   );
- }
+          {!searchData && !searching && (
+            <div className="py-10 text-center border-2 border-dashed rounded-lg bg-muted/20">
+              <Database className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-20" />
+              <p className="text-sm text-muted-foreground">Digite parte do nome do cliente e clique em "Procurar por nome".</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
  
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
