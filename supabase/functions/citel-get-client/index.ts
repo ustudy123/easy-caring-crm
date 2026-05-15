@@ -106,21 +106,49 @@ Deno.serve(async (req) => {
     const targetPhone = normalizePhone(body?.phone ?? "");
     if (targetPhone.length < 10) return json({ error: "Telefone muito curto" }, 400);
 
-    // 1. Cache local
-    const { data: local } = await adminClient.from("clients").select("*").eq("phone", targetPhone).maybeSingle();
-    if (local?.erp_id) {
-      return json({
-        found: true,
-        strategy: "cache",
-        client: { erpId: local.erp_id, name: local.name, email: local.email, address: local.address, city: local.city },
-      });
-    }
-
-    // 2. Chamada direta ao endpoint /cliente/telefone (descoberto via Swagger)
+    // 1. Configuração ERP (usada para chamada direta e enriquecimento)
     const apiUrl = cleanApiBase(Deno.env.get("CITEL_API_URL") ?? "");
     const auth = btoa(`${Deno.env.get("CITEL_USER")}:${Deno.env.get("CITEL_PASSWORD")}`);
     const companyCode = Deno.env.get("CITEL_EMPRESA") || "1";
     const headers = { Authorization: `Basic ${auth}`, Accept: "application/json" };
+
+    // Função auxiliar: tenta enriquecer dados via /cliente/{erpId} ou variantes
+    async function enrich(erpId: string): Promise<Record<string, any> | null> {
+      const candidates = [
+        `${apiUrl}/cliente/${encodeURIComponent(erpId)}?codigoEmpresa=${encodeURIComponent(companyCode)}`,
+        `${apiUrl}/cliente/codigo/${encodeURIComponent(erpId)}?codigoEmpresa=${encodeURIComponent(companyCode)}`,
+        `${apiUrl}/cliente?codigoEmpresa=${encodeURIComponent(companyCode)}&codigoCliente=${encodeURIComponent(erpId)}`,
+      ];
+      for (const url of candidates) {
+        console.log(`[citel-get-client] ENRICH GET ${url}`);
+        const r = await tryFetch(url, headers, 15_000);
+        console.log(`[citel-get-client] enrich status=${r.status} preview=${(JSON.stringify(r.data) ?? "").slice(0, 1500)}`);
+        if (!r.ok) continue;
+        const items = extractArray(r.data);
+        const single = items.length > 0
+          ? items[0]
+          : (r.data && typeof r.data === "object" && !Array.isArray(r.data) ? r.data : null);
+        if (single) return single;
+      }
+      return null;
+    }
+
+    // 2. Cache local — resposta rápida; tenta enriquecer em seguida
+    const { data: local } = await adminClient.from("clients").select("*").eq("phone", targetPhone).maybeSingle();
+    if (local?.erp_id) {
+      const baseClient: any = {
+        erpId: local.erp_id, name: local.name, email: local.email,
+        address: local.address, city: local.city,
+      };
+      const enriched = await enrich(local.erp_id);
+      if (enriched) {
+        const m = mapErpClient(enriched);
+        return json({ found: true, strategy: "cache+enrich", client: { ...baseClient, ...m, erpId: local.erp_id } });
+      }
+      return json({ found: true, strategy: "cache", client: baseClient });
+    }
+
+    // 3. Chamada direta ao endpoint /cliente/telefone (descoberto via Swagger)
 
     // Variações: número completo, sem DDI 55, últimos 11 e últimos 10 dígitos
     const variants = Array.from(new Set<string>([
@@ -139,7 +167,7 @@ Deno.serve(async (req) => {
       const r = await tryFetch(url, headers, 30_000);
       lastStatus = r.status;
       lastError = (r as any).error;
-      console.log(`[citel-get-client] status=${r.status} ok=${r.ok} bodyPreview=${JSON.stringify(r.data).slice(0, 500)}`);
+      console.log(`[citel-get-client] status=${r.status} ok=${r.ok} bodyPreview=${(JSON.stringify(r.data) ?? "").slice(0, 2000)}`);
 
       if (!r.ok) continue;
 
@@ -158,7 +186,10 @@ Deno.serve(async (req) => {
         phone: targetPhone, name: c.name, email: c.email, address: c.address, city: c.city, erp_id: c.erpId,
       }, { onConflict: "phone" });
 
-      return json({ found: true, strategy: "direct", numeroUsado: numero, client: c });
+      // Tenta enriquecer com endpoint por código (CPF/CNPJ, CEP, limite, última compra)
+      const enriched = c.erpId ? await enrich(c.erpId) : null;
+      const merged = enriched ? { ...c, ...mapErpClient(enriched), erpId: c.erpId } : c;
+      return json({ found: true, strategy: enriched ? "direct+enrich" : "direct", numeroUsado: numero, client: merged });
     }
 
     if (lastStatus === 0) {
