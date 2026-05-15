@@ -200,6 +200,42 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
               </div>
             </div>
 
+            {clientResult && (
+              <Card className={clientResult.found ? "border-emerald-300 bg-emerald-50/40" : "border-rose-300 bg-rose-50/40"}>
+                <CardHeader className="py-3">
+                  <CardTitle className={`text-sm flex items-center gap-2 ${clientResult.found ? "text-emerald-800" : "text-rose-800"}`}>
+                    <UserCheck className="h-4 w-4" />
+                    {clientResult.found
+                      ? `Cliente encontrado para ${clientResult.queriedPhone}`
+                      : `Cliente NÃO encontrado para ${clientResult.queriedPhone}`}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {clientResult.found ? (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        <div><span className="font-semibold">Nome:</span> {clientResult.client.name || "—"}</div>
+                        <div><span className="font-semibold">ID ERP:</span> <code className="text-xs bg-white px-1.5 py-0.5 rounded border">{clientResult.client.erpId || "—"}</code></div>
+                        <div><span className="font-semibold">E-mail:</span> {clientResult.client.email || "—"}</div>
+                        <div><span className="font-semibold">Cidade:</span> {clientResult.client.city || "—"}</div>
+                        <div className="md:col-span-2"><span className="font-semibold">Endereço:</span> {clientResult.client.address || "—"}</div>
+                        <div className="md:col-span-2 text-xs text-muted-foreground">
+                          Estratégia: <Badge variant="outline">{clientResult.strategy}</Badge>
+                          {clientResult.numeroUsado && <> · número consultado: <code>{clientResult.numeroUsado}</code></>}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm space-y-1">
+                      <p>Motivo: <Badge variant="outline">{clientResult.reason}</Badge></p>
+                      {clientResult.lastStatus !== undefined && <p className="text-xs text-muted-foreground">HTTP retornado pelo ERP: {clientResult.lastStatus}</p>}
+                      {clientResult.error && <p className="text-xs text-muted-foreground">Erro: {clientResult.error}</p>}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {swaggerDump && (
               <Card className="border-amber-200 bg-amber-50/30">
                 <CardHeader className="py-3">
