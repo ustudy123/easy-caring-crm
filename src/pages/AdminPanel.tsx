@@ -14,12 +14,33 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight } from "lucide-react";
  function CitelIntegrationTab() {
-   const [exploreData, setExploreData] = useState<any>(null);
+  const [exploreData, setExploreData] = useState<any>(null);
+  const [swaggerDump, setSwaggerDump] = useState<any>(null);
+  const [dumping, setDumping] = useState(false);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [listing, setListing] = useState(false);
   const [listData, setListData] = useState<any>(null);
   const [listSearch, setListSearch] = useState("");
+  const runSwaggerDump = async () => {
+    setDumping(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('citel-swagger-dump');
+      if (error) throw error;
+      setSwaggerDump(data);
+      if (data.success) {
+        toast.success("Swagger extraído com sucesso!");
+      } else {
+        toast.error("Não foi possível encontrar o Swagger automaticamente.");
+      }
+    } catch (err: any) {
+      console.error("Swagger dump error:", err);
+      toast.error("Erro ao extrair Swagger: " + (err.message || "Verifique os logs"));
+    } finally {
+      setDumping(false);
+    }
+  };
+
   const runSync = async () => {
     if (!confirm("Isso irá importar todos os clientes da Citel para o seu banco de dados. Deseja continuar?")) return;
     setSyncing(true);
@@ -146,6 +167,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
                   {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                   Sincronização Total
                 </Button>
+                 <Button variant="outline" onClick={runSwaggerDump} disabled={dumping || syncing || loading}>
+                   {dumping ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Terminal className="h-4 w-4 mr-2" />}
+                   Dump Swagger
+                 </Button>
                  <Button variant="outline" onClick={runListAll} disabled={listing || syncing || loading}>
                    {listing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Users className="h-4 w-4 mr-2" />}
                    Listar Todos os Clientes
@@ -168,6 +193,65 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
                 />
               </div>
             </div>
+
+            {swaggerDump && (
+              <Card className="border-amber-200 bg-amber-50/30">
+                <CardHeader className="py-3">
+                  <CardTitle className="text-sm flex items-center gap-2 text-amber-800">
+                    <Terminal className="h-4 w-4" /> Resultado do Dump Swagger
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {swaggerDump.success ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <p className="text-[10px] uppercase font-bold text-muted-foreground">Endpoint Encontrado</p>
+                          <p className="text-xs font-mono break-all">{swaggerDump.workingUrl}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] uppercase font-bold text-muted-foreground">Total de Paths</p>
+                          <p className="text-xs">{swaggerDump.analysis.totalPaths}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-xs font-bold">Endpoints de Telefone/Busca Identificados:</p>
+                        <div className="space-y-2 max-h-40 overflow-auto border rounded p-2 bg-white">
+                          {swaggerDump.analysis.phoneSearchEndpoints.map((e: any, i: number) => (
+                            <div key={i} className="text-[10px] border-b pb-1 last:border-0">
+                              <p className="font-mono text-blue-700">{e.path}</p>
+                              <p className="text-muted-foreground">Params: {e.params.map((p: any) => `${p.name} (${p.in})`).join(", ")}</p>
+                            </div>
+                          ))}
+                          {swaggerDump.analysis.phoneSearchEndpoints.length === 0 && <p className="text-[10px] italic">Nenhum identificado automaticamente.</p>}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-xs font-bold">JSON Cru (Preview):</p>
+                        <ScrollArea className="h-40 w-full border rounded-md bg-white p-2">
+                          <pre className="text-[10px]">{swaggerDump.fullDocRawPreview}</pre>
+                        </ScrollArea>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-xs space-y-2">
+                      <p className="text-destructive font-bold">Falha ao localizar Swagger.</p>
+                      <p>Tentativas:</p>
+                      <div className="space-y-1">
+                        {swaggerDump.attempts?.map((a: any, i: number) => (
+                          <div key={i} className="flex justify-between font-mono bg-white p-1 rounded border">
+                            <span>{a.url}</span>
+                            <Badge variant={a.status === 200 ? "outline" : "destructive"}>{a.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {listData?.success && Array.isArray(listData.clients) && (
               <div className="space-y-3 animate-in fade-in">
