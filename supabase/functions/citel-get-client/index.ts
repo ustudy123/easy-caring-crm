@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
       const r = await tryFetch(url, headers, 30_000);
       lastStatus = r.status;
       lastError = (r as any).error;
-      console.log(`[citel-get-client] status=${r.status} ok=${r.ok} bodyPreview=${JSON.stringify(r.data).slice(0, 500)}`);
+      console.log(`[citel-get-client] status=${r.status} ok=${r.ok} bodyPreview=${(JSON.stringify(r.data) ?? "").slice(0, 2000)}`);
 
       if (!r.ok) continue;
 
