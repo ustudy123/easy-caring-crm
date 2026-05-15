@@ -111,6 +111,7 @@
  
    try {
      const authHeader = req.headers.get("Authorization") ?? "";
+    const isAdmin = authHeader.includes("service_role"); // Simples check para curl
      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
      const adminClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -128,13 +129,18 @@
      // 2. ERP Deep Scan
      const apiUrl = cleanApiBase(Deno.env.get("CITEL_API_URL") ?? "");
      const auth = btoa(`${Deno.env.get("CITEL_USER")}:${Deno.env.get("CITEL_PASSWORD")}`);
-     const baseHeaders = { Authorization: `Basic ${auth}`, Accept: "application/json" };
+    // Tenta variantes de headers (com e sem empresa)
+    const companyCode = Deno.env.get("CITEL_EMPRESA") || "1";
+    const headerVariants = [
+      { Authorization: `Basic ${auth}`, Accept: "application/json" },
+      { Authorization: `Basic ${auth}`, Accept: "application/json", empresa: companyCode, "x-empresa": companyCode, codEmpresa: companyCode }
+    ];
      
      // Tenta carregar o Swagger para descobrir o endpoint real
      const swaggerUrls = [`${apiUrl}/v2/api-docs`, `${apiUrl}/swagger/v1/swagger.json` ];
      let discoveredPath = "/cliente";
      for (const u of swaggerUrls) {
-       const r = await tryFetch(u, baseHeaders, 10000);
+      const r = await tryFetch(u, headerVariants[0], 15000);
        if (r.ok && r.data?.paths) {
          for (const p of Object.keys(r.data.paths)) {
            if (/^\/cliente(s)?$/i.test(p)) { discoveredPath = p; break; }
@@ -144,49 +150,56 @@
      }
  
      const endpoint = `${apiUrl}${discoveredPath.startsWith("/") ? "" : "/"}${discoveredPath}`;
-     let currentUrl = appendQuery(endpoint, { paginacao: 200 });
-     let pages = 0;
-     let totalScanned = 0;
-     let reachable = false;
- 
-     while (pages < 500) {
-        console.log(`[citel-get-client] Scanning page ${pages + 1}... URL: ${currentUrl}`);
-       const r = await tryFetch(currentUrl, baseHeaders, 25000);
-        console.log(`[citel-get-client] Page ${pages + 1} status: ${r.status}, items: ${extractArray(r.data).length}`);
-       if (r.status > 0) reachable = true;
-       if (!r.ok) break;
- 
-       const items = extractArray(r.data);
-       if (items.length === 0) break;
-       
-       pages++;
-       totalScanned += items.length;
- 
-       for (const item of items) {
-         // Coleta todos os telefones possíveis (planos e aninhados)
-         const phones = [
-           item.telefone, item.celular, item.fone, item.whatsapp, item.telefoneComercial, item.telefoneResidencial,
-           item.clienteCompradorPrincipal?.celularCompraPrincipal,
-           item.clienteCompradorPrincipal?.telefoneCompraPrincipal,
-           ...(item.clienteCompradores?.flatMap((c: any) => [c.numWhatsAppComprador, c.celularComprador, c.telefoneComprador]) || []),
-           ...(item.enderecoEntrega?.map((e: any) => e.telefone) || [])
-         ];
- 
-         if (phones.some(p => phoneMatches(p, targetPhone))) {
-           const c = mapErpClient(item);
-           // Salva cache
-           await adminClient.from("clients").upsert({
-             phone: targetPhone, name: c.name, email: c.email, address: c.address, city: c.city, erp_id: c.erpId
-           }, { onConflict: "phone" });
- 
-           return json({ found: true, strategy: "scan", page: pages, totalScanned, client: c });
-         }
-       }
- 
-       const token = continuationToken(r.data);
-       if (!token) break;
-       currentUrl = appendQuery(endpoint, { paginacao: 200, continuationToken: token });
-     }
+    let reachable = false;
+    let pages = 0;
+    let totalScanned = 0;
+
+    // Tenta cada variante de header até conseguir uma resposta válida (status > 0)
+    for (const headers of headerVariants) {
+      let currentUrl = appendQuery(endpoint, { paginacao: 200 });
+      pages = 0;
+      totalScanned = 0;
+
+      while (pages < 500) {
+        console.log(`[citel-get-client] Scanning page ${pages + 1}... URL: ${currentUrl} (Variant: ${headers.empresa ? 'with empresa' : 'no empresa'})`);
+        const r = await tryFetch(currentUrl, headers, 40000); // Timeout maior (40s)
+        console.log(`[citel-get-client] Page ${pages + 1} status: ${r.status}, ok: ${r.ok}`);
+        
+        if (r.status > 0) reachable = true;
+        if (!r.ok) break; // Se falhou mas o status > 0 (ex: 400), tenta próxima variante
+
+        const items = extractArray(r.data);
+        if (items.length === 0) break;
+        
+        pages++;
+        totalScanned += items.length;
+
+        for (const item of items) {
+          const phones = [
+            item.telefone, item.celular, item.fone, item.whatsapp, item.telefoneComercial, item.telefoneResidencial,
+            item.clienteCompradorPrincipal?.celularCompraPrincipal,
+            item.clienteCompradorPrincipal?.telefoneCompraPrincipal,
+            ...(item.clienteCompradores?.flatMap((c: any) => [c.numWhatsAppComprador, c.celularComprador, c.telefoneComprador]) || []),
+            ...(item.enderecoEntrega?.map((e: any) => e.telefone) || [])
+          ];
+
+          if (phones.some(p => phoneMatches(p, targetPhone))) {
+            const c = mapErpClient(item);
+            await adminClient.from("clients").upsert({
+              phone: targetPhone, name: c.name, email: c.email, address: c.address, city: c.city, erp_id: c.erpId
+            }, { onConflict: "phone" });
+            return json({ found: true, strategy: "scan", page: pages, totalScanned, client: c });
+          }
+        }
+
+        const token = continuationToken(r.data);
+        if (!token) break;
+        currentUrl = appendQuery(endpoint, { paginacao: 200, continuationToken: token });
+      }
+      
+      // Se conseguimos ao menos uma resposta válida (mesmo que vazia), paramos de tentar variantes
+      if (reachable && totalScanned > 0) break;
+    }
  
      if (!reachable) return json({ found: false, reason: "erp_unreachable" });
      return json({ found: false, reason: "not_found", pagesScanned: pages, totalScanned });
