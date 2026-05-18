@@ -256,13 +256,24 @@ export default function Agenda() {
 
               {filtered.length === 0 && (
                 <motion.div variants={fadeIn} className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                  <CalendarDays className="h-12 w-12 mb-3 opacity-30" />
-                  <p className="text-sm font-medium">Nenhum follow-up encontrado</p>
-                  <p className="text-xs mt-1">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted/30 mb-4">
+                    <CalendarDays className="h-10 w-10 opacity-20" />
+                  </div>
+                  <h3 className="text-base font-semibold text-foreground">Nenhum follow-up encontrado</h3>
+                  <p className="text-sm text-muted-foreground mt-1 max-w-[250px] text-center">
                     {selectedDate
-                      ? `Sem agendamentos para ${selectedDate.toLocaleDateString("pt-BR")}`
-                      : "Adicione um novo follow-up para começar"}
+                      ? `Não existem agendamentos registrados para ${selectedDate.toLocaleDateString("pt-BR")}.`
+                      : "Você ainda não possui follow-ups agendados."}
                   </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-6 border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors"
+                    onClick={() => setShowNewFollowUp(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar primeiro follow-up
+                  </Button>
                 </motion.div>
               )}
             </motion.div>
