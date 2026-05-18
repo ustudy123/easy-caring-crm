@@ -7,10 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
  import { 
-   Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
-   AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
-   MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight
- } from "lucide-react";
+    Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
+    AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
+    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle
+  } from "lucide-react";
+ import { getDisplayClientName, isGenericName } from "@/lib/clientUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -513,10 +514,25 @@ export default function Kanban() {
                                           {/* Header row */}
                                           <div className="flex items-start justify-between gap-2">
                                             <div className="flex items-center gap-2 min-w-0">
-                                              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stageBgMap[stage.key]} text-[10px] font-extrabold`}>
-                                                {lead.clientName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                                              </div>
-                                              <p className="text-[13px] font-bold text-foreground leading-tight truncate">{lead.clientName}</p>
+                                              {(() => {
+                                                const displayName = getDisplayClientName({ 
+                                                  name: lead.clientName, 
+                                                  phone: lead.clientPhone, 
+                                                  source: lead.source, 
+                                                  notes: lead.notes 
+                                                });
+                                                const isGeneric = isGenericName(lead.clientName);
+                                                return (
+                                                  <>
+                                                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isGeneric ? 'bg-muted text-muted-foreground' : stageBgMap[stage.key]} text-[10px] font-extrabold`}>
+                                                      {isGeneric ? <UserCircle className="h-4 w-4" /> : lead.clientName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                                    </div>
+                                                    <p className={`text-[13px] font-bold leading-tight truncate ${isGeneric ? 'text-foreground/70 italic' : 'text-foreground'}`}>
+                                                      {displayName}
+                                                    </p>
+                                                  </>
+                                                );
+                                              })()}
                                             </div>
                                             <div className="flex items-center gap-1 shrink-0">
                                               {!lead.assignedTo && userSeller && (
