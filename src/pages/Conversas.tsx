@@ -981,12 +981,70 @@ const mockContactNames: Record<string, string> = {
                 <Clock className="h-4 w-4 animate-spin" />
                 Carregando conversas...
               </div>
-            ) : filteredConversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 gap-3 text-muted-foreground">
-                <Search className="h-8 w-8 text-muted-foreground/30" />
-                <span className="text-sm">Nenhuma conversa encontrada</span>
-              </div>
-            ) : (
+             ) : filteredConversations.length === 0 ? (
+               <div className="flex flex-col items-center justify-center min-h-[400px] p-6 gap-6 text-center animate-in fade-in duration-500">
+                 <div className="relative">
+                   <div className="absolute inset-0 bg-primary/5 rounded-full scale-150 blur-2xl" />
+                   <div className="relative h-20 w-20 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-2">
+                     <MessageCircle className="h-10 w-10 text-muted-foreground/40" />
+                   </div>
+                 </div>
+                 
+                 <div className="max-w-[240px] space-y-2">
+                   <h3 className="font-semibold text-foreground">Nenhuma conversa encontrada</h3>
+                   <p className="text-sm text-muted-foreground leading-relaxed">
+                     {activeTab === 'minhas' 
+                       ? "Você não possui atendimentos ativos no momento." 
+                       : "Não há novas conversas pendentes nesta categoria."}
+                   </p>
+                 </div>
+ 
+                 <div className="grid grid-cols-1 gap-2 w-full max-w-[280px]">
+                   {activeTab === 'minhas' && (
+                     <>
+                       <Button 
+                         variant="outline" 
+                         className="w-full justify-start gap-3 h-12 bg-background border-dashed hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                         onClick={() => setActiveTab('loja')}
+                       >
+                         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                           <Store className="h-4 w-4 text-primary" />
+                         </div>
+                         <div className="text-left">
+                           <div className="text-xs font-semibold">Ver Fila da Loja</div>
+                           <div className="text-[10px] text-muted-foreground">Novos leads aguardando</div>
+                         </div>
+                       </Button>
+ 
+                       <Button 
+                         variant="outline" 
+                         className="w-full justify-start gap-3 h-12 bg-background border-dashed hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                         onClick={() => setActiveTab('geral')}
+                       >
+                         <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
+                           <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                         </div>
+                         <div className="text-left">
+                           <div className="text-xs font-semibold">Fila Geral</div>
+                           <div className="text-[10px] text-muted-foreground">Leads sem atribuição</div>
+                         </div>
+                       </Button>
+                     </>
+                   )}
+                   
+                   <Button 
+                     variant="ghost" 
+                     className="text-xs text-primary hover:bg-primary/5 mt-2"
+                     onClick={() => {
+                       setSearch("");
+                       fetchData();
+                     }}
+                   >
+                     Atualizar lista
+                   </Button>
+                 </div>
+               </div>
+             ) : (
               <div>
                 <AnimatePresence>
                   {filteredConversations.map((conv, idx) => {
