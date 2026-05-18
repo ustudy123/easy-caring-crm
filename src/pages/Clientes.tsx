@@ -236,9 +236,26 @@ export default function Clientes() {
 
           {filtered.length === 0 && (
             <motion.div variants={fadeIn} className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <Users className="h-12 w-12 mb-3 opacity-30" />
-              <p className="text-sm font-medium">Nenhum cliente encontrado</p>
-              <p className="text-xs mt-1">Tente ajustar sua busca ou adicione um novo cliente</p>
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted/30 mb-4">
+                <Users className="h-10 w-10 opacity-20" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground">Nenhum cliente encontrado</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-[250px] text-center">
+                {search 
+                  ? `Não encontramos resultados para "${search}". Tente outro termo.`
+                  : "Sua base de clientes está vazia no momento."}
+              </p>
+              {!search && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-6 border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors"
+                  onClick={() => setShowNewClient(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar primeiro cliente
+                </Button>
+              )}
             </motion.div>
           )}
         </motion.div>
