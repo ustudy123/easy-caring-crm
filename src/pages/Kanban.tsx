@@ -628,13 +628,29 @@ export default function Kanban() {
                                           </div>
                                         )}
 
-                                        {/* Follow-up reminder */}
-                                        {lead.nextFollowUp && (
-                                          <div className="mt-2.5 rounded-lg bg-warning/8 border border-warning/15 px-2.5 py-1.5 text-[10px] font-semibold text-warning flex items-center gap-1.5">
-                                            <Clock className="h-3 w-3" />
-                                            Follow-up: {new Date(lead.nextFollowUp).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                                          </div>
-                                        )}
+                                         <div className="flex flex-col gap-2 mt-2.5">
+                                           {/* Follow-up reminder */}
+                                           {lead.nextFollowUp && (
+                                             <div className="rounded-lg bg-warning/8 border border-warning/15 px-2.5 py-1.5 text-[10px] font-semibold text-warning flex items-center gap-1.5">
+                                               <Clock className="h-3 w-3" />
+                                               Follow-up: {new Date(lead.nextFollowUp).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                                             </div>
+                                           )}
+
+                                           {/* Urgency Action */}
+                                           {urgency === "critical" && (
+                                             <Button 
+                                               size="sm" 
+                                               className="w-full h-8 text-[11px] font-black bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-lg shadow-red-600/20 border-0 flex items-center justify-center gap-2 animate-bounce-subtle mt-1"
+                                               onClick={(e) => {
+                                                 e.stopPropagation();
+                                                 setEditingLead(lead);
+                                               }}
+                                             >
+                                               <Zap className="h-3 w-3" /> AGIR AGORA: ATUALIZAR STATUS
+                                             </Button>
+                                           )}
+                                         </div>
                                       </div>
                                     </SwipeableCard>
                                   );
