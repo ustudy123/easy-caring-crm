@@ -361,7 +361,7 @@ export function AppSidebar() {
             <SidebarMenu
               className={cn("space-y-0", collapsed ? "px-1" : "px-0")}
             >
-              {mainNav.map(renderItem)}
+              {mainNav.map(renderItem)}</SidebarMenu></SidebarGroupContent></SidebarGroup><SidebarSeparator className="opacity-50" /><SidebarGroup className="py-2">{!collapsed && (<SidebarGroupLabel className="mb-1 px-4 text-[10px] uppercase tracking-wider text-sidebar-foreground/40">Ferramentas</SidebarGroupLabel>)}<SidebarGroupContent><SidebarMenu className={cn("space-y-0", collapsed ? "px-1" : "px-0")}>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
