@@ -43,7 +43,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   const visibleFollowUps = Math.max(0, pendingFollowUpsCount - (dismissed.followUps || 0));
   const visibleNegotiations = Math.max(0, negotiationCount - (dismissed.negotiations || 0));
   const visibleWhatsApp = Math.max(0, unreadWhatsAppCount - (dismissed.whatsapp || 0));
-   const totalNotifications = notifications.length;
+   const totalNotifications = notifications.filter(n => n.type === 'sla_critical').length || notifications.length;
 
   const handleNotificationClick = (type: string, count: number, route: string) => {
     setDismissed((prev) => ({ ...prev, [type]: (prev[type] || 0) + count }));
@@ -120,7 +120,12 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                      {totalNotifications > 0 && (
                        <span
                          aria-hidden="true"
-                         className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground shadow-sm ring-2 ring-card"
+                         className={cn(
+                           "absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold shadow-sm ring-2 ring-card transition-all",
+                           notifications.some(n => n.type === 'sla_critical') 
+                             ? "bg-destructive text-destructive-foreground animate-pulse" 
+                             : "bg-amber-500 text-white"
+                         )}
                        >
                          {totalNotifications > 9 ? "9+" : totalNotifications}
                        </span>
