@@ -374,15 +374,10 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
               ) : (
                 <>
                   <div className="relative flex flex-col items-center gap-1 py-2">
-                    {funnelData.map((stage, i) => {
-                      const maxLeads = Math.max(...funnelData.map((s) => s.leads), 1);
-                       // Calculate visual scale for the funnel:
-                       // We want to show a clear "tapering" effect.
-                       // The first stage is always 100% wide.
-                       // Each subsequent stage is smaller, even if the count is similar,
-                       // to reinforce the funnel logic visually.
-                       const baseWidth = 100 - (i * (100 / (funnelData.length + 1)));
-                       const widthPct = Math.max(20, Math.round((stage.leads / maxLeads) * baseWidth));
+                     {funnelData.map((stage, i) => {
+                       const maxLeads = Math.max(...funnelData.map((s) => s.leads), 1);
+                        // Largura proporcional ao maior valor do funil.
+                        const widthPct = Math.max(4, Math.round((stage.leads / maxLeads) * 100));
                       const prevCount = i > 0 ? funnelData[i - 1].leads : null;
                       const convRate = prevCount && prevCount > 0 ? Math.round((stage.leads / prevCount) * 100) : null;
                       const isHovered = hoveredFunnel === i;
