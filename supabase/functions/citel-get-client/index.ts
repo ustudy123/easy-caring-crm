@@ -76,7 +76,7 @@ function extractArray(data: any): any[] {
   return [];
 }
 
-async function tryFetch(url: string, headers: Record<string, string>, timeoutMs = 20_000) {
+ async function tryFetch(url: string, headers: Record<string, string>, timeoutMs = 20_000): Promise<{ ok: boolean, status: number, data?: any, error?: string }> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -93,7 +93,39 @@ async function tryFetch(url: string, headers: Record<string, string>, timeoutMs 
   }
 }
 
-Deno.serve(async (req) => {
+ async function tryFetchWithRetry(
+   url: string, 
+   headers: Record<string, string>, 
+   options: { attempts?: number, timeoutMs?: number, baseDelayMs?: number } = {}
+ ) {
+   const { attempts = 3, timeoutMs = 8000, baseDelayMs = 500 } = options;
+   let lastResponse: { ok: boolean, status: number, data?: any, error?: string } = { ok: false, status: 0 };
+ 
+   for (let i = 0; i < attempts; i++) {
+     lastResponse = await tryFetch(url, headers, timeoutMs);
+     
+     // Retry on transient errors: timeout (0), 408 (Request Timeout), 429 (Too Many Requests), or 5xx (Server Errors)
+     const isRetriable = lastResponse.status === 0 || 
+                         lastResponse.status === 408 || 
+                         lastResponse.status === 429 || 
+                         lastResponse.status >= 500;
+ 
+     if (lastResponse.ok || !isRetriable) return lastResponse;
+ 
+     if (i < attempts - 1) {
+       // Exponential backoff with jitter
+       const delay = baseDelayMs * Math.pow(2, i) * (0.8 + Math.random() * 0.4);
+       console.log(`[citel-get-client] retry attempt ${i + 1} failed status=${lastResponse.status}, waiting ${Math.round(delay)}ms for ${url}`);
+       await new Promise(r => setTimeout(r, delay));
+     }
+   }
+   return lastResponse;
+ }
+ 
+ // Simple in-memory cache to remember which endpoint works for enrichment
+ const winnerEndpointsCache = new Map<string, string>();
+ 
+ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
