@@ -40,8 +40,8 @@ export function getUrgencyConfig(level: UrgencyLevel) {
   switch (level) {
      case "critical":
        return {
-         borderClass: "ring-4 ring-red-600 bg-red-500/20 dark:bg-red-900/60 shadow-[0_0_20px_rgba(220,38,38,0.4)]",
-         badgeClass: "bg-red-600 text-white scale-110",
+          borderClass: "ring-[3px] ring-red-600/60 bg-red-50/80 dark:bg-red-950/40 shadow-[0_8px_25px_-5px_rgba(220,38,38,0.3)]",
+          badgeClass: "bg-red-600 text-white shadow-red-600/20 scale-105",
           label: "Grave: +1h30m",
          pulse: true,
        };
