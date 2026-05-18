@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
- import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight } from "lucide-react";
+  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3 } from "lucide-react";
  function CitelIntegrationTab() {
   const [syncing, setSyncing] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -154,7 +154,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
   );
 }
  
-import { useState, useEffect, useCallback, useRef } from "react";
+ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+ import { 
+   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, 
+   ResponsiveContainer, Area, AreaChart 
+ } from "recharts";
+ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -203,7 +208,8 @@ const ROLE_LABELS: Record<string, string> = {
    });
    const [redirections, setRedirections] = useState<any[]>([]);
    const [slaAlerts, setSlaAlerts] = useState<any[]>([]);
-   const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
+    const [viewMode, setViewMode] = useState<"table" | "chart">("table");
   const [stores, setStores] = useState<any[]>([]);
   const [sellers, setSellers] = useState<any[]>([]);
   
@@ -308,7 +314,19 @@ const ROLE_LABELS: Record<string, string> = {
      setLoading(false);
    }, [filterStore, filterSeller, filterType, filterDate, filterDateEnd, filterClient]);
  
-   useEffect(() => { fetchReports(); }, [fetchReports]);
+    useEffect(() => { fetchReports(); }, [fetchReports]);
+ 
+    const chartData = useMemo(() => {
+      const groups: Record<string, number> = {};
+      const sorted = [...redirections].sort((a, b) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+      sorted.forEach(r => {
+        const date = new Date(r.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        groups[date] = (groups[date] || 0) + 1;
+      });
+      return Object.entries(groups).map(([date, count]) => ({ date, count }));
+    }, [redirections]);
  
    if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
  
