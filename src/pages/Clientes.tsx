@@ -8,7 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
- import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2, TrendingUp, RefreshCw, Loader2 } from "lucide-react";
+  import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2, TrendingUp, RefreshCw, Loader2, Info } from "lucide-react";
+ import { getDisplayClientName, isGenericName } from "@/lib/clientUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -182,15 +183,25 @@ export default function Clientes() {
                 <CardContent className="p-5 pl-6">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-[hsl(262,60%,55%)] text-sm font-bold text-primary-foreground shadow-md">
-                        {client.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                      </div>
-                      <div>
-                        <p className="font-bold text-foreground leading-tight">{client.name}</p>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                          <Phone className="h-3 w-3" />{client.phone}
-                        </div>
-                      </div>
+                      {(() => {
+                        const displayName = getDisplayClientName(client);
+                        const isGeneric = isGenericName(client.name);
+                        return (
+                          <>
+                            <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${isGeneric ? 'from-muted-foreground/20 to-muted-foreground/40 text-muted-foreground' : 'from-primary to-[hsl(262,60%,55%)] text-primary-foreground'} text-sm font-bold shadow-md`}>
+                              {displayName.split(" ").filter(n => !n.includes('(')).map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className={`font-bold leading-tight ${isGeneric ? 'text-foreground/70 italic' : 'text-foreground'}`}>
+                                {displayName}
+                              </p>
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                                <Phone className="h-3 w-3" />{client.phone}
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                   </div>
