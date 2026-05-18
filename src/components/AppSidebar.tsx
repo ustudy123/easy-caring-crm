@@ -262,95 +262,20 @@ export function AppSidebar({ className }: { className?: string }) {
   return (
     <Sidebar collapsible="icon" className={className}>
       {/* Brand area */}
-      <SidebarHeader
-        className={cn(
-          "px-4 pt-5 pb-4",
-          collapsed && "flex items-center justify-center px-2 pt-4 pb-3",
-        )}
-      >
-        <div
-          className={cn(
-            "flex items-center gap-2.5",
-            collapsed && "justify-center",
-          )}
-        >
-          {/* Geometric monogram — sharp square mark */}
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center">
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 28 28"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <rect
-                x="2"
-                y="2"
-                width="11"
-                height="11"
-                rx="1"
-                fill="hsl(var(--primary))"
-                fillOpacity="0.9"
-              />
-              <rect
-                x="15"
-                y="2"
-                width="11"
-                height="11"
-                rx="1"
-                fill="hsl(var(--primary))"
-                fillOpacity="0.3"
-              />
-              <rect
-                x="2"
-                y="15"
-                width="11"
-                height="11"
-                rx="1"
-                fill="hsl(var(--primary))"
-                fillOpacity="0.3"
-              />
-              <rect
-                x="15"
-                y="15"
-                width="11"
-                height="11"
-                rx="1"
-                fill="hsl(var(--primary))"
-                fillOpacity="0.6"
-              />
-            </svg>
+      <SidebarHeader className="p-4 pt-5 pb-4">
+        <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
+          <div className="h-[30px] w-[30px] rounded-[8px] bg-gradient-to-br from-[#6C63FF] to-[#4F46E5] flex items-center justify-center shrink-0">
+            <span className="text-white text-[14px] font-bold">C</span>
           </div>
           {!collapsed && (
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[13px] font-medium tracking-tight text-[#E8EAF0]">
-                CRM Taeco
-              </span>
-              <span className="text-[11px] font-normal text-[#5A6078]">
-                Gestão Comercial
-              </span>
+            <div className="flex flex-col">
+              <span className="text-[14px] font-bold text-white leading-tight">CRM Taeco</span>
+              <span className="text-[11px] text-[#A0A0B0]">Gestão Comercial</span>
             </div>
           )}
         </div>
-        {/* Fading divider — 60% width */}
         {!collapsed && (
-          <div className="mt-4 flex justify-center">
-            <div
-              className="h-px w-[60%]"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent, hsl(var(--sidebar-foreground) / 0.08) 20%, hsl(var(--sidebar-foreground) / 0.08) 80%, transparent)",
-              }}
-            />
-          </div>
-        )}
-        {collapsed && (
-          <div className="mt-2 flex justify-center">
-            <div
-              className="h-px w-6"
-              style={{ background: "hsl(var(--sidebar-foreground) / 0.08)" }}
-            />
-          </div>
+          <div className="mt-5 h-[0.5px] w-full bg-white/5" />
         )}
       </SidebarHeader>
 
