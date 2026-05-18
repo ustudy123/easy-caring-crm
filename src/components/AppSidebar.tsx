@@ -380,10 +380,12 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu
               className={cn("space-y-0", collapsed ? "px-1" : "px-0")}
-            > {toolsNav.map(renderItem)}</SidebarMenu>
+            >
+              {" "}
+              {toolsNav.map(renderItem)}
+            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
       </SidebarContent>
 
       <SidebarFooter className={cn("p-2", collapsed && "p-1.5")}>
