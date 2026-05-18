@@ -87,7 +87,7 @@ const allToolsNav: NavItem[] = [
   },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({ className }: { className?: string }) {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
@@ -260,7 +260,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className={className}>
       {/* Brand area */}
       <SidebarHeader
         className={cn(
