@@ -385,9 +385,46 @@ export default function Kanban() {
           ))}
         </div>
 
-        {/* Board */}
-        <DragDropContext onDragEnd={onDragEnd}>
-          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none scroll-smooth">
+         {/* Board */}
+         <DragDropContext onDragEnd={onDragEnd}>
+           <div className="relative group/board">
+             {/* Scroll indicators/controls */}
+             {scrollInfo.countLeft > 0 && (
+               <div className="absolute left-0 top-0 bottom-4 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none flex items-center justify-start pl-2">
+                 <Button 
+                   variant="secondary" 
+                   size="icon" 
+                   className="h-8 w-8 rounded-full shadow-md pointer-events-auto bg-background/80 backdrop-blur-sm border border-border/40"
+                   onClick={() => scrollBoard('left')}
+                 >
+                   <ChevronLeft className="h-4 w-4" />
+                   <Badge className="absolute -top-2 -right-2 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] rounded-full">
+                     {scrollInfo.countLeft}
+                   </Badge>
+                 </Button>
+               </div>
+             )}
+ 
+             {scrollInfo.countRight > 0 && (
+               <div className="absolute right-0 top-0 bottom-4 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none flex items-center justify-end pr-2">
+                 <Button 
+                   variant="secondary" 
+                   size="icon" 
+                   className="h-8 w-8 rounded-full shadow-md pointer-events-auto bg-background/80 backdrop-blur-sm border border-border/40"
+                   onClick={() => scrollBoard('right')}
+                 >
+                   <ChevronRight className="h-4 w-4" />
+                   <Badge className="absolute -top-2 -left-2 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] rounded-full">
+                     {scrollInfo.countRight}
+                   </Badge>
+                 </Button>
+               </div>
+             )}
+ 
+             <div 
+               ref={boardRef}
+               className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none scroll-smooth no-scrollbar"
+             >
             {KANBAN_STAGES.map((stage) => {
               const stageLeads = filteredLeads.filter((l) => l.stage === stage.key);
               const totalValue = stageLeads.reduce((s, l) => s + l.value, 0);
