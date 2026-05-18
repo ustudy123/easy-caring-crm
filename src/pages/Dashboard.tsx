@@ -176,10 +176,10 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
 
   // KPI semantic colors: icon bg only
   const kpis = [
-    { label: "LEADS ATIVOS", value: activeLeads, icon: Users, change: activeChange.text, positive: activeChange.positive, iconColor: "text-primary", iconBg: "bg-primary/10", key: 'activeLeads' },
-    { label: "TAXA DE CONVERSÃO", value: `${conversionRate}%`, icon: Target, change: convChange.text, positive: convChange.positive, iconColor: "text-success", iconBg: "bg-success/10", key: 'conversionRate' },
-    { label: "TEMPO MÉDIO RESPOSTA", value: responseLabel, icon: Clock, change: "", positive: true, iconColor: "text-warning", iconBg: "bg-warning/10", key: 'responseTime' },
-    { label: "FOLLOW-UPS PENDENTES", value: pendingFollowUps, icon: Phone, change: `${pendingFollowUps}`, positive: pendingFollowUps === 0, iconColor: "text-destructive", iconBg: "bg-destructive/10", key: 'pendingFollowUps' },
+    { label: "Leads Ativos", value: activeLeads, icon: Users, change: activeChange.text, positive: activeChange.positive, iconColor: "text-primary", iconBg: "bg-primary/10", key: 'activeLeads' },
+    { label: "Taxa de Conversão", value: `${conversionRate}%`, icon: Target, change: convChange.text, positive: convChange.positive, iconColor: "text-success", iconBg: "bg-success/10", key: 'conversionRate' },
+    { label: "Tempo Médio Resposta", value: responseLabel, icon: Clock, change: "", positive: true, iconColor: "text-warning", iconBg: "bg-warning/10", key: 'responseTime' },
+    { label: "Follow-ups Pendentes", value: pendingFollowUps, icon: Phone, change: `${pendingFollowUps}`, positive: pendingFollowUps === 0, iconColor: "text-destructive", iconBg: "bg-destructive/10", key: 'pendingFollowUps' },
   ];
 
   // Funnel data
@@ -283,7 +283,7 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
         {notifications.length > 0 && (
           <motion.div variants={item} className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs sm:text-sm font-extrabold text-foreground flex items-center gap-2 uppercase tracking-wider">
+              <h3 className="text-xs sm:text-sm font-extrabold text-foreground flex items-center gap-2 tracking-wider">
                 <AlertTriangle className="h-4 w-4 text-warning" /> 
                 Alertas de SLA Ativos 
                 <Badge variant="destructive" className="ml-1 rounded-full px-2 py-0 h-5 text-[10px] animate-pulse">
@@ -339,7 +339,7 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
                 <CardContent className="p-3 sm:p-5">
                   <div className="flex items-start justify-between">
                     <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                       <p className="text-[8px] sm:text-[10px] font-semibold text-muted-foreground tracking-[0.12em] truncate uppercase">{kpi.label}</p>
+                       <p className="text-[8px] sm:text-[10px] font-semibold text-muted-foreground tracking-[0.12em] truncate">{kpi.label}</p>
                        <p className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight tabular-nums leading-none mt-1 sm:mt-2">{kpi.value}</p>
                     </div>
                     <div className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-lg sm:rounded-xl ${kpi.iconBg} group-hover:scale-105 transition-transform`}>
@@ -402,7 +402,7 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
                             <TooltipTrigger asChild>
                               <div className="relative flex items-center w-full group/funnel cursor-help">
                                  <div className="w-16 sm:w-28 shrink-0 text-right pr-2 sm:pr-4">
-                                   <span className="text-[9px] sm:text-[11px] font-bold text-muted-foreground leading-tight uppercase tracking-tighter sm:tracking-normal line-clamp-1">{stage.name}</span>
+                                   <span className="text-[9px] sm:text-[11px] font-bold text-muted-foreground leading-tight tracking-tighter sm:tracking-normal line-clamp-1">{stage.name}</span>
                                 </div>
                                 <div className="flex-1 flex items-center gap-1.5 sm:gap-3">
                                    <div className="flex-1 relative min-w-[60px]">

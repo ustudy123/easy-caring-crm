@@ -161,7 +161,7 @@ export default function Clientes() {
                     <kpi.icon className="h-5 w-5 text-primary-foreground" />
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{kpi.label}</p>
+                    <p className="text-xs font-medium text-muted-foreground tracking-wide">{kpi.label}</p>
                     <p className="text-2xl font-extrabold text-foreground">{kpi.value}</p>
                   </div>
                 </CardContent>
@@ -290,7 +290,7 @@ export default function Clientes() {
                     <div key={field.label} className="rounded-xl bg-muted/50 border border-border/30 p-3.5 group hover:border-primary/20 transition-colors">
                       <div className="flex items-center gap-1.5 mb-1">
                         <field.icon className="h-3 w-3 text-muted-foreground" />
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{field.label}</p>
+                        <p className="text-[10px] tracking-wider text-muted-foreground font-medium">{field.label}</p>
                       </div>
                       <p className={`text-sm font-semibold ${field.highlight ? "text-primary" : "text-foreground"}`}>{field.value}</p>
                     </div>
@@ -300,14 +300,14 @@ export default function Clientes() {
                   <div className="rounded-xl bg-muted/50 border border-border/30 p-3.5">
                     <div className="flex items-center gap-1.5 mb-1">
                       <MapPin className="h-3 w-3 text-muted-foreground" />
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Endereço</p>
+                      <p className="text-[10px] tracking-wider text-muted-foreground font-medium">Endereço</p>
                     </div>
                     <p className="text-sm font-semibold text-foreground">{selectedClient.address}</p>
                   </div>
                 )}
                 {selectedClient.notes && (
                   <div className="rounded-xl bg-muted/50 border border-border/30 p-3.5">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Observações</p>
+                    <p className="text-[10px] tracking-wider text-muted-foreground font-medium mb-1">Observações</p>
                     <p className="text-sm text-foreground">{selectedClient.notes}</p>
                   </div>
                 )}
