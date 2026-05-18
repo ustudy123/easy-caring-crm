@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
- import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight } from "lucide-react";
+  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3 } from "lucide-react";
  function CitelIntegrationTab() {
   const [syncing, setSyncing] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -154,7 +154,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
   );
 }
  
-import { useState, useEffect, useCallback, useRef } from "react";
+ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+ import { 
+   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, 
+   ResponsiveContainer, Area, AreaChart 
+ } from "recharts";
+ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -203,7 +208,8 @@ const ROLE_LABELS: Record<string, string> = {
    });
    const [redirections, setRedirections] = useState<any[]>([]);
    const [slaAlerts, setSlaAlerts] = useState<any[]>([]);
-   const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
+    const [viewMode, setViewMode] = useState<"table" | "chart">("table");
   const [stores, setStores] = useState<any[]>([]);
   const [sellers, setSellers] = useState<any[]>([]);
   
@@ -308,7 +314,19 @@ const ROLE_LABELS: Record<string, string> = {
      setLoading(false);
    }, [filterStore, filterSeller, filterType, filterDate, filterDateEnd, filterClient]);
  
-   useEffect(() => { fetchReports(); }, [fetchReports]);
+    useEffect(() => { fetchReports(); }, [fetchReports]);
+ 
+    const chartData = useMemo(() => {
+      const groups: Record<string, number> = {};
+      const sorted = [...redirections].sort((a, b) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+      sorted.forEach(r => {
+        const date = new Date(r.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        groups[date] = (groups[date] || 0) + 1;
+      });
+      return Object.entries(groups).map(([date, count]) => ({ date, count }));
+    }, [redirections]);
  
    if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
  
@@ -525,9 +543,20 @@ const ROLE_LABELS: Record<string, string> = {
                    <Download className="h-4 w-4 mr-2" /> Exportar TXT
                  </Button>
                )}
-               <Button variant="outline" size="sm" onClick={() => {
+               <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as any)} size="sm" className="border rounded-md p-0.5 bg-background">
+                 <ToggleGroupItem value="table" aria-label="Tabela" className="h-7 px-2 data-[state=on]:bg-muted">
+                   <LayoutGrid className="h-3.5 w-3.5 mr-1" />
+                   <span className="text-xs">Tabela</span>
+                 </ToggleGroupItem>
+                 <ToggleGroupItem value="chart" aria-label="Gráfico" className="h-7 px-2 data-[state=on]:bg-muted">
+                   <BarChart3 className="h-3.5 w-3.5 mr-1" />
+                   <span className="text-xs">Gráfico</span>
+                 </ToggleGroupItem>
+               </ToggleGroup>
+ 
+               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => {
                  setFilterStore("all"); setFilterSeller("all"); setFilterType("all"); setFilterDate(""); setFilterDateEnd(""); setFilterClient("");
-               }}>Limpar Filtros</Button>
+               }}>Limpar</Button>
               <Button variant="ghost" size="sm" onClick={fetchReports}>
                 <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
               </Button>
@@ -608,55 +637,103 @@ const ROLE_LABELS: Record<string, string> = {
             </div>
           </div>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[150px]">Data</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead className="text-xs">Origem</TableHead>
-                  <TableHead className="text-xs">Destino</TableHead>
-                  <TableHead className="text-xs">Loja</TableHead>
-                  <TableHead className="text-xs">Tipo</TableHead>
-                  <TableHead className="text-xs max-w-[200px]">Motivo</TableHead>
-                  <TableHead className="text-xs">Autor</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {redirections.map(r => (
-                  <TableRow key={r.id}>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(r.created_at).toLocaleString('pt-BR')}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      <div className="font-medium">{r.client?.name || 'Desconhecido'}</div>
-                      <div className="text-[10px] text-muted-foreground">{r.client?.phone}</div>
-                    </TableCell>
-                    <TableCell className="text-xs">{r.from_seller?.name || '—'}</TableCell>
-                    <TableCell className="text-xs">{r.to_seller?.name || '—'}</TableCell>
-                    <TableCell className="text-xs">{r.store?.name || 'Geral'}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-[10px] whitespace-nowrap">
-                        {getTypeLabel(r.redirection_type)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground truncate max-w-[200px]" title={r.reason}>
-                      {r.reason}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {r.performed_by_profile?.display_name || (r.redirection_type === 'manual_transfer' ? '—' : 'Sistema')}
-                    </TableCell>
+          {viewMode === "table" ? (
+            <div className="rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[150px]">Data</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead className="text-xs">Origem</TableHead>
+                    <TableHead className="text-xs">Destino</TableHead>
+                    <TableHead className="text-xs">Loja</TableHead>
+                    <TableHead className="text-xs">Tipo</TableHead>
+                    <TableHead className="text-xs max-w-[200px]">Motivo</TableHead>
+                    <TableHead className="text-xs">Autor</TableHead>
                   </TableRow>
-                ))}
-                {redirections.length === 0 && !loading && (
-                  <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground text-xs">Nenhum registro encontrado com esses filtros</TableCell></TableRow>
-                )}
-                {loading && (
-                   <TableRow><TableCell colSpan={8} className="text-center py-6"><Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Carregando...</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {redirections.map(r => (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {new Date(r.created_at).toLocaleString('pt-BR')}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        <div className="font-medium">{r.client?.name || 'Desconhecido'}</div>
+                        <div className="text-[10px] text-muted-foreground">{r.client?.phone}</div>
+                      </TableCell>
+                      <TableCell className="text-xs">{r.from_seller?.name || '—'}</TableCell>
+                      <TableCell className="text-xs">{r.to_seller?.name || '—'}</TableCell>
+                      <TableCell className="text-xs">{r.store?.name || 'Geral'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px] whitespace-nowrap">
+                          {getTypeLabel(r.redirection_type)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground truncate max-w-[200px]" title={r.reason}>
+                        {r.reason}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {r.performed_by_profile?.display_name || (r.redirection_type === 'manual_transfer' ? '—' : 'Sistema')}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {redirections.length === 0 && !loading && (
+                    <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground text-xs">Nenhum registro encontrado com esses filtros</TableCell></TableRow>
+                  )}
+                  {loading && (
+                     <TableRow><TableCell colSpan={8} className="text-center py-6"><Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Carregando...</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="h-[350px] w-full pt-6 bg-muted/5 rounded-lg border p-4">
+              {chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorRedir" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                    <XAxis 
+                      dataKey="date" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fontSize: 10, fill: '#888' }}
+                      dy={10}
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fontSize: 10, fill: '#888' }}
+                    />
+                    <RTooltip 
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="count" 
+                      stroke="hsl(var(--primary))" 
+                      fillOpacity={1} 
+                      fill="url(#colorRedir)" 
+                      strokeWidth={2}
+                      name="Redirecionamentos"
+                      animationDuration={1000}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <BarChart3 className="h-10 w-10 mb-2 opacity-20" />
+                  <p className="text-sm">Dados insuficientes para gerar tendência</p>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
