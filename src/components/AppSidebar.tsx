@@ -356,7 +356,7 @@ export function AppSidebar() {
 
       <SidebarContent className="pt-1">
         {/* Main navigation */}
-        <SidebarGroup>
+        <SidebarGroup className="py-2">
           <SidebarGroupContent>
             <SidebarMenu
               className={cn("space-y-0", collapsed ? "px-1" : "px-0")}
@@ -375,33 +375,10 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu
               className={cn("space-y-0", collapsed ? "px-1" : "px-0")}
-            ></SidebarMenu>
+            > {toolsNav.map(renderItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Hairline divider */}
-        <div
-          className={cn(
-            "my-2 flex justify-center",
-            collapsed ? "px-2" : "px-4",
-          )}
-        >
-          <div
-            className="h-px w-full"
-            style={{ background: "rgba(255,255,255,0.07)" }}
-          />
-        </div>
-
-        {/* Tools navigation */}
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu
-              className={cn("space-y-0", collapsed ? "px-1" : "px-0")}
-            >
-              {toolsNav.map(renderItem)}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className={cn("p-2", collapsed && "p-1.5")}>
