@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 #lovable-badge {
   display: none !important;
@@ -10,81 +10,78 @@
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 222 28% 14%;
+    --background: 240 10% 97%;
+    --foreground: 240 10% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 28% 14%;
+    --card-foreground: 240 10% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 28% 14%;
+    --popover-foreground: 240 10% 10%;
 
-    --primary: 224 76% 48%;
+    --primary: 244 100% 70%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 262 60% 55%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 240 10% 96%;
+    --secondary-foreground: 240 10% 10%;
 
-    --muted: 220 16% 93%;
-    --muted-foreground: 220 12% 46%;
+    --muted: 240 10% 96%;
+    --muted-foreground: 240 10% 46%;
 
-    --accent: 338 76% 52%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 244 100% 70%;
+    --accent-foreground: 240 10% 10%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 72% 59%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 14% 90%;
-    --input: 220 14% 90%;
-    --ring: 224 76% 48%;
+    --border: 0 0% 0% / 0.08;
+    --input: 0 0% 0% / 0.08;
+    --ring: 244 100% 70%;
 
-    --radius: 0.75rem;
+    --radius: 14px;
 
-    /* Kanban stage colors - gradient ramp: light blue → deep purple */
-    --kanban-approach: 210 80% 62%;
-    --kanban-probing: 220 76% 56%;
-    --kanban-recommendation: 230 72% 52%;
-    --kanban-demonstration: 240 68% 50%;
-    --kanban-objections: 252 64% 48%;
-    --kanban-crosssell: 260 62% 46%;
-    --kanban-pricing: 264 61% 45%;
-    --kanban-closing: 268 60% 44%;
-    --kanban-postsale: 275 58% 42%;
+    /* Kanban stage colors */
+    --kanban-approach: 244 100% 70%;
+    --kanban-probing: 244 80% 65%;
+    --kanban-recommendation: 244 70% 60%;
+    --kanban-demonstration: 244 60% 55%;
+    --kanban-objections: 244 50% 50%;
+    --kanban-crosssell: 244 45% 45%;
+    --kanban-pricing: 244 40% 40%;
+    --kanban-closing: 162 69% 37%;
+    --kanban-postsale: 244 35% 35%;
 
     /* Funnel gradient stops for SVG/charts */
-    --funnel-start: 210 80% 62%;
-    --funnel-end: 275 58% 42%;
+    --funnel-start: 244 100% 70%;
+    --funnel-end: 162 69% 37%;
 
     /* Semantic accents only */
-    --success: 152 60% 42%;
-    --warning: 38 92% 50%;
-    --info: 217 78% 52%;
+    --success: 162 69% 37%;
+    --warning: 35 78% 41%;
+    --info: 210 75% 37%;
+    
+    --success-bg: 162 50% 92%;
+    --warning-bg: 35 78% 92%;
+    --error-bg: 0 72% 96%;
+    --info-bg: 210 75% 94%;
 
-    /* WhatsApp theme */
-    --wa-green: 142 70% 40%;
-    --wa-green-dark: 142 70% 32%;
-    --wa-teal: 174 62% 38%;
-    --wa-light: 120 20% 95%;
-    --wa-outgoing: 120 28% 86%;
-    --wa-incoming: 0 0% 100%;
-    --wa-chat-bg: 30 15% 90%;
-    --wa-header: 174 62% 38%;
-
-    /* Dark navy-slate sidebar (#111318 range) */
-    --sidebar-background: 230 30% 16%;
-    --sidebar-foreground: 231 20% 92%;
-    --sidebar-primary: 231 20% 92%;
-    --sidebar-primary-foreground: 230 30% 16%;
-    --sidebar-accent: 232 28% 20%;
-    --sidebar-accent-foreground: 231 20% 92%;
+    /* Sidebar - #0F1117 */
+    --sidebar-background: 225 21% 7%;
+    --sidebar-foreground: 0 0% 100% / 0.45;
+    --sidebar-primary: 244 100% 81%;
+    --sidebar-primary-foreground: 225 21% 7%;
+    --sidebar-accent: 0 0% 100% / 0.06;
+    --sidebar-accent-foreground: 0 0% 100% / 0.8;
     --sidebar-border: 0 0% 100% / 0.06;
-    --sidebar-ring: 231 20% 92%;
+    --sidebar-ring: 244 100% 70%;
+    --sidebar-item-active-bg: 244 100% 70% / 0.1;
+    --sidebar-section-label: 0 0% 100% / 0.25;
 
     /* Glass / elevation tokens */
     --glass-bg: 0 0% 100% / 0.72;
-    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
-    --shadow-card-hover: 0 4px 12px -2px rgb(0 0 0 / 0.10), 0 2px 6px -2px rgb(0 0 0 / 0.06);
-    --shadow-elevated: 0 8px 30px -4px rgb(0 0 0 / 0.12), 0 2px 8px -2px rgb(0 0 0 / 0.06);
+    --shadow-card-hover: 0 2px 12px rgba(0,0,0,0.06);
+    --shadow-modal: 0 8px 32px rgba(0,0,0,0.12);
+    --shadow-dropdown: 0 4px 16px rgba(0,0,0,0.08);
   }
 
   .dark {
@@ -146,7 +143,8 @@
 
   body {
     @apply bg-background text-foreground antialiased transition-colors duration-300;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.5;
   }
 
   h1, h2, h3 {
