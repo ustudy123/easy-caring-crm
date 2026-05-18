@@ -226,17 +226,64 @@ export default function Kanban() {
     }
   };
 
-  const filteredLeads = leads.filter((l) => {
-    if (!l.clientName.toLowerCase().includes(search.toLowerCase())) return false;
-    if (filterSource !== "all" && l.source !== filterSource) return false;
-    if (filterUrgency !== "all") {
-      const u = getUrgencyLevel(l);
-      if (filterUrgency === "critical" && u !== "critical") return false;
-      if (filterUrgency === "warning" && u !== "warning") return false;
-      if (filterUrgency === "ok" && u !== "ok") return false;
-    }
-    return true;
-  });
+   const filteredLeads = leads.filter((l) => {
+     if (!l.clientName.toLowerCase().includes(search.toLowerCase())) return false;
+     if (filterSource !== "all" && l.source !== filterSource) return false;
+     if (filterUrgency !== "all") {
+       const u = getUrgencyLevel(l);
+       if (filterUrgency === "critical" && u !== "critical") return false;
+       if (filterUrgency === "warning" && u !== "warning") return false;
+       if (filterUrgency === "ok" && u !== "ok") return false;
+     }
+     return true;
+   });
+ 
+   const [scrollInfo, setScrollInfo] = useState({ left: 0, max: 0, countLeft: 0, countRight: 0 });
+   const boardRef = useRef<HTMLDivElement>(null);
+ 
+   const updateScrollInfo = () => {
+     const el = boardRef.current;
+     if (!el) return;
+     
+     const left = el.scrollLeft;
+     const max = el.scrollWidth - el.clientWidth;
+     
+     // Calculate how many columns are hidden on each side
+     const columns = Array.from(el.children).filter((child): child is HTMLElement => child instanceof HTMLElement && child.id.startsWith('stage-'));
+     let countLeft = 0;
+     let countRight = 0;
+     
+     columns.forEach(col => {
+       const rect = col.getBoundingClientRect();
+       const boardRect = el.getBoundingClientRect();
+       if (rect.right < boardRect.left + 10) countLeft++;
+       else if (rect.left > boardRect.right - 10) countRight++;
+     });
+ 
+     setScrollInfo({ left, max, countLeft, countRight });
+   };
+ 
+   useEffect(() => {
+     const el = boardRef.current;
+     if (el) {
+       el.addEventListener('scroll', updateScrollInfo);
+       window.addEventListener('resize', updateScrollInfo);
+       // Initial check
+       const timer = setTimeout(updateScrollInfo, 100);
+       return () => {
+         el.removeEventListener('scroll', updateScrollInfo);
+         window.removeEventListener('resize', updateScrollInfo);
+         clearTimeout(timer);
+       };
+     }
+   }, [loading, filteredLeads.length]);
+ 
+   const scrollBoard = (direction: 'left' | 'right') => {
+     const el = boardRef.current;
+     if (!el) return;
+     const scrollAmount = direction === 'left' ? -300 : 300;
+     el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+   };
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
