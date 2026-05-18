@@ -1,4 +1,4 @@
- import { useState, useEffect } from "react";
+ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,11 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
  import { useToast } from "@/hooks/use-toast";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { 
-  Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
-  AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
-  MapPin, Package, Forward, Zap, Loader2 
-} from "lucide-react";
+ import { 
+   Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
+   AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
+   MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight
+ } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -139,7 +139,7 @@ export default function Kanban() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [filterSource, setFilterSource] = useState<string>("all");
   const [filterUrgency, setFilterUrgency] = useState<string>("all");
-  const [showFilters, setShowFilters] = useState(false);
+   const [showFilters, setShowFilters] = useState(false);
 
   const hasActiveFilters = filterSource !== "all" || filterUrgency !== "all";
 
@@ -226,17 +226,64 @@ export default function Kanban() {
     }
   };
 
-  const filteredLeads = leads.filter((l) => {
-    if (!l.clientName.toLowerCase().includes(search.toLowerCase())) return false;
-    if (filterSource !== "all" && l.source !== filterSource) return false;
-    if (filterUrgency !== "all") {
-      const u = getUrgencyLevel(l);
-      if (filterUrgency === "critical" && u !== "critical") return false;
-      if (filterUrgency === "warning" && u !== "warning") return false;
-      if (filterUrgency === "ok" && u !== "ok") return false;
-    }
-    return true;
-  });
+   const filteredLeads = leads.filter((l) => {
+     if (!l.clientName.toLowerCase().includes(search.toLowerCase())) return false;
+     if (filterSource !== "all" && l.source !== filterSource) return false;
+     if (filterUrgency !== "all") {
+       const u = getUrgencyLevel(l);
+       if (filterUrgency === "critical" && u !== "critical") return false;
+       if (filterUrgency === "warning" && u !== "warning") return false;
+       if (filterUrgency === "ok" && u !== "ok") return false;
+     }
+     return true;
+   });
+ 
+   const [scrollInfo, setScrollInfo] = useState({ left: 0, max: 0, countLeft: 0, countRight: 0 });
+   const boardRef = useRef<HTMLDivElement>(null);
+ 
+   const updateScrollInfo = () => {
+     const el = boardRef.current;
+     if (!el) return;
+     
+     const left = el.scrollLeft;
+     const max = el.scrollWidth - el.clientWidth;
+     
+     // Calculate how many columns are hidden on each side
+     const columns = Array.from(el.children).filter((child): child is HTMLElement => child instanceof HTMLElement && child.id.startsWith('stage-'));
+     let countLeft = 0;
+     let countRight = 0;
+     
+     columns.forEach(col => {
+       const rect = col.getBoundingClientRect();
+       const boardRect = el.getBoundingClientRect();
+       if (rect.right < boardRect.left + 10) countLeft++;
+       else if (rect.left > boardRect.right - 10) countRight++;
+     });
+ 
+     setScrollInfo({ left, max, countLeft, countRight });
+   };
+ 
+   useEffect(() => {
+     const el = boardRef.current;
+     if (el) {
+       el.addEventListener('scroll', updateScrollInfo);
+       window.addEventListener('resize', updateScrollInfo);
+       // Initial check
+       const timer = setTimeout(updateScrollInfo, 100);
+       return () => {
+         el.removeEventListener('scroll', updateScrollInfo);
+         window.removeEventListener('resize', updateScrollInfo);
+         clearTimeout(timer);
+       };
+     }
+   }, [loading, filteredLeads.length]);
+ 
+   const scrollBoard = (direction: 'left' | 'right') => {
+     const el = boardRef.current;
+     if (!el) return;
+     const scrollAmount = direction === 'left' ? -300 : 300;
+     el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+   };
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -338,9 +385,46 @@ export default function Kanban() {
           ))}
         </div>
 
-        {/* Board */}
-        <DragDropContext onDragEnd={onDragEnd}>
-          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none scroll-smooth">
+         {/* Board */}
+         <DragDropContext onDragEnd={onDragEnd}>
+           <div className="relative group/board">
+             {/* Scroll indicators/controls */}
+             {scrollInfo.countLeft > 0 && (
+               <div className="absolute left-0 top-0 bottom-4 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none flex items-center justify-start pl-2">
+                 <Button 
+                   variant="secondary" 
+                   size="icon" 
+                   className="h-8 w-8 rounded-full shadow-md pointer-events-auto bg-background/80 backdrop-blur-sm border border-border/40"
+                   onClick={() => scrollBoard('left')}
+                 >
+                   <ChevronLeft className="h-4 w-4" />
+                   <Badge className="absolute -top-2 -right-2 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] rounded-full">
+                     {scrollInfo.countLeft}
+                   </Badge>
+                 </Button>
+               </div>
+             )}
+ 
+             {scrollInfo.countRight > 0 && (
+               <div className="absolute right-0 top-0 bottom-4 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none flex items-center justify-end pr-2">
+                 <Button 
+                   variant="secondary" 
+                   size="icon" 
+                   className="h-8 w-8 rounded-full shadow-md pointer-events-auto bg-background/80 backdrop-blur-sm border border-border/40"
+                   onClick={() => scrollBoard('right')}
+                 >
+                   <ChevronRight className="h-4 w-4" />
+                   <Badge className="absolute -top-2 -left-2 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] rounded-full">
+                     {scrollInfo.countRight}
+                   </Badge>
+                 </Button>
+               </div>
+             )}
+ 
+             <div 
+               ref={boardRef}
+               className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none scroll-smooth no-scrollbar"
+             >
             {KANBAN_STAGES.map((stage) => {
               const stageLeads = filteredLeads.filter((l) => l.stage === stage.key);
               const totalValue = stageLeads.reduce((s, l) => s + l.value, 0);
@@ -574,8 +658,9 @@ export default function Kanban() {
                 </div>
               );
             })}
-          </div>
-        </DragDropContext>
+             </div>
+           </div>
+         </DragDropContext>
       </div>
       <NewLeadForm open={showNewLead} onOpenChange={setShowNewLead} onSubmit={addLead} />
       <EditLeadForm lead={editingLead} open={!!editingLead} onOpenChange={(open) => !open && setEditingLead(null)} onSubmit={updateLead} onDelete={deleteLead} />
