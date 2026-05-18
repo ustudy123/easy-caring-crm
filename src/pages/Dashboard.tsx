@@ -77,14 +77,14 @@ function getStartDate(period: PeriodKey): Date | null {
 
 // Funnel gradient ramp: 8 stops from light blue to deep purple
 const FUNNEL_COLORS = [
-  "hsl(210, 80%, 62%)",
-  "hsl(220, 76%, 56%)",
-  "hsl(230, 72%, 52%)",
-  "hsl(240, 68%, 50%)",
-  "hsl(252, 64%, 48%)",
-  "hsl(260, 62%, 46%)",
-  "hsl(268, 60%, 44%)",
-  "hsl(275, 58%, 42%)",
+  "rgba(108, 99, 255, 1.0)",
+  "rgba(108, 99, 255, 0.9)",
+  "rgba(108, 99, 255, 0.8)",
+  "rgba(108, 99, 255, 0.7)",
+  "rgba(108, 99, 255, 0.6)",
+  "rgba(108, 99, 255, 0.5)",
+  "rgba(108, 99, 255, 0.45)",
+  "rgba(29, 158, 117, 1.0)", // Fechamento em verde
 ];
 
 // Skeleton for chart loading (forwardRef so framer-motion can pass refs through)
@@ -176,10 +176,10 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
 
   // KPI semantic colors: icon bg only
   const kpis = [
-    { label: "Leads Ativos", value: activeLeads, icon: Users, change: activeChange.text, positive: activeChange.positive, iconColor: "text-primary", iconBg: "bg-primary/10", key: 'activeLeads' },
-    { label: "Taxa de Conversão", value: `${conversionRate}%`, icon: Target, change: convChange.text, positive: convChange.positive, iconColor: "text-success", iconBg: "bg-success/10", key: 'conversionRate' },
-    { label: "Tempo Médio Resposta", value: responseLabel, icon: Clock, change: "", positive: true, iconColor: "text-warning", iconBg: "bg-warning/10", key: 'responseTime' },
-    { label: "Follow-ups Pendentes", value: pendingFollowUps, icon: Phone, change: `${pendingFollowUps}`, positive: pendingFollowUps === 0, iconColor: "text-destructive", iconBg: "bg-destructive/10", key: 'pendingFollowUps' },
+    { label: "Leads ativos", value: activeLeads, icon: Users, change: activeChange.text, positive: activeChange.positive, color: "#6C63FF", key: 'activeLeads' },
+    { label: "Taxa de conversão", value: `${conversionRate}%`, icon: Target, change: convChange.text, positive: convChange.positive, color: "#1D9E75", key: 'conversionRate' },
+    { label: "Tempo resposta", value: responseLabel, icon: Clock, change: "", positive: true, color: "#BA7517", key: 'responseTime' },
+    { label: "Follow-ups", value: pendingFollowUps, icon: Phone, change: `${pendingFollowUps}`, positive: pendingFollowUps === 0, color: "#E24B4A", key: 'pendingFollowUps' },
   ];
 
   // Funnel data
@@ -327,41 +327,33 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
           </motion.div>
         )}
 
-        {/* KPIs — glassmorphism cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+        {/* KPIs */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {kpis.map((kpi) => (
             <motion.div key={kpi.label} variants={item}>
-              <Card 
-                tabIndex={0}
-                className="group relative overflow-hidden border border-border/50 shadow-sm hover:shadow-md hover:border-border transition-all duration-300 glass-card"
-                style={{ borderLeft: `3px solid hsl(var(--${kpi.iconColor.replace('text-', '')}))` }}
-              >
-                <CardContent className="p-3 sm:p-5">
+              <Card className="group relative overflow-hidden border border-black/8 shadow-none hover:shadow-card-hover transition-all duration-300 bg-white rounded-[14px]">
+                <div className="h-[3px] w-full" style={{ backgroundColor: kpi.color }} />
+                <CardContent className="p-[18px] pt-[20px]">
                   <div className="flex items-start justify-between">
-                    <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                       <p className="text-[8px] sm:text-[10px] font-semibold text-muted-foreground tracking-[0.12em] truncate">{kpi.label}</p>
-                       <p className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight tabular-nums leading-none mt-1 sm:mt-2">{kpi.value}</p>
+                    <div className="space-y-1 min-w-0">
+                       <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-[0.04em]">{kpi.label}</p>
+                       <p className="text-[26px] font-medium text-foreground tracking-tight leading-none mt-2">{kpi.value}</p>
                     </div>
-                    <div className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-lg sm:rounded-xl ${kpi.iconBg} group-hover:scale-105 transition-transform`}>
-                      <kpi.icon className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${kpi.iconColor}`} />
+                    <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: `${kpi.color}15` }}>
+                      <kpi.icon className="h-4 w-4" style={{ color: kpi.color }} />
                     </div>
                   </div>
-                  {kpi.change && (
-                    <div className="mt-2 sm:mt-3 flex items-center gap-1">
-                      {kpi.key === 'pendingFollowUps' ? (
-                        <span className="flex items-center gap-0.5 text-[10px] sm:text-xs font-bold text-warning">
-                          <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />{kpi.change}
-                        </span>
-                      ) : kpi.positive ? (
-                        <span className="flex items-center gap-0.5 text-[10px] sm:text-xs font-bold text-success">
-                          <ArrowUpRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />{kpi.change}
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-0.5 text-[10px] sm:text-xs font-bold text-destructive">
-                          <ArrowDownRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />{kpi.change}
-                        </span>
-                      )}
-                      <span className="text-[9px] sm:text-[10px] text-muted-foreground hidden sm:inline">
+                  <div className="mt-3 flex items-center gap-2">
+                    <Badge variant={kpi.positive ? "success" : "destructive"} className="rounded-[20px] px-2 py-0.5 text-[10px]">
+                      {kpi.positive ? `↑ ${kpi.change}` : `↓ ${kpi.change}`}
+                    </Badge>
+                    <span className="text-[11px] text-muted-foreground">vs. mês ant.</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
                         {kpi.key === 'pendingFollowUps' ? 'pendentes' : 'vs período anterior'}
                       </span>
                     </div>
