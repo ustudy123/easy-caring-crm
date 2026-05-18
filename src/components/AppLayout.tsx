@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+ import { useState, useEffect } from "react";
+ import { cn } from "@/lib/utils";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle, Sun, Moon, AlertTriangle, ShieldAlert, CheckCircle2 } from "lucide-react";
@@ -43,7 +44,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   const visibleFollowUps = Math.max(0, pendingFollowUpsCount - (dismissed.followUps || 0));
   const visibleNegotiations = Math.max(0, negotiationCount - (dismissed.negotiations || 0));
   const visibleWhatsApp = Math.max(0, unreadWhatsAppCount - (dismissed.whatsapp || 0));
-  const totalNotifications = visibleLeads + visibleFollowUps + visibleNegotiations + visibleWhatsApp + notifications.length;
+   const totalNotifications = notifications.filter(n => n.type === 'sla_critical').length || notifications.length;
 
   const handleNotificationClick = (type: string, count: number, route: string) => {
     setDismissed((prev) => ({ ...prev, [type]: (prev[type] || 0) + count }));
@@ -113,18 +114,23 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`Notificações${totalNotifications > 0 ? `, ${totalNotifications} não lidas` : ""}`}
+                     aria-label={`Notificações${totalNotifications > 0 ? `, ${totalNotifications} alertas pendentes` : ""}`}
                     className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-xl hover:bg-muted transition-colors"
                   >
                     <Bell className="h-4 w-4" aria-hidden="true" />
-                    {totalNotifications > 0 && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute -top-0.5 -right-0.5 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-accent text-[9px] sm:text-[10px] font-bold text-accent-foreground shadow-sm ring-2 ring-card animate-pulse"
-                      >
-                        {totalNotifications > 99 ? "99+" : totalNotifications}
-                      </span>
-                    )}
+                     {totalNotifications > 0 && (
+                       <span
+                         aria-hidden="true"
+                         className={cn(
+                           "absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold shadow-sm ring-2 ring-card transition-all",
+                           notifications.some(n => n.type === 'sla_critical') 
+                             ? "bg-destructive text-destructive-foreground animate-pulse" 
+                             : "bg-amber-500 text-white"
+                         )}
+                       >
+                         {totalNotifications > 9 ? "9+" : totalNotifications}
+                       </span>
+                     )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-0 rounded-xl shadow-lg border-border/60" align="end" sideOffset={8}>
@@ -141,51 +147,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                        </Button>
                      )}
                    </div>
-                  <div className="divide-y divide-border/40">
-                    {visibleLeads > 0 && (
-                      <div onClick={() => handleNotificationClick("leads", visibleLeads, "/kanban")} className="flex items-center gap-3 p-3.5 hover:bg-muted/40 transition-colors cursor-pointer">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                          <Columns3 className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-foreground">{visibleLeads} novo(s) lead(s)</p>
-                          <p className="text-xs text-muted-foreground">Aguardando atendimento</p>
-                        </div>
-                      </div>
-                    )}
-                    {visibleFollowUps > 0 && (
-                      <div onClick={() => handleNotificationClick("followUps", visibleFollowUps, "/agenda")} className="flex items-center gap-3 p-3.5 hover:bg-muted/40 transition-colors cursor-pointer">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-secondary/10 text-secondary">
-                          <CalendarDays className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-foreground">{visibleFollowUps} follow-up(s)</p>
-                          <p className="text-xs text-muted-foreground">Pendentes na agenda</p>
-                        </div>
-                      </div>
-                    )}
-                    {visibleNegotiations > 0 && (
-                      <div onClick={() => handleNotificationClick("negotiations", visibleNegotiations, "/kanban")} className="flex items-center gap-3 p-3.5 hover:bg-muted/40 transition-colors cursor-pointer">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
-                          <Megaphone className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-foreground">{visibleNegotiations} em negociação</p>
-                          <p className="text-xs text-muted-foreground">Leads em fase final</p>
-                        </div>
-                      </div>
-                    )}
-                    {visibleWhatsApp > 0 && (
-                      <div onClick={() => handleNotificationClick("whatsapp", visibleWhatsApp, "/conversas")} className="flex items-center gap-3 p-3.5 hover:bg-muted/40 transition-colors cursor-pointer">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
-                          <MessageCircle className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-foreground">{visibleWhatsApp} mensagem(ns)</p>
-                          <p className="text-xs text-muted-foreground">Novas no WhatsApp</p>
-                        </div>
-                      </div>
-                    )}
+                   <div className="divide-y divide-border/40 max-h-[400px] overflow-y-auto">
                 {notifications.map((notif) => (
                   <div 
                     key={notif.id} 
