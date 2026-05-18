@@ -100,7 +100,7 @@ export default function Agenda() {
                     <kpi.icon className="h-5 w-5 text-primary-foreground" />
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground tracking-wide uppercase">{kpi.label}</p>
+                    <p className="text-xs font-medium text-muted-foreground tracking-wide">{kpi.label}</p>
                     <p className={`text-2xl font-extrabold ${kpi.danger ? "text-destructive" : "text-foreground"}`}>{kpi.value}</p>
                   </div>
                 </CardContent>
