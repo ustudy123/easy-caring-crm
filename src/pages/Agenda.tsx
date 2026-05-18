@@ -93,15 +93,15 @@ export default function Agenda() {
         <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {kpis.map((kpi) => (
             <motion.div key={kpi.label} variants={item}>
-              <Card className="relative overflow-hidden border-border/40 bg-card/80 backdrop-blur-sm hover:shadow-lg transition-all duration-300 group">
+              <Card className="relative overflow-hidden border-black/8 bg-white hover:shadow-none transition-all duration-300 group">
                 <div className={`absolute inset-0 bg-gradient-to-br ${kpi.gradient} opacity-[0.04] group-hover:opacity-[0.08] transition-opacity`} />
                 <CardContent className="flex items-center gap-4 p-5 relative">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${kpi.gradient} shadow-lg`}>
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-[14px] bg-gradient-to-br ${kpi.gradient} shadow-none`}>
                     <kpi.icon className="h-5 w-5 text-primary-foreground" />
                   </div>
                   <div>
                     <p className="text-xs font-medium text-muted-foreground tracking-wide">{kpi.label}</p>
-                    <p className={`text-2xl font-extrabold ${kpi.danger ? "text-destructive" : "text-foreground"}`}>{kpi.value}</p>
+                    <p className={`text-2xl font-medium ${kpi.danger ? "text-destructive" : "text-foreground"}`}>{kpi.value}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -113,10 +113,10 @@ export default function Agenda() {
           {/* Calendar Card - Collapsible on Mobile */}
           <motion.div variants={fadeIn} initial="hidden" animate="show" className="lg:col-span-1">
             <Collapsible open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <Card className="border-border/40 bg-card/80 backdrop-blur-sm overflow-hidden">
+              <Card className="border-black/8 bg-white overflow-hidden">
                 <CardHeader className="pb-2 border-b border-border/30 flex flex-row items-center justify-between space-y-0">
                   <CardTitle className="text-base font-bold flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-[hsl(262,60%,55%)]">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-400">
                       <CalendarDays className="h-3.5 w-3.5 text-primary-foreground" />
                     </div>
                     Calendário
@@ -168,13 +168,13 @@ export default function Agenda() {
                     size="sm"
                     variant={view === v ? "default" : "outline"}
                     onClick={() => setView(v)}
-                    className={`text-xs sm:text-sm ${view === v ? "bg-gradient-to-r from-primary to-[hsl(262,60%,55%)] text-primary-foreground shadow-md border-0" : "border-border/50 bg-card/60 backdrop-blur-sm hover:bg-muted/80"}`}
+                    className={`text-xs sm:text-sm ${view === v ? "bg-brand-500 text-primary-foreground shadow-none border-0" : "border-border/50 bg-card/60 backdrop-blur-sm hover:bg-muted/80"}`}
                   >
                     {v === "all" ? "Todos" : v === "pending" ? "Pendentes" : "Concluídos"}
                   </Button>
                 ))}
               </div>
-              <Button size="sm" className="bg-gradient-to-r from-primary to-[hsl(262,60%,55%)] hover:opacity-90 text-primary-foreground shadow-md" onClick={() => setShowNewFollowUp(true)}>
+              <Button size="sm" className="bg-brand-500 hover:opacity-90 text-primary-foreground shadow-none" onClick={() => setShowNewFollowUp(true)}>
                 <Plus className="h-3.5 w-3.5 mr-1" /> Novo Follow-up
               </Button>
             </motion.div>
@@ -187,7 +187,7 @@ export default function Agenda() {
 
                 return (
                   <motion.div key={f.id} variants={item}>
-                    <Card className={`relative overflow-hidden border-border/40 bg-card/80 backdrop-blur-sm transition-all duration-300 group hover:shadow-lg hover:-translate-y-0.5 ${f.completed ? "opacity-50" : ""} ${isOverdue ? "border-destructive/40" : ""}`}>
+                    <Card className={`relative overflow-hidden border-black/8 bg-white transition-all duration-300 group hover:shadow-none hover:-translate-y-0.5 ${f.completed ? "opacity-50" : ""} ${isOverdue ? "border-destructive/40" : ""}`}>
                       {/* Left accent bar */}
                       <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${isOverdue ? "from-destructive to-destructive/60" : config.gradient} ${f.completed ? "opacity-30" : "opacity-70 group-hover:opacity-100"} transition-opacity`} />
 
@@ -195,9 +195,9 @@ export default function Agenda() {
                         {/* Toggle button */}
                         <button
                           onClick={() => toggleComplete(f.id)}
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all duration-200 mt-0.5 sm:mt-0 ${
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[14px] transition-all duration-200 mt-0.5 sm:mt-0 ${
                             f.completed
-                              ? "bg-gradient-to-br from-[hsl(152,60%,42%)] to-[hsl(174,62%,38%)] text-primary-foreground shadow-md"
+                              ? "bg-gradient-to-br from-[hsl(152,60%,42%)] to-[hsl(174,62%,38%)] text-primary-foreground shadow-none"
                               : "border-2 border-muted-foreground/25 hover:border-primary hover:bg-primary/5"
                           }`}
                         >
@@ -233,7 +233,7 @@ export default function Agenda() {
                         </div>
 
                         <div className="hidden sm:flex items-center gap-3">
-                          <div className="text-right shrink-0 bg-muted/40 rounded-xl px-3 py-1.5">
+                          <div className="text-right shrink-0 bg-muted/40 rounded-[14px] px-3 py-1.5">
                             <p className="text-xs font-bold text-foreground">
                               {new Date(f.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
                             </p>
@@ -243,7 +243,7 @@ export default function Agenda() {
                           </div>
                           <button
                             onClick={() => setEditingFollowUp(f)}
-                            className="opacity-0 group-hover:opacity-100 transition-all p-2 rounded-xl hover:bg-muted/80"
+                            className="opacity-0 group-hover:opacity-100 transition-all p-2 rounded-[14px] hover:bg-muted/80"
                           >
                             <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                           </button>

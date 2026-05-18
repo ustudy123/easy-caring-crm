@@ -146,7 +146,7 @@ export default function Clientes() {
                Sincronizar ERP
              </Button>
            </div>
-           <Button size="sm" className="w-full sm:w-auto bg-gradient-to-r from-primary to-[hsl(262,60%,55%)] hover:opacity-90 text-primary-foreground shadow-md" onClick={() => setShowNewClient(true)}>
+           <Button size="sm" className="w-full sm:w-auto bg-brand-500 hover:opacity-90 text-primary-foreground shadow-none" onClick={() => setShowNewClient(true)}>
              <Plus className="h-3.5 w-3.5 mr-1" /> Novo Cliente
            </Button>
          </motion.div>
@@ -155,15 +155,15 @@ export default function Clientes() {
         <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {kpis.map((kpi) => (
             <motion.div key={kpi.label} variants={item}>
-              <Card className="relative overflow-hidden border-border/40 bg-card/80 backdrop-blur-sm hover:shadow-lg transition-all duration-300 group">
+              <Card className="relative overflow-hidden border-black/8 bg-white hover:shadow-none transition-all duration-300 group">
                 <div className={`absolute inset-0 bg-gradient-to-br ${kpi.gradient} opacity-[0.04] group-hover:opacity-[0.08] transition-opacity`} />
                 <CardContent className="flex items-center gap-4 p-5 relative">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${kpi.gradient} shadow-lg`}>
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-[14px] bg-gradient-to-br ${kpi.gradient} shadow-none`}>
                     <kpi.icon className="h-5 w-5 text-primary-foreground" />
                   </div>
                   <div>
                     <p className="text-xs font-medium text-muted-foreground tracking-wide">{kpi.label}</p>
-                    <p className="text-2xl font-extrabold text-foreground">{kpi.value}</p>
+                    <p className="text-2xl font-medium text-foreground">{kpi.value}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -176,10 +176,10 @@ export default function Clientes() {
           {filtered.map((client) => (
             <motion.div key={client.id} variants={item}>
               <Card
-                className="relative overflow-hidden border-border/40 bg-card/80 backdrop-blur-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group"
+                className="relative overflow-hidden border-black/8 bg-white hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group"
                 onClick={() => setSelectedClient(client)}
               >
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-[hsl(262,60%,55%)] opacity-60 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-brand-500 to-brand-400 opacity-60 group-hover:opacity-100 transition-opacity" />
                 <CardContent className="p-5 pl-6">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -188,7 +188,7 @@ export default function Clientes() {
                         const isGeneric = isGenericName(client.name);
                         return (
                           <>
-                            <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${isGeneric ? 'from-muted-foreground/20 to-muted-foreground/40 text-muted-foreground' : 'from-primary to-[hsl(262,60%,55%)] text-primary-foreground'} text-sm font-bold shadow-md`}>
+                            <div className={`flex h-11 w-11 items-center justify-center rounded-[14px] bg-gradient-to-br ${isGeneric ? 'from-muted-foreground/20 to-muted-foreground/40 text-muted-foreground' : 'from-brand-500 to-brand-400 text-primary-foreground'} text-sm font-bold shadow-none`}>
                               {displayName.split(" ").filter(n => !n.includes('(')).map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                             </div>
                             <div>
@@ -220,7 +220,7 @@ export default function Clientes() {
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-border/40">
-                    <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                    <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
                       <DollarSign className="h-3.5 w-3.5 text-[hsl(var(--success))]" />
                       R$ {client.totalPurchases.toLocaleString("pt-BR")}
                     </div>
@@ -279,7 +279,7 @@ export default function Clientes() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-[hsl(262,60%,55%)] text-base font-bold text-primary-foreground shadow-lg">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-gradient-to-br from-brand-500 to-brand-400 text-base font-bold text-primary-foreground shadow-none">
                     {selectedClient.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                   </div>
                   <div>
@@ -298,7 +298,7 @@ export default function Clientes() {
                     { label: "Cidade", value: selectedClient.city || "—", icon: MapPin },
                     { label: "Total Compras", value: `R$ ${selectedClient.totalPurchases.toLocaleString("pt-BR")}`, icon: DollarSign, highlight: true },
                   ].map((field) => (
-                    <div key={field.label} className="rounded-xl bg-muted/50 border border-border/30 p-3.5 group hover:border-primary/20 transition-colors">
+                    <div key={field.label} className="rounded-[14px] bg-muted/50 border border-border/30 p-3.5 group hover:border-primary/20 transition-colors">
                       <div className="flex items-center gap-1.5 mb-1">
                         <field.icon className="h-3 w-3 text-muted-foreground" />
                         <p className="text-[10px] tracking-wider text-muted-foreground font-medium">{field.label}</p>
@@ -308,7 +308,7 @@ export default function Clientes() {
                   ))}
                 </div>
                 {selectedClient.address && (
-                  <div className="rounded-xl bg-muted/50 border border-border/30 p-3.5">
+                  <div className="rounded-[14px] bg-muted/50 border border-border/30 p-3.5">
                     <div className="flex items-center gap-1.5 mb-1">
                       <MapPin className="h-3 w-3 text-muted-foreground" />
                       <p className="text-[10px] tracking-wider text-muted-foreground font-medium">Endereço</p>
@@ -317,7 +317,7 @@ export default function Clientes() {
                   </div>
                 )}
                 {selectedClient.notes && (
-                  <div className="rounded-xl bg-muted/50 border border-border/30 p-3.5">
+                  <div className="rounded-[14px] bg-muted/50 border border-border/30 p-3.5">
                     <p className="text-[10px] tracking-wider text-muted-foreground font-medium mb-1">Observações</p>
                     <p className="text-sm text-foreground">{selectedClient.notes}</p>
                   </div>
@@ -343,7 +343,7 @@ export default function Clientes() {
                   </Button>
                   <Button
                     size="sm"
-                    className="bg-gradient-to-r from-primary to-[hsl(262,60%,55%)] hover:opacity-90 shadow-sm"
+                    className="bg-brand-500 hover:opacity-90 shadow-sm"
                     onClick={() => { setEditingClient(selectedClient); setSelectedClient(null); }}
                   >
                     <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
