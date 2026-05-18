@@ -337,7 +337,7 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
                   <div className="flex items-start justify-between">
                     <div className="space-y-1 min-w-0">
                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-[0.04em]">{kpi.label}</p>
-                       <p className="text-[26px] font-medium text-foreground tracking-tight leading-none mt-2">{kpi.value}</p>
+                       <p className="text-[26px] font-medium text-foreground tracking-tight leading-none mt-2 tabular-nums">{kpi.value}</p>
                     </div>
                     <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: `${kpi.color}15` }}>
                       <kpi.icon className="h-4 w-4" style={{ color: kpi.color }} />
@@ -345,19 +345,12 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
                   </div>
                   <div className="mt-3 flex items-center gap-2">
                     <Badge variant={kpi.positive ? "success" : "destructive"} className="rounded-[20px] px-2 py-0.5 text-[10px]">
-                      {kpi.positive ? `↑ ${kpi.change}` : `↓ ${kpi.change}`}
+                      {kpi.key === 'pendingFollowUps' ? kpi.change : (kpi.positive ? `↑ ${kpi.change}` : `↓ ${kpi.change}`)}
                     </Badge>
-                    <span className="text-[11px] text-muted-foreground">vs. mês ant.</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {kpi.key === 'pendingFollowUps' ? 'pendentes' : 'vs. mês ant.'}
+                    </span>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-                        {kpi.key === 'pendingFollowUps' ? 'pendentes' : 'vs período anterior'}
-                      </span>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             </motion.div>
