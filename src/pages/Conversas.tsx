@@ -915,7 +915,7 @@ const mockContactNames: Record<string, string> = {
                  onClick={() => setActiveTab('minhas')}
                  className={cn(
                    "flex-1 text-[11px] h-8 gap-1.5 rounded-md transition-all",
-                   activeTab === 'minhas' ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:bg-muted"
+                   activeTab === 'minhas' ? "bg-brand-500/10 text-brand-500 hover:bg-brand-500/20" : "text-muted-foreground hover:bg-muted"
                  )}
                >
                  <UserCheck className="h-3.5 w-3.5" />
@@ -927,7 +927,7 @@ const mockContactNames: Record<string, string> = {
                  onClick={() => setActiveTab('loja')}
                  className={cn(
                    "flex-1 text-[11px] h-8 gap-1.5 rounded-md transition-all",
-                   activeTab === 'loja' ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:bg-muted"
+                   activeTab === 'loja' ? "bg-brand-500/10 text-brand-500 hover:bg-brand-500/20" : "text-muted-foreground hover:bg-muted"
                  )}
                >
                  <Store className="h-3.5 w-3.5" />
@@ -939,7 +939,7 @@ const mockContactNames: Record<string, string> = {
                   onClick={() => setActiveTab('geral')}
                   className={cn(
                     "flex-1 text-[11px] h-8 gap-1.5 rounded-md transition-all",
-                    activeTab === 'geral' ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:bg-muted"
+                    activeTab === 'geral' ? "bg-brand-500/10 text-brand-500 hover:bg-brand-500/20" : "text-muted-foreground hover:bg-muted"
                   )}
                 >
                   <Users className="h-3.5 w-3.5" />
@@ -952,7 +952,7 @@ const mockContactNames: Record<string, string> = {
                     onClick={() => setActiveTab('todas')}
                     className={cn(
                       "flex-1 text-[11px] h-8 gap-1.5 rounded-md transition-all min-w-[70px]",
-                      activeTab === 'todas' ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:bg-muted"
+                      activeTab === 'todas' ? "bg-brand-500/10 text-brand-500 hover:bg-brand-500/20" : "text-muted-foreground hover:bg-muted"
                     )}
                   >
                     <MoreVertical className="h-3.5 w-3.5" />
@@ -984,8 +984,8 @@ const mockContactNames: Record<string, string> = {
              ) : filteredConversations.length === 0 ? (
                <div className="flex flex-col items-center justify-center min-h-[400px] p-6 gap-6 text-center animate-in fade-in duration-500">
                  <div className="relative">
-                   <div className="absolute inset-0 bg-primary/5 rounded-full scale-150 blur-2xl" />
-                   <div className="relative h-20 w-20 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-2">
+                   <div className="absolute inset-0 bg-brand-500/5 rounded-full scale-150 blur-2xl" />
+                   <div className="relative h-20 w-20 rounded-[14px] bg-muted/50 flex items-center justify-center mx-auto mb-2">
                      <MessageCircle className="h-10 w-10 text-muted-foreground/40" />
                    </div>
                  </div>
@@ -1004,11 +1004,11 @@ const mockContactNames: Record<string, string> = {
                      <>
                        <Button 
                          variant="outline" 
-                         className="w-full justify-start gap-3 h-12 bg-background border-dashed hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                         className="w-full justify-start gap-3 h-12 bg-background border-dashed hover:border-primary/50 hover:bg-brand-500/5 transition-all group"
                          onClick={() => setActiveTab('loja')}
                        >
-                         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                           <Store className="h-4 w-4 text-primary" />
+                         <div className="h-8 w-8 rounded-lg bg-brand-500/10 flex items-center justify-center group-hover:bg-brand-500/20 transition-colors">
+                           <Store className="h-4 w-4 text-brand-500" />
                          </div>
                          <div className="text-left">
                            <div className="text-xs font-semibold">Ver Fila da Loja</div>
@@ -1018,7 +1018,7 @@ const mockContactNames: Record<string, string> = {
  
                        <Button 
                          variant="outline" 
-                         className="w-full justify-start gap-3 h-12 bg-background border-dashed hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                         className="w-full justify-start gap-3 h-12 bg-background border-dashed hover:border-primary/50 hover:bg-brand-500/5 transition-all group"
                          onClick={() => setActiveTab('geral')}
                        >
                          <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
@@ -1034,7 +1034,7 @@ const mockContactNames: Record<string, string> = {
                    
                    <Button 
                      variant="ghost" 
-                     className="text-xs text-primary hover:bg-primary/5 mt-2"
+                     className="text-xs text-brand-500 hover:bg-brand-500/5 mt-2"
                      onClick={() => {
                        setSearch("");
                        fetchData();
@@ -1082,7 +1082,7 @@ const mockContactNames: Record<string, string> = {
                                  {name}
                                </span>
                                {conv.store_id && (
-                                 <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium shrink-0">
+                                 <span className="text-[10px] bg-brand-500/10 text-brand-500 px-1.5 py-0.5 rounded-full font-medium shrink-0">
                                    {stores.find(s => s.id === conv.store_id)?.name || 'Loja'}
                                  </span>
                                )}
@@ -1383,8 +1383,8 @@ const mockContactNames: Record<string, string> = {
                                       className="flex items-center gap-2 p-2 cursor-pointer hover:bg-black/10 transition-colors"
                                       onClick={() => window.open(msg.media_url!, '_blank')}
                                     >
-                                      <div className="bg-primary/10 p-2 rounded">
-                                        <Paperclip className="h-4 w-4 text-primary" />
+                                      <div className="bg-brand-500/10 p-2 rounded">
+                                        <Paperclip className="h-4 w-4 text-brand-500" />
                                       </div>
                                       <span className="text-xs truncate max-w-[200px]">
                                         {msg.media_url.split('/').pop()?.slice(-20) || 'Arquivo'}
