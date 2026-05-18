@@ -279,54 +279,9 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
           </div>
         </motion.div>
 
-        {/* SLA Alerts Section - Real Time */}
-        {notifications.length > 0 && (
-          <motion.div variants={item} className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs sm:text-sm font-extrabold text-foreground flex items-center gap-2 tracking-wider">
-                <AlertTriangle className="h-4 w-4 text-warning" /> 
-                Alertas de SLA Ativos 
-                <Badge variant="destructive" className="ml-1 rounded-full px-2 py-0 h-5 text-[10px] animate-pulse">
-                  {notifications.length}
-                </Badge>
-              </h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {notifications.map((notif) => (
-                <Card key={notif.id} className={`border-l-4 ${notif.type === 'sla_critical' ? 'border-l-destructive' : 'border-l-warning'} glass-card hover:shadow-md transition-all group`}>
-                  <CardContent className="p-4 flex items-start gap-3">
-                    <div className={`mt-1 h-8 w-8 rounded-lg shrink-0 flex items-center justify-center ${notif.type === 'sla_critical' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'}`}>
-                      {notif.type === 'sla_critical' ? <ShieldAlert className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-bold text-foreground leading-tight">{notif.title}</p>
-                      <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{notif.message}</p>
-                      <div className="mt-3 flex items-center justify-between">
-                        <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ptBR })}
-                        </span>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-7 text-[10px] font-bold text-success hover:bg-success/10 rounded-lg gap-1.5"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            markNotificationRead(notif.id);
-                            toast.success("Alerta marcado como resolvido.");
-                          }}
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Resolver
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
+        {/* Top area: KPIs + Funil à esquerda, Painel de Leads Críticos à direita */}
+        <div className={`grid grid-cols-1 ${notifications.length > 0 ? 'lg:grid-cols-3' : ''} gap-4 sm:gap-6`}>
+          <div className={`${notifications.length > 0 ? 'lg:col-span-2' : ''} space-y-5 sm:space-y-8`}>
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {kpis.map((kpi) => (
@@ -374,15 +329,10 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
               ) : (
                 <>
                   <div className="relative flex flex-col items-center gap-1 py-2">
-                    {funnelData.map((stage, i) => {
-                      const maxLeads = Math.max(...funnelData.map((s) => s.leads), 1);
-                       // Calculate visual scale for the funnel:
-                       // We want to show a clear "tapering" effect.
-                       // The first stage is always 100% wide.
-                       // Each subsequent stage is smaller, even if the count is similar,
-                       // to reinforce the funnel logic visually.
-                       const baseWidth = 100 - (i * (100 / (funnelData.length + 1)));
-                       const widthPct = Math.max(20, Math.round((stage.leads / maxLeads) * baseWidth));
+                     {funnelData.map((stage, i) => {
+                       const maxLeads = Math.max(...funnelData.map((s) => s.leads), 1);
+                        // Largura proporcional ao maior valor do funil.
+                        const widthPct = Math.max(4, Math.round((stage.leads / maxLeads) * 100));
                       const prevCount = i > 0 ? funnelData[i - 1].leads : null;
                       const convRate = prevCount && prevCount > 0 ? Math.round((stage.leads / prevCount) * 100) : null;
                       const isHovered = hoveredFunnel === i;
@@ -455,6 +405,56 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
             </CardContent>
           </Card>
         </motion.div>
+
+          </div>
+
+          {notifications.length > 0 && (
+            <motion.aside variants={item} className="lg:col-span-1 space-y-3">
+              <div className="flex items-center justify-between sticky top-0">
+                <h3 className="text-xs sm:text-sm font-extrabold text-foreground flex items-center gap-2 tracking-wider">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  Leads críticos
+                  <Badge variant="destructive" className="ml-1 rounded-full px-2 py-0 h-5 text-[10px] animate-pulse">
+                    {notifications.length}
+                  </Badge>
+                </h3>
+              </div>
+              <div className="space-y-3 max-h-[640px] overflow-y-auto pr-1">
+                {notifications.map((notif) => (
+                  <Card key={notif.id} className={`border-l-4 ${notif.type === 'sla_critical' ? 'border-l-destructive' : 'border-l-warning'} glass-card hover:shadow-md transition-all group`}>
+                    <CardContent className="p-3.5 flex items-start gap-3">
+                      <div className={`mt-0.5 h-8 w-8 rounded-lg shrink-0 flex items-center justify-center ${notif.type === 'sla_critical' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'}`}>
+                        {notif.type === 'sla_critical' ? <ShieldAlert className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-bold text-foreground leading-tight">{notif.title}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{notif.message}</p>
+                        <div className="mt-2.5 flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ptBR })}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-[10px] font-bold text-success hover:bg-success/10 rounded-lg gap-1.5"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markNotificationRead(notif.id);
+                              toast.success("Alerta marcado como resolvido.");
+                            }}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Resolver
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </motion.aside>
+          )}
+        </div>
 
         {/* Timeline area chart */}
         <motion.div variants={item}>
