@@ -18,7 +18,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup, SidebarGroupLabel, SidebarSeparator,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarSeparator,
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuButton,
