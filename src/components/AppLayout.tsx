@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+ import { useState, useEffect } from "react";
+ import { cn } from "@/lib/utils";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle, Sun, Moon, AlertTriangle, ShieldAlert, CheckCircle2 } from "lucide-react";
