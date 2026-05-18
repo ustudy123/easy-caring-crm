@@ -42,21 +42,21 @@ export function getUrgencyConfig(level: UrgencyLevel) {
        return {
          borderClass: "ring-4 ring-red-600 bg-red-500/20 dark:bg-red-900/60 shadow-[0_0_20px_rgba(220,38,38,0.4)]",
          badgeClass: "bg-red-600 text-white scale-110",
-         label: "GRAVE: +1h30m",
+          label: "Grave: +1h30m",
          pulse: true,
        };
      case "warning":
        return {
          borderClass: "ring-4 ring-orange-500 bg-orange-400/20 dark:bg-orange-900/50 shadow-[0_0_15px_rgba(249,115,22,0.3)]",
          badgeClass: "bg-orange-500 text-white scale-105",
-         label: "ATENÇÃO: +1h",
+          label: "Atenção: +1h",
          pulse: true,
        };
      case "attention":
        return {
          borderClass: "ring-4 ring-yellow-400 bg-yellow-300/20 dark:bg-yellow-900/40 shadow-[0_0_10px_rgba(250,204,21,0.2)]",
          badgeClass: "bg-yellow-500 text-white",
-         label: "INICIAL: 30m",
+          label: "Inicial: 30m",
          pulse: true,
        };
     default:

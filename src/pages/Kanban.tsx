@@ -422,7 +422,7 @@ export default function Kanban() {
                                          ${snapshot.isDragging ? "shadow-xl ring-2 ring-primary/20 rotate-[1.5deg] scale-[1.02]" : ""}
                                        `}>
                                          {urgency !== "ok" && (
-                                           <div className={`absolute -top-2 -right-1 z-10 ${config.badgeClass} text-[10px] px-2 py-0.5 rounded-full font-black shadow-lg uppercase tracking-tighter`}>
+                                           <div className={`absolute -top-2 -right-1 z-10 ${config.badgeClass} text-[10px] px-2 py-0.5 rounded-full font-black shadow-lg tracking-tighter`}>
                                              {config.label}
                                            </div>
                                          )}
