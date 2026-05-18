@@ -76,7 +76,7 @@ function extractArray(data: any): any[] {
   return [];
 }
 
-async function tryFetch(url: string, headers: Record<string, string>, timeoutMs = 20_000) {
+ async function tryFetch(url: string, headers: Record<string, string>, timeoutMs = 20_000): Promise<{ ok: boolean, status: number, data?: any, error?: string }> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -93,7 +93,39 @@ async function tryFetch(url: string, headers: Record<string, string>, timeoutMs 
   }
 }
 
-Deno.serve(async (req) => {
+ async function tryFetchWithRetry(
+   url: string, 
+   headers: Record<string, string>, 
+   options: { attempts?: number, timeoutMs?: number, baseDelayMs?: number } = {}
+ ) {
+   const { attempts = 3, timeoutMs = 8000, baseDelayMs = 500 } = options;
+   let lastResponse: { ok: boolean, status: number, data?: any, error?: string } = { ok: false, status: 0 };
+ 
+   for (let i = 0; i < attempts; i++) {
+     lastResponse = await tryFetch(url, headers, timeoutMs);
+     
+     // Retry on transient errors: timeout (0), 408 (Request Timeout), 429 (Too Many Requests), or 5xx (Server Errors)
+     const isRetriable = lastResponse.status === 0 || 
+                         lastResponse.status === 408 || 
+                         lastResponse.status === 429 || 
+                         lastResponse.status >= 500;
+ 
+     if (lastResponse.ok || !isRetriable) return lastResponse;
+ 
+     if (i < attempts - 1) {
+       // Exponential backoff with jitter
+       const delay = baseDelayMs * Math.pow(2, i) * (0.8 + Math.random() * 0.4);
+       console.log(`[citel-get-client] retry attempt ${i + 1} failed status=${lastResponse.status}, waiting ${Math.round(delay)}ms for ${url}`);
+       await new Promise(r => setTimeout(r, delay));
+     }
+   }
+   return lastResponse;
+ }
+ 
+ // Simple in-memory cache to remember which endpoint works for enrichment
+ const winnerEndpointsCache = new Map<string, string>();
+ 
+ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
@@ -112,26 +144,56 @@ Deno.serve(async (req) => {
     const companyCode = Deno.env.get("CITEL_EMPRESA") || "1";
     const headers = { Authorization: `Basic ${auth}`, Accept: "application/json" };
 
-    // Função auxiliar: tenta enriquecer dados via /cliente/{erpId} ou variantes
-    async function enrich(erpId: string): Promise<Record<string, any> | null> {
-      const candidates = [
-        `${apiUrl}/cliente/${encodeURIComponent(erpId)}?codigoEmpresa=${encodeURIComponent(companyCode)}`,
-        `${apiUrl}/cliente/codigo/${encodeURIComponent(erpId)}?codigoEmpresa=${encodeURIComponent(companyCode)}`,
-        `${apiUrl}/cliente?codigoEmpresa=${encodeURIComponent(companyCode)}&codigoCliente=${encodeURIComponent(erpId)}`,
-      ];
-      for (const url of candidates) {
-        console.log(`[citel-get-client] ENRICH GET ${url}`);
-        const r = await tryFetch(url, headers, 15_000);
-        console.log(`[citel-get-client] enrich status=${r.status} preview=${(JSON.stringify(r.data) ?? "").slice(0, 1500)}`);
-        if (!r.ok) continue;
-        const items = extractArray(r.data);
-        const single = items.length > 0
-          ? items[0]
-          : (r.data && typeof r.data === "object" && !Array.isArray(r.data) ? r.data : null);
-        if (single) return single;
-      }
-      return null;
-    }
+     // Função auxiliar: tenta enriquecer dados via /cliente/{erpId} ou variantes
+     async function enrich(erpId: string): Promise<Record<string, any> | null> {
+       const enrichmentTask = (async () => {
+         const companyKey = `${apiUrl}-${companyCode}`;
+         const winnerTemplate = winnerEndpointsCache.get(companyKey);
+         
+         const candidates = [
+           `${apiUrl}/cliente/${encodeURIComponent(erpId)}?codigoEmpresa=${encodeURIComponent(companyCode)}`,
+           `${apiUrl}/cliente/codigo/${encodeURIComponent(erpId)}?codigoEmpresa=${encodeURIComponent(companyCode)}`,
+           `${apiUrl}/cliente?codigoEmpresa=${encodeURIComponent(companyCode)}&codigoCliente=${encodeURIComponent(erpId)}`,
+         ];
+ 
+         // Prioritize the winner template if we have one
+         if (winnerTemplate) {
+           const winnerUrl = winnerTemplate.replace("{{erpId}}", encodeURIComponent(erpId));
+           candidates.sort((a, b) => (a === winnerUrl ? -1 : b === winnerUrl ? 1 : 0));
+         }
+ 
+         for (const url of candidates) {
+           console.log(`[citel-get-client] ENRICH GET ${url}`);
+           const r = await tryFetchWithRetry(url, headers, { attempts: 3, timeoutMs: 8000 });
+           console.log(`[citel-get-client] enrich status=${r.status} preview=${(JSON.stringify(r.data) ?? "").slice(0, 1500)}`);
+           
+           if (!r.ok) continue;
+ 
+           const items = extractArray(r.data);
+           const single = items.length > 0
+             ? items[0]
+             : (r.data && typeof r.data === "object" && !Array.isArray(r.data) ? r.data : null);
+           
+           if (single) {
+             // Store the success pattern (using {{erpId}} as placeholder)
+             if (!winnerTemplate) {
+               const pattern = url.replace(encodeURIComponent(erpId), "{{erpId}}");
+               winnerEndpointsCache.set(companyKey, pattern);
+             }
+             return single;
+           }
+         }
+         return null;
+       })();
+ 
+       // Global budget for enrichment: 15 seconds
+       const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => {
+         console.log(`[citel-get-client] enrichment timed out after 15s`);
+         resolve(null);
+       }, 15000));
+ 
+       return Promise.race([enrichmentTask, timeoutPromise]);
+     }
 
     // 2. Cache local — resposta rápida; tenta enriquecer em seguida
     const { data: local } = await adminClient.from("clients").select("*").eq("phone", targetPhone).maybeSingle();
