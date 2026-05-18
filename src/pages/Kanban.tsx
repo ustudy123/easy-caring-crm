@@ -658,8 +658,9 @@ export default function Kanban() {
                 </div>
               );
             })}
-          </div>
-        </DragDropContext>
+             </div>
+           </div>
+         </DragDropContext>
       </div>
       <NewLeadForm open={showNewLead} onOpenChange={setShowNewLead} onSubmit={addLead} />
       <EditLeadForm lead={editingLead} open={!!editingLead} onOpenChange={(open) => !open && setEditingLead(null)} onSubmit={updateLead} onDelete={deleteLead} />
