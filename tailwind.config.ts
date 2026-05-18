@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Plus Jakarta Sans", "sans-serif"],
+        sans: ["Inter", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -22,6 +22,14 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        brand: {
+          50: "#EEEDFE",
+          100: "#CECBF6",
+          400: "#7F77DD",
+          500: "#6C63FF",
+          600: "#534AB7",
+          800: "#3C3489",
+        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -71,14 +79,44 @@ export default {
           closing: "hsl(var(--kanban-closing))",
           postsale: "hsl(var(--kanban-postsale))",
         },
-        success: "hsl(var(--success))",
-        warning: "hsl(var(--warning))",
-        info: "hsl(var(--info))",
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          ring: "hsl(var(--sidebar-ring))",
+          "item-active-bg": "hsl(var(--sidebar-item-active-bg))",
+          "section-label": "hsl(var(--sidebar-section-label))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          bg: "hsl(var(--success-bg))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          bg: "hsl(var(--warning-bg))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          bg: "hsl(var(--info-bg))",
+        },
+        error: {
+          bg: "hsl(var(--error-bg))",
+        },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "14px",
+        md: "10px",
+        sm: "8px",
+        xl: "16px",
+      },
+      boxShadow: {
+        "card-hover": "0 2px 12px rgba(0,0,0,0.06)",
+        modal: "0 8px 32px rgba(0,0,0,0.12)",
+        dropdown: "0 4px 16px rgba(0,0,0,0.08)",
       },
       keyframes: {
         "accordion-down": {

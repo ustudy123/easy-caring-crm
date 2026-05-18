@@ -168,88 +168,29 @@ export function AppSidebar({ className }: { className?: string }) {
     user?.email?.split("@")[0] ||
     "User";
 
-  const renderItem = (item: {
-    title: string;
-    url: string;
-    icon: React.ComponentType<any>;
-    badgeKey: string | null;
-  }) => {
+  const renderItem = (item: { title: string; url: string; icon: React.ComponentType<any>; badgeKey: string | null }) => {
     const isActive = location.pathname === item.url;
     const badge = getBadge(item.badgeKey);
     return (
       <SidebarMenuItem key={item.title}>
-        <SidebarMenuButton asChild isActive={isActive} className="h-auto p-0">
+        <SidebarMenuButton asChild isActive={isActive} className="h-auto p-0 hover:bg-transparent">
           <NavLink
             to={item.url}
             end={item.url === "/"}
-            title={collapsed ? item.title : item.title}
-            aria-current={isActive ? "page" : undefined}
-            aria-label={
-              badge > 0 ? `${item.title}, ${badge} novos` : item.title
-            }
             className={cn(
-              "group relative flex items-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar rounded-r-md",
-              collapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
+              "group relative flex items-center transition-all duration-150 rounded-[8px] mx-2 px-3 py-2",
               isActive
-                ? "text-sidebar-foreground font-medium"
-                : "text-sidebar-foreground/55 hover:text-sidebar-foreground/85 hover:bg-sidebar-accent/40",
+                ? "bg-brand-500/10 text-[#A5A0FF]"
+                : "text-white/45 hover:bg-white/5 hover:text-white/80"
             )}
-            activeClassName=""
           >
-            {/* Active indicator — 2px left border + subtle bg */}
+            <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-brand-500" : "")} strokeWidth={1.5} />
+            {!collapsed && <span className="ml-3 text-[13px]">{item.title}</span>}
             {isActive && !collapsed && (
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 rounded-r-[7px] border-l-2 border-primary bg-sidebar-foreground/5"
-              />
+              <div className="ml-auto h-[6px] w-[6px] rounded-full bg-brand-500" />
             )}
-            <div className="relative shrink-0">
-              <item.icon
-                aria-hidden="true"
-                className={cn(
-                  "h-4 w-4 transition-colors",
-                  isActive
-                    ? "text-primary"
-                    : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground/85",
-                )}
-                strokeWidth={1.5}
-              />
-              {collapsed && badge > 0 && (
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-semibold ring-2 ring-sidebar",
-                    item.badgeKey === "notifications"
-                      ? "bg-destructive text-destructive-foreground"
-                      : "bg-primary text-primary-foreground",
-                  )}
-                >
-                  {badge > 9 ? "9+" : badge}
-                </span>
-              )}
-            </div>
-            {!collapsed && (
-              <span
-                className={cn(
-                  "text-[13px] leading-none relative",
-                  isActive
-                    ? "font-medium text-sidebar-foreground"
-                    : "font-normal",
-                )}
-              >
-                {item.title}
-              </span>
-            )}
-            {!collapsed && badge > 0 && (
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "ml-auto relative flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums",
-                  item.badgeKey === "notifications"
-                    ? "bg-destructive text-destructive-foreground shadow-sm animate-pulse"
-                    : "bg-primary/20 text-sidebar-foreground",
-                )}
-              >
+            {badge > 0 && !isActive && (
+              <span className="ml-auto h-4 min-w-[16px] flex items-center justify-center rounded-full bg-brand-500 text-white text-[10px] px-1">
                 {badge > 99 ? "99+" : badge}
               </span>
             )}
@@ -262,95 +203,20 @@ export function AppSidebar({ className }: { className?: string }) {
   return (
     <Sidebar collapsible="icon" className={className}>
       {/* Brand area */}
-      <SidebarHeader
-        className={cn(
-          "px-4 pt-5 pb-4",
-          collapsed && "flex items-center justify-center px-2 pt-4 pb-3",
-        )}
-      >
-        <div
-          className={cn(
-            "flex items-center gap-2.5",
-            collapsed && "justify-center",
-          )}
-        >
-          {/* Geometric monogram — sharp square mark */}
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center">
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 28 28"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <rect
-                x="2"
-                y="2"
-                width="11"
-                height="11"
-                rx="1"
-                fill="hsl(var(--primary))"
-                fillOpacity="0.9"
-              />
-              <rect
-                x="15"
-                y="2"
-                width="11"
-                height="11"
-                rx="1"
-                fill="hsl(var(--primary))"
-                fillOpacity="0.3"
-              />
-              <rect
-                x="2"
-                y="15"
-                width="11"
-                height="11"
-                rx="1"
-                fill="hsl(var(--primary))"
-                fillOpacity="0.3"
-              />
-              <rect
-                x="15"
-                y="15"
-                width="11"
-                height="11"
-                rx="1"
-                fill="hsl(var(--primary))"
-                fillOpacity="0.6"
-              />
-            </svg>
+      <SidebarHeader className="p-4 pt-5 pb-4">
+        <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
+          <div className="h-[30px] w-[30px] rounded-[8px] bg-gradient-to-br from-[#6C63FF] to-[#4F46E5] flex items-center justify-center shrink-0">
+            <span className="text-white text-[14px] font-bold">C</span>
           </div>
           {!collapsed && (
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[13px] font-medium tracking-tight text-[#E8EAF0]">
-                CRM Taeco
-              </span>
-              <span className="text-[11px] font-normal text-[#5A6078]">
-                Gestão Comercial
-              </span>
+            <div className="flex flex-col">
+              <span className="text-[14px] font-bold text-white leading-tight">CRM Taeco</span>
+              <span className="text-[11px] text-[#A0A0B0]">Gestão Comercial</span>
             </div>
           )}
         </div>
-        {/* Fading divider — 60% width */}
         {!collapsed && (
-          <div className="mt-4 flex justify-center">
-            <div
-              className="h-px w-[60%]"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent, hsl(var(--sidebar-foreground) / 0.08) 20%, hsl(var(--sidebar-foreground) / 0.08) 80%, transparent)",
-              }}
-            />
-          </div>
-        )}
-        {collapsed && (
-          <div className="mt-2 flex justify-center">
-            <div
-              className="h-px w-6"
-              style={{ background: "hsl(var(--sidebar-foreground) / 0.08)" }}
-            />
-          </div>
+          <div className="mt-5 h-[0.5px] w-full bg-white/5" />
         )}
       </SidebarHeader>
 
@@ -358,7 +224,7 @@ export function AppSidebar({ className }: { className?: string }) {
         {/* Main navigation */}
         <SidebarGroup className="py-2">
           {!collapsed && (
-            <SidebarGroupLabel className="mb-1 px-4 text-[10px] uppercase tracking-wider text-sidebar-foreground/40">
+            <SidebarGroupLabel className="mb-1 px-4 text-[10px] uppercase tracking-[0.06em] font-medium text-white/25">
               Principal
             </SidebarGroupLabel>
           )}
@@ -373,7 +239,7 @@ export function AppSidebar({ className }: { className?: string }) {
         <SidebarSeparator className="opacity-50" />
         <SidebarGroup className="py-2">
           {!collapsed && (
-            <SidebarGroupLabel className="mb-1 px-4 text-[10px] uppercase tracking-wider text-sidebar-foreground/40">
+            <SidebarGroupLabel className="mb-1 px-4 text-[10px] uppercase tracking-[0.06em] font-medium text-white/25">
               Ferramentas
             </SidebarGroupLabel>
           )}

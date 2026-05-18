@@ -152,7 +152,7 @@ export default function SuporteOrcamento() {
  
    const columns: { id: SupportRequest["status"]; label: string; color: string; icon: any }[] = [
      { id: "pendente", label: "Pendentes", color: "text-warning bg-warning/10 border-warning/20", icon: Clock },
-     { id: "em_analise", label: "Em Análise", color: "text-primary bg-primary/10 border-primary/20", icon: FileText },
+     { id: "em_analise", label: "Em Análise", color: "text-brand-500 bg-brand-500/10 border-primary/20", icon: FileText },
      { id: "concluido", label: "Concluídos", color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle },
    ];
  
@@ -165,7 +165,7 @@ export default function SuporteOrcamento() {
 
   const statusConfig = {
     pendente: { label: "Pendente", color: "bg-warning/15 text-warning border-warning/30" },
-    em_analise: { label: "Em Análise", color: "bg-primary/15 text-primary border-primary/30" },
+    em_analise: { label: "Em Análise", color: "bg-brand-500/15 text-brand-500 border-primary/30" },
     concluido: { label: "Concluído", color: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" },
   };
 
@@ -184,18 +184,18 @@ export default function SuporteOrcamento() {
                 <Clock className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{pendingCount}</p>
+                <p className="text-2xl font-medium text-foreground">{pendingCount}</p>
                 <p className="text-xs text-muted-foreground">Pendentes</p>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="flex items-center gap-4 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15">
-                <FileText className="h-5 w-5 text-primary" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-500/15">
+                <FileText className="h-5 w-5 text-brand-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{inAnalysisCount}</p>
+                <p className="text-2xl font-medium text-foreground">{inAnalysisCount}</p>
                 <p className="text-xs text-muted-foreground">Em Análise</p>
               </div>
             </CardContent>
@@ -206,7 +206,7 @@ export default function SuporteOrcamento() {
                 <CheckCircle className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{completedCount}</p>
+                <p className="text-2xl font-medium text-foreground">{completedCount}</p>
                 <p className="text-xs text-muted-foreground">Concluídos</p>
               </div>
             </CardContent>
@@ -235,7 +235,7 @@ export default function SuporteOrcamento() {
           <div className="flex gap-2">
             <Button
               onClick={() => { setRequestType("orcamento"); setShowForm(true); }}
-              className="bg-primary"
+              className="bg-brand-500"
               size="sm"
             >
               <FileText className="h-3.5 w-3.5 mr-1" /> Solicitar Orçamento
@@ -335,12 +335,12 @@ export default function SuporteOrcamento() {
               {columns.map((col) => {
                const colRequests = filteredRequests.filter((r) => r.status === col.id);
                return (
-                 <div key={col.id} className="flex-shrink-0 w-[300px] flex flex-col bg-muted/30 rounded-xl border border-border/40 min-h-[500px]">
+                 <div key={col.id} className="flex-shrink-0 w-[300px] flex flex-col bg-muted/30 rounded-[14px] border border-border/40 min-h-[500px]">
                    {/* Column Header */}
                    <div className={`p-3 border-b border-border/40 rounded-t-xl flex items-center justify-between ${col.color}`}>
                      <div className="flex items-center gap-2">
                        <col.icon className="h-4 w-4" />
-                       <span className="text-sm font-bold">{col.label}</span>
+                       <span className="text-sm font-medium">{col.label}</span>
                      </div>
                      <Badge variant="secondary" className="bg-background/50 text-[10px] h-5">
                        {colRequests.length}
@@ -354,7 +354,7 @@ export default function SuporteOrcamento() {
                          ref={provided.innerRef}
                          {...provided.droppableProps}
                          className={`p-3 space-y-3 min-h-[400px] transition-colors ${
-                           snapshot.isDraggingOver ? "bg-primary/5" : ""
+                           snapshot.isDraggingOver ? "bg-brand-500/5" : ""
                          }`}
                        >
                          {colRequests.length === 0 && !snapshot.isDraggingOver && (
@@ -372,13 +372,13 @@ export default function SuporteOrcamento() {
                                  ref={provided.innerRef}
                                  {...provided.draggableProps}
                                  {...provided.dragHandleProps}
-                                   className={`shadow-sm hover:shadow-md hover:bg-primary/5 hover:border-primary/20 transition-all !cursor-pointer ${
+                                   className={`shadow-sm hover:shadow-md hover:bg-brand-500/5 hover:border-primary/20 transition-all !cursor-pointer ${
                                     snapshot.isDragging ? "rotate-2 shadow-xl ring-2 ring-primary/20" : ""
                                   }`}
                                >
                                   <CardContent className="p-3 space-y-2.5">
                                     <div className="flex items-start justify-between gap-2">
-                                      <span className="text-xs font-bold truncate leading-tight flex-1">
+                                      <span className="text-xs font-medium truncate leading-tight flex-1">
                                         {req.clientName}
                                       </span>
                                       <Badge variant="outline" className="text-[9px] h-4 px-1 shrink-0 bg-muted/50">
@@ -418,7 +418,7 @@ export default function SuporteOrcamento() {
                                           </div>
                                         )}
                                         {lead.interestProducts && (
-                                          <div className="flex items-center gap-1.5 text-[10px] text-primary font-medium">
+                                          <div className="flex items-center gap-1.5 text-[10px] text-brand-500 font-medium">
                                             <Package className="h-2.5 w-2.5 shrink-0" />
                                             <span>{lead.interestProducts}</span>
                                           </div>
@@ -433,13 +433,13 @@ export default function SuporteOrcamento() {
                                     )}
                                     
                                     {req.pdfUrl && (
-                                      <div className="flex items-center gap-1.5 mt-1 bg-primary/5 p-1 rounded border border-primary/10">
-                                        <FileIcon className="h-3 w-3 text-primary" />
+                                      <div className="flex items-center gap-1.5 mt-1 bg-brand-500/5 p-1 rounded border border-primary/10">
+                                        <FileIcon className="h-3 w-3 text-brand-500" />
                                         <a 
                                           href={req.pdfUrl} 
                                           target="_blank" 
                                           rel="noopener noreferrer"
-                                          className="text-[9px] text-primary hover:underline truncate max-w-[200px]"
+                                          className="text-[9px] text-brand-500 hover:underline truncate max-w-[200px]"
                                           onClick={(e) => e.stopPropagation()}
                                         >
                                           {req.pdfName || "Anexo PDF"}
@@ -448,9 +448,9 @@ export default function SuporteOrcamento() {
                                     )}
  
                                    <div className="flex items-center justify-between pt-1.5 border-t border-border/40 mt-1.5">
-                                     <div className="flex items-center gap-1.5 text-primary/80">
+                                     <div className="flex items-center gap-1.5 text-brand-500/80">
                                        <User className="h-3 w-3" />
-                                       <span className="text-[9px] font-bold truncate max-w-[120px]">
+                                       <span className="text-[9px] font-medium truncate max-w-[120px]">
                                          {req.vendedorName}
                                        </span>
                                      </div>
@@ -461,7 +461,7 @@ export default function SuporteOrcamento() {
  
                                    <div className="flex gap-1 mt-2">
                                      {req.status === "pendente" && (
-                                       <Button size="sm" variant="outline" className="text-[9px] h-6 w-full py-0 hover:bg-primary/10"
+                                       <Button size="sm" variant="outline" className="text-[9px] h-6 w-full py-0 hover:bg-brand-500/10"
                                          onClick={() => updateRequestStatus(req.id, "em_analise")}>
                                          Analisar
                                        </Button>

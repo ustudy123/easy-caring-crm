@@ -85,107 +85,91 @@ export function AppLayout({ children, title }: AppLayoutProps) {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar className="shadow-[4px_0_24px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_32px_rgba(0,0,0,0.3)] z-40" />
-        <div className="flex-1 flex flex-col min-w-0 border-l border-border/10 dark:border-border/5">
+        <div className="flex-1 flex flex-col min-w-0">
           <header
             role="banner"
-            className="h-14 sm:h-16 flex items-center justify-between border-b border-border/60 bg-card/80 backdrop-blur-md px-4 sm:px-6 shrink-0 sticky top-0 z-30"
+            className="h-[60px] flex items-center justify-between border-b border-black/10 bg-white px-4 sm:px-6 shrink-0 sticky top-0 z-30"
           >
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
               <SidebarTrigger
                 aria-label="Alternar barra lateral"
-                className="text-muted-foreground hover:text-foreground transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card rounded-md"
+                className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
               />
-              {title && (
-                <h1 className="text-sm sm:text-lg font-extrabold text-foreground truncate tracking-tight">{title}</h1>
-              )}
+              <div className="flex flex-col">
+                {title && (
+                  <h1 className="text-[18px] font-medium text-primary tracking-tight leading-tight">{title}</h1>
+                )}
+                <span className="text-[13px] text-muted-foreground">Gestão comercial inteligente</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
-                aria-label={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
-                className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl hover:bg-muted transition-colors"
-              >
-                {theme === "dark" ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
-              </Button>
+            <div className="flex items-center gap-4 shrink-0">
+              <div className="hidden sm:flex items-center gap-1 bg-[#F0F0F5] p-[3px] rounded-[8px]">
+                {["7d", "30d", "90d", "Tudo"].map((p) => (
+                  <button
+                    key={p}
+                    className={cn(
+                      "px-3 py-1 text-[11px] font-medium transition-all rounded-[6px]",
+                      p === "30d" ? "bg-brand-500 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                     aria-label={`Notificações${totalNotifications > 0 ? `, ${totalNotifications} alertas pendentes` : ""}`}
-                    className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-xl hover:bg-muted transition-colors"
+                    className="relative h-[36px] w-[36px] rounded-[8px] border-black/10 hover:bg-secondary transition-colors"
                   >
-                    <Bell className="h-4 w-4" aria-hidden="true" />
-                     {totalNotifications > 0 && (
-                       <span
-                         aria-hidden="true"
-                         className={cn(
-                           "absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold shadow-sm ring-2 ring-card transition-all",
-                           notifications.some(n => n.type === 'sla_critical') 
-                             ? "bg-destructive text-destructive-foreground animate-pulse" 
-                             : "bg-amber-500 text-white"
-                         )}
-                       >
-                         {totalNotifications > 9 ? "9+" : totalNotifications}
-                       </span>
-                     )}
+                    <Bell className="h-4 w-4" />
+                    {totalNotifications > 0 && (
+                      <span className="absolute top-[2px] right-[2px] h-[8px] w-[8px] rounded-full bg-destructive border-[1.5px] border-white" />
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-0 rounded-xl shadow-lg border-border/60" align="end" sideOffset={8}>
                    <div className="p-3.5 border-b border-border/60 flex items-center justify-between">
-                     <h4 className="text-sm font-bold text-foreground">Notificações</h4>
+                     <h4 className="text-[13px] font-medium text-foreground">Notificações</h4>
                      {totalNotifications > 0 && (
                        <Button 
                          variant="ghost" 
                          size="sm" 
                          onClick={markAllAsRead}
-                         className="h-7 px-2 text-[11px] font-semibold text-primary hover:text-primary hover:bg-primary/5 rounded-lg"
+                         className="h-7 px-2 text-[11px] font-medium text-primary"
                        >
                          Ler todas
                        </Button>
                      )}
                    </div>
                    <div className="divide-y divide-border/40 max-h-[400px] overflow-y-auto">
-                {notifications.map((notif) => (
-                  <div 
-                    key={notif.id} 
-                    onClick={() => handleSlaNotificationClick(notif)} 
-                    className="flex items-center gap-3 p-3.5 hover:bg-muted/40 transition-colors cursor-pointer"
-                  >
-                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${notif.type === 'sla_critical' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'}`}>
-                      {notif.type === 'sla_critical' ? <ShieldAlert className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold text-foreground">{notif.title}</p>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 rounded-full hover:bg-success/20 text-success"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            markNotificationRead(notif.id);
-                          }}
-                          title="Resolver alerta"
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{notif.message}</p>
-                    </div>
-                  </div>
-                ))}
-                    {totalNotifications === 0 && (
-                      <div className="p-8 text-center">
-                        <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
-                        <p className="text-sm text-muted-foreground">Nenhuma notificação</p>
-                      </div>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
+                 {notifications.map((notif) => (
+                   <div 
+                     key={notif.id} 
+                     onClick={() => handleSlaNotificationClick(notif)} 
+                     className="flex items-center gap-3 p-3.5 hover:bg-muted/40 transition-colors cursor-pointer"
+                   >
+                     <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${notif.type === 'sla_critical' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'}`}>
+                       {notif.type === 'sla_critical' ? <ShieldAlert className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                     </div>
+                     <div className="flex-1 min-w-0">
+                       <div className="flex items-center justify-between">
+                         <p className="text-sm font-semibold text-foreground">{notif.title}</p>
+                       </div>
+                       <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{notif.message}</p>
+                     </div>
+                   </div>
+                 ))}
+                     {totalNotifications === 0 && (
+                       <div className="p-8 text-center">
+                         <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
+                         <p className="text-sm text-muted-foreground">Nenhuma notificação</p>
+                       </div>
+                     )}
+                   </div>
+                 </PopoverContent>
+               </Popover>
             </div>
           </header>
           <main className="flex-1 overflow-auto p-3 sm:p-5 md:p-6">

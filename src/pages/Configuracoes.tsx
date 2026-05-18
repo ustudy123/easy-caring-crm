@@ -1,7 +1,7 @@
          <Card>
            <CardHeader>
-             <CardTitle className="flex items-center gap-2 text-base font-bold">
-               <MessageCircle className="h-4 w-4 text-primary" /> Integração WhatsApp
+             <CardTitle className="flex items-center gap-2 text-base font-medium">
+               <MessageCircle className="h-4 w-4 text-brand-500" /> Integração WhatsApp
              </CardTitle>
            </CardHeader>
            <CardContent className="space-y-4">
@@ -144,12 +144,12 @@ export default function Configuracoes() {
       <div className="max-w-2xl space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-bold">
-              <UserCheck className="h-4 w-4 text-primary" /> Status e Disponibilidade
+            <CardTitle className="flex items-center gap-2 text-base font-medium">
+              <UserCheck className="h-4 w-4 text-brand-500" /> Status e Disponibilidade
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between p-4 rounded-xl border bg-card shadow-sm">
+            <div className="flex items-center justify-between p-4 rounded-[14px] border border-black/8 bg-white">
               <div className="space-y-0.5">
                 <p className="text-sm font-semibold flex items-center gap-2">
                   {profile?.is_active ? <span className="flex h-2 w-2 rounded-full bg-green-500" /> : <span className="flex h-2 w-2 rounded-full bg-red-500" />}
@@ -199,8 +199,8 @@ export default function Configuracoes() {
         {isAdmin && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base font-bold">
-                <Settings className="h-4 w-4 text-primary" /> Geral
+              <CardTitle className="flex items-center gap-2 text-base font-medium">
+                <Settings className="h-4 w-4 text-brand-500" /> Geral
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -228,8 +228,8 @@ export default function Configuracoes() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-bold">
-              <Bell className="h-4 w-4 text-primary" /> Notificações
+            <CardTitle className="flex items-center gap-2 text-base font-medium">
+              <Bell className="h-4 w-4 text-brand-500" /> Notificações
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">

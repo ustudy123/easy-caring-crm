@@ -442,10 +442,10 @@ export default function Kanban() {
                   className="flex-shrink-0 w-[85vw] sm:w-[280px] lg:w-[276px] flex flex-col snap-center sm:snap-start"
                 >
                   {/* Column header */}
-                  <div className={`flex items-center justify-between rounded-t-xl sm:rounded-t-2xl p-3 sm:p-3.5 bg-gradient-to-b ${stageHeaderGradient[stage.key]} border-x border-t border-b border-border/40 border-b-kanban-${stage.key === 'abordagem' ? 'approach' : stage.key === 'sondagem' ? 'probing' : stage.key === 'recomendacao_tecnica' ? 'recommendation' : stage.key === 'demonstracao_valor' ? 'demonstration' : stage.key === 'contorno_objecoes' ? 'objections' : stage.key === 'cross_sell' ? 'crosssell' : stage.key === 'fechamento' ? 'closing' : 'postsale'}/20`}>
+                  <div className={`flex items-center justify-between rounded-t-[12px] p-3 sm:p-3.5 bg-gradient-to-b ${stageHeaderGradient[stage.key]} border-x border-t border-b border-border/40 border-b-kanban-${stage.key === 'abordagem' ? 'approach' : stage.key === 'sondagem' ? 'probing' : stage.key === 'recomendacao_tecnica' ? 'recommendation' : stage.key === 'demonstracao_valor' ? 'demonstration' : stage.key === 'contorno_objecoes' ? 'objections' : stage.key === 'cross_sell' ? 'crosssell' : stage.key === 'fechamento' ? 'closing' : 'postsale'}/20`}>
                     <div className="flex items-center gap-2.5">
                       <div className={`h-2.5 w-2.5 rounded-full ${stageDotMap[stage.key]} ring-2 ring-background shadow-sm`} />
-                      <span className="text-[12px] sm:text-[13px] font-bold truncate max-w-[120px] sm:max-w-none">{stage.label}</span>
+                      <span className="text-[12px] sm:text-[13px] font-medium uppercase tracking-[0.05em] text-[11px] text-muted-foreground">{stage.label}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                        {alertCount > 0 && (
@@ -467,10 +467,10 @@ export default function Kanban() {
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`min-h-[420px] flex-1 space-y-2.5 rounded-b-2xl p-2.5 transition-all duration-200 border border-t-0 border-border/40 ${
+                        className={`min-h-[420px] flex-1 space-y-2.5 rounded-b-[12px] p-2.5 transition-all duration-200 border border-t-0 border-border/40 ${
                           snapshot.isDraggingOver
                             ? "bg-primary/[0.04] border-primary/20"
-                            : "bg-muted/20"
+                            : "bg-[#F4F4F7]"
                         }`}
                       >
                         {stageLeads.map((lead, index) => (
@@ -492,7 +492,7 @@ export default function Kanban() {
                                       onMoveNext={stage.key !== "pos_venda" ? () => moveToNextStage(lead) : undefined}
                                     >
                                        <div className={`
-                                         rounded-xl border-l-[3px] p-3.5 
+                                         rounded-[10px] border-l-[3px] p-3.5 
                                          ${urgency === "ok" ? "bg-card" : ""} 
                                          text-card-foreground
                                          border border-border/30 border-l-0
@@ -567,7 +567,7 @@ export default function Kanban() {
                                                   )}
                                                   <button
                                                     onClick={(e) => { e.stopPropagation(); setTransferringLead(lead); }}
-                                                    className="p-1 rounded-lg hover:bg-blue-100 text-blue-600"
+                                                    className="p-1 rounded-lg hover:bg-blue-100 text-brand-500"
                                                     title="Transferir"
                                                   >
                                                     <Forward className="h-3 w-3" />
@@ -663,7 +663,7 @@ export default function Kanban() {
                                                  setEditingLead(lead);
                                                }}
                                              >
-                                               <Zap className="h-3 w-3" /> AGIR AGORA: ATUALIZAR STATUS
+                                               <Zap className="h-3 w-3" /> Agir agora
                                              </Button>
                                            )}
                                          </div>

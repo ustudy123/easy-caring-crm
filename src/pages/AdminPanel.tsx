@@ -490,7 +490,7 @@ const ROLE_LABELS: Record<string, string> = {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Vendedores Ativos</p>
-                <h3 className="text-2xl font-bold text-green-600">{stats.activeSellers}</h3>
+                <h3 className="text-2xl font-medium text-green-600">{stats.activeSellers}</h3>
               </div>
               <UserCheck className="h-8 w-8 text-green-100" />
             </div>
@@ -501,7 +501,7 @@ const ROLE_LABELS: Record<string, string> = {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Vendedores Ausentes</p>
-                <h3 className="text-2xl font-bold text-orange-600">{stats.inactiveSellers}</h3>
+                <h3 className="text-2xl font-medium text-orange-600">{stats.inactiveSellers}</h3>
               </div>
               <UserX className="h-8 w-8 text-orange-100" />
             </div>
@@ -512,7 +512,7 @@ const ROLE_LABELS: Record<string, string> = {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Alertas Pendentes</p>
-                <h3 className="text-2xl font-bold text-red-600">{stats.pendingAlerts}</h3>
+                <h3 className="text-2xl font-medium text-red-600">{stats.pendingAlerts}</h3>
               </div>
               <AlertCircle className="h-8 w-8 text-red-100" />
             </div>
@@ -523,7 +523,7 @@ const ROLE_LABELS: Record<string, string> = {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-red-600">Alertas Graves (+1h30)</p>
-                <h3 className="text-2xl font-bold text-red-700">{stats.criticalAlerts}</h3>
+                <h3 className="text-2xl font-medium text-red-700">{stats.criticalAlerts}</h3>
               </div>
               <AlertCircle className="h-8 w-8 text-red-200" />
             </div>
@@ -566,7 +566,7 @@ const ROLE_LABELS: Record<string, string> = {
          <CardContent className="space-y-4">
            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
              <div className="space-y-1">
-               <Label className="text-[10px] uppercase text-muted-foreground font-bold">Loja</Label>
+               <Label className="text-[10px] uppercase text-muted-foreground font-medium">Loja</Label>
               <Select value={filterStore} onValueChange={setFilterStore}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Todas as Lojas" />
@@ -578,7 +578,7 @@ const ROLE_LABELS: Record<string, string> = {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Vendedor</Label>
+              <Label className="text-[10px] uppercase text-muted-foreground font-medium">Vendedor</Label>
               <Select value={filterSeller} onValueChange={setFilterSeller}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Todos os Vendedores" />
@@ -590,7 +590,7 @@ const ROLE_LABELS: Record<string, string> = {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Tipo</Label>
+              <Label className="text-[10px] uppercase text-muted-foreground font-medium">Tipo</Label>
               <Select value={filterType} onValueChange={setFilterType}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Todos os Tipos" />
@@ -606,7 +606,7 @@ const ROLE_LABELS: Record<string, string> = {
               </Select>
             </div>
              <div className="space-y-1">
-               <Label className="text-[10px] uppercase text-muted-foreground font-bold">Início</Label>
+               <Label className="text-[10px] uppercase text-muted-foreground font-medium">Início</Label>
                <Input 
                  type="date" 
                  className="h-8 text-xs" 
@@ -615,7 +615,7 @@ const ROLE_LABELS: Record<string, string> = {
                />
              </div>
              <div className="space-y-1">
-               <Label className="text-[10px] uppercase text-muted-foreground font-bold">Fim</Label>
+               <Label className="text-[10px] uppercase text-muted-foreground font-medium">Fim</Label>
                <Input 
                  type="date" 
                  className="h-8 text-xs" 
@@ -624,7 +624,7 @@ const ROLE_LABELS: Record<string, string> = {
                />
              </div>
             <div className="space-y-1">
-              <Label className="text-[10px] uppercase text-muted-foreground font-bold">Cliente</Label>
+              <Label className="text-[10px] uppercase text-muted-foreground font-medium">Cliente</Label>
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <Input 
@@ -1173,7 +1173,7 @@ function UsersTab() {
                         id="isActive" 
                         checked={editIsActive} 
                         onChange={e => setEditIsActive(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-primary"
                       />
                       <Label htmlFor="isActive" className="cursor-pointer">Vendedor Ativo</Label>
                     </div>
@@ -1183,7 +1183,7 @@ function UsersTab() {
                         id="isAvailable" 
                         checked={editIsAvailable} 
                         onChange={e => setEditIsAvailable(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-primary"
                       />
                       <Label htmlFor="isAvailable" className="cursor-pointer">Disponível para Leads</Label>
                     </div>
