@@ -357,6 +357,11 @@ export function AppSidebar() {
       <SidebarContent className="pt-1">
         {/* Main navigation */}
         <SidebarGroup className="py-2">
+          {!collapsed && (
+            <SidebarGroupLabel className="mb-1 px-4 text-[10px] uppercase tracking-wider text-sidebar-foreground/40">
+              Principal
+            </SidebarGroupLabel>
+          )}
           <SidebarGroupContent>
             <SidebarMenu
               className={cn("space-y-0", collapsed ? "px-1" : "px-0")}
