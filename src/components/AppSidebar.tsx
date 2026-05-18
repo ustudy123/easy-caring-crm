@@ -224,7 +224,7 @@ export function AppSidebar({ className }: { className?: string }) {
         {/* Main navigation */}
         <SidebarGroup className="py-2">
           {!collapsed && (
-            <SidebarGroupLabel className="mb-1 px-4 text-[10px] uppercase tracking-wider text-sidebar-foreground/40">
+            <SidebarGroupLabel className="mb-1 px-4 text-[10px] uppercase tracking-[0.06em] font-medium text-white/25">
               Principal
             </SidebarGroupLabel>
           )}
@@ -239,7 +239,7 @@ export function AppSidebar({ className }: { className?: string }) {
         <SidebarSeparator className="opacity-50" />
         <SidebarGroup className="py-2">
           {!collapsed && (
-            <SidebarGroupLabel className="mb-1 px-4 text-[10px] uppercase tracking-wider text-sidebar-foreground/40">
+            <SidebarGroupLabel className="mb-1 px-4 text-[10px] uppercase tracking-[0.06em] font-medium text-white/25">
               Ferramentas
             </SidebarGroupLabel>
           )}
