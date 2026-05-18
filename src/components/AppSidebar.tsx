@@ -50,12 +50,20 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
-  const { newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount } = useCrm();
+   const { newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount, notifications } = useCrm();
   const { user, signOut } = useAuth();
   const { role } = useRole();
 
   const mainNav = useMemo(() => allMainNav.filter(item => !item.roles || (role && item.roles.includes(role))), [role]);
-  const toolsNav = useMemo(() => allToolsNav.filter(item => !item.roles || (role && item.roles.includes(role))), [role]);
+   const toolsNav = useMemo(() => {
+     const nav = allToolsNav.filter(item => !item.roles || (role && item.roles.includes(role)));
+     return nav.map(item => {
+       if (item.url === "/conversas") {
+         return { ...item, badgeKey: "notifications" };
+       }
+       return item;
+     });
+   }, [role, notifications.length]);
 
   const STORAGE_KEY = "crm-sidebar-dismissed";
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
@@ -74,12 +82,13 @@ export function AppSidebar() {
     }
   }, [location.pathname, newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount]);
 
-  const badgeMap: Record<string, number> = {
-    newLeads: Math.max(0, newLeadsCount - (dismissed.newLeads ?? 0)),
-    pendingFollowUps: Math.max(0, pendingFollowUpsCount - (dismissed.pendingFollowUps ?? 0)),
-    negotiation: Math.max(0, negotiationCount - (dismissed.negotiation ?? 0)),
-    whatsapp: Math.max(0, unreadWhatsAppCount - (dismissed.whatsapp ?? 0)),
-  };
+   const badgeMap: Record<string, number> = {
+     newLeads: Math.max(0, newLeadsCount - (dismissed.newLeads ?? 0)),
+     pendingFollowUps: Math.max(0, pendingFollowUpsCount - (dismissed.pendingFollowUps ?? 0)),
+     negotiation: Math.max(0, negotiationCount - (dismissed.negotiation ?? 0)),
+     whatsapp: Math.max(0, unreadWhatsAppCount - (dismissed.whatsapp ?? 0)),
+     notifications: notifications.length,
+   };
 
   const getBadge = (badgeKey: string | null) => badgeKey ? badgeMap[badgeKey] : 0;
 
@@ -116,28 +125,36 @@ export function AppSidebar() {
                 className={cn("h-4 w-4 transition-colors", isActive ? "text-primary" : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground/85")}
                 strokeWidth={1.5}
               />
-              {collapsed && badge > 0 && (
-                <span
-                  aria-hidden="true"
-                  className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-semibold text-primary-foreground ring-2 ring-sidebar"
-                >
-                  {badge}
-                </span>
-              )}
+               {collapsed && badge > 0 && (
+                 <span
+                   aria-hidden="true"
+                   className={cn(
+                     "absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-semibold ring-2 ring-sidebar",
+                     item.badgeKey === "notifications" ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
+                   )}
+                 >
+                   {badge > 9 ? "9+" : badge}
+                 </span>
+               )}
             </div>
             {!collapsed && (
               <span className={cn("text-[13px] leading-none relative", isActive ? "font-medium text-sidebar-foreground" : "font-normal")}>
                 {item.title}
               </span>
             )}
-            {!collapsed && badge > 0 && (
-              <span
-                aria-hidden="true"
-                className="ml-auto relative flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary/20 px-1.5 text-[10px] font-bold text-sidebar-foreground tabular-nums"
-              >
-                {badge}
-              </span>
-            )}
+             {!collapsed && badge > 0 && (
+               <span
+                 aria-hidden="true"
+                 className={cn(
+                   "ml-auto relative flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums",
+                   item.badgeKey === "notifications" 
+                    ? "bg-destructive text-destructive-foreground shadow-sm animate-pulse" 
+                    : "bg-primary/20 text-sidebar-foreground"
+                 )}
+               >
+                 {badge > 99 ? "99+" : badge}
+               </span>
+             )}
           </NavLink>
         </SidebarMenuButton>
       </SidebarMenuItem>
