@@ -193,7 +193,7 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
     };
   });
 
-  // Horizontal bar data for "Leads e Valor por Etapa"
+  // Horizontal bar data for "Leads e valor por etapa"
   const barData = funnelData.map((d) => ({
     name: d.name,
     leads: d.leads,
@@ -361,11 +361,11 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
         <motion.div variants={item}>
           <Card className="border border-border/50 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-default">
             <CardHeader className="pb-3">
-              <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+              <CardTitle className="text-[15px] font-medium text-foreground flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 </div>
-                Funil de Conversão
+                Funil de conversão
               </CardTitle>
             </CardHeader>
             <CardContent className="pb-6">
@@ -460,11 +460,11 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
         <motion.div variants={item}>
           <Card className="border border-border/50 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-default">
             <CardHeader className="pb-3">
-              <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+              <CardTitle className="text-[15px] font-medium text-foreground flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-info/10">
                   <CalendarDays className="h-3.5 w-3.5 text-info" />
                 </div>
-                Evolução de Leads ao Longo do Tempo
+                Evolução de leads ao longo do tempo
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -518,11 +518,11 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
           <motion.div variants={item} className="lg:col-span-2">
             <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow cursor-default">
               <CardHeader className="pb-3">
-                <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+                <CardTitle className="text-[15px] font-medium text-foreground flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary/10">
                     <BarChart3 className="h-3.5 w-3.5 text-secondary" />
                   </div>
-                  Leads e Valor por Etapa
+                  Leads e valor por etapa
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -566,11 +566,11 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
           <motion.div variants={item}>
             <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow cursor-default">
               <CardHeader className="pb-3">
-                <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+                <CardTitle className="text-[15px] font-medium text-foreground flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-success/10">
                     <MessageCircle className="h-3.5 w-3.5 text-success" />
                   </div>
-                  Origem dos Leads
+                  Origem dos leads
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -635,11 +635,11 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
         <motion.div variants={item}>
           <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow cursor-default">
             <CardHeader className="pb-3">
-              <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+              <CardTitle className="text-[15px] font-medium text-foreground flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-info/10">
                   <Users className="h-3.5 w-3.5 text-info" />
                 </div>
-                Desempenho por Vendedor
+                Desempenho por vendedor
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -672,11 +672,11 @@ function FunnelTooltip({ stage, count, value, convRate }: { stage: string; count
         <motion.div variants={item}>
           <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow cursor-default">
             <CardHeader className="pb-3">
-              <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+              <CardTitle className="text-[15px] font-medium text-foreground flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning/10">
                   <CalendarDays className="h-3.5 w-3.5 text-warning" />
                 </div>
-                Próximos Follow-ups
+                Próximos follow-ups
               </CardTitle>
             </CardHeader>
             <CardContent>
