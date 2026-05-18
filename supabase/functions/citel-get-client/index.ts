@@ -144,26 +144,56 @@ function extractArray(data: any): any[] {
     const companyCode = Deno.env.get("CITEL_EMPRESA") || "1";
     const headers = { Authorization: `Basic ${auth}`, Accept: "application/json" };
 
-    // Função auxiliar: tenta enriquecer dados via /cliente/{erpId} ou variantes
-    async function enrich(erpId: string): Promise<Record<string, any> | null> {
-      const candidates = [
-        `${apiUrl}/cliente/${encodeURIComponent(erpId)}?codigoEmpresa=${encodeURIComponent(companyCode)}`,
-        `${apiUrl}/cliente/codigo/${encodeURIComponent(erpId)}?codigoEmpresa=${encodeURIComponent(companyCode)}`,
-        `${apiUrl}/cliente?codigoEmpresa=${encodeURIComponent(companyCode)}&codigoCliente=${encodeURIComponent(erpId)}`,
-      ];
-      for (const url of candidates) {
-        console.log(`[citel-get-client] ENRICH GET ${url}`);
-        const r = await tryFetch(url, headers, 15_000);
-        console.log(`[citel-get-client] enrich status=${r.status} preview=${(JSON.stringify(r.data) ?? "").slice(0, 1500)}`);
-        if (!r.ok) continue;
-        const items = extractArray(r.data);
-        const single = items.length > 0
-          ? items[0]
-          : (r.data && typeof r.data === "object" && !Array.isArray(r.data) ? r.data : null);
-        if (single) return single;
-      }
-      return null;
-    }
+     // Função auxiliar: tenta enriquecer dados via /cliente/{erpId} ou variantes
+     async function enrich(erpId: string): Promise<Record<string, any> | null> {
+       const enrichmentTask = (async () => {
+         const companyKey = `${apiUrl}-${companyCode}`;
+         const winnerTemplate = winnerEndpointsCache.get(companyKey);
+         
+         const candidates = [
+           `${apiUrl}/cliente/${encodeURIComponent(erpId)}?codigoEmpresa=${encodeURIComponent(companyCode)}`,
+           `${apiUrl}/cliente/codigo/${encodeURIComponent(erpId)}?codigoEmpresa=${encodeURIComponent(companyCode)}`,
+           `${apiUrl}/cliente?codigoEmpresa=${encodeURIComponent(companyCode)}&codigoCliente=${encodeURIComponent(erpId)}`,
+         ];
+ 
+         // Prioritize the winner template if we have one
+         if (winnerTemplate) {
+           const winnerUrl = winnerTemplate.replace("{{erpId}}", encodeURIComponent(erpId));
+           candidates.sort((a, b) => (a === winnerUrl ? -1 : b === winnerUrl ? 1 : 0));
+         }
+ 
+         for (const url of candidates) {
+           console.log(`[citel-get-client] ENRICH GET ${url}`);
+           const r = await tryFetchWithRetry(url, headers, { attempts: 3, timeoutMs: 8000 });
+           console.log(`[citel-get-client] enrich status=${r.status} preview=${(JSON.stringify(r.data) ?? "").slice(0, 1500)}`);
+           
+           if (!r.ok) continue;
+ 
+           const items = extractArray(r.data);
+           const single = items.length > 0
+             ? items[0]
+             : (r.data && typeof r.data === "object" && !Array.isArray(r.data) ? r.data : null);
+           
+           if (single) {
+             // Store the success pattern (using {{erpId}} as placeholder)
+             if (!winnerTemplate) {
+               const pattern = url.replace(encodeURIComponent(erpId), "{{erpId}}");
+               winnerEndpointsCache.set(companyKey, pattern);
+             }
+             return single;
+           }
+         }
+         return null;
+       })();
+ 
+       // Global budget for enrichment: 15 seconds
+       const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => {
+         console.log(`[citel-get-client] enrichment timed out after 15s`);
+         resolve(null);
+       }, 15000));
+ 
+       return Promise.race([enrichmentTask, timeoutPromise]);
+     }
 
     // 2. Cache local — resposta rápida; tenta enriquecer em seguida
     const { data: local } = await adminClient.from("clients").select("*").eq("phone", targetPhone).maybeSingle();
