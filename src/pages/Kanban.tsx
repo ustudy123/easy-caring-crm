@@ -6,11 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
  import { useToast } from "@/hooks/use-toast";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { 
-  Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
-  AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
-  MapPin, Package, Forward, Zap, Loader2 
-} from "lucide-react";
+ import { 
+   Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
+   AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
+   MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight
+ } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -139,7 +139,53 @@ export default function Kanban() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [filterSource, setFilterSource] = useState<string>("all");
   const [filterUrgency, setFilterUrgency] = useState<string>("all");
-  const [showFilters, setShowFilters] = useState(false);
+   const [showFilters, setShowFilters] = useState(false);
+   const [scrollInfo, setScrollInfo] = useState({ left: 0, max: 0, countLeft: 0, countRight: 0 });
+ 
+   const boardRef = useRef<HTMLDivElement>(null);
+ 
+   const updateScrollInfo = () => {
+     const el = boardRef.current;
+     if (!el) return;
+     
+     const left = el.scrollLeft;
+     const max = el.scrollWidth - el.clientWidth;
+     
+     // Calculate how many columns are hidden on each side
+     const columns = Array.from(el.children).filter(child => child.id.startsWith('stage-'));
+     let countLeft = 0;
+     let countRight = 0;
+     
+     columns.forEach(col => {
+       const rect = col.getBoundingClientRect();
+       const boardRect = el.getBoundingClientRect();
+       if (rect.right < boardRect.left + 10) countLeft++;
+       else if (rect.left > boardRect.right - 10) countRight++;
+     });
+ 
+     setScrollInfo({ left, max, countLeft, countRight });
+   };
+ 
+   useEffect(() => {
+     const el = boardRef.current;
+     if (el) {
+       el.addEventListener('scroll', updateScrollInfo);
+       window.addEventListener('resize', updateScrollInfo);
+       // Initial check
+       setTimeout(updateScrollInfo, 100);
+     }
+     return () => {
+       el?.removeEventListener('scroll', updateScrollInfo);
+       window.removeEventListener('resize', updateScrollInfo);
+     };
+   }, [loading, filteredLeads.length]);
+ 
+   const scrollBoard = (direction: 'left' | 'right') => {
+     const el = boardRef.current;
+     if (!el) return;
+     const scrollAmount = direction === 'left' ? -300 : 300;
+     el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+   };
 
   const hasActiveFilters = filterSource !== "all" || filterUrgency !== "all";
 
