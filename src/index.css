@@ -248,4 +248,32 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Visible, brand-tinted scrollbar used by the Kanban board (horizontal)
+     and the main content area on Kanban (vertical). */
+  .kanban-scrollbar {
+    scrollbar-width: auto;
+    scrollbar-color: hsl(var(--primary) / 0.55) hsl(var(--primary) / 0.08);
+  }
+  .kanban-scrollbar::-webkit-scrollbar {
+    width: 12px;
+    height: 14px;
+  }
+  .kanban-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--primary) / 0.06);
+    border-radius: 999px;
+  }
+  .kanban-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.45);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    min-width: 60px;
+    min-height: 60px;
+  }
+  .kanban-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.75);
+    background-clip: padding-box;
+    border: 3px solid transparent;
+  }
 }
