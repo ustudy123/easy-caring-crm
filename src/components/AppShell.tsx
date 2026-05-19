@@ -19,8 +19,6 @@ export const usePageTitle = () => useContext(PageTitleContext);
 
 export function AppShell() {
   const [title, setTitle] = useState<string>("");
-  const location = useLocation();
-  const showPeriodSelector = location.pathname === "/";
   const {
     newLeadsCount,
     pendingFollowUpsCount,
@@ -97,23 +95,6 @@ export function AppShell() {
                 </div>
               </div>
               <div className="flex items-center gap-4 shrink-0">
-                {showPeriodSelector && (
-                <div className="hidden sm:flex items-center gap-1 bg-[#F0F0F5] p-[3px] rounded-[8px]">
-                  {["7d", "30d", "90d", "Tudo"].map((p) => (
-                    <button
-                      key={p}
-                      className={cn(
-                        "px-3 py-1 text-[11px] font-medium transition-all rounded-[6px]",
-                        p === "30d"
-                          ? "bg-brand-500 text-white shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-                )}
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
