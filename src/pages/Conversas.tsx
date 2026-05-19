@@ -873,9 +873,11 @@ const mockContactNames: Record<string, string> = {
       <div className="flex h-[calc(100vh-5rem)] overflow-hidden bg-background">
         {/* ── Left panel - Contact list ── */}
         <div className={cn(
-          "w-full md:w-[420px] lg:w-[380px] flex flex-col shrink-0 border-r border-border/30 bg-card",
+          "w-full md:w-[420px] lg:w-[380px] flex flex-col shrink-0 border-r border-border/60 shadow-[1px_0_0_rgba(0,0,0,0.04)]",
           showMobileChat && "hidden md:flex"
         )}>
+          {/* tonal background to separate from chat panel */}
+          <div className="flex flex-col flex-1 min-h-0" style={{ backgroundColor: "hsl(var(--wa-list-bg))" }}>
           {/* WhatsApp-style header */}
           <div className="h-14 flex items-center justify-between px-4" style={{ backgroundColor: "hsl(var(--wa-header))" }}>
             <div className="flex items-center gap-3">
@@ -897,14 +899,14 @@ const mockContactNames: Record<string, string> = {
           </div>
 
            {/* Search and Tabs */}
-           <div className="px-2 py-2 bg-card space-y-2 border-b border-border/10">
+           <div className="px-2 py-2.5 bg-white/70 backdrop-blur-sm space-y-2 border-b border-border/60">
              <div className="relative">
                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
                <Input
                  placeholder="Pesquisar..."
                  value={search}
                  onChange={(e) => setSearch(e.target.value)}
-                 className="pl-10 h-9 rounded-lg bg-muted/50 border-0 text-sm placeholder:text-muted-foreground/50 focus-visible:ring-0 focus-visible:bg-muted/70"
+                 className="pl-10 h-9 rounded-lg bg-white border border-border text-sm placeholder:text-muted-foreground/50 focus-visible:ring-2 focus-visible:ring-brand-500/30 focus-visible:border-brand-500/40"
                />
              </div>
              
@@ -975,7 +977,7 @@ const mockContactNames: Record<string, string> = {
             )}
             
           {/* Conversations list */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto divide-y divide-border/40">
             {loading ? (
               <div className="flex items-center justify-center h-32 text-sm text-muted-foreground gap-2">
                 <Clock className="h-4 w-4 animate-spin" />
@@ -1059,23 +1061,23 @@ const mockContactNames: Record<string, string> = {
                         transition={{ delay: idx * 0.02, duration: 0.15 }}
                         onClick={() => handleSelectConversation(conv.phone)}
                         className={cn(
-                          "w-full flex items-center gap-3 px-3 py-3 text-left transition-colors duration-100 hover:bg-muted/40",
-                          isSelected && "bg-muted/60",
+                          "w-full flex items-center gap-3 px-3 py-3 text-left transition-colors duration-100 bg-white/60 hover:bg-white",
+                          isSelected && "bg-brand-500/10 hover:bg-brand-500/15 border-l-2 border-brand-500",
                           conv.alert_status === 'critical' && "bg-destructive/10 hover:bg-destructive/20",
                           conv.alert_status === 'red' && "bg-red-50/50 hover:bg-red-100/40",
                           conv.alert_status === 'yellow' && "bg-yellow-50/50 hover:bg-yellow-100/40"
                         )}
                       >
                         {/* Avatar */}
-                        <div className="flex h-[49px] w-[49px] shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <div className="flex h-[49px] w-[49px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-50 text-brand-500 ring-1 ring-brand-500/10">
                           {contactNames[conv.phone] ? (
-                            <span className="text-sm font-semibold">{getInitials(contactNames[conv.phone])}</span>
+                            <span className="text-sm font-semibold text-brand-500">{getInitials(contactNames[conv.phone])}</span>
                           ) : (
                             <User className="h-6 w-6" />
                           )}
                         </div>
 
-                        <div className="flex-1 min-w-0 border-b border-border/20 pb-3">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 truncate">
                               <span className="text-[16px] font-normal text-foreground truncate">
@@ -1134,6 +1136,7 @@ const mockContactNames: Record<string, string> = {
                 </AnimatePresence>
               </div>
             )}
+          </div>
           </div>
         </div>
 
