@@ -12,6 +12,7 @@ import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useRole } from "@/contexts/RoleContext";
+import { useCrm } from "@/contexts/CrmContext";
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -148,6 +149,7 @@ const mockContactNames: Record<string, string> = {
 // ── Component ──
  export default function Conversas() {
      const { isAdmin, isGerente, isVendedor, sellerId, storeId, role } = useRole();
+    const { decrementUnreadWhatsApp } = useCrm();
     const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
     const [clients, setClients] = useState<any[]>([]);
     const [stores, setStores] = useState<any[]>([]);
@@ -479,6 +481,12 @@ const mockContactNames: Record<string, string> = {
   useEffect(() => {
     if (selectedPhone && !useMock) {
       const markAsRead = async () => {
+        const unreadCount = messages.filter(
+          (m) => m.phone === selectedPhone && !m.is_from_me && !m.is_read
+        ).length;
+        if (unreadCount > 0) {
+          decrementUnreadWhatsApp(unreadCount);
+        }
         const { error } = await supabase
           .from("whatsapp_messages")
           .update({ is_read: true })

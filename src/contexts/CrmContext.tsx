@@ -31,6 +31,7 @@ interface CrmContextType {
   pendingFollowUpsCount: number;
   negotiationCount: number;
   unreadWhatsAppCount: number;
+  decrementUnreadWhatsApp: (by: number) => void;
    slaAlertsCount: number;
    notifications: Notification[];
   loading: boolean;
@@ -377,6 +378,11 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     filterNotifs();
   }, [notifications]);
 
+  const decrementUnreadWhatsApp = useCallback((by: number) => {
+    if (by <= 0) return;
+    setUnreadWhatsAppCount((prev) => Math.max(0, prev - by));
+  }, []);
+
   const slaAlertsCount = filteredNotifications.length;
 
   return (
@@ -385,7 +391,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
         leads, setLeads, addLead, updateLead, deleteLead,
         followUps, setFollowUps, addFollowUp, updateFollowUp, deleteFollowUp,
         sellers, notifications: filteredNotifications, slaAlertsCount,
-        newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount, loading,
+        newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount, decrementUnreadWhatsApp, loading,
         markNotificationRead
       }}
     >
