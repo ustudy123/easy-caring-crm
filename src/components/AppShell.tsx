@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Bell, AlertTriangle, ShieldAlert } from "lucide-react";
+import { Bell, AlertTriangle, MessageCircle, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCrm, Notification } from "@/contexts/CrmContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,11 +41,15 @@ export function AppShell() {
     localStorage.setItem("crm-dismissed-notifs", JSON.stringify(dismissed));
   }, [dismissed]);
 
-  const totalNotifications =
-    notifications.filter((n) => n.type === "sla_critical").length || notifications.length;
+  const nonWhatsAppNotifications = notifications.filter((n) => n.type !== "whatsapp_new_message");
+  const totalNotifications = unreadWhatsAppCount + nonWhatsAppNotifications.length;
 
   const handleSlaNotificationClick = (notif: Notification) => {
     markNotificationRead(notif.id);
+    navigate("/conversas");
+  };
+
+  const handleWhatsAppNotificationClick = () => {
     navigate("/conversas");
   };
 
@@ -105,7 +109,9 @@ export function AppShell() {
                     >
                       <Bell className="h-4 w-4" />
                       {totalNotifications > 0 && (
-                        <span className="absolute top-[2px] right-[2px] h-[8px] w-[8px] rounded-full bg-destructive border-[1.5px] border-white" />
+                        <span className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-destructive-foreground ring-2 ring-background">
+                          {totalNotifications > 99 ? "99+" : totalNotifications}
+                        </span>
                       )}
                     </Button>
                   </PopoverTrigger>
@@ -128,7 +134,32 @@ export function AppShell() {
                       )}
                     </div>
                     <div className="divide-y divide-border/40 max-h-[400px] overflow-y-auto">
-                      {notifications.map((notif) => (
+                      {unreadWhatsAppCount > 0 && (
+                        <div
+                          onClick={handleWhatsAppNotificationClick}
+                          className="flex items-center gap-3 p-3.5 hover:bg-muted/40 transition-colors cursor-pointer"
+                        >
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+                            <MessageCircle className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-semibold text-foreground">
+                                Mensagens não lidas
+                              </p>
+                              <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-destructive-foreground">
+                                {unreadWhatsAppCount > 99 ? "99+" : unreadWhatsAppCount}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                              {unreadWhatsAppCount === 1
+                                ? "1 conversa com mensagem pendente."
+                                : `${unreadWhatsAppCount} mensagens aguardando leitura.`}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {nonWhatsAppNotifications.map((notif) => (
                         <div
                           key={notif.id}
                           onClick={() => handleSlaNotificationClick(notif)}
