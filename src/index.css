@@ -82,6 +82,15 @@
     --shadow-card-hover: 0 2px 12px rgba(0,0,0,0.06);
     --shadow-modal: 0 8px 32px rgba(0,0,0,0.12);
     --shadow-dropdown: 0 4px 16px rgba(0,0,0,0.08);
+
+    /* WhatsApp light theme tokens (used on /conversas) */
+    --wa-header: 244 60% 28%;        /* deep indigo */
+    --wa-green: 142 70% 38%;         /* WhatsApp green */
+    --wa-chat-bg: 240 14% 95%;       /* chat backdrop */
+    --wa-list-bg: 240 14% 96%;       /* contacts list backdrop */
+    --wa-incoming: 0 0% 100%;
+    --wa-outgoing: 142 60% 90%;
+    --wa-divider: 240 10% 88%;
   }
 
   .dark {
