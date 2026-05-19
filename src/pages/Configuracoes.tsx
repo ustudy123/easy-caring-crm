@@ -1,31 +1,3 @@
-         <Card>
-           <CardHeader>
-             <CardTitle className="flex items-center gap-2 text-base font-medium">
-               <MessageCircle className="h-4 w-4 text-brand-500" /> Integração WhatsApp
-             </CardTitle>
-           </CardHeader>
-           <CardContent className="space-y-4">
-             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
-               <div className="flex items-center gap-3">
-                 <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                   <MessageCircle className="h-5 w-5 text-green-600" />
-                 </div>
-                 <div>
-                   <p className="text-sm font-semibold">Status da Conexão</p>
-                   <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                     <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                     Conectado e pronto para uso
-                   </p>
-                 </div>
-               </div>
-               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Ativo</Badge>
-             </div>
-             <p className="text-xs text-muted-foreground">
-               Seu número está sincronizado com o sistema. Mensagens recebidas serão transformadas em leads automaticamente.
-             </p>
-           </CardContent>
-         </Card>
-
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,9 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-  import { Settings, Bell, Shield, Loader2, MessageCircle, UserX, UserCheck, RefreshCw } from "lucide-react";
- import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
- import { Badge } from "@/components/ui/badge";
+import { Settings, Bell, Loader2, MessageCircle, UserCheck } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,7 +20,7 @@ export default function Configuracoes() {
   const { isAdmin } = useRole();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [profile, setProfile] = useState<any>(null);
+  const [seller, setSeller] = useState<any>(null);
   const [allSellers, setAllSellers] = useState<any[]>([]);
   const [companyName, setCompanyName] = useState("CRM Tintas");
   const [autoReturnLeads, setAutoReturnLeads] = useState(true);
@@ -61,10 +33,10 @@ export default function Configuracoes() {
   useEffect(() => {
     if (!user) return;
     const fetchSettings = async () => {
-      const [settingsRes, profileRes, sellersRes] = await Promise.all([
+      const [settingsRes, sellerRes, allSellersRes] = await Promise.all([
         supabase.from("settings").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("profiles").select("id, display_name").neq("user_id", user.id).order("display_name")
+        supabase.from("sellers").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("sellers").select("id, name, store_id").neq("user_id", user.id).order("name")
       ]);
 
       if (settingsRes.data) {
@@ -77,12 +49,17 @@ export default function Configuracoes() {
         });
       }
 
-      if (profileRes.data) {
-        setProfile(profileRes.data);
+      if (sellerRes.data) {
+        setSeller(sellerRes.data);
       }
 
-      if (sellersRes.data) {
-        setAllSellers(sellersRes.data);
+      if (allSellersRes.data) {
+        // Only show sellers from the same store if the current seller has a store_id
+        if (sellerRes.data?.store_id) {
+          setAllSellers(allSellersRes.data.filter(s => s.store_id === sellerRes.data.store_id));
+        } else {
+          setAllSellers(allSellersRes.data);
+        }
       }
 
       setLoading(false);
@@ -90,7 +67,7 @@ export default function Configuracoes() {
     fetchSettings();
   }, [user]);
 
-  const handleSave = async () => {
+  const handleSaveGeneral = async () => {
     if (!user) return;
     setSaving(true);
 
@@ -116,6 +93,34 @@ export default function Configuracoes() {
     }
   };
 
+  const handleUpdateSeller = async (updates: any) => {
+    if (!user || !seller) return;
+    setSaving(true);
+    
+    // If updating activity, also update status for consistency in Admin/Routing
+    const finalUpdates = { ...updates };
+    if ('is_active' in updates) {
+      finalUpdates.status = updates.is_active ? 'active' : 'inactive';
+    }
+
+    const { error } = await supabase.from("sellers").update(finalUpdates).eq("id", seller.id);
+    
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      setSeller({ ...seller, ...finalUpdates });
+      
+      // Mirror to profiles for backward compatibility
+      await supabase.from("profiles").update({
+        is_active: finalUpdates.is_active,
+        substitute_id: finalUpdates.substitute_id
+      }).eq("user_id", user.id);
+
+      toast({ title: "Status atualizado!" });
+    }
+    setSaving(false);
+  };
+
   if (loading) {
     return (
       <AppLayout title="Configurações">
@@ -125,19 +130,6 @@ export default function Configuracoes() {
       </AppLayout>
     );
   }
-
-  const handleUpdateProfile = async (updates: any) => {
-    if (!user) return;
-    setSaving(true);
-    const { error } = await supabase.from("profiles").update(updates).eq("user_id", user.id);
-    setSaving(false);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      setProfile({ ...profile, ...updates });
-      toast({ title: "Perfil atualizado!" });
-    }
-  };
 
   return (
     <AppLayout title="Configurações">
@@ -152,18 +144,22 @@ export default function Configuracoes() {
             <div className="flex items-center justify-between p-4 rounded-[14px] border border-black/8 bg-white">
               <div className="space-y-0.5">
                 <p className="text-sm font-semibold flex items-center gap-2">
-                  {profile?.is_active ? <span className="flex h-2 w-2 rounded-full bg-green-500" /> : <span className="flex h-2 w-2 rounded-full bg-red-500" />}
-                  Você está {profile?.is_active ? 'Ativo' : 'Inativo / Em Férias'}
+                  {seller?.is_active ? (
+                    <span className="flex h-2 w-2 rounded-full bg-green-500" />
+                  ) : (
+                    <span className="flex h-2 w-2 rounded-full bg-red-500" />
+                  )}
+                  Você está {seller?.is_active ? 'Ativo' : 'Inativo / Em Férias'}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {profile?.is_active 
+                  {seller?.is_active 
                     ? "Você está recebendo leads normalmente." 
                     : "Novas mensagens serão redirecionadas para seu substituto."}
                 </p>
               </div>
               <Switch 
-                checked={profile?.is_active} 
-                onCheckedChange={(v) => handleUpdateProfile({ is_active: v })} 
+                checked={seller?.is_active} 
+                onCheckedChange={(v) => handleUpdateSeller({ is_active: v })} 
                 disabled={saving}
               />
             </div>
@@ -177,8 +173,8 @@ export default function Configuracoes() {
               </div>
               <div className="flex gap-2">
                 <Select 
-                  value={profile?.substitute_id || "none"} 
-                  onValueChange={(v) => handleUpdateProfile({ substitute_id: v === "none" ? null : v })}
+                  value={seller?.substitute_id || "none"} 
+                  onValueChange={(v) => handleUpdateSeller({ substitute_id: v === "none" ? null : v })}
                   disabled={saving}
                 >
                   <SelectTrigger className="w-full">
@@ -187,11 +183,36 @@ export default function Configuracoes() {
                   <SelectContent>
                     <SelectItem value="none">Nenhum (usar fila geral)</SelectItem>
                     {allSellers.map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.display_name || "Vendedor sem nome"}</SelectItem>
+                      <SelectItem key={s.id} value={s.id}>{s.name || "Vendedor sem nome"}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base font-medium">
+              <MessageCircle className="h-4 w-4 text-brand-500" /> Integração WhatsApp
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <MessageCircle className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Status da Conexão</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    Conectado e pronto para uso
+                  </p>
+                </div>
+              </div>
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Ativo</Badge>
             </div>
           </CardContent>
         </Card>
@@ -218,7 +239,7 @@ export default function Configuracoes() {
                 </div>
                 <Switch checked={autoReturnLeads} onCheckedChange={setAutoReturnLeads} />
               </div>
-              <Button onClick={handleSave} disabled={saving}>
+              <Button onClick={handleSaveGeneral} disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Salvar
               </Button>
