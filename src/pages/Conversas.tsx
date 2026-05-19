@@ -481,6 +481,12 @@ const mockContactNames: Record<string, string> = {
   useEffect(() => {
     if (selectedPhone && !useMock) {
       const markAsRead = async () => {
+        const unreadCount = messages.filter(
+          (m) => m.phone === selectedPhone && !m.is_from_me && !m.is_read
+        ).length;
+        if (unreadCount > 0) {
+          decrementUnreadWhatsApp(unreadCount);
+        }
         const { error } = await supabase
           .from("whatsapp_messages")
           .update({ is_read: true })
