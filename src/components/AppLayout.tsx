@@ -1,182 +1,24 @@
- import { useState, useEffect } from "react";
- import { cn } from "@/lib/utils";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
-import { Bell, Columns3, CalendarDays, Megaphone, MessageCircle, Sun, Moon, AlertTriangle, ShieldAlert, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useCrm, Notification } from "@/contexts/CrmContext";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { useTheme } from "@/hooks/useTheme";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { useEffect } from "react";
+import { usePageTitle } from "./AppShell";
 
 interface AppLayoutProps {
   children: React.ReactNode;
   title?: string;
 }
 
+/**
+ * Backwards-compatible layout wrapper.
+ * The actual chrome (sidebar/header) lives in <AppShell /> at the route level
+ * so navigations no longer remount the shell. This component now only syncs
+ * the page title into the persistent header.
+ */
 export function AppLayout({ children, title }: AppLayoutProps) {
-  const { 
-    newLeadsCount, 
-    pendingFollowUpsCount, 
-    negotiationCount, 
-    unreadWhatsAppCount, 
-    notifications,
-    markNotificationRead
-  } = useCrm();
-  const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
-  const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
-    try {
-      return JSON.parse(localStorage.getItem("crm-dismissed-notifs") || "{}");
-    } catch { return {}; }
-  });
+  const { setTitle } = usePageTitle();
 
   useEffect(() => {
-    localStorage.setItem("crm-dismissed-notifs", JSON.stringify(dismissed));
-  }, [dismissed]);
+    setTitle(title ?? "");
+    return () => setTitle("");
+  }, [title, setTitle]);
 
-  const visibleLeads = Math.max(0, newLeadsCount - (dismissed.leads || 0));
-  const visibleFollowUps = Math.max(0, pendingFollowUpsCount - (dismissed.followUps || 0));
-  const visibleNegotiations = Math.max(0, negotiationCount - (dismissed.negotiations || 0));
-  const visibleWhatsApp = Math.max(0, unreadWhatsAppCount - (dismissed.whatsapp || 0));
-   const totalNotifications = notifications.filter(n => n.type === 'sla_critical').length || notifications.length;
-
-  const handleNotificationClick = (type: string, count: number, route: string) => {
-    setDismissed((prev) => ({ ...prev, [type]: (prev[type] || 0) + count }));
-    navigate(route);
-  };
-
-  const handleSlaNotificationClick = (notif: Notification) => {
-    markNotificationRead(notif.id);
-    navigate("/conversas");
-  };
-
-  const markAllAsRead = async () => {
-    setDismissed({
-      leads: newLeadsCount,
-      followUps: pendingFollowUpsCount,
-      negotiations: negotiationCount,
-      whatsapp: unreadWhatsAppCount
-    });
-
-    // Mark notifications as read
-    for (const notif of notifications) {
-      markNotificationRead(notif.id);
-    }
-
-    // Marcar todas as mensagens do WhatsApp como lidas no banco de dados
-    if (unreadWhatsAppCount > 0) {
-      const { error } = await supabase
-        .from("whatsapp_messages")
-        .update({ is_read: true })
-        .eq("is_read", false)
-        .eq("is_from_me", false);
-      
-      if (error) console.error("Erro ao marcar todas as mensagens como lidas:", error);
-    }
-  };
- 
-  return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar className="shadow-[4px_0_24px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_32px_rgba(0,0,0,0.3)] z-40" />
-        <div className="flex-1 flex flex-col min-w-0">
-          <header
-            role="banner"
-            className="h-[60px] flex items-center justify-between border-b border-black/10 bg-white px-4 sm:px-6 shrink-0 sticky top-0 z-30"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <SidebarTrigger
-                aria-label="Alternar barra lateral"
-                className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-              />
-              <div className="flex flex-col">
-                {title && (
-                  <h1 className="text-[18px] font-medium text-primary tracking-tight leading-tight">{title}</h1>
-                )}
-                <span className="text-[13px] text-muted-foreground">Gestão comercial inteligente</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 shrink-0">
-              <div className="hidden sm:flex items-center gap-1 bg-[#F0F0F5] p-[3px] rounded-[8px]">
-                {["7d", "30d", "90d", "Tudo"].map((p) => (
-                  <button
-                    key={p}
-                    className={cn(
-                      "px-3 py-1 text-[11px] font-medium transition-all rounded-[6px]",
-                      p === "30d" ? "bg-brand-500 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="relative h-[36px] w-[36px] rounded-[8px] border-black/10 hover:bg-secondary transition-colors"
-                  >
-                    <Bell className="h-4 w-4" />
-                    {totalNotifications > 0 && (
-                      <span className="absolute top-[2px] right-[2px] h-[8px] w-[8px] rounded-full bg-destructive border-[1.5px] border-white" />
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-0 rounded-xl shadow-lg border-border/60" align="end" sideOffset={8}>
-                   <div className="p-3.5 border-b border-border/60 flex items-center justify-between">
-                     <h4 className="text-[13px] font-medium text-foreground">Notificações</h4>
-                     {totalNotifications > 0 && (
-                       <Button 
-                         variant="ghost" 
-                         size="sm" 
-                         onClick={markAllAsRead}
-                         className="h-7 px-2 text-[11px] font-medium text-primary"
-                       >
-                         Ler todas
-                       </Button>
-                     )}
-                   </div>
-                   <div className="divide-y divide-border/40 max-h-[400px] overflow-y-auto">
-                 {notifications.map((notif) => (
-                   <div 
-                     key={notif.id} 
-                     onClick={() => handleSlaNotificationClick(notif)} 
-                     className="flex items-center gap-3 p-3.5 hover:bg-muted/40 transition-colors cursor-pointer"
-                   >
-                     <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${notif.type === 'sla_critical' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'}`}>
-                       {notif.type === 'sla_critical' ? <ShieldAlert className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-                     </div>
-                     <div className="flex-1 min-w-0">
-                       <div className="flex items-center justify-between">
-                         <p className="text-sm font-semibold text-foreground">{notif.title}</p>
-                       </div>
-                       <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{notif.message}</p>
-                     </div>
-                   </div>
-                 ))}
-                     {totalNotifications === 0 && (
-                       <div className="p-8 text-center">
-                         <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
-                         <p className="text-sm text-muted-foreground">Nenhuma notificação</p>
-                       </div>
-                     )}
-                   </div>
-                 </PopoverContent>
-               </Popover>
-            </div>
-          </header>
-          <main className="flex-1 overflow-auto p-3 sm:p-5 md:p-6">
-            {children}
-          </main>
-        </div>
-      </div>
-    </SidebarProvider>
-  );
+  return <>{children}</>;
 }

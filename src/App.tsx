@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CrmProvider } from "@/contexts/CrmContext";
 import { RoleProvider } from "@/contexts/RoleContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AppShell } from "@/components/AppShell";
 import AdminPanel from "./pages/AdminPanel";
 import Dashboard from "./pages/Dashboard";
 import Kanban from "./pages/Kanban";
@@ -38,15 +39,17 @@ const App = () => (
                   <CrmProvider>
                     <UrgencyAlertPopup />
                     <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/kanban" element={<Kanban />} />
-                      <Route path="/clientes" element={<Clientes />} />
-                      <Route path="/agenda" element={<Agenda />} />
-                      <Route path="/conversas" element={<Conversas />} />
-                      <Route path="/configuracoes" element={<Configuracoes />} />
-                      <Route path="/suporte-orcamento" element={<SuporteOrcamento />} />
-                      <Route path="/admin" element={<AdminPanel />} />
-                      <Route path="*" element={<NotFound />} />
+                      <Route element={<AppShell />}>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/kanban" element={<Kanban />} />
+                        <Route path="/clientes" element={<Clientes />} />
+                        <Route path="/agenda" element={<Agenda />} />
+                        <Route path="/conversas" element={<Conversas />} />
+                        <Route path="/configuracoes" element={<Configuracoes />} />
+                        <Route path="/suporte-orcamento" element={<SuporteOrcamento />} />
+                        <Route path="/admin" element={<AdminPanel />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Route>
                     </Routes>
                   </CrmProvider>
                 </ProtectedRoute>
