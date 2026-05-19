@@ -362,6 +362,28 @@ serve(async (req) => {
           let targetStoreId = client?.store_id || null;
           const normalizedText = text.toLowerCase();
 
+          // Create in-app notification for new inbound WhatsApp message
+          try {
+            const notifStoreId = client?.store_id || null;
+            const assignedSellerId = client?.assigned_seller_id || null;
+            const preview = (text || "").toString().slice(0, 80);
+            await supabase.from("notifications").insert({
+              type: "whatsapp_new_message",
+              title: "Nova mensagem WhatsApp",
+              message: `${senderName}: ${preview}`,
+              store_id: notifStoreId,
+              role_target: assignedSellerId ? "vendedor" : "gerente",
+              metadata: {
+                seller_id: assignedSellerId,
+                phone: cleanPhone,
+                client_name: client?.name || senderName,
+              },
+              is_read: false,
+            });
+          } catch (notifErr) {
+            console.error("Error creating whatsapp notification:", notifErr);
+          }
+
           // Lead distribution logic: check for store preference in the message
           const { data: allStores } = await supabase.from("stores").select("id, name");
           if (allStores) {
