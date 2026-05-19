@@ -606,36 +606,37 @@ serve(async (req) => {
                 status: 200,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
               });
-            } else {
-              // Check if the assigned seller's status has changed and if redirection is needed
-              const { data: seller } = await supabase
-                .from("sellers")
-                .select("status, substitute_id")
-                .eq("id", client.assigned_seller_id)
-                .maybeSingle();
+             } else {
+               // Check if the assigned seller's status has changed and if redirection is needed
+               const { data: seller } = await supabase
+                 .from("sellers")
+                 .select("status, substitute_id, is_active, is_available")
+                 .eq("id", client.assigned_seller_id)
+                 .maybeSingle();
 
-              if (seller && seller.status !== 'active' && seller.substitute_id) {
-                console.log(`Seller ${client.assigned_seller_id} is ${seller.status}. Redirecting to substitute ${seller.substitute_id}`);
-                const originalSellerId = client.assigned_seller_id;
-                
-                const { data: redirectResult } = await supabase.rpc("assign_client_with_redirection", {
-                  _phone: cleanPhone,
-                  _seller_id: originalSellerId
-                });
+               const isInactive = seller && (
+                 seller.status !== 'active' || 
+                 seller.is_active === false || 
+                 seller.is_available === false
+               );
 
-                if (redirectResult?.success) {
-                   console.log(`Redirection successful to ${redirectResult.seller_id}`);
-                   // No need to manually update updateData.assigned_seller_id as RPC handled it
-                }
-              } else if (seller && seller.status !== 'active' && !seller.substitute_id) {
-                // If inactive and NO substitute, what should happen for an ALREADY assigned client?
-                // Usually they stay with the seller unless the manager manually transfers.
-                // But according to "Se estiver inativo e não tiver substituto, o lead volta para a fila da loja."
-                // Let's implement this for new messages too if the seller went away.
-                console.log(`Seller ${client.assigned_seller_id} is ${seller.status} with NO substitute. Re-distributing lead.`);
-                await distributeLead(client.store_id);
-              }
-            }
+               if (seller && isInactive && seller.substitute_id) {
+                 console.log(`Seller ${client.assigned_seller_id} is inactive (status: ${seller.status}, active: ${seller.is_active}, available: ${seller.is_available}). Redirecting to substitute ${seller.substitute_id}`);
+                 const originalSellerId = client.assigned_seller_id;
+                 
+                 const { data: redirectResult } = await supabase.rpc("assign_client_with_redirection", {
+                   _phone: cleanPhone,
+                   _seller_id: originalSellerId
+                 });
+
+                 if (redirectResult?.success) {
+                    console.log(`Redirection successful to ${redirectResult.seller_id}`);
+                 }
+               } else if (seller && isInactive && !seller.substitute_id) {
+                 console.log(`Seller ${client.assigned_seller_id} is inactive with NO substitute. Re-distributing lead.`);
+                 await distributeLead(client.store_id);
+               }
+             }
 
             await supabase
               .from("clients")
