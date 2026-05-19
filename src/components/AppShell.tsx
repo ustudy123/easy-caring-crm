@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -19,6 +19,8 @@ export const usePageTitle = () => useContext(PageTitleContext);
 
 export function AppShell() {
   const [title, setTitle] = useState<string>("");
+  const location = useLocation();
+  const showPeriodSelector = location.pathname === "/";
   const {
     newLeadsCount,
     pendingFollowUpsCount,
@@ -95,6 +97,7 @@ export function AppShell() {
                 </div>
               </div>
               <div className="flex items-center gap-4 shrink-0">
+                {showPeriodSelector && (
                 <div className="hidden sm:flex items-center gap-1 bg-[#F0F0F5] p-[3px] rounded-[8px]">
                   {["7d", "30d", "90d", "Tudo"].map((p) => (
                     <button
@@ -110,6 +113,7 @@ export function AppShell() {
                     </button>
                   ))}
                 </div>
+                )}
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
