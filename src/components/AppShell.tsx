@@ -165,7 +165,12 @@ export function AppShell() {
                 </Popover>
               </div>
             </header>
-            <main className="flex-1 overflow-auto p-3 sm:p-5 md:p-6">
+            <main
+              className={cn(
+                "flex-1 overflow-auto p-3 sm:p-5 md:p-6",
+                location.pathname === "/kanban" && "kanban-scrollbar"
+              )}
+            >
               <Outlet />
             </main>
           </div>
