@@ -23,12 +23,12 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         brand: {
-          50: "#EEEDFE",
-          100: "#CECBF6",
-          400: "#7F77DD",
-          500: "#6C63FF",
-          600: "#534AB7",
-          800: "#3C3489",
+          50: "#FEEEDC",
+          100: "#FCD4AC",
+          400: "#F58F3F",
+          500: "#F37021",
+          600: "#C95611",
+          800: "#7A340A",
         },
         primary: {
           DEFAULT: "hsl(var(--primary))",
