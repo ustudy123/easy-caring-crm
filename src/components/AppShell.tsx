@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Bell, AlertTriangle, MessageCircle, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -76,9 +76,8 @@ export function AppShell() {
   return (
     <PageTitleContext.Provider value={{ title, setTitle }}>
       <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-background">
-          <AppSidebar className="shadow-[4px_0_24px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_32px_rgba(0,0,0,0.3)] z-40" />
-          <div className="flex-1 flex flex-col min-w-0">
+        <AppSidebar className="shadow-[4px_0_24px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_32px_rgba(0,0,0,0.3)] z-40" />
+        <SidebarInset className="flex flex-col min-w-0 bg-background">
             <header
               role="banner"
               className="h-[60px] flex items-center justify-between border-b border-black/10 bg-white px-4 sm:px-6 shrink-0 sticky top-0 z-30"
@@ -205,8 +204,7 @@ export function AppShell() {
             >
               <Outlet />
             </main>
-          </div>
-        </div>
+        </SidebarInset>
       </SidebarProvider>
     </PageTitleContext.Provider>
   );
