@@ -75,9 +75,9 @@ export function AppShell() {
 
   return (
     <PageTitleContext.Provider value={{ title, setTitle }}>
-      <SidebarProvider className="min-h-screen w-full overflow-hidden">
+      <SidebarProvider className="h-screen w-full overflow-hidden">
         <AppSidebar className="shadow-[4px_0_24px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_32px_rgba(0,0,0,0.3)] z-40" />
-        <SidebarInset className="flex flex-col min-w-0 bg-background h-screen">
+        <SidebarInset className="flex flex-col min-w-0 bg-background overflow-hidden">
             <header
               role="banner"
               className="h-[60px] flex items-center justify-between border-b border-black/10 bg-white px-4 sm:px-6 shrink-0 sticky top-0 z-30"
