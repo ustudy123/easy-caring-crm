@@ -19,7 +19,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 10%;
 
-    --primary: 244 100% 70%;
+    --primary: 22 92% 54%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 240 10% 96%;
@@ -28,7 +28,7 @@
     --muted: 240 10% 96%;
     --muted-foreground: 240 10% 46%;
 
-    --accent: 244 100% 70%;
+    --accent: 22 92% 54%;
     --accent-foreground: 240 10% 10%;
 
     --destructive: 0 72% 59%;
@@ -36,24 +36,24 @@
 
     --border: 0 0% 0% / 0.08;
     --input: 0 0% 0% / 0.08;
-    --ring: 244 100% 70%;
+    --ring: 22 92% 54%;
 
     --radius: 14px;
 
-    /* Kanban stage colors */
-    --kanban-approach: 244 100% 70%;
-    --kanban-probing: 244 80% 65%;
-    --kanban-recommendation: 244 70% 60%;
-    --kanban-demonstration: 244 60% 55%;
-    --kanban-objections: 244 50% 50%;
-    --kanban-crosssell: 244 45% 45%;
-    --kanban-pricing: 244 40% 40%;
-    --kanban-closing: 162 69% 37%;
-    --kanban-postsale: 244 35% 35%;
+    /* Kanban stage colors (Taeco palette: orange -> dark) */
+    --kanban-approach: 22 92% 54%;
+    --kanban-probing: 22 85% 50%;
+    --kanban-recommendation: 22 75% 45%;
+    --kanban-demonstration: 22 60% 38%;
+    --kanban-objections: 0 0% 45%;
+    --kanban-crosssell: 0 0% 35%;
+    --kanban-pricing: 0 0% 25%;
+    --kanban-closing: 22 92% 54%;
+    --kanban-postsale: 0 0% 15%;
 
     /* Funnel gradient stops for SVG/charts */
-    --funnel-start: 244 100% 70%;
-    --funnel-end: 162 69% 37%;
+    --funnel-start: 22 92% 54%;
+    --funnel-end: 0 0% 15%;
 
     /* Semantic accents only */
     --success: 162 69% 37%;
@@ -65,16 +65,16 @@
     --error-bg: 0 72% 96%;
     --info-bg: 210 75% 94%;
 
-    /* Sidebar - #0F1117 */
-    --sidebar-background: 225 21% 7%;
+    /* Sidebar - Taeco black with orange accent */
+    --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 0 0% 100% / 0.45;
-    --sidebar-primary: 244 100% 81%;
-    --sidebar-primary-foreground: 225 21% 7%;
+    --sidebar-primary: 22 92% 60%;
+    --sidebar-primary-foreground: 0 0% 8%;
     --sidebar-accent: 0 0% 100% / 0.06;
     --sidebar-accent-foreground: 0 0% 100% / 0.8;
     --sidebar-border: 0 0% 100% / 0.06;
-    --sidebar-ring: 244 100% 70%;
-    --sidebar-item-active-bg: 244 100% 70% / 0.1;
+    --sidebar-ring: 22 92% 54%;
+    --sidebar-item-active-bg: 22 92% 54% / 0.12;
     --sidebar-section-label: 0 0% 100% / 0.25;
 
     /* Glass / elevation tokens */
@@ -84,7 +84,7 @@
     --shadow-dropdown: 0 4px 16px rgba(0,0,0,0.08);
 
     /* WhatsApp light theme tokens (used on /conversas) */
-    --wa-header: 244 60% 28%;        /* deep indigo */
+    --wa-header: 0 0% 12%;           /* Taeco black */
     --wa-green: 142 70% 38%;         /* WhatsApp green */
     --wa-chat-bg: 240 14% 95%;       /* chat backdrop */
     --wa-list-bg: 240 14% 96%;       /* contacts list backdrop */
