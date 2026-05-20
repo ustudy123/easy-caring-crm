@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff, Mail, Lock, User as UserIcon, ArrowLeft } from "lucide-react";
+import taecoLogo from "@/assets/taeco-logo.png";
 
 export default function Login() {
   const { signIn, signUp, resetPassword } = useAuth();
@@ -64,14 +65,7 @@ export default function Login() {
       <div className="w-full max-w-md animate-fade-up relative z-10">
         {/* Brand */}
         <div className="flex flex-col items-center mb-6 sm:mb-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary shadow-lg shadow-primary/20 mb-3 ring-1 ring-primary/20">
-            <svg width="24" height="24" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <rect x="2" y="2" width="11" height="11" rx="2" fill="white" fillOpacity="0.95" />
-              <rect x="15" y="2" width="11" height="11" rx="2" fill="white" fillOpacity="0.5" />
-              <rect x="2" y="15" width="11" height="11" rx="2" fill="white" fillOpacity="0.5" />
-              <rect x="15" y="15" width="11" height="11" rx="2" fill="white" fillOpacity="0.8" />
-            </svg>
-          </div>
+          <img src={taecoLogo} alt="Taeco Tintas" className="h-24 w-auto mb-3 select-none" draggable={false} />
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">CRM Taeco</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">Gestão Comercial Inteligente</p>
         </div>

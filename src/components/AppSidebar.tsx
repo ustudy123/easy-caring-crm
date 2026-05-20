@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useCrm } from "@/contexts/CrmContext";
 import { useRole } from "@/contexts/RoleContext";
+import taecoLogo from "@/assets/taeco-logo.png";
 
 type NavItem = {
   title: string;
@@ -205,13 +206,13 @@ export function AppSidebar({ className }: { className?: string }) {
       {/* Brand area */}
       <SidebarHeader className="p-4 pt-5 pb-4">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="h-[30px] w-[30px] rounded-[8px] bg-gradient-to-br from-[#6C63FF] to-[#4F46E5] flex items-center justify-center shrink-0">
-            <span className="text-white text-[14px] font-bold">C</span>
+          <div className="h-[34px] w-[34px] rounded-[8px] bg-white flex items-center justify-center shrink-0 p-1">
+            <img src={taecoLogo} alt="Taeco Tintas" className="h-full w-full object-contain" />
           </div>
           {!collapsed && (
             <div className="flex flex-col">
               <span className="text-[14px] font-bold text-white leading-tight">CRM Taeco</span>
-              <span className="text-[11px] text-[#A0A0B0]">Gestão Comercial</span>
+              <span className="text-[11px] text-brand-500">Gestão Comercial</span>
             </div>
           )}
         </div>
