@@ -8,6 +8,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reset viewport for full-bleed layout with sidebar */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 @layer base {
   :root {
     --background: 240 10% 97%;
