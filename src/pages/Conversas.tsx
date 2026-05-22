@@ -1580,7 +1580,7 @@ const mockContactNames: Record<string, string> = {
               </SelectTrigger>
               <SelectContent>
                 {sellers
-                  .filter(s => s.id !== sellerId && s.is_active !== false)
+                  .filter(s => s.id !== sellerId && s.is_active !== false && !!s.user_id)
                   .map(seller => (
                     <SelectItem key={seller.id} value={seller.id}>
                       {seller.code ? `[${seller.code}] ` : ''}{seller.name}
