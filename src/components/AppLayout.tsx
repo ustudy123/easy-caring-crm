@@ -16,8 +16,11 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   const { setTitle } = usePageTitle();
 
   useEffect(() => {
+    // Update the persistent header title on mount/update.
+    // Do NOT reset on unmount: the next page sets its own title synchronously,
+    // and resetting here caused a double-render flicker on navigation
+    // (empty title → new title) that looked like the page was reloading twice.
     setTitle(title ?? "");
-    return () => setTitle("");
   }, [title, setTitle]);
 
   return <>{children}</>;
