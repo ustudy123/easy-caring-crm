@@ -601,7 +601,13 @@ export default function Kanban() {
                                             <DollarSign className="h-3 w-3 text-success" />
                                             R$ {lead.value.toLocaleString("pt-BR")}
                                           </div>
-                                          <span className="text-[10px] font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">{lead.source}</span>
+                                          <div className="flex items-center gap-1.5">
+                                            <InstanceBadge
+                                              instance={instancesById[clientInstanceByPhone[lead.clientPhone]]}
+                                              size="xs"
+                                            />
+                                            <span className="text-[10px] font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">{lead.source}</span>
+                                          </div>
                                         </div>
 
                                         {/* Tags */}
