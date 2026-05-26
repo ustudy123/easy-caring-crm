@@ -928,6 +928,22 @@ const mockContactNames: Record<string, string> = {
                  className="pl-10 h-9 rounded-lg bg-white border border-border text-sm placeholder:text-muted-foreground/50 focus-visible:ring-2 focus-visible:ring-brand-500/30 focus-visible:border-brand-500/40"
                />
              </div>
+
+             {allInstances.length > 1 && (
+               <Select value={instanceFilter} onValueChange={setInstanceFilter}>
+                 <SelectTrigger className="h-9 rounded-lg bg-white border border-border text-xs">
+                   <SelectValue placeholder="Todos os números" />
+                 </SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="all">Todos os números</SelectItem>
+                   {allInstances.map((inst) => (
+                     <SelectItem key={inst.id} value={inst.id}>
+                       {inst.instance_type === "store" ? "🏬 " : "📱 "}{inst.name}
+                     </SelectItem>
+                   ))}
+                 </SelectContent>
+               </Select>
+             )}
              
               <div className="flex gap-1 flex-wrap">
                <Button 
