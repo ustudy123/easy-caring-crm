@@ -39,7 +39,7 @@ serve(async (req) => {
 
   try {
      const body = await req.json();
-      const { phone, message, mediaUrl, mediaType, senderId, senderName } = body;
+      const { phone, message, mediaUrl, mediaType, senderId, senderName, instanceId } = body;
 
     if (!phone || (!message && !mediaUrl)) {
       return new Response(JSON.stringify({ error: "phone and (message or mediaUrl) are required" }), {
@@ -48,6 +48,26 @@ serve(async (req) => {
       });
     }
 
+    // Resolve target instance: explicit instanceId > client's received_on_instance_id > default env
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    let resolvedInstanceId: string | null = instanceId || null;
+    if (!resolvedInstanceId) {
+      const cleanPhoneLookup = phone.replace(/\D/g, "");
+      const { data: client } = await supabase
+        .from("clients")
+        .select("received_on_instance_id")
+        .eq("phone", cleanPhoneLookup)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      resolvedInstanceId = client?.received_on_instance_id || null;
+    }
+
+    // Future: load per-instance credentials from whatsapp_instances + named secrets.
+    // For now, all instances share the env credentials (uazapi default).
     const whatsappApiUrl = getZApiBaseUrl();
 
     if (!whatsappApiUrl) {
@@ -110,11 +130,6 @@ serve(async (req) => {
       });
     }
 
-    // Store sent message in database
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const messageId = apiData?.messageId || apiData?.zaapId || apiData?.id || crypto.randomUUID();
 
     await supabase.from("whatsapp_messages").insert({
@@ -126,7 +141,8 @@ serve(async (req) => {
       is_from_me: true,
       timestamp: new Date().toISOString(),
       sender_id: senderId,
-      sender_name: senderName
+      sender_name: senderName,
+      received_on_instance_id: resolvedInstanceId,
     });
 
     // Update client metadata for response tracking
@@ -139,7 +155,7 @@ serve(async (req) => {
       })
       .eq("phone", cleanPhone);
 
-    return new Response(JSON.stringify({ success: true, messageId }), {
+    return new Response(JSON.stringify({ success: true, messageId, instanceId: resolvedInstanceId }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
