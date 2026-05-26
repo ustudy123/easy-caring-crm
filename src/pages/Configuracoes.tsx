@@ -308,6 +308,71 @@ export default function Configuracoes() {
           </Card>
         )}
 
+        {(isGerente || isAdmin) && teamSellers.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base font-medium">
+                <Users className="h-4 w-4 text-brand-500" /> Gestão da Equipe
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Defina status e vendedor substituto da sua equipe. O substituto é obrigatório quando o vendedor está inativo, em férias ou ausente.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {teamSellers.map((m) => {
+                const otherSellers = teamSellers.filter((s) => s.id !== m.id);
+                return (
+                  <div
+                    key={m.id}
+                    className="grid grid-cols-1 md:grid-cols-[1fr_180px_220px] gap-3 items-center p-3 rounded-lg border border-black/8 bg-white"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold">{m.name}</p>
+                      {m.code && (
+                        <p className="text-[11px] text-muted-foreground font-mono">Código {m.code}</p>
+                      )}
+                    </div>
+                    <Select
+                      value={m.status || "active"}
+                      onValueChange={(v) => handleUpdateTeamMember(m, { status: v })}
+                      disabled={savingTeamId === m.id}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Ativo</SelectItem>
+                        <SelectItem value="inactive">Inativo</SelectItem>
+                        <SelectItem value="vacation">Em férias</SelectItem>
+                        <SelectItem value="away">Ausente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={m.substitute_id || "none"}
+                      onValueChange={(v) =>
+                        handleUpdateTeamMember(m, { substitute_id: v === "none" ? null : v })
+                      }
+                      disabled={savingTeamId === m.id}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione substituto..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum (fila geral)</SelectItem>
+                        {otherSellers.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-medium">
