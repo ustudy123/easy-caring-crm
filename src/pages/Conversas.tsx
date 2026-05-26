@@ -148,7 +148,7 @@ const mockContactNames: Record<string, string> = {
 
 // ── Component ──
  export default function Conversas() {
-     const { isAdmin, isGerente, isVendedor, sellerId, storeId, role } = useRole();
+     const { isAdmin, isGerente, isVendedor, isSuporte, sellerId, storeId, role } = useRole();
     const { decrementUnreadWhatsApp } = useCrm();
     const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
     const [clients, setClients] = useState<any[]>([]);
@@ -1218,7 +1218,7 @@ const mockContactNames: Record<string, string> = {
                            {isClaiming ? (<span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 animate-spin" /> Processando...</span>) : (<span className="flex items-center gap-1.5"><UserCheck className="h-4 w-4" /> {isSelectedStale && selectedConversation?.assigned_seller_id ? "Retomar Atendimento" : "Atender Cliente"}</span>)}
                          </Button>
                        )}
-                         {(isAdmin || isGerente || selectedConversation?.assigned_seller_id === sellerId) && (
+                         {(isAdmin || isGerente || isVendedor || isSuporte) && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
