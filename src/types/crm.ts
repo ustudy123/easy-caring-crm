@@ -19,7 +19,6 @@ export interface Lead {
    interestProducts?: string;
    storeName?: string;
    storeId?: string;
-   receivedOnInstanceId?: string;
 }
 
 export interface Client {
