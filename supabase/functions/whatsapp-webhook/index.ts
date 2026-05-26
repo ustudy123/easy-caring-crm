@@ -264,6 +264,37 @@ serve(async (req) => {
        console.log("Detected Event:", event);
        console.log("Event Data:", JSON.stringify(data));
 
+        // Multi-instance routing: identify which connected number received the message.
+        // Z-API provides `connectedPhone`; uazapi typically provides `instance` / `instanceId` / `owner`.
+        const rawConnectedPhone = (
+          data.connectedPhone || data.connected_phone || data.owner || data.toPhone || data.to || ""
+        ).toString();
+        const connectedPhoneClean = rawConnectedPhone
+          .replace("@s.whatsapp.net", "")
+          .replace("@c.us", "")
+          .replace(/[^0-9]/g, "");
+        const instanceHint = (data.instance || data.instanceId || data.instance_id || "").toString();
+
+        let receivedInstance: any = null;
+        if (connectedPhoneClean) {
+          const { data: inst } = await supabase
+            .from("whatsapp_instances")
+            .select("id, instance_type, store_id, seller_id, phone_number")
+            .eq("phone_number", connectedPhoneClean)
+            .maybeSingle();
+          receivedInstance = inst || null;
+        }
+        if (!receivedInstance && instanceHint) {
+          const { data: inst } = await supabase
+            .from("whatsapp_instances")
+            .select("id, instance_type, store_id, seller_id, phone_number")
+            .or(`phone_number.eq.${instanceHint},id.eq.${instanceHint}`)
+            .maybeSingle();
+          receivedInstance = inst || null;
+        }
+        const receivedInstanceId = receivedInstance?.id || null;
+        console.log("Resolved instance:", JSON.stringify({ connectedPhoneClean, instanceHint, receivedInstanceId, type: receivedInstance?.instance_type }));
+
         // Z-API uses "ReceivedMessage" for incoming messages
         const isMessageEvent = event === "ReceivedMessage" || event === "ReceivedCallback" || event === "messages" || event === "message" || event === "chats";
 
@@ -305,7 +336,8 @@ serve(async (req) => {
           body: text,
           is_from_me: isFromMe,
           timestamp: new Date(tsMs).toISOString(),
-          raw_data: body
+          raw_data: body,
+          received_on_instance_id: receivedInstanceId,
         });
         if (msgError) {
           if (msgError.code === '23505') {
