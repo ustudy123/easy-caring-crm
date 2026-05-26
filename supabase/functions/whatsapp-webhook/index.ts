@@ -352,6 +352,49 @@ serve(async (req) => {
  
         // If incoming message (not from me, not group), handle lead distribution logic
         if (!isFromMe && cleanPhone && !isGroup) {
+          // ── MULTI-INSTANCE: If message arrived on a seller's direct number,
+          // skip triage entirely and route straight to that seller.
+          if (receivedInstance?.instance_type === 'seller' && receivedInstance?.seller_id) {
+            const directSellerId = receivedInstance.seller_id;
+            const directStoreId = receivedInstance.store_id || null;
+
+            // Use assign_client_with_redirection to honor substitute logic when seller is inactive
+            const { data: assignResult } = await supabase.rpc("assign_client_with_redirection", {
+              _phone: cleanPhone,
+              _seller_id: directSellerId,
+            });
+
+            // Always tag the client with the instance the message came from (for reply routing + thread separation)
+            await supabase.from("clients")
+              .update({
+                received_on_instance_id: receivedInstanceId,
+                last_message_at: new Date().toISOString(),
+                last_message_from_client_at: new Date().toISOString(),
+                triaging: false,
+                triage_step: null,
+              })
+              .eq("phone", cleanPhone);
+
+            console.log(`Direct seller routing → seller ${directSellerId} via instance ${receivedInstanceId}. Result:`, JSON.stringify(assignResult));
+
+            return new Response(JSON.stringify({
+              success: true,
+              action: "routed_direct_seller_number",
+              instance_id: receivedInstanceId,
+              seller_id: directSellerId,
+            }), {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+
+          // Track which instance brought the client in (for store-type instances and reply routing)
+          if (receivedInstanceId) {
+            await supabase.from("clients")
+              .update({ received_on_instance_id: receivedInstanceId })
+              .eq("phone", cleanPhone);
+          }
+
           // PRIORITY: Check if message contains a seller code (ramal). If matched, route directly.
           const codeMatch = text.match(/\b(\d{3,10})\b/);
           if (codeMatch) {
