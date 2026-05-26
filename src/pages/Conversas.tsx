@@ -437,7 +437,7 @@ const mockContactNames: Record<string, string> = {
       
       // Default sort (Minhas): newest first
       return filtered.sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
-     }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente]);
+     }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente, instanceFilter]);
 
   // Monitor conversations for stale messages to trigger alert popup
   useEffect(() => {
