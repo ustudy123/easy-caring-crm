@@ -353,7 +353,8 @@ const mockContactNames: Record<string, string> = {
             store_id: client?.store_id,
             status: client?.status,
             alert_status: client?.alert_status,
-            last_message_from_client_at: client?.last_message_from_client_at
+            last_message_from_client_at: client?.last_message_from_client_at,
+            received_on_instance_id: client?.received_on_instance_id
           });
         }
         const conv = map.get(phone)!;
