@@ -521,23 +521,18 @@ serve(async (req) => {
                    await sendWhatsAppMessage(cleanPhone, `Não localizei esse código. Verifique e digite novamente, ou responda *N* para continuar sem código.`, isTest);
                  }
                } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
-                 // Move to ask_store
-                 const { data: stores } = await supabase.from("stores").select("id, name").order("name");
-                  const storeList = (stores || []).map((s, i) => `${i + 1} - ${s.name}`).join("\n");
-                  const generalOptionIndex = (stores || []).length + 1;
-                  const fullList = `${storeList}\n${generalOptionIndex} - Ainda não sei / Quero atendimento geral`;
-                  
+                  // Move to ask_store: pergunta a CIDADE/REGIÃO em texto livre
                   await updateClient({ triage_step: 'ask_store' });
                   await sendWhatsAppMessage(
-                    cleanPhone, 
-                    `Para direcionarmos melhor seu atendimento, escolha a *loja ou região* mais próxima de você:\n\n${fullList}\n\nDigite apenas o *número* da opção desejada.`, 
+                    cleanPhone,
+                    `Sem problemas! Para direcionarmos seu atendimento, em qual *cidade ou região* você está? 📍\n\nDigite o nome da sua cidade (ex: *São Paulo*) ou responda *N* para atendimento geral.`,
                     isTest
                   );
                } else {
                  await sendWhatsAppMessage(cleanPhone, `Por favor, digite seu *código de vendedor* (ex: 1023) ou responda *N* se não tiver.`, isTest);
                }
              } else if (step === 'ask_store') {
-               const { data: stores } = await supabase.from("stores").select("id, name").order("name");
+                const { data: stores } = await supabase.from("stores").select("id, name, city").order("name");
                 const numMatch = trimmed.match(/^\d+$/);
                 const selectedIndex = numMatch ? parseInt(trimmed, 10) : -1;
                 const generalOptionIndex = (stores || []).length + 1;
@@ -549,28 +544,33 @@ serve(async (req) => {
                   if (selectedIndex > 0 && stores && selectedIndex <= stores.length) {
                     chosen = stores[selectedIndex - 1];
                   }
-                  if (!chosen && stores) {
-                    chosen = stores.find(s => lower.includes(s.name.toLowerCase())) || null;
-                  }
+                   if (!chosen && stores) {
+                     // Match por cidade ou nome da loja (substring nos dois sentidos)
+                     chosen = stores.find(s => {
+                       const cityLower = (s.city || '').toLowerCase().trim();
+                       const nameLower = s.name.toLowerCase().trim();
+                       if (cityLower && (lower.includes(cityLower) || cityLower.includes(lower))) return true;
+                       if (nameLower && (lower.includes(nameLower) || nameLower.includes(lower))) return true;
+                       return false;
+                     }) || null;
+                   }
                   
                   if (chosen) {
                     // Direct hand-off: don't list sellers, don't ask about interest.
-                    await updateClient({ store_id: chosen.id });
+                     await updateClient({ store_id: chosen.id, city: trimmed });
                     await finishWithStore(chosen.id, chosen.name);
                   } else {
-                    // Fallback for unexpected text or invalid option during store choice:
-                    // We show the menu again with clear numbering to guide the user.
-                    console.log(`Fallback: client ${cleanPhone} sent unexpected text "${text}" during store choice. Showing menu again.`);
-                    
-                    const storeList = (stores || []).map((s, i) => `${i + 1} - ${s.name}`).join("\n");
-                    const generalOptionIndex = (stores || []).length + 1;
-                    const fullList = `${storeList}\n${generalOptionIndex} - Ainda não sei / Quero atendimento geral`;
-                    
-                    await sendWhatsAppMessage(
-                      cleanPhone, 
-                      `Ainda não consegui identificar sua escolha. 🧐\n\nPor favor, escolha uma das opções abaixo digitando apenas o *número*:\n\n${fullList}`, 
-                      isTest
-                    );
+                     // Fallback: cidade não bate com nenhuma loja — mostra menu numerado
+                     console.log(`Fallback: client ${cleanPhone} sent city "${text}" with no store match. Showing numbered menu.`);
+                     const storeList = (stores || []).map((s, i) => `${i + 1} - ${s.name}${s.city ? ` (${s.city})` : ''}`).join("\n");
+                     const fullList = `${storeList}\n${generalOptionIndex} - Outra cidade / Atendimento geral`;
+                     // Salva a cidade informada para contexto do vendedor
+                     await updateClient({ city: trimmed });
+                     await sendWhatsAppMessage(
+                       cleanPhone,
+                       `Não localizei uma loja na cidade *${trimmed}*. 🧐\n\nEscolha a unidade mais próxima digitando apenas o *número*:\n\n${fullList}`,
+                       isTest
+                     );
                   }
                }
               } else if (step === 'ask_seller') {
