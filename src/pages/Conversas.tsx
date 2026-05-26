@@ -18,6 +18,8 @@ import { useCrm } from "@/contexts/CrmContext";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import { Textarea } from "@/components/ui/textarea";
  import { Label } from "@/components/ui/label";
+ import { InstanceBadge } from "@/components/InstanceBadge";
+ import { useInstances } from "@/hooks/useInstances";
 const ChatMessageBody = memo(({ body, chatSearch, isCurrentOccurrence }: { body: string | null; chatSearch: string; isCurrentOccurrence: boolean }) => {
   const content = useMemo(() => {
     if (!chatSearch || chatSearch.length < 2 || !body) return body || "";
@@ -74,6 +76,7 @@ interface WhatsAppMessage {
    claimed_at?: string | null;
   last_message_from_client_at?: string | null;
   alert_status?: 'none' | 'yellow' | 'red' | 'transferred' | 'critical';
+  received_on_instance_id?: string | null;
  }
  
  type TabType = 'minhas' | 'loja' | 'geral' | 'todas';
@@ -150,6 +153,8 @@ const mockContactNames: Record<string, string> = {
  export default function Conversas() {
      const { isAdmin, isGerente, isVendedor, isSuporte, sellerId, storeId, role } = useRole();
     const { decrementUnreadWhatsApp } = useCrm();
+    const { instances: allInstances, byId: instancesById } = useInstances();
+    const [instanceFilter, setInstanceFilter] = useState<string>("all");
     const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
     const [clients, setClients] = useState<any[]>([]);
     const [stores, setStores] = useState<any[]>([]);
@@ -348,7 +353,8 @@ const mockContactNames: Record<string, string> = {
             store_id: client?.store_id,
             status: client?.status,
             alert_status: client?.alert_status,
-            last_message_from_client_at: client?.last_message_from_client_at
+            last_message_from_client_at: client?.last_message_from_client_at,
+            received_on_instance_id: client?.received_on_instance_id
           });
         }
         const conv = map.get(phone)!;
@@ -370,6 +376,11 @@ const mockContactNames: Record<string, string> = {
      const filteredConversations = useMemo(() => {
        let filtered = conversations.filter((c) => {
          const isMine = c.assigned_seller_id === sellerId;
+
+         // Multi-instance filter
+         if (instanceFilter !== "all" && c.received_on_instance_id !== instanceFilter) {
+           return false;
+         }
  
          // Controle de acesso baseado no perfil e na aba
          if (isVendedor) {
@@ -426,7 +437,7 @@ const mockContactNames: Record<string, string> = {
       
       // Default sort (Minhas): newest first
       return filtered.sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
-     }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente]);
+     }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente, instanceFilter]);
 
   // Monitor conversations for stale messages to trigger alert popup
   useEffect(() => {
@@ -917,6 +928,22 @@ const mockContactNames: Record<string, string> = {
                  className="pl-10 h-9 rounded-lg bg-white border border-border text-sm placeholder:text-muted-foreground/50 focus-visible:ring-2 focus-visible:ring-brand-500/30 focus-visible:border-brand-500/40"
                />
              </div>
+
+             {allInstances.length > 1 && (
+               <Select value={instanceFilter} onValueChange={setInstanceFilter}>
+                 <SelectTrigger className="h-9 rounded-lg bg-white border border-border text-xs">
+                   <SelectValue placeholder="Todos os números" />
+                 </SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="all">Todos os números</SelectItem>
+                   {allInstances.map((inst) => (
+                     <SelectItem key={inst.id} value={inst.id}>
+                       {inst.instance_type === "store" ? "🏬 " : "📱 "}{inst.name}
+                     </SelectItem>
+                   ))}
+                 </SelectContent>
+               </Select>
+             )}
              
               <div className="flex gap-1 flex-wrap">
                <Button 
@@ -1091,11 +1118,13 @@ const mockContactNames: Record<string, string> = {
                               <span className="text-[16px] font-normal text-foreground truncate">
                                  {name}
                                </span>
-                               {conv.store_id && (
+                               {conv.received_on_instance_id && instancesById[conv.received_on_instance_id] ? (
+                                 <InstanceBadge instance={instancesById[conv.received_on_instance_id]} size="xs" />
+                               ) : conv.store_id ? (
                                  <span className="text-[10px] bg-brand-500/10 text-brand-500 px-1.5 py-0.5 rounded-full font-medium shrink-0">
                                    {stores.find(s => s.id === conv.store_id)?.name || 'Loja'}
                                  </span>
-                               )}
+                               ) : null}
                                {conv.alert_status === 'critical' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" title="ALERTA CRÍTICO - ADMIN" />}
                               {conv.alert_status === 'red' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" title="Alerta Crítico" />}
                                {conv.alert_status === 'yellow' && <div className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" title="Alerta de Demora" />}

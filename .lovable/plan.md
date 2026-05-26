@@ -1,113 +1,90 @@
-## Multi-WhatsApp — central da loja + números próprios de vendedor
+## Multi-WhatsApp — finalizar visibilidade e casos especiais
 
-Suporte a múltiplos números conectados ao CRM, com 2 tipos de instância convivendo na mesma loja:
-- **Central da loja** (`type=store`) — faz triagem (código → cidade → distribui)
-- **Número próprio do vendedor** (`type=seller`) — vai direto para o vendedor, sem triagem
-
-Regras confirmadas:
-1. Vendedor com número próprio **continua no sorteio do central** (canal extra).
-2. Mesmo cliente em 2 números = **threads separadas por número** na Central de Conversas.
-3. Vendedor inativo com número próprio → **redireciona para substituto** (usa `enforce_substitute_when_inactive`).
+A infra base (tabela `whatsapp_instances`, webhook bifurcado, envio multi-instância, aba Admin) já está implementada. Este plano cobre o que ainda falta para o sistema ficar igual ao desenhado nos screenshots: **visibilidade nos cards/conversas, casos especiais (transferência cross-instance, número desconectado) e UX da Central**.
 
 ---
 
-### 1. Banco de dados (migração)
+### 1. Badge do número na UI (Kanban + Lista de Leads + Conversas)
 
-**Nova tabela `whatsapp_instances`:**
-- `name`, `phone_number` (E.164 único), `instance_type` enum (`store` | `seller`)
-- `store_id` (FK stores, obrigatório p/ store; opcional p/ seller herdar)
-- `seller_id` (FK sellers, obrigatório p/ seller; null p/ store)
-- `provider` enum (`uazapi` | `meta_cloud`), default `uazapi`
-- `status` enum (`disconnected` | `qr_pending` | `connected` | `error`)
-- `qr_code` text, `last_connected_at`, timestamps
-- Constraint: `seller` requer `seller_id`; `store` requer `store_id` e `seller_id IS NULL`
-- RLS: admin full; outros SELECT
-- GRANTs: authenticated SELECT, service_role ALL
+- Trazer `received_on_instance_id` (+ join com `whatsapp_instances.name` e `instance_type`) nas queries de `clients` e `leads` no `CrmContext`.
+- Componente novo `<InstanceBadge instance={...} />`:
+  - Loja → ícone 🏬 + nome da instância (ex.: "Loja Tijuca")
+  - Vendedor → ícone 📱 + nome (ex.: "João Direto")
+  - Cor distinta por instância (hash do id → token do design system).
+- Renderizar o badge em:
+  - Card do Kanban (`Kanban.tsx`)
+  - Linha da lista de Clientes (`Clientes.tsx`)
+  - Cabeçalho da conversa na Central (`Conversas.tsx`)
 
-**Colunas novas:**
-- `whatsapp_messages.received_on_instance_id` (FK whatsapp_instances, nullable)
-- `clients.received_on_instance_id` (FK whatsapp_instances, nullable) — define por qual número responder
+### 2. Central de Conversas — filtro + thread por instância
 
-**Backfill:** criar 1 instância "default uazapi" e atribuir a mensagens/clientes existentes.
+- Filtro no topo: dropdown "Todos os números / Loja Tijuca / João Direto / …" populado de `whatsapp_instances`.
+- Lista de conversas agrupa por `(phone, received_on_instance_id)`: mesmo cliente em 2 números aparece 2x, cada uma com seu badge.
+- Ao abrir a conversa, busca mensagens filtradas pelo mesmo par.
+- Envio: passar `instance_id` da conversa aberta para `send-whatsapp` (não confiar só no fallback do `clients.received_on_instance_id`).
 
----
+### 3. Caso especial — cliente existente fala num número novo
 
-### 2. Webhook (`whatsapp-webhook`)
+No `whatsapp-webhook`, quando o cliente já existe mas o `received_on_instance_id` da mensagem é diferente do atual:
+- Atualiza `clients.received_on_instance_id` para o novo.
+- Se o **novo número é `type=seller`** e o `assigned_seller_id` atual é diferente do `instance.seller_id`:
+  - Faz transferência: chama `assign_client_with_redirection(phone, instance.seller_id)`.
+  - Registra em `redirection_history` com novo tipo `cross_instance` (motivo: "Cliente migrou para número direto de outro vendedor").
+- Se o novo número é `type=store`: não força transferência (mantém vendedor), só atualiza `received_on_instance_id` e cria thread paralela na Central.
 
-Refatorar para identificar a instância destinatária no payload e bifurcar:
+Migração leve: adicionar valor `'cross_instance'` no enum/coluna de `redirection_type` se for enum; se for text, só documentar.
 
-```text
-mensagem chega
-  ↓
-identifica instance (por phone_number/instance_id do payload)
-  ↓
-┌─ type=seller ─────────────────────┐    ┌─ type=store ──────────────────────┐
-│ assigned_seller_id = inst.seller  │    │ fluxo atual: pede código →        │
-│ store_id = seller.store           │    │ se vazio, pede cidade →           │
-│ triaging = false                  │    │ sorteia entre vendedores da       │
-│ stage = 'abordagem'               │    │ cidade (TODOS, inclusive os que   │
-│ se inativo: substituto via        │    │ têm número próprio)               │
-│ assign_client_with_redirection    │    │ store_id restrito ao inst.store   │
-└───────────────────────────────────┘    └───────────────────────────────────┘
-  ↓
-salva received_on_instance_id em clients + whatsapp_messages
-```
+### 4. Número desconectado — alerta no Admin
 
-Cliente que já existe em outro número: **não unifica** — cria/atualiza registro tratando o par `(phone, received_on_instance_id)` como conversa distinta na Central. (No banco continua sendo 1 cliente por telefone, mas mensagens carregam o `received_on_instance_id` e a Central filtra por ele.)
+- Aba "Números WhatsApp" já mostra status. Adicionar:
+  - Banner de alerta no topo da aba quando ≥1 instância está `disconnected` ou `error`.
+  - Toast global (via realtime channel) para admins quando uma instância muda para `disconnected`.
+- Mensagens recebidas em instância desconectada já não chegam (provedor não dispara) — não há mudança no webhook.
 
----
+### 5. Vendedor com número próprio sai de férias
 
-### 3. Envio (`send-whatsapp`)
+Já coberto por `enforce_substitute_when_inactive` + `assign_client_with_redirection` no webhook (passo 2 do plano original). Aqui só **garantir que o webhook `type=seller` use `assign_client_with_redirection`** em vez de update direto, para o substituto entrar automaticamente. Validar no código atual e ajustar se necessário.
 
-- Aceita `instance_id` opcional. Se ausente, lê `clients.received_on_instance_id`.
-- Resolve credenciais por instância (segredos nomeados por instância ou config no banco — a definir na hora de conectar a 2ª instância real).
-- Adapter pattern preparado: `uazapi` agora, `meta_cloud` depois.
+### 6. Dashboard — KPIs por instância (fase leve)
 
----
-
-### 4. UI Admin — aba "Números WhatsApp"
-
-- Lista de instâncias com badge de tipo (`Loja` / `Vendedor`), status, último connect.
-- Botão "Conectar novo número" → modal:
-  - Tipo (Loja / Vendedor)
-  - Loja (sempre) + Vendedor (se tipo=seller)
-  - Provider (uazapi default)
-  - Exibe QR Code; polling de status até `connected`
-- Ações: desconectar, reconectar, excluir (apenas admin).
-- Realtime via Supabase channel.
-
----
-
-### 5. Central de Conversas
-
-- Lista de conversas: agrupada por `(phone, received_on_instance_id)` → mesmo cliente em 2 números aparece 2x, cada uma com badge do número que recebeu.
-- Filtro por instância no topo.
-- Envio sempre pelo número que recebeu (passa `instance_id` no `send-whatsapp`).
+- Adicionar filtro "Por número" no topo do Dashboard (mesmo dropdown da Central).
+- Filtra KPIs existentes (volume de leads, tempo de resposta, conversão) por `received_on_instance_id`.
+- Sem novos cards/gráficos nesta fase — só o filtro reaproveitando o que já existe.
 
 ---
 
 ### Detalhes técnicos
 
-- `get_random_seller_by_city` permanece como está (já inclui todos os ativos — vendedores com número próprio entram no sorteio sem mudança).
-- `enforce_substitute_when_inactive` já cobre o caso 3: quando o webhook de um número `type=seller` chega e o vendedor está inativo, chama `assign_client_with_redirection(phone, inst.seller_id)` e cai no substituto.
-- `received_on_instance_id` em `clients` é atualizado a cada nova mensagem recebida → resposta sempre sai pelo último número que o cliente usou.
-- Migração de dados: 1 instância default; mensagens antigas recebem `received_on_instance_id = default`.
+**Queries afetadas:**
+- `CrmContext.tsx`: incluir `received_on_instance_id` + join `whatsapp_instances(name, instance_type)` em `clients` e `leads`.
+- `Conversas.tsx`: agrupar por `(phone, received_on_instance_id)`; filtro adiciona `.eq('received_on_instance_id', filter)`.
+
+**Webhook (`whatsapp-webhook/index.ts`):**
+- Após identificar instância e cliente existente, comparar `client.received_on_instance_id` vs `instance.id`.
+- Lógica de transferência só dispara para `type=seller` com `seller_id` diferente do atual.
+
+**Componentes novos:**
+- `src/components/InstanceBadge.tsx`
+- `src/components/InstanceFilter.tsx` (dropdown reutilizado em Conversas e Dashboard)
+
+**Sem mudança de schema** exceto opcional: valor `cross_instance` no enum de `redirection_type` (se existir como enum).
 
 ---
 
-### Fora de escopo desta fase
+### Fora de escopo
 
-- SLA de 30min com auto-pass para próximo da fila (vai numa fase 2).
-- Self-service de conexão por vendedor (só admin nesta fase).
-- Billing/relatório por número.
-- Provider Meta Cloud API funcional (estrutura preparada, mas integração real fica para depois).
+- Conectar credenciais únicas por instância (continua usando env vars compartilhadas — fase quando 2ª instância real for plugada).
+- KPIs novos quebrados por instância (gráficos dedicados).
+- Self-service de conexão por vendedor.
+- Provider Meta Cloud funcional.
 
 ---
 
-### Ordem de execução após aprovação
+### Ordem de execução
 
-1. Migração: tabela `whatsapp_instances` + colunas + backfill.
-2. Refactor do webhook (bifurcação store/seller).
-3. UI Admin (aba Números WhatsApp + modal QR).
-4. `send-whatsapp` multi-instância.
-5. Central de Conversas: threads por instância + filtro.
+1. `InstanceBadge` + trazer dados nas queries do CrmContext.
+2. Renderizar badge em Kanban, Clientes, Conversas.
+3. `InstanceFilter` + filtro/agrupamento na Central de Conversas.
+4. Lógica de transferência cross-instance no webhook + `redirection_history`.
+5. Alerta de desconexão no Admin (banner + toast).
+6. Filtro por instância no Dashboard.
