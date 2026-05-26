@@ -17,7 +17,7 @@ import { useRole } from "@/contexts/RoleContext";
 export default function Configuracoes() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isAdmin } = useRole();
+  const { isAdmin, isGerente } = useRole();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [seller, setSeller] = useState<any>(null);
@@ -95,6 +95,22 @@ export default function Configuracoes() {
 
   const handleUpdateSeller = async (updates: any) => {
     if (!user || !seller) return;
+
+    // Determine final state after applying updates
+    const next = { ...seller, ...updates };
+    const willBeInactive = ('is_active' in updates)
+      ? updates.is_active === false
+      : seller.is_active === false;
+
+    if (willBeInactive && !next.substitute_id) {
+      toast({
+        title: "Substituto obrigatório",
+        description: "Selecione um vendedor substituto antes de ficar inativo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     
     // If updating activity, also update status for consistency in Admin/Routing
