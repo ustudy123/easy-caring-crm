@@ -1025,6 +1025,33 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_random_seller_by_city: {
+        Args: { _city: string }
+        Returns: {
+          avatar: string | null
+          code: string | null
+          conversions: number
+          created_at: string
+          id: string
+          is_active: boolean | null
+          is_available: boolean | null
+          last_assigned_at: string | null
+          leads_count: number
+          name: string
+          role: Database["public"]["Enums"]["seller_role"]
+          sla_target_minutes: number | null
+          status: string | null
+          store_id: string | null
+          substitute_id: string | null
+          user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "sellers"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_user_seller_id: { Args: { _user_id: string }; Returns: string }
       get_user_store_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
