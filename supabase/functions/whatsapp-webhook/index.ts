@@ -264,6 +264,37 @@ serve(async (req) => {
        console.log("Detected Event:", event);
        console.log("Event Data:", JSON.stringify(data));
 
+        // Multi-instance routing: identify which connected number received the message.
+        // Z-API provides `connectedPhone`; uazapi typically provides `instance` / `instanceId` / `owner`.
+        const rawConnectedPhone = (
+          data.connectedPhone || data.connected_phone || data.owner || data.toPhone || data.to || ""
+        ).toString();
+        const connectedPhoneClean = rawConnectedPhone
+          .replace("@s.whatsapp.net", "")
+          .replace("@c.us", "")
+          .replace(/[^0-9]/g, "");
+        const instanceHint = (data.instance || data.instanceId || data.instance_id || "").toString();
+
+        let receivedInstance: any = null;
+        if (connectedPhoneClean) {
+          const { data: inst } = await supabase
+            .from("whatsapp_instances")
+            .select("id, instance_type, store_id, seller_id, phone_number")
+            .eq("phone_number", connectedPhoneClean)
+            .maybeSingle();
+          receivedInstance = inst || null;
+        }
+        if (!receivedInstance && instanceHint) {
+          const { data: inst } = await supabase
+            .from("whatsapp_instances")
+            .select("id, instance_type, store_id, seller_id, phone_number")
+            .or(`phone_number.eq.${instanceHint},id.eq.${instanceHint}`)
+            .maybeSingle();
+          receivedInstance = inst || null;
+        }
+        const receivedInstanceId = receivedInstance?.id || null;
+        console.log("Resolved instance:", JSON.stringify({ connectedPhoneClean, instanceHint, receivedInstanceId, type: receivedInstance?.instance_type }));
+
         // Z-API uses "ReceivedMessage" for incoming messages
         const isMessageEvent = event === "ReceivedMessage" || event === "ReceivedCallback" || event === "messages" || event === "message" || event === "chats";
 
@@ -305,7 +336,8 @@ serve(async (req) => {
           body: text,
           is_from_me: isFromMe,
           timestamp: new Date(tsMs).toISOString(),
-          raw_data: body
+          raw_data: body,
+          received_on_instance_id: receivedInstanceId,
         });
         if (msgError) {
           if (msgError.code === '23505') {
@@ -320,6 +352,49 @@ serve(async (req) => {
  
         // If incoming message (not from me, not group), handle lead distribution logic
         if (!isFromMe && cleanPhone && !isGroup) {
+          // ── MULTI-INSTANCE: If message arrived on a seller's direct number,
+          // skip triage entirely and route straight to that seller.
+          if (receivedInstance?.instance_type === 'seller' && receivedInstance?.seller_id) {
+            const directSellerId = receivedInstance.seller_id;
+            const directStoreId = receivedInstance.store_id || null;
+
+            // Use assign_client_with_redirection to honor substitute logic when seller is inactive
+            const { data: assignResult } = await supabase.rpc("assign_client_with_redirection", {
+              _phone: cleanPhone,
+              _seller_id: directSellerId,
+            });
+
+            // Always tag the client with the instance the message came from (for reply routing + thread separation)
+            await supabase.from("clients")
+              .update({
+                received_on_instance_id: receivedInstanceId,
+                last_message_at: new Date().toISOString(),
+                last_message_from_client_at: new Date().toISOString(),
+                triaging: false,
+                triage_step: null,
+              })
+              .eq("phone", cleanPhone);
+
+            console.log(`Direct seller routing → seller ${directSellerId} via instance ${receivedInstanceId}. Result:`, JSON.stringify(assignResult));
+
+            return new Response(JSON.stringify({
+              success: true,
+              action: "routed_direct_seller_number",
+              instance_id: receivedInstanceId,
+              seller_id: directSellerId,
+            }), {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+
+          // Track which instance brought the client in (for store-type instances and reply routing)
+          if (receivedInstanceId) {
+            await supabase.from("clients")
+              .update({ received_on_instance_id: receivedInstanceId })
+              .eq("phone", cleanPhone);
+          }
+
           // PRIORITY: Check if message contains a seller code (ramal). If matched, route directly.
           const codeMatch = text.match(/\b(\d{3,10})\b/);
           if (codeMatch) {

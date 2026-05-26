@@ -73,6 +73,7 @@ export type Database = {
           notes: string | null
           pending_store_preference: string | null
           phone: string
+          received_on_instance_id: string | null
           status: string | null
           store_id: string | null
           tags: string[]
@@ -99,6 +100,7 @@ export type Database = {
           notes?: string | null
           pending_store_preference?: string | null
           phone: string
+          received_on_instance_id?: string | null
           status?: string | null
           store_id?: string | null
           tags?: string[]
@@ -125,6 +127,7 @@ export type Database = {
           notes?: string | null
           pending_store_preference?: string | null
           phone?: string
+          received_on_instance_id?: string | null
           status?: string | null
           store_id?: string | null
           tags?: string[]
@@ -145,6 +148,13 @@ export type Database = {
             columns: ["pending_store_preference"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_received_on_instance_id_fkey"
+            columns: ["received_on_instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
             referencedColumns: ["id"]
           },
           {
@@ -886,6 +896,66 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_instances: {
+        Row: {
+          created_at: string
+          id: string
+          instance_type: Database["public"]["Enums"]["whatsapp_instance_type"]
+          last_connected_at: string | null
+          name: string
+          phone_number: string
+          provider: Database["public"]["Enums"]["whatsapp_provider"]
+          qr_code: string | null
+          seller_id: string | null
+          status: Database["public"]["Enums"]["whatsapp_instance_status"]
+          store_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instance_type: Database["public"]["Enums"]["whatsapp_instance_type"]
+          last_connected_at?: string | null
+          name: string
+          phone_number: string
+          provider?: Database["public"]["Enums"]["whatsapp_provider"]
+          qr_code?: string | null
+          seller_id?: string | null
+          status?: Database["public"]["Enums"]["whatsapp_instance_status"]
+          store_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instance_type?: Database["public"]["Enums"]["whatsapp_instance_type"]
+          last_connected_at?: string | null
+          name?: string
+          phone_number?: string
+          provider?: Database["public"]["Enums"]["whatsapp_provider"]
+          qr_code?: string | null
+          seller_id?: string | null
+          status?: Database["public"]["Enums"]["whatsapp_instance_status"]
+          store_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_instances_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_messages: {
         Row: {
           body: string | null
@@ -898,6 +968,7 @@ export type Database = {
           message_id: string
           phone: string
           raw_data: Json | null
+          received_on_instance_id: string | null
           sender_id: string | null
           sender_name: string | null
           timestamp: string | null
@@ -913,6 +984,7 @@ export type Database = {
           message_id: string
           phone: string
           raw_data?: Json | null
+          received_on_instance_id?: string | null
           sender_id?: string | null
           sender_name?: string | null
           timestamp?: string | null
@@ -928,11 +1000,20 @@ export type Database = {
           message_id?: string
           phone?: string
           raw_data?: Json | null
+          received_on_instance_id?: string | null
           sender_id?: string | null
           sender_name?: string | null
           timestamp?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_received_on_instance_id_fkey"
+            columns: ["received_on_instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1085,6 +1166,13 @@ export type Database = {
         | "fechamento"
         | "pos_venda"
       seller_role: "vendedor" | "gerente"
+      whatsapp_instance_status:
+        | "disconnected"
+        | "qr_pending"
+        | "connected"
+        | "error"
+      whatsapp_instance_type: "store" | "seller"
+      whatsapp_provider: "uazapi" | "meta_cloud"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1235,6 +1323,14 @@ export const Constants = {
         "pos_venda",
       ],
       seller_role: ["vendedor", "gerente"],
+      whatsapp_instance_status: [
+        "disconnected",
+        "qr_pending",
+        "connected",
+        "error",
+      ],
+      whatsapp_instance_type: ["store", "seller"],
+      whatsapp_provider: ["uazapi", "meta_cloud"],
     },
   },
 } as const
