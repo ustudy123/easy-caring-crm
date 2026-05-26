@@ -1118,11 +1118,13 @@ const mockContactNames: Record<string, string> = {
                               <span className="text-[16px] font-normal text-foreground truncate">
                                  {name}
                                </span>
-                               {conv.store_id && (
+                               {conv.received_on_instance_id && instancesById[conv.received_on_instance_id] ? (
+                                 <InstanceBadge instance={instancesById[conv.received_on_instance_id]} size="xs" />
+                               ) : conv.store_id ? (
                                  <span className="text-[10px] bg-brand-500/10 text-brand-500 px-1.5 py-0.5 rounded-full font-medium shrink-0">
                                    {stores.find(s => s.id === conv.store_id)?.name || 'Loja'}
                                  </span>
-                               )}
+                               ) : null}
                                {conv.alert_status === 'critical' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" title="ALERTA CRÍTICO - ADMIN" />}
                               {conv.alert_status === 'red' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" title="Alerta Crítico" />}
                                {conv.alert_status === 'yellow' && <div className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" title="Alerta de Demora" />}
