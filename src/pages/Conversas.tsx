@@ -148,7 +148,7 @@ const mockContactNames: Record<string, string> = {
 
 // ── Component ──
  export default function Conversas() {
-     const { isAdmin, isGerente, isVendedor, sellerId, storeId, role } = useRole();
+     const { isAdmin, isGerente, isVendedor, isSuporte, sellerId, storeId, role } = useRole();
     const { decrementUnreadWhatsApp } = useCrm();
     const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
     const [clients, setClients] = useState<any[]>([]);
