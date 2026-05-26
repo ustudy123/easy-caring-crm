@@ -376,6 +376,11 @@ const mockContactNames: Record<string, string> = {
      const filteredConversations = useMemo(() => {
        let filtered = conversations.filter((c) => {
          const isMine = c.assigned_seller_id === sellerId;
+
+         // Multi-instance filter
+         if (instanceFilter !== "all" && c.received_on_instance_id !== instanceFilter) {
+           return false;
+         }
  
          // Controle de acesso baseado no perfil e na aba
          if (isVendedor) {
