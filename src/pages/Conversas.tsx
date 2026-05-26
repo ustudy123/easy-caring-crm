@@ -76,6 +76,7 @@ interface WhatsAppMessage {
    claimed_at?: string | null;
   last_message_from_client_at?: string | null;
   alert_status?: 'none' | 'yellow' | 'red' | 'transferred' | 'critical';
+  received_on_instance_id?: string | null;
  }
  
  type TabType = 'minhas' | 'loja' | 'geral' | 'todas';
