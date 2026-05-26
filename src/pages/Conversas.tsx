@@ -153,6 +153,8 @@ const mockContactNames: Record<string, string> = {
  export default function Conversas() {
      const { isAdmin, isGerente, isVendedor, isSuporte, sellerId, storeId, role } = useRole();
     const { decrementUnreadWhatsApp } = useCrm();
+    const { instances: allInstances, byId: instancesById } = useInstances();
+    const [instanceFilter, setInstanceFilter] = useState<string>("all");
     const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
     const [clients, setClients] = useState<any[]>([]);
     const [stores, setStores] = useState<any[]>([]);
