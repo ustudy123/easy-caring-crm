@@ -84,6 +84,8 @@ export default function Kanban() {
   const navigate = useNavigate();
    const { leads, setLeads, addLead, updateLead, deleteLead, loading, sellers } = useCrm();
    const { toast } = useToast();
+   const { byId: instancesById } = useInstances();
+   const clientInstanceByPhone = useClientInstanceMap();
    const [userSeller, setUserSeller] = useState<any>(null);
    useEffect(() => {
      const fetchUserSeller = async () => {
