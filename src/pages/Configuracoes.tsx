@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Settings, Bell, Loader2, MessageCircle, UserCheck } from "lucide-react";
+import { Settings, Bell, Loader2, MessageCircle, UserCheck, Users } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
@@ -17,11 +17,13 @@ import { useRole } from "@/contexts/RoleContext";
 export default function Configuracoes() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isAdmin } = useRole();
+  const { isAdmin, isGerente } = useRole();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [seller, setSeller] = useState<any>(null);
   const [allSellers, setAllSellers] = useState<any[]>([]);
+  const [teamSellers, setTeamSellers] = useState<any[]>([]);
+  const [savingTeamId, setSavingTeamId] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("CRM Tintas");
   const [autoReturnLeads, setAutoReturnLeads] = useState(true);
   const [notifications, setNotifications] = useState({
@@ -33,10 +35,11 @@ export default function Configuracoes() {
   useEffect(() => {
     if (!user) return;
     const fetchSettings = async () => {
-      const [settingsRes, sellerRes, allSellersRes] = await Promise.all([
+      const [settingsRes, sellerRes, allSellersRes, teamRes] = await Promise.all([
         supabase.from("settings").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("sellers").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("sellers").select("id, name, store_id").neq("user_id", user.id).order("name")
+        supabase.from("sellers").select("id, name, store_id").neq("user_id", user.id).order("name"),
+        supabase.from("sellers").select("id, name, code, store_id, is_active, status, substitute_id, user_id").order("name"),
       ]);
 
       if (settingsRes.data) {
@@ -60,6 +63,14 @@ export default function Configuracoes() {
         } else {
           setAllSellers(allSellersRes.data);
         }
+      }
+
+      if (teamRes.data) {
+        const storeId = sellerRes.data?.store_id;
+        const list = storeId
+          ? teamRes.data.filter(s => s.store_id === storeId)
+          : teamRes.data;
+        setTeamSellers(list);
       }
 
       setLoading(false);
@@ -95,6 +106,22 @@ export default function Configuracoes() {
 
   const handleUpdateSeller = async (updates: any) => {
     if (!user || !seller) return;
+
+    // Determine final state after applying updates
+    const next = { ...seller, ...updates };
+    const willBeInactive = ('is_active' in updates)
+      ? updates.is_active === false
+      : seller.is_active === false;
+
+    if (willBeInactive && !next.substitute_id) {
+      toast({
+        title: "Substituto obrigatório",
+        description: "Selecione um vendedor substituto antes de ficar inativo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     
     // If updating activity, also update status for consistency in Admin/Routing
@@ -119,6 +146,40 @@ export default function Configuracoes() {
       toast({ title: "Status atualizado!" });
     }
     setSaving(false);
+  };
+
+  const handleUpdateTeamMember = async (
+    member: any,
+    updates: { status?: string; substitute_id?: string | null }
+  ) => {
+    const next = { ...member, ...updates };
+    const inactive = next.status && next.status !== "active";
+
+    if (inactive && !next.substitute_id) {
+      toast({
+        title: "Substituto obrigatório",
+        description: `Selecione um vendedor substituto para ${member.name} antes de marcar como inativo.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingTeamId(member.id);
+    const dbUpdates: any = { ...updates };
+    if ("status" in updates) {
+      dbUpdates.is_active = updates.status === "active";
+    }
+    const { error } = await supabase.from("sellers").update(dbUpdates).eq("id", member.id);
+    setSavingTeamId(null);
+
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+    setTeamSellers((prev) =>
+      prev.map((s) => (s.id === member.id ? { ...s, ...dbUpdates } : s))
+    );
+    toast({ title: "Vendedor atualizado" });
   };
 
   if (loading) {
@@ -243,6 +304,71 @@ export default function Configuracoes() {
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Salvar
               </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {(isGerente || isAdmin) && teamSellers.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base font-medium">
+                <Users className="h-4 w-4 text-brand-500" /> Gestão da Equipe
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Defina status e vendedor substituto da sua equipe. O substituto é obrigatório quando o vendedor está inativo, em férias ou ausente.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {teamSellers.map((m) => {
+                const otherSellers = teamSellers.filter((s) => s.id !== m.id);
+                return (
+                  <div
+                    key={m.id}
+                    className="grid grid-cols-1 md:grid-cols-[1fr_180px_220px] gap-3 items-center p-3 rounded-lg border border-black/8 bg-white"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold">{m.name}</p>
+                      {m.code && (
+                        <p className="text-[11px] text-muted-foreground font-mono">Código {m.code}</p>
+                      )}
+                    </div>
+                    <Select
+                      value={m.status || "active"}
+                      onValueChange={(v) => handleUpdateTeamMember(m, { status: v })}
+                      disabled={savingTeamId === m.id}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Ativo</SelectItem>
+                        <SelectItem value="inactive">Inativo</SelectItem>
+                        <SelectItem value="vacation">Em férias</SelectItem>
+                        <SelectItem value="away">Ausente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={m.substitute_id || "none"}
+                      onValueChange={(v) =>
+                        handleUpdateTeamMember(m, { substitute_id: v === "none" ? null : v })
+                      }
+                      disabled={savingTeamId === m.id}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione substituto..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum (fila geral)</SelectItem>
+                        {otherSellers.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
         )}

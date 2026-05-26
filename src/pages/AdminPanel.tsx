@@ -1006,6 +1006,13 @@ function UsersTab() {
       toast.error("Selecione uma loja");
       return;
     }
+    if (editRole === "vendedor") {
+      const inactive = !editIsActive || editStatus !== "active";
+      if (inactive && !editSubstituteId) {
+        toast.error("Selecione um vendedor substituto antes de marcar como inativo / em férias / ausente.");
+        return;
+      }
+    }
     setSaving(true);
     const { error } = await supabase.rpc("admin_assign_user_role", {
       _user_id: editing.user_id,
