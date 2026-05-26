@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Settings, Bell, Loader2, MessageCircle, UserCheck } from "lucide-react";
+import { Settings, Bell, Loader2, MessageCircle, UserCheck, Users } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
@@ -22,6 +22,8 @@ export default function Configuracoes() {
   const [saving, setSaving] = useState(false);
   const [seller, setSeller] = useState<any>(null);
   const [allSellers, setAllSellers] = useState<any[]>([]);
+  const [teamSellers, setTeamSellers] = useState<any[]>([]);
+  const [savingTeamId, setSavingTeamId] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("CRM Tintas");
   const [autoReturnLeads, setAutoReturnLeads] = useState(true);
   const [notifications, setNotifications] = useState({
@@ -33,10 +35,11 @@ export default function Configuracoes() {
   useEffect(() => {
     if (!user) return;
     const fetchSettings = async () => {
-      const [settingsRes, sellerRes, allSellersRes] = await Promise.all([
+      const [settingsRes, sellerRes, allSellersRes, teamRes] = await Promise.all([
         supabase.from("settings").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("sellers").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("sellers").select("id, name, store_id").neq("user_id", user.id).order("name")
+        supabase.from("sellers").select("id, name, store_id").neq("user_id", user.id).order("name"),
+        supabase.from("sellers").select("id, name, code, store_id, is_active, status, substitute_id, user_id").order("name"),
       ]);
 
       if (settingsRes.data) {
@@ -60,6 +63,14 @@ export default function Configuracoes() {
         } else {
           setAllSellers(allSellersRes.data);
         }
+      }
+
+      if (teamRes.data) {
+        const storeId = sellerRes.data?.store_id;
+        const list = storeId
+          ? teamRes.data.filter(s => s.store_id === storeId)
+          : teamRes.data;
+        setTeamSellers(list);
       }
 
       setLoading(false);
