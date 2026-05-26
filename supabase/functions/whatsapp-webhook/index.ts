@@ -531,7 +531,7 @@ serve(async (req) => {
                } else {
                  await sendWhatsAppMessage(cleanPhone, `Por favor, digite seu *código de vendedor* (ex: 1023) ou responda *N* se não tiver.`, isTest);
                }
-             } else if (step === 'ask_store') {
+              } else if (step === 'ask_store') {
                 const { data: stores } = await supabase.from("stores").select("id, name, city").order("name");
                 const numMatch = trimmed.match(/^\d+$/);
                 const selectedIndex = numMatch ? parseInt(trimmed, 10) : -1;
@@ -540,7 +540,7 @@ serve(async (req) => {
                 if (lower === 'n' || lower === 'nao' || lower === 'não' || selectedIndex === generalOptionIndex) {
                  await finishWithStore(null);
                } else {
-                 let chosen = null as null | { id: string; name: string };
+                  let chosen = null as null | { id: string; name: string; city?: string | null };
                   if (selectedIndex > 0 && stores && selectedIndex <= stores.length) {
                     chosen = stores[selectedIndex - 1];
                   }
@@ -556,9 +556,31 @@ serve(async (req) => {
                    }
                   
                   if (chosen) {
-                    // Direct hand-off: don't list sellers, don't ask about interest.
-                     await updateClient({ store_id: chosen.id, city: trimmed });
-                    await finishWithStore(chosen.id, chosen.name);
+                     // Distribuição ALEATÓRIA por cidade: pega qualquer vendedor das lojas dessa cidade
+                     const cityKey = (chosen.city || trimmed || '').trim();
+                     await updateClient({ city: trimmed });
+                     let assigned = false;
+                     if (cityKey) {
+                       const { data: randomSeller } = await supabase.rpc("get_random_seller_by_city", { _city: cityKey });
+                       if (randomSeller && randomSeller.length > 0) {
+                         const picked = randomSeller[0];
+                         await assignToSeller(picked.id, picked.name, picked.store_id);
+                         await supabase.from("redirection_history").insert({
+                           client_id: client.id,
+                           to_seller_id: picked.id,
+                           redirection_type: 'city_random',
+                           reason: `Distribuição aleatória por cidade: ${cityKey}`,
+                           store_id: picked.store_id
+                         });
+                         await supabase.rpc("mark_seller_assigned", { _seller_id: picked.id });
+                         assigned = true;
+                       }
+                     }
+                     if (!assigned) {
+                       // Fallback: distribuição padrão por loja escolhida
+                       await updateClient({ store_id: chosen.id });
+                       await finishWithStore(chosen.id, chosen.name);
+                     }
                   } else {
                      // Fallback: cidade não bate com nenhuma loja — mostra menu numerado
                      console.log(`Fallback: client ${cleanPhone} sent city "${text}" with no store match. Showing numbered menu.`);
