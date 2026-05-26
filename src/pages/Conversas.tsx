@@ -18,6 +18,8 @@ import { useCrm } from "@/contexts/CrmContext";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import { Textarea } from "@/components/ui/textarea";
  import { Label } from "@/components/ui/label";
+ import { InstanceBadge } from "@/components/InstanceBadge";
+ import { useInstances } from "@/hooks/useInstances";
 const ChatMessageBody = memo(({ body, chatSearch, isCurrentOccurrence }: { body: string | null; chatSearch: string; isCurrentOccurrence: boolean }) => {
   const content = useMemo(() => {
     if (!chatSearch || chatSearch.length < 2 || !body) return body || "";
