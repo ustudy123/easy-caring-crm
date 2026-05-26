@@ -60,6 +60,7 @@ function mapLeadFromDb(row: any): Lead {
      interestProducts: row.interest_products || undefined,
      storeName: row.store_name || undefined,
      storeId: row.store_id || undefined,
+     receivedOnInstanceId: row.received_on_instance_id || undefined,
   };
 }
 
