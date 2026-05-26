@@ -148,6 +148,40 @@ export default function Configuracoes() {
     setSaving(false);
   };
 
+  const handleUpdateTeamMember = async (
+    member: any,
+    updates: { status?: string; substitute_id?: string | null }
+  ) => {
+    const next = { ...member, ...updates };
+    const inactive = next.status && next.status !== "active";
+
+    if (inactive && !next.substitute_id) {
+      toast({
+        title: "Substituto obrigatório",
+        description: `Selecione um vendedor substituto para ${member.name} antes de marcar como inativo.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingTeamId(member.id);
+    const dbUpdates: any = { ...updates };
+    if ("status" in updates) {
+      dbUpdates.is_active = updates.status === "active";
+    }
+    const { error } = await supabase.from("sellers").update(dbUpdates).eq("id", member.id);
+    setSavingTeamId(null);
+
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+    setTeamSellers((prev) =>
+      prev.map((s) => (s.id === member.id ? { ...s, ...dbUpdates } : s))
+    );
+    toast({ title: "Vendedor atualizado" });
+  };
+
   if (loading) {
     return (
       <AppLayout title="Configurações">
