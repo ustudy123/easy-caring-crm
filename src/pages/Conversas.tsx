@@ -639,9 +639,11 @@ const mockContactNames: Record<string, string> = {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: signed, error: signErr } = await supabase.storage
         .from('whatsapp_media')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 60 * 60 * 24);
+      if (signErr || !signed?.signedUrl) throw signErr ?? new Error('Falha ao gerar URL assinada');
+      const publicUrl = signed.signedUrl;
 
       let mediaType = 'document';
       if (file.type.startsWith('image/')) mediaType = 'image';
@@ -805,9 +807,11 @@ const mockContactNames: Record<string, string> = {
 
      if (uploadError) throw uploadError;
 
-     const { data: { publicUrl } } = supabase.storage
-       .from('whatsapp_media')
-       .getPublicUrl(filePath);
+      const { data: signed, error: signErr } = await supabase.storage
+        .from('whatsapp_media')
+        .createSignedUrl(filePath, 60 * 60 * 24);
+      if (signErr || !signed?.signedUrl) throw signErr ?? new Error('Falha ao gerar URL assinada');
+      const publicUrl = signed.signedUrl;
 
       const currentSeller = sellers.find(s => s.id === sellerId);
       const { data: { user } } = await supabase.auth.getUser();
