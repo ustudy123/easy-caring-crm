@@ -27,6 +27,7 @@ export function AppShell() {
     unreadWhatsAppCount,
     notifications,
     markNotificationRead,
+    markAllWhatsAppRead,
   } = useCrm();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
@@ -64,12 +65,7 @@ export function AppShell() {
       markNotificationRead(notif.id);
     }
     if (unreadWhatsAppCount > 0) {
-      const { error } = await supabase
-        .from("whatsapp_messages")
-        .update({ is_read: true })
-        .eq("is_read", false)
-        .eq("is_from_me", false);
-      if (error) console.error("Erro ao marcar todas as mensagens como lidas:", error);
+      await markAllWhatsAppRead();
     }
   };
 
