@@ -56,6 +56,8 @@ export function WhatsAppInstancesTab() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [checkingId, setCheckingId] = useState<string | null>(null);
 
   // form state
   const [name, setName] = useState("");
