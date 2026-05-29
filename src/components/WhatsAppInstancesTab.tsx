@@ -145,6 +145,29 @@ export function WhatsAppInstancesTab() {
     load();
   };
 
+  const checkStatus = async (instanceId?: string) => {
+    if (instanceId) setCheckingId(instanceId); else setChecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("check-whatsapp-status", {
+        body: instanceId ? { instanceId } : {},
+      });
+      if (error) throw error;
+      const results = (data as any)?.results || [];
+      const connected = results.filter((r: any) => r.status === "connected").length;
+      toast.success(
+        instanceId
+          ? `Status atualizado: ${results[0]?.status === "connected" ? "Conectado" : "Desconectado"}`
+          : `Verificação concluída • ${connected} conectado(s)`
+      );
+      await load();
+    } catch (e: any) {
+      toast.error("Erro ao verificar conexão: " + (e?.message || e));
+    } finally {
+      setChecking(false);
+      setCheckingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
