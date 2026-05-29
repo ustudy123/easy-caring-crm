@@ -618,18 +618,21 @@ serve(async (req) => {
                  } else {
                    await sendWhatsAppMessage(cleanPhone, `Não localizei esse código. Verifique e digite novamente, ou responda *N* para continuar sem código.`, isTest);
                  }
-               } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
-                  // Move to ask_store: pergunta a CIDADE/REGIÃO em texto livre
-                  await updateClient({ triage_step: 'ask_store' });
-                  await sendWhatsAppMessage(
-                    cleanPhone,
-                    `Sem problemas! Para direcionarmos seu atendimento, em qual *cidade ou região* você está? 📍\n\nDigite o nome da sua cidade (ex: *São Paulo*) ou responda *N* para atendimento geral.`,
-                    isTest
-                  );
-               } else {
-                 await sendWhatsAppMessage(cleanPhone, `Por favor, digite seu *código de vendedor* (ex: 1023) ou responda *N* se não tiver.`, isTest);
-               }
-              } else if (step === 'ask_store') {
+                } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
+                   // Move to ask_store: pergunta a REGIÃO com opções específicas
+                   await updateClient({ triage_step: 'ask_store' });
+                   const storeOptions = `Em qual região você deseja ser atendido? 👋\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé\n\nResponda com o *número* da opção desejada.`;
+                   await sendWhatsAppMessage(
+                     cleanPhone,
+                     storeOptions,
+                     isTest,
+                     receivedInstance?.api_url,
+                     receivedInstance?.api_token
+                   );
+                } else {
+                  await sendWhatsAppMessage(cleanPhone, `Por favor, digite seu *código de vendedor* (ex: 1023) ou responda *N* se não tiver.`, isTest);
+                }
+               } else if (step === 'ask_store') {
                 const { data: stores } = await supabase.from("stores").select("id, name, city").order("name");
                 const numMatch = trimmed.match(/^\d+$/);
                 const selectedIndex = numMatch ? parseInt(trimmed, 10) : -1;
