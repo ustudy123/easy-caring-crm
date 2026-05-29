@@ -32,6 +32,7 @@ interface CrmContextType {
   negotiationCount: number;
   unreadWhatsAppCount: number;
   decrementUnreadWhatsApp: (by: number) => void;
+  markAllWhatsAppRead: () => Promise<void>;
    slaAlertsCount: number;
    notifications: Notification[];
   loading: boolean;
