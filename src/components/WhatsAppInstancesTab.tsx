@@ -26,6 +26,8 @@ interface WhatsAppInstance {
   status: InstanceStatus;
   qr_code: string | null;
   last_connected_at: string | null;
+  api_url?: string | null;
+  api_token?: string | null;
   stores?: { name: string } | null;
   sellers?: { name: string } | null;
 }
@@ -62,9 +64,12 @@ export function WhatsAppInstancesTab() {
   const [storeId, setStoreId] = useState<string>("");
   const [sellerId, setSellerId] = useState<string>("");
   const [provider, setProvider] = useState<Provider>("uazapi");
+  const [apiUrl, setApiUrl] = useState("");
+  const [apiToken, setApiToken] = useState("");
 
   const resetForm = () => {
     setName(""); setPhone(""); setType("store"); setStoreId(""); setSellerId(""); setProvider("uazapi");
+    setApiUrl(""); setApiToken("");
   };
 
   const load = async () => {
@@ -114,6 +119,8 @@ export function WhatsAppInstancesTab() {
       store_id: type === "store" ? storeId : sellerStoreId,
       seller_id: type === "seller" ? sellerId : null,
       provider,
+      api_url: apiUrl.trim() || null,
+      api_token: apiToken.trim() || null,
       status: "disconnected",
     });
     setSaving(false);
@@ -206,6 +213,30 @@ export function WhatsAppInstancesTab() {
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  {provider === "uazapi" && (
+                    <>
+                      <div>
+                        <Label>Z-API Instance URL</Label>
+                        <Input 
+                          value={apiUrl} 
+                          onChange={(e) => setApiUrl(e.target.value)} 
+                          placeholder="https://api.z-api.io/instances/SUA_ID/token/SEU_TOKEN" 
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Cole a URL completa fornecida pelo Z-API.
+                        </p>
+                      </div>
+                      <div>
+                        <Label>Z-API Client Token (Opcional)</Label>
+                        <Input 
+                          value={apiToken} 
+                          onChange={(e) => setApiToken(e.target.value)} 
+                          placeholder="Client-Token (opcional)" 
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button variant="ghost" onClick={() => setDialogOpen(false)}>Cancelar</Button>
