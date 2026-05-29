@@ -636,6 +636,7 @@ export type Database = {
           code: string | null
           conversions: number
           created_at: string
+          distribution_priority: number | null
           id: string
           is_active: boolean | null
           is_available: boolean | null
@@ -654,6 +655,7 @@ export type Database = {
           code?: string | null
           conversions?: number
           created_at?: string
+          distribution_priority?: number | null
           id?: string
           is_active?: boolean | null
           is_available?: boolean | null
@@ -672,6 +674,7 @@ export type Database = {
           code?: string | null
           conversions?: number
           created_at?: string
+          distribution_priority?: number | null
           id?: string
           is_active?: boolean | null
           is_available?: boolean | null
@@ -1092,6 +1095,7 @@ export type Database = {
           code: string | null
           conversions: number
           created_at: string
+          distribution_priority: number | null
           id: string
           is_active: boolean | null
           is_available: boolean | null
@@ -1119,6 +1123,7 @@ export type Database = {
           code: string | null
           conversions: number
           created_at: string
+          distribution_priority: number | null
           id: string
           is_active: boolean | null
           is_available: boolean | null
