@@ -189,8 +189,8 @@ const mockContactNames: Record<string, string> = {
   const [transferReason, setTransferReason] = useState("");
    const [isTransferring, setIsTransferring] = useState(false);
 
-    const fetchData = useCallback(async () => {
-      setLoading(true);
+    const fetchData = useCallback(async (silent = false) => {
+      if (!silent) setLoading(true);
       try {
         const [msgsRes, clientsRes, sellersRes, storesRes] = await Promise.all([
            supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }),
@@ -330,9 +330,9 @@ const mockContactNames: Record<string, string> = {
    useEffect(() => {
      const channel = supabase
        .channel("clients-realtime")
-       .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, () => {
-         fetchData();
-       })
+        .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, () => {
+          fetchData(true);
+        })
        .subscribe();
      return () => { supabase.removeChannel(channel); };
    }, [fetchData]);
