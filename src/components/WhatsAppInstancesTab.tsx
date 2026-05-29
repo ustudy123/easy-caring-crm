@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Phone, Smartphone, Store as StoreIcon, Trash2, Loader2, Wifi, WifiOff, Terminal } from "lucide-react";
+import { Plus, Phone, Smartphone, Store as StoreIcon, Trash2, Loader2, Wifi, WifiOff, Terminal, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 type InstanceType = "store" | "seller";
