@@ -384,6 +384,17 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     setUnreadWhatsAppCount((prev) => Math.max(0, prev - by));
   }, []);
 
+  const markAllWhatsAppRead = useCallback(async () => {
+    // Optimistically reset the local count so the badge clears immediately
+    setUnreadWhatsAppCount(0);
+    const { error } = await supabase
+      .from("whatsapp_messages")
+      .update({ is_read: true })
+      .eq("is_read", false)
+      .eq("is_from_me", false);
+    if (error) console.error("Erro ao marcar todas as mensagens como lidas:", error);
+  }, []);
+
   const slaAlertsCount = filteredNotifications.length;
 
   return (
