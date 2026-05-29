@@ -404,7 +404,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
         followUps, setFollowUps, addFollowUp, updateFollowUp, deleteFollowUp,
         sellers, notifications: filteredNotifications, slaAlertsCount,
         newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount, decrementUnreadWhatsApp, loading,
-        markNotificationRead
+        markNotificationRead, markAllWhatsAppRead
       }}
     >
       {children}
