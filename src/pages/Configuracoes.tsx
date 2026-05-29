@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Settings, Bell, Loader2, MessageCircle, UserCheck, Users } from "lucide-react";
+import { Settings, Bell, Loader2, MessageCircle, UserCheck, Users, SortAsc } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
@@ -24,6 +24,7 @@ export default function Configuracoes() {
   const [allSellers, setAllSellers] = useState<any[]>([]);
   const [teamSellers, setTeamSellers] = useState<any[]>([]);
   const [savingTeamId, setSavingTeamId] = useState<string | null>(null);
+  const [updatingPriority, setUpdatingPriority] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("CRM Tintas");
   const [autoReturnLeads, setAutoReturnLeads] = useState(true);
   const [notifications, setNotifications] = useState({
@@ -39,7 +40,7 @@ export default function Configuracoes() {
         supabase.from("settings").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("sellers").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("sellers").select("id, name, store_id").neq("user_id", user.id).order("name"),
-        supabase.from("sellers").select("id, name, code, store_id, is_active, status, substitute_id, user_id").order("name"),
+        supabase.from("sellers").select("id, name, code, store_id, is_active, status, substitute_id, user_id, distribution_priority").order("distribution_priority", { ascending: false }).order("name"),
       ]);
 
       if (settingsRes.data) {
@@ -315,60 +316,95 @@ export default function Configuracoes() {
                 <Users className="h-4 w-4 text-brand-500" /> Gestão da Equipe
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
-                Defina status e vendedor substituto da sua equipe. O substituto é obrigatório quando o vendedor está inativo, em férias ou ausente.
+                Defina status, vendedor substituto e ordem de preferência da sua equipe.
               </p>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {teamSellers.map((m) => {
-                const otherSellers = teamSellers.filter((s) => s.id !== m.id);
-                return (
-                  <div
-                    key={m.id}
-                    className="grid grid-cols-1 md:grid-cols-[1fr_180px_220px] gap-3 items-center p-3 rounded-lg border border-black/8 bg-white"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold">{m.name}</p>
-                      {m.code && (
-                        <p className="text-[11px] text-muted-foreground font-mono">Código {m.code}</p>
-                      )}
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground border-b pb-2">
+                  <SortAsc className="h-4 w-4" /> Ordem de Preferência (Prioridade)
+                </div>
+                {teamSellers.map((m) => {
+                  const otherSellers = teamSellers.filter((s) => s.id !== m.id);
+                  return (
+                    <div
+                      key={m.id}
+                      className="space-y-3 p-3 rounded-lg border border-black/8 bg-white"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold">{m.name}</p>
+                          {m.code && (
+                            <p className="text-[11px] text-muted-foreground font-mono">Código {m.code}</p>
+                          )}
+                        </div>
+                        
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="flex flex-col space-y-1">
+                            <Label className="text-[10px] uppercase text-muted-foreground font-medium">Prioridade</Label>
+                            <Select
+                              value={String(m.distribution_priority || 0)}
+                              onValueChange={(v) => handleUpdatePriority(m.id, parseInt(v))}
+                              disabled={updatingPriority === m.id}
+                            >
+                              <SelectTrigger className="w-[80px] h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(p => (
+                                  <SelectItem key={p} value={String(p)}>{p}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="flex flex-col space-y-1">
+                            <Label className="text-[10px] uppercase text-muted-foreground font-medium">Status</Label>
+                            <Select
+                              value={m.status || "active"}
+                              onValueChange={(v) => handleUpdateTeamMember(m, { status: v })}
+                              disabled={savingTeamId === m.id}
+                            >
+                              <SelectTrigger className="w-[120px] h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="active">Ativo</SelectItem>
+                                <SelectItem value="inactive">Inativo</SelectItem>
+                                <SelectItem value="vacation">Em férias</SelectItem>
+                                <SelectItem value="away">Ausente</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="flex flex-col space-y-1">
+                            <Label className="text-[10px] uppercase text-muted-foreground font-medium">Substituto</Label>
+                            <Select
+                              value={m.substitute_id || "none"}
+                              onValueChange={(v) =>
+                                handleUpdateTeamMember(m, { substitute_id: v === "none" ? null : v })
+                              }
+                              disabled={savingTeamId === m.id}
+                            >
+                              <SelectTrigger className="w-[160px] h-9">
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Nenhum (fila geral)</SelectItem>
+                                {otherSellers.map((s) => (
+                                  <SelectItem key={s.id} value={s.id}>
+                                    {s.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <Select
-                      value={m.status || "active"}
-                      onValueChange={(v) => handleUpdateTeamMember(m, { status: v })}
-                      disabled={savingTeamId === m.id}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Ativo</SelectItem>
-                        <SelectItem value="inactive">Inativo</SelectItem>
-                        <SelectItem value="vacation">Em férias</SelectItem>
-                        <SelectItem value="away">Ausente</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={m.substitute_id || "none"}
-                      onValueChange={(v) =>
-                        handleUpdateTeamMember(m, { substitute_id: v === "none" ? null : v })
-                      }
-                      disabled={savingTeamId === m.id}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione substituto..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhum (fila geral)</SelectItem>
-                        {otherSellers.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         )}
