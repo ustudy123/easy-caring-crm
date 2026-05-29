@@ -898,6 +898,8 @@ export type Database = {
       }
       whatsapp_instances: {
         Row: {
+          api_token: string | null
+          api_url: string | null
           created_at: string
           id: string
           instance_type: Database["public"]["Enums"]["whatsapp_instance_type"]
@@ -912,6 +914,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          api_token?: string | null
+          api_url?: string | null
           created_at?: string
           id?: string
           instance_type: Database["public"]["Enums"]["whatsapp_instance_type"]
@@ -926,6 +930,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          api_token?: string | null
+          api_url?: string | null
           created_at?: string
           id?: string
           instance_type?: Database["public"]["Enums"]["whatsapp_instance_type"]
