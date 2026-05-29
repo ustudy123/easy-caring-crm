@@ -185,6 +185,11 @@ export function WhatsAppInstancesTab() {
                 <span>Webhook: {window.location.origin.replace('lovable.app', 'supabase.co')}/functions/v1/whatsapp-webhook</span>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => checkStatus()} disabled={checking}>
+              {checking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              Verificar conexões
+            </Button>
             <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Conectar novo número</Button>
