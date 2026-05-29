@@ -275,6 +275,10 @@ serve(async (req) => {
           .replace(/[^0-9]/g, "");
         const instanceHint = (data.instance || data.instanceId || data.instance_id || "").toString();
 
+        // Brazilian numbers can vary by country code (55) and the 9th mobile digit,
+        // so an exact phone_number match is unreliable. We compare by the last 8 digits.
+        const phoneSuffix = (p: string) => (p || "").replace(/\D/g, "").slice(-8);
+
         let receivedInstance: any = null;
         if (connectedPhoneClean) {
           const { data: inst } = await supabase
@@ -283,6 +287,17 @@ serve(async (req) => {
             .eq("phone_number", connectedPhoneClean)
             .maybeSingle();
           receivedInstance = inst || null;
+        }
+        // Fallback: suffix-based match across all instances (handles 55/DDI + 9th-digit differences)
+        if (!receivedInstance && connectedPhoneClean) {
+          const { data: allInst } = await supabase
+            .from("whatsapp_instances")
+            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token");
+          const wantedSuffix = phoneSuffix(connectedPhoneClean);
+          if (wantedSuffix && allInst) {
+            receivedInstance =
+              allInst.find((i: any) => phoneSuffix(i.phone_number) === wantedSuffix) || null;
+          }
         }
         if (!receivedInstance && instanceHint) {
           const { data: inst } = await supabase
