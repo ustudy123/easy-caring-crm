@@ -632,44 +632,62 @@ serve(async (req) => {
                 } else {
                   await sendWhatsAppMessage(cleanPhone, `Por favor, digite seu *código de vendedor* (ex: 1023) ou responda *N* se não tiver.`, isTest);
                 }
-               } else if (step === 'ask_store') {
-                const { data: stores } = await supabase.from("stores").select("id, name, city").order("name");
-                
-                // Mapeamento manual conforme solicitado
-                // 1 — Niterói -> 25b7fb23-89c6-4abc-af6a-75c8c41e0dc2
-                // 2 — Rio de Janeiro (Barra da Tijuca) -> b7369414-9afe-4870-974e-45aa58173b8c
-                // 3 — Macaé -> 0e3a0306-58b0-4449-8526-177a91d7d6d4
+                } else if (step === 'ask_store') {
+                  const { data: stores } = await supabase.from("stores").select("id, name, city").order("name");
+                  
+                  // Mapeamento manual conforme solicitado
+                  // 1 — Niterói -> 25b7fb23-89c6-4abc-af6a-75c8c41e0dc2
+                  // 2 — Rio de Janeiro (Barra da Tijuca) -> b7369414-9afe-4870-974e-45aa58173b8c
+                  // 3 — Macaé -> Múltiplas lojas (Matriz, Aeroporto, Riviera)
 
-                let chosenStoreId = null;
-                let chosenStoreName = "";
+                  if (trimmed === '1') {
+                    const chosenStoreId = '25b7fb23-89c6-4abc-af6a-75c8c41e0dc2';
+                    const chosenStoreName = 'Niterói';
+                    await updateClient({ store_id: chosenStoreId, triaging: false, triage_step: null });
+                    await finishWithStore(chosenStoreId, chosenStoreName);
+                  } else if (trimmed === '2') {
+                    const chosenStoreId = 'b7369414-9afe-4870-974e-45aa58173b8c';
+                    const chosenStoreName = 'Barra da Tijuca';
+                    await updateClient({ store_id: chosenStoreId, triaging: false, triage_step: null });
+                    await finishWithStore(chosenStoreId, chosenStoreName);
+                  } else if (trimmed === '3') {
+                    // Macaé region routing with multiple stores priority: Matriz -> Aeroporto -> Riviera
+                    const macaeStores = [
+                      { id: 'a6b2da10-3e07-421f-b05c-cdc696bfe46a', name: 'Matriz' },
+                      { id: '80eb248f-02b0-4bc7-a545-63ae48b78d29', name: 'Aeroporto' },
+                      { id: '16ad0928-0372-40ea-9a9a-774416551dc7', name: 'Riviera' }
+                    ];
 
-                if (trimmed === '1') {
-                  chosenStoreId = '25b7fb23-89c6-4abc-af6a-75c8c41e0dc2';
-                  chosenStoreName = 'Niterói';
-                } else if (trimmed === '2') {
-                  chosenStoreId = 'b7369414-9afe-4870-974e-45aa58173b8c';
-                  chosenStoreName = 'Barra da Tijuca';
-                } else if (trimmed === '3') {
-                  chosenStoreId = '0e3a0306-58b0-4449-8526-177a91d7d6d4';
-                  chosenStoreName = 'Macaé';
-                }
+                    let distributed = false;
+                    for (const store of macaeStores) {
+                      console.log(`Attempting distribution for Macaé store: ${store.name} (${store.id})`);
+                      distributed = await distributeLead(store.id);
+                      if (distributed) {
+                        await updateClient({ store_id: store.id, triaging: false, triage_step: null });
+                        console.log(`Successfully distributed to store: ${store.name}`);
+                        break;
+                      }
+                    }
 
-                if (chosenStoreId) {
-                  await updateClient({ store_id: chosenStoreId, triaging: false, triage_step: null });
-                  await finishWithStore(chosenStoreId, chosenStoreName);
-                } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
-                  await finishWithStore(null);
-                } else {
-                  await sendWhatsAppMessage(
-                    cleanPhone,
-                    `Opção inválida. Por favor, responda com o *número* da região:\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé`,
-                    isTest,
-                    receivedInstance?.api_url,
-                    receivedInstance?.api_token
-                  );
-                }
-               }
-              } else if (step === 'ask_seller') {
+                    if (!distributed) {
+                      // Fallback to Matriz if no one is available in any store.
+                      // finishWithStore will create a lead for managers to see.
+                      console.log("No available sellers in Macaé stores. Falling back to Matriz queue.");
+                      await updateClient({ store_id: macaeStores[0].id, triaging: false, triage_step: null });
+                      await finishWithStore(macaeStores[0].id, macaeStores[0].name);
+                    }
+                  } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
+                    await finishWithStore(null);
+                  } else {
+                    await sendWhatsAppMessage(
+                      cleanPhone,
+                      `Opção inválida. Por favor, responda com o *número* da região:\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé`,
+                      isTest,
+                      receivedInstance?.api_url,
+                      receivedInstance?.api_token
+                    );
+                  }
+                } else if (step === 'ask_seller') {
                 const storeId = client.store_id;
                 if (lower === 'n' || lower === 'nao' || lower === 'não') {
                   const distributed = await distributeLead(storeId);
