@@ -6,9 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function getZApiBaseUrl() {
-  const rawUrl = Deno.env.get("WHATSAPP_API_URL")?.trim();
-  const instanceToken = Deno.env.get("WHATSAPP_API_KEY")?.trim();
+function getZApiBaseUrl(customUrl?: string | null, customToken?: string | null) {
+  const rawUrl = (customUrl || Deno.env.get("WHATSAPP_API_URL"))?.trim();
+  const instanceToken = (customToken || Deno.env.get("WHATSAPP_API_KEY"))?.trim();
 
   if (!rawUrl) return null;
 
@@ -54,6 +54,9 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     let resolvedInstanceId: string | null = instanceId || null;
+    let customApiUrl: string | null = null;
+    let customApiToken: string | null = null;
+
     if (!resolvedInstanceId) {
       const cleanPhoneLookup = phone.replace(/\D/g, "");
       const { data: client } = await supabase
@@ -66,9 +69,20 @@ serve(async (req) => {
       resolvedInstanceId = client?.received_on_instance_id || null;
     }
 
-    // Future: load per-instance credentials from whatsapp_instances + named secrets.
-    // For now, all instances share the env credentials (uazapi default).
-    const whatsappApiUrl = getZApiBaseUrl();
+    if (resolvedInstanceId) {
+      const { data: inst } = await supabase
+        .from("whatsapp_instances")
+        .select("api_url, api_token")
+        .eq("id", resolvedInstanceId)
+        .maybeSingle();
+      
+      if (inst) {
+        customApiUrl = inst.api_url;
+        customApiToken = inst.api_token;
+      }
+    }
+
+    const whatsappApiUrl = getZApiBaseUrl(customApiUrl, customApiToken);
 
     if (!whatsappApiUrl) {
       return new Response(JSON.stringify({ error: "WhatsApp API (Z-API) not configured. Please set WHATSAPP_API_URL." }), {
@@ -100,9 +114,9 @@ serve(async (req) => {
 
     console.log(`Sending message via Z-API to ${cleanPhone}...`);
 
-    const clientToken = Deno.env.get("ZAPI_CLIENT_TOKEN");
+    const clientToken = customApiToken || Deno.env.get("ZAPI_CLIENT_TOKEN");
     const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (clientToken) headers["Client-Token"] = clientToken;
+    if (clientToken && !whatsappApiUrl.includes(clientToken)) headers["Client-Token"] = clientToken;
 
     const apiResponse = await fetch(endpoint, {
       method: "POST",

@@ -10,9 +10,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function getZApiBaseUrl() {
-  const rawUrl = Deno.env.get("WHATSAPP_API_URL")?.trim();
-  const instanceToken = Deno.env.get("WHATSAPP_API_KEY")?.trim();
+function getZApiBaseUrl(customUrl?: string | null, customToken?: string | null) {
+  const rawUrl = (customUrl || Deno.env.get("WHATSAPP_API_URL"))?.trim();
+  const instanceToken = (customToken || Deno.env.get("WHATSAPP_API_KEY"))?.trim();
 
   if (!rawUrl) return null;
 
@@ -63,8 +63,8 @@ function getZApiBaseUrl() {
   }
 
  // Function to send message via Z-API
- async function sendWhatsAppMessage(phone: string, text: string, isTest: boolean = false) {
-    const apiBaseUrl = getZApiBaseUrl();
+ async function sendWhatsAppMessage(phone: string, text: string, isTest: boolean = false, customUrl?: string | null, customToken?: string | null) {
+    const apiBaseUrl = getZApiBaseUrl(customUrl, customToken);
     if (!apiBaseUrl) {
       console.error("WHATSAPP_API_URL not set");
       return { error: "API not configured" };
@@ -74,10 +74,10 @@ function getZApiBaseUrl() {
       console.log(`[TEST MODE] Would send WhatsApp message to ${phone}: ${text}`);
       return { success: true, message: "Test mode: message not sent to real API" };
     }
-   try {
-     const clientToken = Deno.env.get("ZAPI_CLIENT_TOKEN");
-     const headers: Record<string, string> = { "Content-Type": "application/json" };
-     if (clientToken) headers["Client-Token"] = clientToken;
+    try {
+      const clientToken = customToken || Deno.env.get("ZAPI_CLIENT_TOKEN");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (clientToken && !apiBaseUrl.includes(clientToken)) headers["Client-Token"] = clientToken;
 
       const response = await fetch(`${apiBaseUrl.replace(/\/+$/, "")}/send-text`, {
        method: "POST",
@@ -279,7 +279,7 @@ serve(async (req) => {
         if (connectedPhoneClean) {
           const { data: inst } = await supabase
             .from("whatsapp_instances")
-            .select("id, instance_type, store_id, seller_id, phone_number")
+            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token")
             .eq("phone_number", connectedPhoneClean)
             .maybeSingle();
           receivedInstance = inst || null;
@@ -287,7 +287,7 @@ serve(async (req) => {
         if (!receivedInstance && instanceHint) {
           const { data: inst } = await supabase
             .from("whatsapp_instances")
-            .select("id, instance_type, store_id, seller_id, phone_number")
+            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token")
             .or(`phone_number.eq.${instanceHint},id.eq.${instanceHint}`)
             .maybeSingle();
           receivedInstance = inst || null;
@@ -414,7 +414,9 @@ serve(async (req) => {
                 await sendWhatsAppMessage(
                   cleanPhone,
                   `Perfeito! Recebemos seu contato. Em instantes um de nossos consultores entrará em contato com você. ✅`,
-                  isTest
+                  isTest,
+                  receivedInstance?.api_url,
+                  receivedInstance?.api_token
                 );
                 return new Response(JSON.stringify({ success: true, action: "routed_by_code", seller: sellerByCode.name }), {
                   status: 200,
