@@ -618,80 +618,56 @@ serve(async (req) => {
                  } else {
                    await sendWhatsAppMessage(cleanPhone, `Não localizei esse código. Verifique e digite novamente, ou responda *N* para continuar sem código.`, isTest);
                  }
-               } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
-                  // Move to ask_store: pergunta a CIDADE/REGIÃO em texto livre
-                  await updateClient({ triage_step: 'ask_store' });
+                } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
+                   // Move to ask_store: pergunta a REGIÃO com opções específicas
+                   await updateClient({ triage_step: 'ask_store' });
+                   const storeOptions = `Em qual região você deseja ser atendido? 👋\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé\n\nResponda com o *número* da opção desejada.`;
+                   await sendWhatsAppMessage(
+                     cleanPhone,
+                     storeOptions,
+                     isTest,
+                     receivedInstance?.api_url,
+                     receivedInstance?.api_token
+                   );
+                } else {
+                  await sendWhatsAppMessage(cleanPhone, `Por favor, digite seu *código de vendedor* (ex: 1023) ou responda *N* se não tiver.`, isTest);
+                }
+               } else if (step === 'ask_store') {
+                const { data: stores } = await supabase.from("stores").select("id, name, city").order("name");
+                
+                // Mapeamento manual conforme solicitado
+                // 1 — Niterói -> 25b7fb23-89c6-4abc-af6a-75c8c41e0dc2
+                // 2 — Rio de Janeiro (Barra da Tijuca) -> b7369414-9afe-4870-974e-45aa58173b8c
+                // 3 — Macaé -> 0e3a0306-58b0-4449-8526-177a91d7d6d4
+
+                let chosenStoreId = null;
+                let chosenStoreName = "";
+
+                if (trimmed === '1') {
+                  chosenStoreId = '25b7fb23-89c6-4abc-af6a-75c8c41e0dc2';
+                  chosenStoreName = 'Niterói';
+                } else if (trimmed === '2') {
+                  chosenStoreId = 'b7369414-9afe-4870-974e-45aa58173b8c';
+                  chosenStoreName = 'Barra da Tijuca';
+                } else if (trimmed === '3') {
+                  chosenStoreId = '0e3a0306-58b0-4449-8526-177a91d7d6d4';
+                  chosenStoreName = 'Macaé';
+                }
+
+                if (chosenStoreId) {
+                  await updateClient({ store_id: chosenStoreId, triaging: false, triage_step: null });
+                  await finishWithStore(chosenStoreId, chosenStoreName);
+                } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
+                  await finishWithStore(null);
+                } else {
                   await sendWhatsAppMessage(
                     cleanPhone,
-                    `Sem problemas! Para direcionarmos seu atendimento, em qual *cidade ou região* você está? 📍\n\nDigite o nome da sua cidade (ex: *São Paulo*) ou responda *N* para atendimento geral.`,
-                    isTest
+                    `Opção inválida. Por favor, responda com o *número* da região:\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé`,
+                    isTest,
+                    receivedInstance?.api_url,
+                    receivedInstance?.api_token
                   );
-               } else {
-                 await sendWhatsAppMessage(cleanPhone, `Por favor, digite seu *código de vendedor* (ex: 1023) ou responda *N* se não tiver.`, isTest);
-               }
-              } else if (step === 'ask_store') {
-                const { data: stores } = await supabase.from("stores").select("id, name, city").order("name");
-                const numMatch = trimmed.match(/^\d+$/);
-                const selectedIndex = numMatch ? parseInt(trimmed, 10) : -1;
-                const generalOptionIndex = (stores || []).length + 1;
-
-                if (lower === 'n' || lower === 'nao' || lower === 'não' || selectedIndex === generalOptionIndex) {
-                 await finishWithStore(null);
-               } else {
-                  let chosen = null as null | { id: string; name: string; city?: string | null };
-                  if (selectedIndex > 0 && stores && selectedIndex <= stores.length) {
-                    chosen = stores[selectedIndex - 1];
-                  }
-                   if (!chosen && stores) {
-                     // Match por cidade ou nome da loja (substring nos dois sentidos)
-                     chosen = stores.find(s => {
-                       const cityLower = (s.city || '').toLowerCase().trim();
-                       const nameLower = s.name.toLowerCase().trim();
-                       if (cityLower && (lower.includes(cityLower) || cityLower.includes(lower))) return true;
-                       if (nameLower && (lower.includes(nameLower) || nameLower.includes(lower))) return true;
-                       return false;
-                     }) || null;
-                   }
-                  
-                  if (chosen) {
-                     // Distribuição ALEATÓRIA por cidade: pega qualquer vendedor das lojas dessa cidade
-                     const cityKey = (chosen.city || trimmed || '').trim();
-                     await updateClient({ city: trimmed });
-                     let assigned = false;
-                     if (cityKey) {
-                       const { data: randomSeller } = await supabase.rpc("get_random_seller_by_city", { _city: cityKey });
-                       if (randomSeller && randomSeller.length > 0) {
-                         const picked = randomSeller[0];
-                         await assignToSeller(picked.id, picked.name, picked.store_id);
-                         await supabase.from("redirection_history").insert({
-                           client_id: client.id,
-                           to_seller_id: picked.id,
-                           redirection_type: 'city_random',
-                           reason: `Distribuição aleatória por cidade: ${cityKey}`,
-                           store_id: picked.store_id
-                         });
-                         await supabase.rpc("mark_seller_assigned", { _seller_id: picked.id });
-                         assigned = true;
-                       }
-                     }
-                     if (!assigned) {
-                       // Fallback: distribuição padrão por loja escolhida
-                       await updateClient({ store_id: chosen.id });
-                       await finishWithStore(chosen.id, chosen.name);
-                     }
-                  } else {
-                     // Fallback: cidade não bate com nenhuma loja — mostra menu numerado
-                     console.log(`Fallback: client ${cleanPhone} sent city "${text}" with no store match. Showing numbered menu.`);
-                     const storeList = (stores || []).map((s, i) => `${i + 1} - ${s.name}${s.city ? ` (${s.city})` : ''}`).join("\n");
-                     const fullList = `${storeList}\n${generalOptionIndex} - Outra cidade / Atendimento geral`;
-                     // Salva a cidade informada para contexto do vendedor
-                     await updateClient({ city: trimmed });
-                     await sendWhatsAppMessage(
-                       cleanPhone,
-                       `Não localizei uma loja na cidade *${trimmed}*. 🧐\n\nEscolha a unidade mais próxima digitando apenas o *número*:\n\n${fullList}`,
-                       isTest
-                     );
-                  }
+                }
                }
               } else if (step === 'ask_seller') {
                 const storeId = client.store_id;
