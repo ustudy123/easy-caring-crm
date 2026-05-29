@@ -638,25 +638,44 @@ serve(async (req) => {
                 // Mapeamento manual conforme solicitado
                 // 1 — Niterói -> 25b7fb23-89c6-4abc-af6a-75c8c41e0dc2
                 // 2 — Rio de Janeiro (Barra da Tijuca) -> b7369414-9afe-4870-974e-45aa58173b8c
-                // 3 — Macaé -> 0e3a0306-58b0-4449-8526-177a91d7d6d4
-
-                let chosenStoreId = null;
-                let chosenStoreName = "";
+                // 3 — Macaé -> Múltiplas lojas (Matriz, Aeroporto, Riviera)
 
                 if (trimmed === '1') {
-                  chosenStoreId = '25b7fb23-89c6-4abc-af6a-75c8c41e0dc2';
-                  chosenStoreName = 'Niterói';
-                } else if (trimmed === '2') {
-                  chosenStoreId = 'b7369414-9afe-4870-974e-45aa58173b8c';
-                  chosenStoreName = 'Barra da Tijuca';
-                } else if (trimmed === '3') {
-                  chosenStoreId = '0e3a0306-58b0-4449-8526-177a91d7d6d4';
-                  chosenStoreName = 'Macaé';
-                }
-
-                if (chosenStoreId) {
+                  const chosenStoreId = '25b7fb23-89c6-4abc-af6a-75c8c41e0dc2';
+                  const chosenStoreName = 'Niterói';
                   await updateClient({ store_id: chosenStoreId, triaging: false, triage_step: null });
                   await finishWithStore(chosenStoreId, chosenStoreName);
+                } else if (trimmed === '2') {
+                  const chosenStoreId = 'b7369414-9afe-4870-974e-45aa58173b8c';
+                  const chosenStoreName = 'Barra da Tijuca';
+                  await updateClient({ store_id: chosenStoreId, triaging: false, triage_step: null });
+                  await finishWithStore(chosenStoreId, chosenStoreName);
+                } else if (trimmed === '3') {
+                  // Macaé region routing with multiple stores priority: Matriz -> Aeroporto -> Riviera
+                  const macaeStores = [
+                    { id: 'a6b2da10-3e07-421f-b05c-cdc696bfe46a', name: 'Matriz' },
+                    { id: '80eb248f-02b0-4bc7-a545-63ae48b78d29', name: 'Aeroporto' },
+                    { id: '16ad0928-0372-40ea-9a9a-774416551dc7', name: 'Riviera' }
+                  ];
+
+                  let distributed = false;
+                  for (const store of macaeStores) {
+                    console.log(`Attempting distribution for Macaé store: ${store.name} (${store.id})`);
+                    distributed = await distributeLead(store.id);
+                    if (distributed) {
+                      await updateClient({ store_id: store.id, triaging: false, triage_step: null });
+                      console.log(`Successfully distributed to store: ${store.name}`);
+                      break;
+                    }
+                  }
+
+                  if (!distributed) {
+                    // Fallback to Matriz if no one is available in any store.
+                    // finishWithStore will create a lead for managers to see.
+                    console.log("No available sellers in Macaé stores. Falling back to Matriz queue.");
+                    await updateClient({ store_id: macaeStores[0].id, triaging: false, triage_step: null });
+                    await finishWithStore(macaeStores[0].id, macaeStores[0].name);
+                  }
                 } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
                   await finishWithStore(null);
                 } else {
