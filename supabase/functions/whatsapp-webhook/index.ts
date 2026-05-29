@@ -451,7 +451,11 @@ serve(async (req) => {
 
           if (clientError) console.error("Error fetching client:", clientError);
 
-          let targetStoreId = client?.store_id || null;
+          // For store-type instances, default the client to that store so it shows
+          // up in the store's "Geral" list and triage is scoped to the store.
+          const instanceStoreId =
+            receivedInstance?.instance_type === "store" ? receivedInstance.store_id || null : null;
+          let targetStoreId = client?.store_id || instanceStoreId || null;
           const normalizedText = text.toLowerCase();
 
           // Create in-app notification for new inbound WhatsApp message
@@ -514,6 +518,8 @@ serve(async (req) => {
                 triage_step: 'ask_code',
                 last_message_at: new Date().toISOString(),
                 last_message_from_client_at: new Date().toISOString(),
+                store_id: targetStoreId,
+                received_on_instance_id: receivedInstanceId,
                 notes: erpClient ? `Cliente identificado via ERP Citel. ID: ${erpClient.id || 'N/A'}` : null,
                 tags: erpClient ? ['erp_citel'] : []
               };
@@ -525,7 +531,7 @@ serve(async (req) => {
                   ? `Olá, *${erpClient.nome || erpClient.razao_social}*! 👋`
                   : `Olá! 👋`;
                 const welcomeMsg = `${greeting} Você está falando com a *TF Tintas*.\n\nVocê já possui o *código (ramal)* de um vendedor?\n\n👉 Se *sim*, digite o código agora (ex: 1023).\n👉 Se *não*, responda com *N* para continuar.`;
-                await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest);
+                await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest, receivedInstance?.api_url, receivedInstance?.api_token);
               }
             } else if (client.triaging) {
              // URA-style step machine
