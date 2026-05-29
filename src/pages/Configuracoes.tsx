@@ -182,6 +182,25 @@ export default function Configuracoes() {
     );
     toast({ title: "Vendedor atualizado" });
   };
+  
+  const handleUpdatePriority = async (sellerId: string, priority: number) => {
+    setUpdatingPriority(sellerId);
+    const { error } = await supabase
+      .from("sellers")
+      .update({ distribution_priority: priority })
+      .eq("id", sellerId);
+    
+    setUpdatingPriority(null);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      setTeamSellers(prev => 
+        [...prev.map(s => s.id === sellerId ? { ...s, distribution_priority: priority } : s)]
+        .sort((a, b) => (b.distribution_priority || 0) - (a.distribution_priority || 0) || a.name.localeCompare(b.name))
+      );
+      toast({ title: "Prioridade atualizada" });
+    }
+  };
 
   if (loading) {
     return (
