@@ -182,7 +182,7 @@ export function WhatsAppInstancesTab() {
               </p>
               <div className="mt-2 flex items-center gap-2 text-[10px] font-mono bg-muted p-1.5 rounded border max-w-fit">
                 <Terminal className="h-3 w-3" />
-                <span>Webhook: {window.location.origin.replace('lovable.app', 'supabase.co')}/functions/v1/whatsapp-webhook</span>
+                <span>Webhook: {import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
