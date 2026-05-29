@@ -327,6 +327,9 @@ export function WhatsAppInstancesTab() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
+                      <Button size="icon" variant="ghost" title="Verificar conexão" onClick={() => checkStatus(inst.id)} disabled={checkingId === inst.id}>
+                        {checkingId === inst.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                      </Button>
                       <Button size="icon" variant="ghost" onClick={() => handleDelete(inst.id, inst.name)}>
                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
                       </Button>
