@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Phone, Smartphone, Store as StoreIcon, Trash2, Loader2, Wifi, WifiOff, Terminal } from "lucide-react";
+import { Plus, Phone, Smartphone, Store as StoreIcon, Trash2, Loader2, Wifi, WifiOff, Terminal, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 type InstanceType = "store" | "seller";
@@ -56,6 +56,8 @@ export function WhatsAppInstancesTab() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [checkingId, setCheckingId] = useState<string | null>(null);
 
   // form state
   const [name, setName] = useState("");
@@ -143,6 +145,29 @@ export function WhatsAppInstancesTab() {
     load();
   };
 
+  const checkStatus = async (instanceId?: string) => {
+    if (instanceId) setCheckingId(instanceId); else setChecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("check-whatsapp-status", {
+        body: instanceId ? { instanceId } : {},
+      });
+      if (error) throw error;
+      const results = (data as any)?.results || [];
+      const connected = results.filter((r: any) => r.status === "connected").length;
+      toast.success(
+        instanceId
+          ? `Status atualizado: ${results[0]?.status === "connected" ? "Conectado" : "Desconectado"}`
+          : `Verificação concluída • ${connected} conectado(s)`
+      );
+      await load();
+    } catch (e: any) {
+      toast.error("Erro ao verificar conexão: " + (e?.message || e));
+    } finally {
+      setChecking(false);
+      setCheckingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -160,6 +185,11 @@ export function WhatsAppInstancesTab() {
                 <span>Webhook: {window.location.origin.replace('lovable.app', 'supabase.co')}/functions/v1/whatsapp-webhook</span>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => checkStatus()} disabled={checking}>
+              {checking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              Verificar conexões
+            </Button>
             <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Conectar novo número</Button>
@@ -251,6 +281,7 @@ export function WhatsAppInstancesTab() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -296,6 +327,9 @@ export function WhatsAppInstancesTab() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
+                      <Button size="icon" variant="ghost" title="Verificar conexão" onClick={() => checkStatus(inst.id)} disabled={checkingId === inst.id}>
+                        {checkingId === inst.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                      </Button>
                       <Button size="icon" variant="ghost" onClick={() => handleDelete(inst.id, inst.name)}>
                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
                       </Button>
