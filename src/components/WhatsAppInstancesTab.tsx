@@ -281,6 +281,7 @@ export function WhatsAppInstancesTab() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
