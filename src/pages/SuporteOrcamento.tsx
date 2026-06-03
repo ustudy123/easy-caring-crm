@@ -27,6 +27,7 @@ interface SupportRequest {
   pdf_name?: string;
   erp_client_id?: string;
   created_by?: string;
+  seller_id?: string;
 }
 
 export default function SuporteOrcamento() {
