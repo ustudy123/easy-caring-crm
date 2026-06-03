@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2 } from "lucide-react";
+import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
@@ -301,36 +301,72 @@ export default function SuporteOrcamento() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Buscar Cliente no ERP</label>
-                <div className="flex gap-2 mb-2">
-                  <Input 
-                    placeholder="Digite o nome do cliente..." 
-                    value={erpSearch}
-                    onChange={(e) => setErpSearch(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleErpSearch()}
-                  />
-                  <Button size="sm" onClick={handleErpSearch} disabled={searchingErp}>
-                    {searchingErp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                  </Button>
-                </div>
-                {erpResults.length > 0 && (
-                  <div className="max-h-40 overflow-y-auto border rounded-md p-1 bg-muted/20">
-                    {erpResults.map((client) => (
-                      <div 
-                        key={client.erpId} 
-                        className={`p-2 text-xs hover:bg-brand-500/10 cursor-pointer rounded flex justify-between items-center ${selectedErpClient?.erpId === client.erpId ? "bg-brand-500/20" : ""}`}
-                        onClick={() => setSelectedErpClient(client)}
-                      >
-                        <span className="font-medium">{client.name}</span>
-                        <span className="text-muted-foreground">ID: {client.erpId}</span>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Lead / Cliente</label>
+                {!selectedErpClient ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          placeholder="Buscar por nome no ERP..." 
+                          value={erpSearch}
+                          onChange={(e) => setErpSearch(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleErpSearch()}
+                          className="pl-9"
+                        />
                       </div>
-                    ))}
+                      <Button size="sm" onClick={handleErpSearch} disabled={searchingErp} variant="secondary">
+                        {searchingErp ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar"}
+                      </Button>
+                    </div>
+                    {erpResults.length > 0 && (
+                      <div className="max-h-60 overflow-y-auto border rounded-md divide-y bg-background shadow-sm animate-in fade-in slide-in-from-top-1">
+                        {erpResults.map((client) => (
+                          <div 
+                            key={client.erpId} 
+                            className="p-3 hover:bg-muted/50 cursor-pointer transition-colors group"
+                            onClick={() => setSelectedErpClient(client)}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="space-y-0.5">
+                                <p className="text-sm font-semibold group-hover:text-brand-500 transition-colors">{client.name}</p>
+                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                  <span className="bg-muted px-1.5 py-0.5 rounded">ID: {client.erpId}</span>
+                                  {client.phone && <span>• {client.phone}</span>}
+                                </div>
+                              </div>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <CheckCircle className="h-4 w-4 text-brand-500" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-                {selectedErpClient && (
-                  <Badge variant="outline" className="mt-2 bg-brand-500/10 border-brand-500/30">
-                    Selecionado: {selectedErpClient.name}
-                  </Badge>
+                ) : (
+                  <div className="flex items-center justify-between p-3 border rounded-lg bg-brand-500/5 border-brand-500/20 animate-in zoom-in-95">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-brand-500/10 flex items-center justify-center">
+                        <User className="h-5 w-5 text-brand-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-brand-600">{selectedErpClient.name}</p>
+                        <p className="text-[10px] text-muted-foreground">ERP ID: {selectedErpClient.erpId}</p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                      onClick={() => {
+                        setSelectedErpClient(null);
+                        setErpResults([]);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 )}
               </div>
               <div>
@@ -424,21 +460,33 @@ export default function SuporteOrcamento() {
                                       <span className="truncate max-w-[120px]">{req.vendedor_name}</span>
                                       <span>{new Date(req.created_at).toLocaleDateString()}</span>
                                     </div>
-                                    {req.pdf_url && (
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                      {req.pdf_url && (
+                                        <Button 
+                                          variant="secondary" 
+                                          className="h-6 px-2 text-[9px] font-semibold bg-brand-500/10 text-brand-500 hover:bg-brand-500/20 border-none"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            const { data } = await supabase.storage
+                                              .from("pricing_attachments")
+                                              .createSignedUrl(req.pdf_url!, 3600);
+                                            if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                                          }}
+                                        >
+                                          <Paperclip className="h-3 w-3 mr-1" />
+                                          PDF
+                                        </Button>
+                                      )}
                                       <Button 
-                                        variant="link" 
-                                        className="h-auto p-0 text-[9px] text-brand-500"
-                                        onClick={async () => {
-                                          const { data } = await supabase.storage
-                                            .from("pricing_attachments")
-                                            .createSignedUrl(req.pdf_url!, 60);
-                                          if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                                        variant="ghost" 
+                                        className="h-6 px-2 text-[9px] ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => {
+                                          toast.info("Detalhes em breve...");
                                         }}
                                       >
-                                        <Paperclip className="h-2 w-2 mr-1" />
-                                        Ver PDF
+                                        Ver mais
                                       </Button>
-                                    )}
+                                    </div>
                                   </CardContent>
                                 </Card>
                               )}
