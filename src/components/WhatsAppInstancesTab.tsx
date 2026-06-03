@@ -77,7 +77,7 @@ export function WhatsAppInstancesTab() {
   const load = async () => {
     setLoading(true);
     const [instRes, storesRes, sellersRes] = await Promise.all([
-      supabase.from("whatsapp_instances").select("*, stores(name), sellers(name)").order("created_at", { ascending: false }),
+      supabase.from("whatsapp_instances").select("id, name, phone_number, instance_type, store_id, seller_id, provider, status, qr_code, last_connected_at, created_at, updated_at, stores(name), sellers(name)").order("created_at", { ascending: false }),
       supabase.from("stores").select("id, name").order("name"),
       supabase.from("sellers").select("id, name, store_id").order("name"),
     ]);
