@@ -125,7 +125,7 @@ export default function SuporteOrcamento() {
       const { error: insertError } = await supabase
         .from("pricing_support_requests")
         .insert({
-          request_type: requestType,
+          request_type: requestType as any,
           client_name: selectedErpClient.name,
           erp_client_id: selectedErpClient.erpId,
           notes: description,
