@@ -198,7 +198,7 @@ export default function SuporteOrcamento() {
     if (isAdmin) isVisible = true;
     else if (isSuporte && r.request_type === "orcamento") isVisible = true;
     else if (isGerente && r.request_type === "precificacao_especial") isVisible = true;
-    else if (r.created_by === sellerId) isVisible = true; // Fallback for owner (matching sellerId)
+    else if (r.created_by === sellerId || r.seller_id === sellerId) isVisible = true;
 
     return matchesSearch && matchesType && isVisible;
   });
