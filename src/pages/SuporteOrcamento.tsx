@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2 } from "lucide-react";
+import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
