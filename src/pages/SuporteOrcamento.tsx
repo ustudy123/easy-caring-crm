@@ -460,21 +460,33 @@ export default function SuporteOrcamento() {
                                       <span className="truncate max-w-[120px]">{req.vendedor_name}</span>
                                       <span>{new Date(req.created_at).toLocaleDateString()}</span>
                                     </div>
-                                    {req.pdf_url && (
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                      {req.pdf_url && (
+                                        <Button 
+                                          variant="secondary" 
+                                          className="h-6 px-2 text-[9px] font-semibold bg-brand-500/10 text-brand-500 hover:bg-brand-500/20 border-none"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            const { data } = await supabase.storage
+                                              .from("pricing_attachments")
+                                              .createSignedUrl(req.pdf_url!, 3600);
+                                            if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                                          }}
+                                        >
+                                          <Paperclip className="h-3 w-3 mr-1" />
+                                          PDF
+                                        </Button>
+                                      )}
                                       <Button 
-                                        variant="link" 
-                                        className="h-auto p-0 text-[9px] text-brand-500"
-                                        onClick={async () => {
-                                          const { data } = await supabase.storage
-                                            .from("pricing_attachments")
-                                            .createSignedUrl(req.pdf_url!, 60);
-                                          if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                                        variant="ghost" 
+                                        className="h-6 px-2 text-[9px] ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => {
+                                          toast.info("Detalhes em breve...");
                                         }}
                                       >
-                                        <Paperclip className="h-2 w-2 mr-1" />
-                                        Ver PDF
+                                        Ver mais
                                       </Button>
-                                    )}
+                                    </div>
                                   </CardContent>
                                 </Card>
                               )}
