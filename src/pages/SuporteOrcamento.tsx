@@ -1,4 +1,4 @@
- import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useCrm } from "@/contexts/CrmContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,171 +7,205 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-  import { FileText, DollarSign, AlertTriangle, Clock, CheckCircle, Send, Search, Filter, GripVertical, User, MessageSquare, Paperclip, FileIcon, Phone, Mail, MapPin, Briefcase, Package, Tag } from "lucide-react";
- import { Lead } from "@/types/crm";
+import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2 } from "lucide-react";
 import { toast } from "sonner";
- import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
+import { supabase } from "@/integrations/supabase/client";
+import { useRole } from "@/contexts/RoleContext";
 
 type RequestType = "orcamento" | "precificacao_especial";
 
 interface SupportRequest {
   id: string;
-  leadId: string;
-  clientName: string;
-   vendedorName: string;
-  type: RequestType;
-  description: string;
+  client_name: string;
+  vendedor_name?: string;
+  request_type: RequestType;
+  notes: string;
   status: "pendente" | "em_analise" | "concluido";
-  createdAt: string;
-  pdfUrl?: string;
-  pdfName?: string;
+  created_at: string;
+  pdf_url?: string;
+  pdf_name?: string;
+  erp_client_id?: string;
+  created_by?: string;
 }
 
 export default function SuporteOrcamento() {
-   const { leads, updateLead, sellers } = useCrm();
-   const [requests, setRequests] = useState<SupportRequest[]>([
-     {
-       id: "1",
-       leadId: "lead1",
-       clientName: "Construtora Rocha",
-       vendedorName: "Ricardo Silva",
-       type: "orcamento",
-       description: "Orçamento para pintura predial 5000m2",
-       status: "pendente",
-       createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-     },
-     {
-       id: "2",
-       leadId: "lead2",
-       clientName: "Indústria Metal",
-       vendedorName: "Ana Santos",
-       type: "precificacao_especial",
-       description: "Solicitação de 15% de desconto para fechamento imediato",
-       status: "em_analise",
-       createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-     },
-     {
-       id: "3",
-       leadId: "lead3",
-       clientName: "Mercado Central",
-       vendedorName: "Ricardo Silva",
-       type: "orcamento",
-       description: "Orçamento de tintas epóxi",
-       status: "concluido",
-       createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-     }
-   ]);
+  const { sellers } = useCrm();
+  const { role, isAdmin, isGerente, isSuporte, sellerId } = useRole();
+  const [requests, setRequests] = useState<SupportRequest[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
-  const [selectedLeadId, setSelectedLeadId] = useState("");
   const [requestType, setRequestType] = useState<RequestType>("orcamento");
   const [description, setDescription] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Leads that are in relevant stages
-  const relevantLeads = leads.filter(
-    (l) => ["sondagem", "recomendacao_tecnica", "demonstracao_valor", "contorno_objecoes"].includes(l.stage)
-  );
+  // ERP Search states
+  const [erpSearch, setErpSearch] = useState("");
+  const [erpResults, setErpResults] = useState<any[]>([]);
+  const [searchingErp, setSearchingErp] = useState(false);
+  const [selectedErpClient, setSelectedErpClient] = useState<any | null>(null);
 
-  const handleSubmit = () => {
-    if (!selectedLeadId) {
-      toast.error("Selecione um lead");
+  const fetchRequests = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("pricing_support_requests")
+        .select(`
+          *,
+          sellers:seller_id (name)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const formatted = (data || []).map((r: any) => ({
+        ...r,
+        vendedor_name: r.sellers?.name || "Vendedor não identificado"
+      }));
+
+      setRequests(formatted);
+    } catch (error: any) {
+      toast.error("Erro ao carregar solicitações: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const handleErpSearch = async () => {
+    if (erpSearch.length < 2) {
+      toast.error("Digite pelo menos 2 caracteres para buscar");
       return;
     }
-     const lead = leads.find((l) => l.id === selectedLeadId);
-    if (!lead) return;
+    setSearchingErp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("citel-search-name", {
+        body: { name: erpSearch }
+      });
+      if (error) throw error;
+      setErpResults(data.results || []);
+      if (!data.found) toast.info("Nenhum cliente encontrado no ERP");
+    } catch (error: any) {
+      toast.error("Erro na busca ERP: " + error.message);
+    } finally {
+      setSearchingErp(false);
+    }
+  };
 
-     const seller = sellers.find(s => s.id === lead.assignedTo) || sellers.find(s => s.name === lead.assignedTo);
- 
-    const newRequest: SupportRequest = {
-      id: crypto.randomUUID(),
-      leadId: lead.id,
-      clientName: lead.clientName,
-       vendedorName: seller?.name || lead.assignedTo || "Vendedor não identificado",
-      type: requestType,
-      description,
-      status: "pendente",
-      createdAt: new Date().toISOString(),
-      pdfName: pdfFile?.name,
-      pdfUrl: pdfFile ? URL.createObjectURL(pdfFile) : undefined,
-    };
-
-    setRequests((prev) => [newRequest, ...prev]);
-
-    // If special pricing, move lead to recomendacao_tecnica stage
-    if (requestType === "precificacao_especial" && lead.stage !== "recomendacao_tecnica") {
-      updateLead({ ...lead, stage: "recomendacao_tecnica" });
+  const handleSubmit = async () => {
+    if (!selectedErpClient) {
+      toast.error("Selecione um cliente do ERP");
+      return;
+    }
+    if (!description.trim()) {
+      toast.error("Descreva a solicitação");
+      return;
     }
 
-    toast.success(
-      requestType === "orcamento"
-        ? "Solicitação de orçamento enviada!"
-        : "Solicitação de precificação especial enviada!"
-    );
+    setSubmitting(true);
+    try {
+      let pdfUrl = null;
+      if (pdfFile) {
+        const fileExt = pdfFile.name.split(".").pop();
+        const filePath = `${crypto.randomUUID()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from("pricing_attachments")
+          .upload(filePath, pdfFile);
 
-    setShowForm(false);
-    setSelectedLeadId("");
+        if (uploadError) throw uploadError;
+        pdfUrl = filePath;
+      }
+
+      const { error: insertError } = await supabase
+        .from("pricing_support_requests")
+        .insert({
+          request_type: requestType,
+          client_name: selectedErpClient.name,
+          erp_client_id: selectedErpClient.erpId,
+          notes: description,
+          pdf_url: pdfUrl,
+          pdf_name: pdfFile?.name,
+          seller_id: sellerId,
+          status: "pendente"
+        });
+
+      if (insertError) throw insertError;
+
+      toast.success("Solicitação enviada com sucesso!");
+      setShowForm(false);
+      resetForm();
+      fetchRequests();
+    } catch (error: any) {
+      toast.error("Erro ao enviar: " + error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setSelectedErpClient(null);
     setDescription("");
     setPdfFile(null);
+    setErpSearch("");
+    setErpResults([]);
   };
 
-   const updateRequestStatus = (id: string, status: SupportRequest["status"]) => {
-     const request = requests.find(r => r.id === id);
-     if (!request) return;
- 
-     setRequests((prev) =>
-       prev.map((r) => (r.id === id ? { ...r, status } : r))
-     );
- 
-     const statusLabels = {
-       pendente: "Pendente",
-       em_analise: "em Análise",
-       concluido: "Concluído"
-     };
- 
-     toast.success(`Status atualizado para ${statusLabels[status]}!`);
-     
-     // Notificar vendedor
-     toast.info(`Notificação enviada para ${request.vendedorName}: O orçamento de ${request.clientName} está ${statusLabels[status]}.`, {
-       icon: <MessageSquare className="h-4 w-4" />,
-       duration: 5000,
-     });
-   };
- 
-   const onDragEnd = (result: DropResult) => {
-     if (!result.destination) return;
-     
-     const sourceStatus = result.source.droppableId as SupportRequest["status"];
-     const destStatus = result.destination.droppableId as SupportRequest["status"];
-     
-     if (sourceStatus === destStatus) return;
-     
-     updateRequestStatus(result.draggableId, destStatus);
-   };
- 
-   const columns: { id: SupportRequest["status"]; label: string; color: string; icon: any }[] = [
-     { id: "pendente", label: "Pendentes", color: "text-warning bg-warning/10 border-warning/20", icon: Clock },
-     { id: "em_analise", label: "Em Análise", color: "text-brand-500 bg-brand-500/10 border-primary/20", icon: FileText },
-     { id: "concluido", label: "Concluídos", color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle },
-   ];
- 
-   const filteredRequests = requests.filter((r) => {
-     const searchLower = search.toLowerCase();
-     if (search && !r.clientName.toLowerCase().includes(searchLower) && !r.vendedorName.toLowerCase().includes(searchLower)) return false;
-     if (filterType !== "all" && r.type !== filterType) return false;
-     return true;
-   });
+  const updateRequestStatus = async (id: string, status: SupportRequest["status"]) => {
+    try {
+      const { error } = await supabase
+        .from("pricing_support_requests")
+        .update({ status })
+        .eq("id", id);
 
-  const statusConfig = {
-    pendente: { label: "Pendente", color: "bg-warning/15 text-warning border-warning/30" },
-    em_analise: { label: "Em Análise", color: "bg-brand-500/15 text-brand-500 border-primary/30" },
-    concluido: { label: "Concluído", color: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" },
+      if (error) throw error;
+
+      setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+      toast.success("Status atualizado!");
+    } catch (error: any) {
+      toast.error("Erro ao atualizar status: " + error.message);
+    }
   };
 
-  const pendingCount = requests.filter((r) => r.status === "pendente").length;
-  const inAnalysisCount = requests.filter((r) => r.status === "em_analise").length;
-  const completedCount = requests.filter((r) => r.status === "concluido").length;
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    const destStatus = result.destination.droppableId as SupportRequest["status"];
+    if (result.source.droppableId === destStatus) return;
+    updateRequestStatus(result.draggableId, destStatus);
+  };
+
+  const columns: { id: SupportRequest["status"]; label: string; color: string; icon: any }[] = [
+    { id: "pendente", label: "Pendentes", color: "text-warning bg-warning/10 border-warning/20", icon: Clock },
+    { id: "em_analise", label: "Em Análise", color: "text-brand-500 bg-brand-500/10 border-primary/20", icon: FileText },
+    { id: "concluido", label: "Concluídos", color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle },
+  ];
+
+  const filteredRequests = requests.filter((r) => {
+    const searchLower = search.toLowerCase();
+    const matchesSearch = !search || 
+      r.client_name.toLowerCase().includes(searchLower) || 
+      r.vendedor_name?.toLowerCase().includes(searchLower);
+    
+    const matchesType = filterType === "all" || r.request_type === filterType;
+
+    // Filter by visibility rules
+    let isVisible = false;
+    if (isAdmin) isVisible = true;
+    else if (isSuporte && r.request_type === "orcamento") isVisible = true;
+    else if (isGerente && r.request_type === "precificacao_especial") isVisible = true;
+    else if (r.created_by === sellerId) isVisible = true; // Fallback for owner (matching sellerId)
+
+    return matchesSearch && matchesType && isVisible;
+  });
+
+  const pendingCount = filteredRequests.filter((r) => r.status === "pendente").length;
+  const inAnalysisCount = filteredRequests.filter((r) => r.status === "em_analise").length;
+  const completedCount = filteredRequests.filter((r) => r.status === "concluido").length;
 
   return (
     <AppLayout title="Suporte a Orçamento">
@@ -234,14 +268,14 @@ export default function SuporteOrcamento() {
           </div>
           <div className="flex gap-2">
             <Button
-              onClick={() => { setRequestType("orcamento"); setShowForm(true); }}
+              onClick={() => { setRequestType("orcamento"); setShowForm(true); resetForm(); }}
               className="bg-brand-500"
               size="sm"
             >
               <FileText className="h-3.5 w-3.5 mr-1" /> Solicitar Orçamento
             </Button>
             <Button
-              onClick={() => { setRequestType("precificacao_especial"); setShowForm(true); }}
+              onClick={() => { setRequestType("precificacao_especial"); setShowForm(true); resetForm(); }}
               variant="outline"
               size="sm"
               className="border-kanban-recommendation text-kanban-recommendation hover:bg-kanban-recommendation/10"
@@ -260,26 +294,43 @@ export default function SuporteOrcamento() {
               </CardTitle>
               <CardDescription>
                 {requestType === "orcamento"
-                  ? "Solicite a elaboração de um orçamento para o cliente."
-                  : "Solicite análise de precificação especial para negociação diferenciada."}
+                  ? "Busque o cliente no ERP e solicite a elaboração de um orçamento."
+                  : "Busque o cliente no ERP e solicite análise de precificação especial."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Lead</label>
-                <Select value={selectedLeadId} onValueChange={setSelectedLeadId}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um lead..." /></SelectTrigger>
-                  <SelectContent>
-                    {relevantLeads.map((lead) => (
-                      <SelectItem key={lead.id} value={lead.id}>
-                        {lead.clientName} — R$ {lead.value.toLocaleString("pt-BR")}
-                      </SelectItem>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Buscar Cliente no ERP</label>
+                <div className="flex gap-2 mb-2">
+                  <Input 
+                    placeholder="Digite o nome do cliente..." 
+                    value={erpSearch}
+                    onChange={(e) => setErpSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleErpSearch()}
+                  />
+                  <Button size="sm" onClick={handleErpSearch} disabled={searchingErp}>
+                    {searchingErp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  </Button>
+                </div>
+                {erpResults.length > 0 && (
+                  <div className="max-h-40 overflow-y-auto border rounded-md p-1 bg-muted/20">
+                    {erpResults.map((client) => (
+                      <div 
+                        key={client.erpId} 
+                        className={`p-2 text-xs hover:bg-brand-500/10 cursor-pointer rounded flex justify-between items-center ${selectedErpClient?.erpId === client.erpId ? "bg-brand-500/20" : ""}`}
+                        onClick={() => setSelectedErpClient(client)}
+                      >
+                        <span className="font-medium">{client.name}</span>
+                        <span className="text-muted-foreground">ID: {client.erpId}</span>
+                      </div>
                     ))}
-                    {relevantLeads.length === 0 && (
-                      <SelectItem value="none" disabled>Nenhum lead disponível</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                  </div>
+                )}
+                {selectedErpClient && (
+                  <Badge variant="outline" className="mt-2 bg-brand-500/10 border-brand-500/30">
+                    Selecionado: {selectedErpClient.name}
+                  </Badge>
+                )}
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">Descrição / Observações</label>
@@ -308,12 +359,7 @@ export default function SuporteOrcamento() {
                     {pdfFile ? pdfFile.name : "Selecionar arquivo PDF"}
                   </label>
                   {pdfFile && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setPdfFile(null)}
-                      className="h-8 px-2 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setPdfFile(null)} className="h-8 text-destructive">
                       Remover
                     </Button>
                   )}
@@ -321,178 +367,92 @@ export default function SuporteOrcamento() {
               </div>
               <div className="flex gap-2 justify-end">
                 <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>Cancelar</Button>
-                <Button size="sm" onClick={handleSubmit}>
-                  <Send className="h-3.5 w-3.5 mr-1" /> Enviar Solicitação
+                <Button size="sm" onClick={handleSubmit} disabled={submitting}>
+                  {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Send className="h-3.5 w-3.5 mr-1" />}
+                  Enviar Solicitação
                 </Button>
               </div>
             </CardContent>
           </Card>
         )}
 
-          {/* Kanban Board */}
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
+          </div>
+        ) : (
           <DragDropContext onDragEnd={onDragEnd}>
             <div className="flex gap-4 overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
               {columns.map((col) => {
-               const colRequests = filteredRequests.filter((r) => r.status === col.id);
-               return (
-                 <div key={col.id} className="flex-shrink-0 w-[300px] flex flex-col bg-muted/30 rounded-[14px] border border-border/40 min-h-[500px]">
-                   {/* Column Header */}
-                   <div className={`p-3 border-b border-border/40 rounded-t-xl flex items-center justify-between ${col.color}`}>
-                     <div className="flex items-center gap-2">
-                       <col.icon className="h-4 w-4" />
-                       <span className="text-sm font-medium">{col.label}</span>
-                     </div>
-                     <Badge variant="secondary" className="bg-background/50 text-[10px] h-5">
-                       {colRequests.length}
-                     </Badge>
-                   </div>
- 
-                   {/* Droppable Area */}
-                   <Droppable droppableId={col.id}>
-                     {(provided, snapshot) => (
-                       <div
-                         ref={provided.innerRef}
-                         {...provided.droppableProps}
-                         className={`p-3 space-y-3 min-h-[400px] transition-colors ${
-                           snapshot.isDraggingOver ? "bg-brand-500/5" : ""
-                         }`}
-                       >
-                         {colRequests.length === 0 && !snapshot.isDraggingOver && (
-                           <div className="flex flex-col items-center justify-center py-12 text-center opacity-30">
-                             <FileText className="h-8 w-8 mb-2" />
-                             <p className="text-[10px] font-medium">Nenhuma solicitação</p>
-                           </div>
-                         )}
-                          {colRequests.map((req, index) => {
-                            const lead = leads.find(l => l.id === req.leadId);
-                            return (
+                const colRequests = filteredRequests.filter((r) => r.status === col.id);
+                return (
+                  <div key={col.id} className="flex-shrink-0 w-[300px] flex flex-col bg-muted/30 rounded-[14px] border border-border/40 min-h-[500px]">
+                    <div className={`p-3 border-b border-border/40 rounded-t-xl flex items-center justify-between ${col.color}`}>
+                      <div className="flex items-center gap-2">
+                        <col.icon className="h-4 w-4" />
+                        <span className="text-sm font-medium">{col.label}</span>
+                      </div>
+                      <Badge variant="secondary" className="text-[10px]">{colRequests.length}</Badge>
+                    </div>
+
+                    <Droppable droppableId={col.id}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={`p-3 space-y-3 min-h-[400px] ${snapshot.isDraggingOver ? "bg-brand-500/5" : ""}`}
+                        >
+                          {colRequests.map((req, index) => (
                             <Draggable key={req.id} draggableId={req.id} index={index}>
                               {(provided, snapshot) => (
-                               <Card
-                                 ref={provided.innerRef}
-                                 {...provided.draggableProps}
-                                 {...provided.dragHandleProps}
-                                   className={`shadow-sm hover:shadow-md hover:bg-brand-500/5 hover:border-primary/20 transition-all !cursor-pointer ${
-                                    snapshot.isDragging ? "rotate-2 shadow-xl ring-2 ring-primary/20" : ""
-                                  }`}
-                               >
-                                  <CardContent className="p-3 space-y-2.5">
-                                    <div className="flex items-start justify-between gap-2">
-                                      <span className="text-xs font-medium truncate leading-tight flex-1">
-                                        {req.clientName}
-                                      </span>
-                                      <Badge variant="outline" className="text-[9px] h-4 px-1 shrink-0 bg-muted/50">
-                                        {req.type === "orcamento" ? "ORC" : "PREC"}
+                                <Card
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className={`shadow-sm hover:shadow-md transition-all ${snapshot.isDragging ? "rotate-2 shadow-xl ring-2 ring-primary/20" : ""}`}
+                                >
+                                  <CardContent className="p-3 space-y-2">
+                                    <div className="flex justify-between items-start gap-2">
+                                      <span className="text-xs font-bold truncate flex-1">{req.client_name}</span>
+                                      <Badge variant="outline" className="text-[9px] uppercase">
+                                        {req.request_type === "orcamento" ? "ORC" : "PREC"}
                                       </Badge>
                                     </div>
-                                    
-                                    {/* Detailed Client Info */}
-                                    {lead && (
-                                      <div className="space-y-1 bg-muted/20 p-2 rounded-lg border border-border/10">
-                                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                                          <Phone className="h-2.5 w-2.5 shrink-0" />
-                                          <span>{lead.clientPhone}</span>
-                                        </div>
-                                        {lead.clientEmail && (
-                                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                                            <Mail className="h-2.5 w-2.5 shrink-0" />
-                                            <span className="truncate">{lead.clientEmail}</span>
-                                          </div>
-                                        )}
-                                        {lead.clientType && (
-                                          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-foreground/80">
-                                            <Briefcase className="h-2.5 w-2.5 shrink-0" />
-                                            <span>{lead.clientType}</span>
-                                          </div>
-                                        )}
-                                        {lead.companyWorkSite && (
-                                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground italic">
-                                            <Briefcase className="h-2.5 w-2.5 shrink-0" />
-                                            <span>Obra: {lead.companyWorkSite}</span>
-                                          </div>
-                                        )}
-                                        {(lead.storeName || lead.source) && (
-                                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                                            <MapPin className="h-2.5 w-2.5 shrink-0" />
-                                            <span>{lead.storeName || lead.source}</span>
-                                          </div>
-                                        )}
-                                        {lead.interestProducts && (
-                                          <div className="flex items-center gap-1.5 text-[10px] text-brand-500 font-medium">
-                                            <Package className="h-2.5 w-2.5 shrink-0" />
-                                            <span>{lead.interestProducts}</span>
-                                          </div>
-                                        )}
-                                      </div>
+                                    <p className="text-[10px] text-muted-foreground line-clamp-2 italic">"{req.notes}"</p>
+                                    <div className="flex justify-between items-center text-[9px] text-muted-foreground pt-1 border-t border-border/10">
+                                      <span className="truncate max-w-[120px]">{req.vendedor_name}</span>
+                                      <span>{new Date(req.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                    {req.pdf_url && (
+                                      <Button 
+                                        variant="link" 
+                                        className="h-auto p-0 text-[9px] text-brand-500"
+                                        onClick={async () => {
+                                          const { data } = await supabase.storage
+                                            .from("pricing_attachments")
+                                            .createSignedUrl(req.pdf_url!, 60);
+                                          if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                                        }}
+                                      >
+                                        <Paperclip className="h-2 w-2 mr-1" />
+                                        Ver PDF
+                                      </Button>
                                     )}
-                                    
-                                    {req.description && (
-                                      <p className="text-[10px] text-muted-foreground line-clamp-2 italic">
-                                        "{req.description}"
-                                      </p>
-                                    )}
-                                    
-                                    {req.pdfUrl && (
-                                      <div className="flex items-center gap-1.5 mt-1 bg-brand-500/5 p-1 rounded border border-primary/10">
-                                        <FileIcon className="h-3 w-3 text-brand-500" />
-                                        <a 
-                                          href={req.pdfUrl} 
-                                          target="_blank" 
-                                          rel="noopener noreferrer"
-                                          className="text-[9px] text-brand-500 hover:underline truncate max-w-[200px]"
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                          {req.pdfName || "Anexo PDF"}
-                                        </a>
-                                      </div>
-                                    )}
- 
-                                   <div className="flex items-center justify-between pt-1.5 border-t border-border/40 mt-1.5">
-                                     <div className="flex items-center gap-1.5 text-brand-500/80">
-                                       <User className="h-3 w-3" />
-                                       <span className="text-[9px] font-medium truncate max-w-[120px]">
-                                         {req.vendedorName}
-                                       </span>
-                                     </div>
-                                     <span className="text-[8px] text-muted-foreground font-medium">
-                                       {new Date(req.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit' })}
-                                     </span>
-                                   </div>
- 
-                                   <div className="flex gap-1 mt-2">
-                                     {req.status === "pendente" && (
-                                       <Button size="sm" variant="outline" className="text-[9px] h-6 w-full py-0 hover:bg-brand-500/10"
-                                         onClick={() => updateRequestStatus(req.id, "em_analise")}>
-                                         Analisar
-                                       </Button>
-                                     )}
-                                     {req.status === "em_analise" && (
-                                       <Button size="sm" variant="outline" className="text-[9px] h-6 w-full py-0 hover:bg-emerald-500/10"
-                                         onClick={() => updateRequestStatus(req.id, "concluido")}>
-                                         Concluir
-                                       </Button>
-                                     )}
-                                     {req.status === "concluido" && (
-                                       <div className="w-full flex justify-center">
-                                          <CheckCircle className="h-4 w-4 text-emerald-600" />
-                                       </div>
-                                     )}
-                                   </div>
-                                 </CardContent>
-                               </Card>
-                             )}
-                           </Draggable>
-                          );
-                        })}
-                         {provided.placeholder}
-                       </div>
-                     )}
-                   </Droppable>
-                 </div>
-               );
-             })}
-           </div>
-         </DragDropContext>
+                                  </CardContent>
+                                </Card>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                  </div>
+                );
+              })}
+            </div>
+          </DragDropContext>
+        )}
       </div>
     </AppLayout>
   );
