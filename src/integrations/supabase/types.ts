@@ -458,28 +458,46 @@ export type Database = {
       }
       pricing_support_requests: {
         Row: {
+          client_name: string | null
           created_at: string | null
+          created_by: string | null
+          erp_client_id: string | null
           id: string
           lead_id: string | null
           notes: string | null
+          pdf_name: string | null
+          pdf_url: string | null
+          request_type: string | null
           seller_id: string | null
           status: string | null
           updated_at: string | null
         }
         Insert: {
+          client_name?: string | null
           created_at?: string | null
+          created_by?: string | null
+          erp_client_id?: string | null
           id?: string
           lead_id?: string | null
           notes?: string | null
+          pdf_name?: string | null
+          pdf_url?: string | null
+          request_type?: string | null
           seller_id?: string | null
           status?: string | null
           updated_at?: string | null
         }
         Update: {
+          client_name?: string | null
           created_at?: string | null
+          created_by?: string | null
+          erp_client_id?: string | null
           id?: string
           lead_id?: string | null
           notes?: string | null
+          pdf_name?: string | null
+          pdf_url?: string | null
+          request_type?: string | null
           seller_id?: string | null
           status?: string | null
           updated_at?: string | null
