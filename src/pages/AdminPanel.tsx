@@ -827,7 +827,7 @@ function StoresTab() {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [phone, setPhone] = useState("");
-  const [employeeCount, setEmployeeCount] = useState<string>("0");
+  
   const [saving, setSaving] = useState(false);
 
   const fetchStores = useCallback(async () => {
