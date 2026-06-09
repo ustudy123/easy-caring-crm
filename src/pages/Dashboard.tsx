@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AppLayout } from "@/components/AppLayout";
 
 interface Module {
   id: string;
@@ -77,7 +78,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-120px)] flex flex-col items-center justify-center p-4">
+    <AppLayout title="Portal Taeco">
+      <div className="min-h-[calc(100vh-120px)] flex flex-col items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -155,5 +157,6 @@ export default function Dashboard() {
         </svg>
       </div>
     </div>
+    </AppLayout>
   );
 }

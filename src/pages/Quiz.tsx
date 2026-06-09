@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trophy, Star, ArrowRight, RotateCcw, PaintBucket, Sparkles } from "lucide-react";
+import { Trophy, Star, ArrowRight, RotateCcw, PaintBucket, Sparkles, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface Question {
   id: string;
@@ -18,6 +19,7 @@ interface Question {
 
 export default function Quiz() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -148,7 +150,15 @@ export default function Quiz() {
 
   return (
     <AppLayout title="Show das Tintas">
-      <div className="max-w-3xl mx-auto py-8 px-4">
+      <div className="max-w-3xl mx-auto py-8 px-4 relative">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/")}
+          className="absolute -top-4 -left-0 text-muted-foreground hover:text-brand-500 mb-4"
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Voltar ao Hub
+        </Button>
         <AnimatePresence mode="wait">
           {!shouldShowResult ? (
             <motion.div

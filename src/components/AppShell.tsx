@@ -3,10 +3,12 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Bell, AlertTriangle, MessageCircle, ShieldAlert } from "lucide-react";
+import { Bell, AlertTriangle, MessageCircle, ShieldAlert, Paintbrush, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCrm, Notification } from "@/contexts/CrmContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import taecoLogo from "@/assets/taeco-logo.png";
 import {
   Popover,
   PopoverContent,
@@ -30,6 +32,7 @@ export function AppShell() {
     markAllWhatsAppRead,
   } = useCrm();
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
     try {
       return JSON.parse(localStorage.getItem("crm-dismissed-notifs") || "{}");
@@ -69,20 +72,36 @@ export function AppShell() {
     }
   };
 
+  const isHub = location.pathname === "/";
+  const isQuiz = location.pathname === "/quiz";
+  const hideSidebar = isHub || isQuiz;
+
   return (
     <PageTitleContext.Provider value={{ title, setTitle }}>
       <SidebarProvider className="h-screen w-full overflow-hidden">
-        <AppSidebar className="shadow-[4px_0_24px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_32px_rgba(0,0,0,0.3)] z-40" />
+        {!hideSidebar && (
+          <AppSidebar className="shadow-[4px_0_24px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_32px_rgba(0,0,0,0.3)] z-40" />
+        )}
         <SidebarInset className="flex flex-col min-w-0 bg-background overflow-hidden">
-            <header
-              role="banner"
-              className="h-[60px] flex items-center justify-between border-b border-black/10 bg-white px-4 sm:px-6 shrink-0 sticky top-0 z-30"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <SidebarTrigger
-                  aria-label="Alternar barra lateral"
-                  className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                />
+            {!isQuiz && (
+              <header
+                role="banner"
+                className="h-[60px] flex items-center justify-between border-b border-black/10 bg-white px-4 sm:px-6 shrink-0 sticky top-0 z-30"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {!hideSidebar && (
+                    <SidebarTrigger
+                      aria-label="Alternar barra lateral"
+                      className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                    />
+                  )}
+                  {isHub && (
+                    <div className="flex items-center gap-2 mr-2">
+                       <div className="h-9 w-9 rounded-[8px] bg-white flex items-center justify-center p-1 ring-1 ring-black/5 shadow-sm">
+                          <img src={taecoLogo} alt="Taeco Tintas" className="h-full w-full object-contain" />
+                       </div>
+                    </div>
+                  )}
                 <div className="flex flex-col">
                   {title && (
                     <h1 className="text-[18px] font-medium text-primary tracking-tight leading-tight">
@@ -190,8 +209,23 @@ export function AppShell() {
                     </div>
                   </PopoverContent>
                 </Popover>
+                {hideSidebar && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={async () => {
+                      await signOut();
+                      navigate("/login");
+                    }}
+                    className="h-[36px] w-[36px] rounded-[8px] text-muted-foreground hover:text-brand-500 hover:bg-brand-50"
+                    title="Sair"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </header>
+          )}
             <main
               className={cn(
                 "flex-1 overflow-auto p-3 sm:p-5 md:p-6",
