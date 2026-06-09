@@ -298,7 +298,7 @@ serve(async (req) => {
         if (!receivedInstance && connectedPhoneClean) {
           const { data: allInst } = await supabase
             .from("whatsapp_instances")
-            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token");
+            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token, provider");
           const wantedSuffix = phoneSuffix(connectedPhoneClean);
           if (wantedSuffix && allInst) {
             receivedInstance =
