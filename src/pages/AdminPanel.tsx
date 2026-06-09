@@ -840,7 +840,7 @@ function StoresTab() {
 
   const resetForm = () => {
     setEditingId(null);
-    setName(""); setAddress(""); setCity(""); setPhone(""); setEmployeeCount("0");
+    setName(""); setAddress(""); setCity(""); setPhone("");
   };
 
   const openNew = () => {
