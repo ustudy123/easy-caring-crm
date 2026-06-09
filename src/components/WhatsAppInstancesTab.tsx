@@ -242,12 +242,34 @@ export function WhatsAppInstancesTab() {
                     <Select value={provider} onValueChange={(v: Provider) => setProvider(v)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="uazapi">uazapi (Z-API)</SelectItem>
+                        <SelectItem value="whatsapi">WhatsAPI (uazapi.com)</SelectItem>
+                        <SelectItem value="uazapi">Z-API (Antigo)</SelectItem>
                         <SelectItem value="meta_cloud">Meta Cloud API</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   
+                  {provider === "whatsapi" && (
+                    <>
+                      <div>
+                        <Label>WhatsAPI Base URL</Label>
+                        <Input 
+                          value={apiUrl} 
+                          onChange={(e) => setApiUrl(e.target.value)} 
+                          placeholder="https://api.uazapi.com" 
+                        />
+                      </div>
+                      <div>
+                        <Label>Instance Token (token)</Label>
+                        <Input 
+                          value={apiToken} 
+                          onChange={(e) => setApiToken(e.target.value)} 
+                          placeholder="Token da instância" 
+                        />
+                      </div>
+                    </>
+                  )}
+
                   {provider === "uazapi" && (
                     <>
                       <div>
