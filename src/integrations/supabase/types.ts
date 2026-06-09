@@ -1311,7 +1311,7 @@ export type Database = {
         | "connected"
         | "error"
       whatsapp_instance_type: "store" | "seller"
-      whatsapp_provider: "uazapi" | "meta_cloud"
+      whatsapp_provider: "uazapi" | "meta_cloud" | "whatsapi"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1469,7 +1469,7 @@ export const Constants = {
         "error",
       ],
       whatsapp_instance_type: ["store", "seller"],
-      whatsapp_provider: ["uazapi", "meta_cloud"],
+      whatsapp_provider: ["uazapi", "meta_cloud", "whatsapi"],
     },
   },
 } as const
