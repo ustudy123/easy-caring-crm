@@ -208,6 +208,20 @@ export function AppShell() {
                     </div>
                   </PopoverContent>
                 </Popover>
+                {hideSidebar && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={async () => {
+                      await signOut();
+                      navigate("/login");
+                    }}
+                    className="h-[36px] w-[36px] rounded-[8px] text-muted-foreground hover:text-brand-500 hover:bg-brand-50"
+                    title="Sair"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </header>
           )}
