@@ -69,20 +69,36 @@ export function AppShell() {
     }
   };
 
+  const isHub = location.pathname === "/";
+  const isQuiz = location.pathname === "/quiz";
+  const hideSidebar = isHub || isQuiz;
+
   return (
     <PageTitleContext.Provider value={{ title, setTitle }}>
       <SidebarProvider className="h-screen w-full overflow-hidden">
-        <AppSidebar className="shadow-[4px_0_24px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_32px_rgba(0,0,0,0.3)] z-40" />
+        {!hideSidebar && (
+          <AppSidebar className="shadow-[4px_0_24px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_32px_rgba(0,0,0,0.3)] z-40" />
+        )}
         <SidebarInset className="flex flex-col min-w-0 bg-background overflow-hidden">
-            <header
-              role="banner"
-              className="h-[60px] flex items-center justify-between border-b border-black/10 bg-white px-4 sm:px-6 shrink-0 sticky top-0 z-30"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <SidebarTrigger
-                  aria-label="Alternar barra lateral"
-                  className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                />
+            {!isQuiz && (
+              <header
+                role="banner"
+                className="h-[60px] flex items-center justify-between border-b border-black/10 bg-white px-4 sm:px-6 shrink-0 sticky top-0 z-30"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {!hideSidebar && (
+                    <SidebarTrigger
+                      aria-label="Alternar barra lateral"
+                      className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                    />
+                  )}
+                  {isHub && (
+                    <div className="flex items-center gap-2 mr-2">
+                       <div className="h-8 w-8 rounded bg-brand-500 flex items-center justify-center">
+                          <Paintbrush className="h-5 w-5 text-white" />
+                       </div>
+                    </div>
+                  )}
                 <div className="flex flex-col">
                   {title && (
                     <h1 className="text-[18px] font-medium text-primary tracking-tight leading-tight">
