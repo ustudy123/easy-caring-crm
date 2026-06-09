@@ -75,37 +75,41 @@ export default function Quiz() {
 
   const handleOptionClick = (index: number) => {
     if (selectedOption !== null) return;
+
+    const activeQuestion = questions[currentQuestionIndex];
+    if (!activeQuestion) return;
     
     setSelectedOption(index);
-    const correct = index === questions[currentQuestionIndex].correct_option_index;
+    const correct = index === activeQuestion.correct_option_index;
     setIsCorrect(correct);
+    const nextScore = correct ? score + (activeQuestion.difficulty * 100) : score;
     
     if (correct) {
-      setScore(s => s + (questions[currentQuestionIndex].difficulty * 100));
+      setScore(nextScore);
       toast.success("Resposta correta! 🎨", { duration: 1500 });
     } else {
       toast.error("Ops! Não foi dessa vez. 🖌️", { duration: 1500 });
     }
 
     setTimeout(() => {
-      if (currentQuestionIndex < questions.length - 1) {
+      if (currentQuestionIndex + 1 < questions.length) {
         setCurrentQuestionIndex(i => i + 1);
         setSelectedOption(null);
         setIsCorrect(null);
       } else {
         setShowResult(true);
-        saveAttempt();
+        saveAttempt(nextScore);
       }
     }, 2000);
   };
 
-  const saveAttempt = async () => {
+  const saveAttempt = async (finalScore: number) => {
     if (!user) return;
     await supabase.from("quiz_attempts").insert({
       user_id: user.id,
-      score: score,
+      score: finalScore,
       total_questions: questions.length,
-      correct_answers: Math.round(score / 100) // Simplistic mapping
+      correct_answers: Math.round(finalScore / 100) // Simplistic mapping
     });
   };
 
@@ -140,12 +144,13 @@ export default function Quiz() {
   }
 
   const currentQuestion = questions[currentQuestionIndex];
+  const shouldShowResult = showResult || !currentQuestion;
 
   return (
     <AppLayout title="Show das Tintas">
       <div className="max-w-3xl mx-auto py-8 px-4">
         <AnimatePresence mode="wait">
-          {!showResult ? (
+          {!shouldShowResult ? (
             <motion.div
               key="quiz"
               initial={{ opacity: 0, x: 20 }}
@@ -159,7 +164,7 @@ export default function Quiz() {
                     Pergunta {currentQuestionIndex + 1} de {questions.length}
                   </p>
                   <h2 className="text-2xl font-black text-foreground">
-                    {questions[currentQuestionIndex].question}
+                    {currentQuestion.question}
                   </h2>
                 </div>
                 <div className="bg-brand-500 text-white px-4 py-2 rounded-2xl font-black shadow-lg shadow-brand-500/20">
@@ -168,10 +173,10 @@ export default function Quiz() {
               </div>
 
               <div className="grid grid-cols-1 gap-4">
-                {questions[currentQuestionIndex].options.map((option, idx) => {
+                {currentQuestion.options.map((option, idx) => {
                   let status = "default";
                   if (selectedOption !== null) {
-                    if (idx === questions[currentQuestionIndex].correct_option_index) status = "correct";
+                    if (idx === currentQuestion.correct_option_index) status = "correct";
                     else if (idx === selectedOption) status = "wrong";
                   }
 
