@@ -409,6 +409,33 @@ export type Database = {
           },
         ]
       }
+      modules: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -575,6 +602,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      quiz_attempts: {
+        Row: {
+          completed_at: string
+          correct_answers: number
+          id: string
+          score: number
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          correct_answers: number
+          id?: string
+          score?: number
+          total_questions: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          correct_answers?: number
+          id?: string
+          score?: number
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      quiz_questions: {
+        Row: {
+          category: string | null
+          correct_option_index: number
+          created_at: string
+          difficulty: number
+          id: string
+          options: Json
+          question: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          correct_option_index: number
+          created_at?: string
+          difficulty?: number
+          id?: string
+          options: Json
+          question: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          correct_option_index?: number
+          created_at?: string
+          difficulty?: number
+          id?: string
+          options?: Json
+          question?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       redirection_history: {
         Row: {
@@ -898,6 +985,29 @@ export type Database = {
           phone?: string | null
         }
         Relationships: []
+      }
+      user_modules: {
+        Row: {
+          module_id: string
+          user_id: string
+        }
+        Insert: {
+          module_id: string
+          user_id: string
+        }
+        Update: {
+          module_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_modules_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
