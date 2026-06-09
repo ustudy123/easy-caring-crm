@@ -9,6 +9,8 @@ import {
   LogOut,
   FileText,
   ShieldCheck,
+  Sparkles,
+  Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
