@@ -45,8 +45,14 @@ type NavItem = {
 
 const allMainNav: NavItem[] = [
   {
-    title: "Dashboard",
+    title: "Início",
     url: "/",
+    icon: Home,
+    badgeKey: null,
+  },
+  {
+    title: "CRM Dashboard",
+    url: "/crm-dashboard",
     icon: LayoutDashboard,
     badgeKey: null,
     roles: ["admin", "gerente"],
