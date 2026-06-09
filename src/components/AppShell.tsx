@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useCrm, Notification } from "@/contexts/CrmContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import taecoLogo from "@/assets/taeco-logo.png";
 import {
   Popover,
   PopoverContent,
