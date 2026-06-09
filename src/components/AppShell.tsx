@@ -31,6 +31,7 @@ export function AppShell() {
     markAllWhatsAppRead,
   } = useCrm();
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
     try {
       return JSON.parse(localStorage.getItem("crm-dismissed-notifs") || "{}");
