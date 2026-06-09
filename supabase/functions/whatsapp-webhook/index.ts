@@ -308,7 +308,7 @@ serve(async (req) => {
         if (!receivedInstance && instanceHint) {
           const { data: inst } = await supabase
             .from("whatsapp_instances")
-            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token")
+            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token, provider")
             .or(`phone_number.eq.${instanceHint},id.eq.${instanceHint}`)
             .maybeSingle();
           receivedInstance = inst || null;
