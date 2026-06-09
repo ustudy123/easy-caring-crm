@@ -1,6 +1,6 @@
 import fs from 'fs';
 
-const csvPath = "Gabarito Embaralhado para Show do Milhão - Gabarito Embaralhado para Show do Milhão.csv";
+const csvPath = "gabarito.csv";
 const content = fs.readFileSync(csvPath, 'utf-8');
 const lines = content.split('\n');
 
