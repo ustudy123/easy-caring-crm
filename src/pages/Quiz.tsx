@@ -37,7 +37,7 @@ export default function Quiz() {
       .select("*")
       .order("difficulty", { ascending: true });
 
-    if (!error && data) {
+    if (!error && data && data.length > 0) {
       // Shuffle options for each question
       const formatted = data.map(q => ({
         ...q,
@@ -124,6 +124,22 @@ export default function Quiz() {
       </div>
     );
   }
+
+  if (!showResult && questions.length === 0) {
+    return (
+      <AppLayout title="Show das Tintas">
+        <div className="max-w-md mx-auto py-20 text-center space-y-4">
+          <PaintBucket className="h-12 w-12 text-brand-500 mx-auto" />
+          <h2 className="text-xl font-bold text-foreground">Nenhuma pergunta disponível</h2>
+          <p className="text-muted-foreground">
+            Ainda não há perguntas cadastradas no Show das Tintas. Volte em breve!
+          </p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const currentQuestion = questions[currentQuestionIndex];
 
   return (
     <AppLayout title="Show das Tintas">
