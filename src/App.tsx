@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppShell } from "@/components/AppShell";
 import AdminPanel from "./pages/AdminPanel";
 import Dashboard from "./pages/Dashboard";
+import Quiz from "./pages/Quiz";
 import Kanban from "./pages/Kanban";
 import Clientes from "./pages/Clientes";
 import Agenda from "./pages/Agenda";
@@ -18,7 +19,6 @@ import Configuracoes from "./pages/Configuracoes";
 import Conversas from "./pages/Conversas";
 import SuporteOrcamento from "./pages/SuporteOrcamento";
 import Login from "./pages/Login";
-import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
