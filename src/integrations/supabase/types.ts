@@ -632,34 +632,34 @@ export type Database = {
       }
       quiz_questions: {
         Row: {
-          category: string | null
+          code: string | null
           correct_option_index: number
           created_at: string
-          difficulty: number
+          difficulty: string | null
           id: string
           options: Json
           question: string
-          updated_at: string
+          subject: string | null
         }
         Insert: {
-          category?: string | null
+          code?: string | null
           correct_option_index: number
           created_at?: string
-          difficulty?: number
+          difficulty?: string | null
           id?: string
           options: Json
           question: string
-          updated_at?: string
+          subject?: string | null
         }
         Update: {
-          category?: string | null
+          code?: string | null
           correct_option_index?: number
           created_at?: string
-          difficulty?: number
+          difficulty?: string | null
           id?: string
           options?: Json
           question?: string
-          updated_at?: string
+          subject?: string | null
         }
         Relationships: []
       }
