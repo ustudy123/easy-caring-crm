@@ -117,7 +117,8 @@ export default function Quiz() {
     await supabase.from("quiz_attempts").insert({
       user_id: user.id,
       score: finalScore,
-      questions_answered: questions.length
+      total_questions: questions.length,
+      correct_answers: Math.round(finalScore / 100)
     });
   };
 
