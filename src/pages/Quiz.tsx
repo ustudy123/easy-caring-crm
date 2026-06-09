@@ -37,7 +37,7 @@ export default function Quiz() {
       .select("*")
       .order("difficulty", { ascending: true });
 
-    if (!error && data) {
+    if (!error && data && data.length > 0) {
       // Shuffle options for each question
       const formatted = data.map(q => ({
         ...q,
