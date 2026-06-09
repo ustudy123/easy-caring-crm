@@ -65,9 +65,11 @@ export default function Login() {
       <div className="w-full max-w-md animate-fade-up relative z-10">
         {/* Brand */}
         <div className="flex flex-col items-center mb-6 sm:mb-8">
-          <img src={taecoLogo} alt="Taeco Tintas" className="h-24 w-auto mb-3 select-none" draggable={false} />
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">CRM Taeco</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Gestão Comercial Inteligente</p>
+          <img src={taecoLogo} alt="Show das Tintas" className="h-24 w-auto mb-3 select-none" draggable={false} />
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground uppercase">
+            Show das <span className="text-brand-500">Tintas</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Plataforma Integrada Taeco</p>
         </div>
 
         <Card className="shadow-2xl border-border/40 backdrop-blur-sm bg-card/95">
