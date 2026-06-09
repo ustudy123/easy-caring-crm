@@ -827,7 +827,7 @@ function StoresTab() {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [phone, setPhone] = useState("");
-  const [employeeCount, setEmployeeCount] = useState<string>("0");
+  
   const [saving, setSaving] = useState(false);
 
   const fetchStores = useCallback(async () => {
@@ -840,7 +840,7 @@ function StoresTab() {
 
   const resetForm = () => {
     setEditingId(null);
-    setName(""); setAddress(""); setCity(""); setPhone(""); setEmployeeCount("0");
+    setName(""); setAddress(""); setCity(""); setPhone("");
   };
 
   const openNew = () => {
@@ -854,7 +854,6 @@ function StoresTab() {
     setAddress(s.address || "");
     setCity(s.city || "");
     setPhone(s.phone || "");
-    setEmployeeCount(String(s.employee_count ?? 0));
     setOpen(true);
   };
 
@@ -866,7 +865,6 @@ function StoresTab() {
       address: address || null,
       city: city || null,
       phone: phone || null,
-      employee_count: Math.max(0, parseInt(employeeCount, 10) || 0),
     };
     const { error } = editingId
       ? await supabase.from("stores").update(payload).eq("id", editingId)
@@ -903,18 +901,6 @@ function StoresTab() {
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Cidade</Label><Input value={city} onChange={e => setCity(e.target.value)} /></div>
                 <div><Label>Telefone</Label><Input value={phone} onChange={e => setPhone(e.target.value)} /></div>
-              </div>
-              <div>
-                <Label>Quantidade de funcionários</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={1}
-                  inputMode="numeric"
-                  value={employeeCount}
-                  onChange={e => setEmployeeCount(e.target.value)}
-                  placeholder="0"
-                />
               </div>
               <Button onClick={handleSave} disabled={saving} className="w-full">
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} {editingId ? "Salvar alterações" : "Cadastrar"}
