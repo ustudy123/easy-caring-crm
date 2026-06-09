@@ -317,7 +317,7 @@ serve(async (req) => {
         console.log("Resolved instance:", JSON.stringify({ connectedPhoneClean, instanceHint, receivedInstanceId, type: receivedInstance?.instance_type }));
 
         // Z-API uses "ReceivedMessage" for incoming messages
-        const isMessageEvent = event === "ReceivedMessage" || event === "ReceivedCallback" || event === "messages" || event === "message" || event === "chats";
+        const isMessageEvent = event === "ReceivedMessage" || event === "ReceivedCallback" || event === "messages.upsert" || event === "messages" || event === "message" || event === "chats";
 
        if (isMessageEvent) {
           // Z-API uses 'phone' directly for incoming messages
