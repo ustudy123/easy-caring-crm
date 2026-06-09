@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AppLayout } from "@/components/AppLayout";
 
 interface Module {
   id: string;
@@ -77,7 +78,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-120px)] flex flex-col items-center justify-center p-4">
+    <AppLayout title="Portal Taeco">
+      <div className="min-h-[calc(100vh-120px)] flex flex-col items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -154,6 +156,6 @@ export default function Dashboard() {
           <path fill="#F37021" d="M44.7,-76.4C58.1,-69.2,69.2,-58.1,76.4,-44.7C83.7,-31.3,87.1,-15.7,85.6,-0.9C84,14,77.5,27.9,69,40.1C60.5,52.3,50,62.8,37.8,70.5C25.6,78.2,12.8,83.1,-0.5,83.9C-13.7,84.7,-27.5,81.4,-40,74.1C-52.6,66.8,-64,55.5,-72.1,42.4C-80.2,29.3,-85,14.7,-84.3,0.4C-83.6,-13.9,-77.4,-27.7,-68.4,-39.4C-59.4,-51.1,-47.6,-60.7,-34.7,-68.3C-21.8,-75.9,-7.9,-81.4,7.4,-82.7C22.7,-83.9,31.3,-83.6,44.7,-76.4Z" transform="translate(100 100)" />
         </svg>
       </div>
-    </div>
+    </AppLayout>
   );
 }
