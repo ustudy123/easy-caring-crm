@@ -38,39 +38,36 @@ export default function Quiz() {
     setLoading(true);
     const { data, error } = await supabase
       .from("quiz_questions")
-      .select("*")
-      .order("difficulty", { ascending: true });
+      .select("*");
 
     if (!error && data && data.length > 0) {
-      // Shuffle options for each question
       const formatted = data.map(q => ({
         ...q,
         options: q.options as string[]
       }));
       setQuestions(formatted);
     } else {
-      // Fallback questions if none in DB yet
       setQuestions([
         {
           id: "1",
           question: "Qual dessas cores é primária?",
           options: ["Verde", "Laranja", "Azul", "Roxo"],
           correct_option_index: 2,
-          difficulty: 1
+          difficulty: "Fácil"
         },
         {
           id: "2",
           question: "Qual o acabamento mais indicado para disfarçar imperfeições na parede?",
           options: ["Brilhante", "Acetinado", "Fosco", "Semibrilho"],
           correct_option_index: 2,
-          difficulty: 2
+          difficulty: "Fácil"
         },
         {
           id: "3",
           question: "O que deve ser aplicado antes da pintura em paredes novas de reboco?",
           options: ["Verniz", "Selador Acrílico", "Massa Corrida", "Tinner"],
           correct_option_index: 1,
-          difficulty: 2
+          difficulty: "Fácil"
         }
       ]);
     }
@@ -86,7 +83,15 @@ export default function Quiz() {
     setSelectedOption(index);
     const correct = index === activeQuestion.correct_option_index;
     setIsCorrect(correct);
-    const nextScore = correct ? score + (activeQuestion.difficulty * 100) : score;
+    
+    // Simple point system based on difficulty
+    const pointsMap: Record<string, number> = {
+      "Fácil": 100,
+      "Intermediária": 200,
+      "Difícil": 300
+    };
+    const points = pointsMap[activeQuestion.difficulty] || 100;
+    const nextScore = correct ? score + points : score;
     
     if (correct) {
       setScore(nextScore);
@@ -112,8 +117,7 @@ export default function Quiz() {
     await supabase.from("quiz_attempts").insert({
       user_id: user.id,
       score: finalScore,
-      total_questions: questions.length,
-      correct_answers: Math.round(finalScore / 100) // Simplistic mapping
+      questions_answered: questions.length
     });
   };
 
