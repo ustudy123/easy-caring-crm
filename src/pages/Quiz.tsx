@@ -14,7 +14,9 @@ interface Question {
   question: string;
   options: string[];
   correct_option_index: number;
-  difficulty: number;
+  difficulty: string;
+  subject?: string;
+  code?: string;
 }
 
 export default function Quiz() {
