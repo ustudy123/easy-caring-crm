@@ -289,7 +289,7 @@ serve(async (req) => {
         if (connectedPhoneClean) {
           const { data: inst } = await supabase
             .from("whatsapp_instances")
-            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token")
+            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token, provider")
             .eq("phone_number", connectedPhoneClean)
             .maybeSingle();
           receivedInstance = inst || null;
