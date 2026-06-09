@@ -7,30 +7,29 @@ const corsHeaders = {
 };
 
 // Normalizes a Z-API instance URL down to its base (.../instances/<id>/token/<token>)
-function getZApiBaseUrl(customUrl?: string | null, customToken?: string | null) {
-  const rawUrl = (customUrl || Deno.env.get("WHATSAPP_API_URL"))?.trim();
-  const instanceToken = (customToken || Deno.env.get("WHATSAPP_API_KEY"))?.trim();
+function getApiConfig(inst: { provider: string; api_url?: string | null; api_token?: string | null }) {
+  const provider = inst.provider || "uazapi";
+  const rawUrl = (inst.api_url || Deno.env.get("WHATSAPP_API_URL"))?.trim();
+  const token = (inst.api_token || Deno.env.get("WHATSAPP_API_KEY"))?.trim();
 
   if (!rawUrl) return null;
 
   let baseUrl = rawUrl.replace(/\/+$/, "");
-  // Strip any trailing action like /send-text, /status, /qr-code, etc.
+  
+  if (provider === "whatsapi") {
+    return { baseUrl, token, provider: "whatsapi" };
+  }
+
+  // Z-API (uazapi) legacy logic
   baseUrl = baseUrl.replace(/\/(send-(text|image|video|audio|file|document)|status|qr-code|restart|disconnect)$/i, "");
-
-  if (baseUrl.includes("/token/")) {
-    return baseUrl;
-  }
-
-  if (instanceToken) {
+  if (!baseUrl.includes("/token/") && token) {
     if (/\/token$/i.test(baseUrl)) {
-      return `${baseUrl}/${instanceToken}`;
-    }
-    if (/\/instances\/[^/]+$/i.test(baseUrl)) {
-      return `${baseUrl}/token/${instanceToken}`;
+      baseUrl = `${baseUrl}/${token}`;
+    } else if (/\/instances\/[^/]+$/i.test(baseUrl)) {
+      baseUrl = `${baseUrl}/token/${token}`;
     }
   }
-
-  return baseUrl;
+  return { baseUrl, token, provider: "uazapi" };
 }
 
 serve(async (req) => {
