@@ -12,7 +12,7 @@ import { Plus, Phone, Smartphone, Store as StoreIcon, Trash2, Loader2, Wifi, Wif
 import { toast } from "sonner";
 
 type InstanceType = "store" | "seller";
-type Provider = "uazapi" | "meta_cloud";
+type Provider = "uazapi" | "meta_cloud" | "whatsapi";
 type InstanceStatus = "disconnected" | "qr_pending" | "connected" | "error";
 
 interface WhatsAppInstance {
