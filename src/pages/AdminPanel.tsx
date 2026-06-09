@@ -902,18 +902,6 @@ function StoresTab() {
                 <div><Label>Cidade</Label><Input value={city} onChange={e => setCity(e.target.value)} /></div>
                 <div><Label>Telefone</Label><Input value={phone} onChange={e => setPhone(e.target.value)} /></div>
               </div>
-              <div>
-                <Label>Quantidade de funcionários</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={1}
-                  inputMode="numeric"
-                  value={employeeCount}
-                  onChange={e => setEmployeeCount(e.target.value)}
-                  placeholder="0"
-                />
-              </div>
               <Button onClick={handleSave} disabled={saving} className="w-full">
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} {editingId ? "Salvar alterações" : "Cadastrar"}
               </Button>
