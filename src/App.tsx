@@ -11,6 +11,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppShell } from "@/components/AppShell";
 import AdminPanel from "./pages/AdminPanel";
 import Dashboard from "./pages/Dashboard";
+import CrmDashboard from "./pages/CrmDashboard";
+import Quiz from "./pages/Quiz";
 import Kanban from "./pages/Kanban";
 import Clientes from "./pages/Clientes";
 import Agenda from "./pages/Agenda";
@@ -41,6 +43,8 @@ const App = () => (
                     <Routes>
                       <Route element={<AppShell />}>
                         <Route path="/" element={<Dashboard />} />
+                        <Route path="/crm-dashboard" element={<CrmDashboard />} />
+                        <Route path="/quiz" element={<Quiz />} />
                         <Route path="/kanban" element={<Kanban />} />
                         <Route path="/clientes" element={<Clientes />} />
                         <Route path="/agenda" element={<Agenda />} />

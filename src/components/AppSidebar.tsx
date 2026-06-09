@@ -9,6 +9,8 @@ import {
   LogOut,
   FileText,
   ShieldCheck,
+  Sparkles,
+  Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -43,8 +45,14 @@ type NavItem = {
 
 const allMainNav: NavItem[] = [
   {
-    title: "Dashboard",
+    title: "Início",
     url: "/",
+    icon: Home,
+    badgeKey: null,
+  },
+  {
+    title: "CRM Dashboard",
+    url: "/crm-dashboard",
     icon: LayoutDashboard,
     badgeKey: null,
     roles: ["admin", "gerente"],
@@ -66,6 +74,12 @@ const allMainNav: NavItem[] = [
 ];
 
 const allToolsNav: NavItem[] = [
+  {
+    title: "Show das Tintas",
+    url: "/quiz",
+    icon: Sparkles,
+    badgeKey: null,
+  },
   {
     title: "Conversas",
     url: "/conversas",
