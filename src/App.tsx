@@ -43,6 +43,7 @@ const App = () => (
                     <Routes>
                       <Route element={<AppShell />}>
                         <Route path="/" element={<Dashboard />} />
+                        <Route path="/crm-dashboard" element={<CrmDashboard />} />
                         <Route path="/quiz" element={<Quiz />} />
                         <Route path="/kanban" element={<Kanban />} />
                         <Route path="/clientes" element={<Clientes />} />
