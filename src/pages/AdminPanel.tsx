@@ -865,7 +865,6 @@ function StoresTab() {
       address: address || null,
       city: city || null,
       phone: phone || null,
-      employee_count: Math.max(0, parseInt(employeeCount, 10) || 0),
     };
     const { error } = editingId
       ? await supabase.from("stores").update(payload).eq("id", editingId)
