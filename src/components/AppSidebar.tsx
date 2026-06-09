@@ -75,12 +75,6 @@ const allMainNav: NavItem[] = [
 
 const allToolsNav: NavItem[] = [
   {
-    title: "Show das Tintas",
-    url: "/quiz",
-    icon: Sparkles,
-    badgeKey: null,
-  },
-  {
     title: "Conversas",
     url: "/conversas",
     icon: MessageSquare,
