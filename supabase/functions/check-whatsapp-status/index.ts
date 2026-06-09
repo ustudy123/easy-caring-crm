@@ -7,30 +7,29 @@ const corsHeaders = {
 };
 
 // Normalizes a Z-API instance URL down to its base (.../instances/<id>/token/<token>)
-function getZApiBaseUrl(customUrl?: string | null, customToken?: string | null) {
-  const rawUrl = (customUrl || Deno.env.get("WHATSAPP_API_URL"))?.trim();
-  const instanceToken = (customToken || Deno.env.get("WHATSAPP_API_KEY"))?.trim();
+function getApiConfig(inst: { provider: string; api_url?: string | null; api_token?: string | null }) {
+  const provider = inst.provider || "uazapi";
+  const rawUrl = (inst.api_url || Deno.env.get("WHATSAPP_API_URL"))?.trim();
+  const token = (inst.api_token || Deno.env.get("WHATSAPP_API_KEY"))?.trim();
 
   if (!rawUrl) return null;
 
   let baseUrl = rawUrl.replace(/\/+$/, "");
-  // Strip any trailing action like /send-text, /status, /qr-code, etc.
+  
+  if (provider === "whatsapi") {
+    return { baseUrl, token, provider: "whatsapi" };
+  }
+
+  // Z-API (uazapi) legacy logic
   baseUrl = baseUrl.replace(/\/(send-(text|image|video|audio|file|document)|status|qr-code|restart|disconnect)$/i, "");
-
-  if (baseUrl.includes("/token/")) {
-    return baseUrl;
-  }
-
-  if (instanceToken) {
+  if (!baseUrl.includes("/token/") && token) {
     if (/\/token$/i.test(baseUrl)) {
-      return `${baseUrl}/${instanceToken}`;
-    }
-    if (/\/instances\/[^/]+$/i.test(baseUrl)) {
-      return `${baseUrl}/token/${instanceToken}`;
+      baseUrl = `${baseUrl}/${token}`;
+    } else if (/\/instances\/[^/]+$/i.test(baseUrl)) {
+      baseUrl = `${baseUrl}/token/${token}`;
     }
   }
-
-  return baseUrl;
+  return { baseUrl, token, provider: "uazapi" };
 }
 
 serve(async (req) => {
@@ -64,33 +63,35 @@ serve(async (req) => {
     const results: any[] = [];
 
     for (const inst of instances || []) {
-      // Only Z-API (uazapi) supports this live status probe
-      if (inst.provider !== "uazapi") {
-        results.push({ id: inst.id, status: inst.status, skipped: true });
-        continue;
-      }
-
-      const baseUrl = getZApiBaseUrl(inst.api_url, inst.api_token);
-      if (!baseUrl) {
+      const config = getApiConfig(inst);
+      if (!config?.baseUrl) {
         await supabase.from("whatsapp_instances").update({ status: "error" }).eq("id", inst.id);
         results.push({ id: inst.id, status: "error", reason: "missing_api_url" });
         continue;
       }
 
-      const clientToken = inst.api_token || Deno.env.get("ZAPI_CLIENT_TOKEN");
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (clientToken && !baseUrl.includes(clientToken)) headers["Client-Token"] = clientToken;
+      let statusEndpoint = "";
+
+      if (config.provider === "whatsapi") {
+        headers["token"] = config.token || "";
+        statusEndpoint = `${config.baseUrl}/instance/connection`;
+      } else {
+        const clientToken = config.token || Deno.env.get("ZAPI_CLIENT_TOKEN");
+        if (clientToken && !config.baseUrl.includes(clientToken)) headers["Client-Token"] = clientToken;
+        statusEndpoint = `${config.baseUrl}/status`;
+      }
 
       let newStatus: "connected" | "disconnected" | "qr_pending" | "error" = "disconnected";
       try {
-        const resp = await fetch(`${baseUrl}/status`, { method: "GET", headers });
+        const resp = await fetch(statusEndpoint, { method: "GET", headers });
         const text = await resp.text();
         let data: any = {};
         try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
 
-        console.log(`Z-API status for ${inst.name}:`, JSON.stringify(data));
+        console.log(`API status for ${inst.name}:`, JSON.stringify(data));
 
-        if (data?.connected === true || data?.smartphoneConnected === true) {
+        if (data?.connected === true || data?.smartphoneConnected === true || data?.status === "connected") {
           newStatus = "connected";
         } else if (data?.error) {
           newStatus = "error";

@@ -6,30 +6,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function getZApiBaseUrl(customUrl?: string | null, customToken?: string | null) {
-  const rawUrl = (customUrl || Deno.env.get("WHATSAPP_API_URL"))?.trim();
-  const instanceToken = (customToken || Deno.env.get("WHATSAPP_API_KEY"))?.trim();
+function getApiConfig(inst: { provider: string; api_url?: string | null; api_token?: string | null }) {
+  const provider = inst.provider || "uazapi";
+  const rawUrl = (inst.api_url || Deno.env.get("WHATSAPP_API_URL"))?.trim();
+  const token = (inst.api_token || Deno.env.get("WHATSAPP_API_KEY"))?.trim();
 
   if (!rawUrl) return null;
 
   let baseUrl = rawUrl.replace(/\/+$/, "");
+  
+  if (provider === "whatsapi") {
+    return { baseUrl, token, provider: "whatsapi" };
+  }
+
+  // Z-API (uazapi) legacy logic
   baseUrl = baseUrl.replace(/\/send-(text|image|video|audio|file|document)$/i, "");
-
-  if (baseUrl.includes("/token/")) {
-    return baseUrl;
-  }
-
-  if (instanceToken) {
+  if (!baseUrl.includes("/token/") && token) {
     if (/\/token$/i.test(baseUrl)) {
-      return `${baseUrl}/${instanceToken}`;
-    }
-
-    if (/\/instances\/[^/]+$/i.test(baseUrl)) {
-      return `${baseUrl}/token/${instanceToken}`;
+      baseUrl = `${baseUrl}/${token}`;
+    } else if (/\/instances\/[^/]+$/i.test(baseUrl)) {
+      baseUrl = `${baseUrl}/token/${token}`;
     }
   }
-
-  return baseUrl;
+  return { baseUrl, token, provider: "uazapi" };
 }
 
 serve(async (req) => {
@@ -82,34 +81,90 @@ serve(async (req) => {
       }
     }
 
-    const whatsappApiUrl = getZApiBaseUrl(customApiUrl, customApiToken);
+    const apiConfig = getApiConfig({ 
+      provider: resolvedInstanceId ? 'custom' : 'uazapi', // Placeholder as we'll fetch real one below
+      api_url: customApiUrl, 
+      api_token: customApiToken 
+    });
 
-    if (!whatsappApiUrl) {
-      return new Response(JSON.stringify({ error: "WhatsApp API (Z-API) not configured. Please set WHATSAPP_API_URL." }), {
+    // Re-fetch to get the provider if we have a resolvedInstanceId
+    let resolvedProvider = "uazapi";
+    if (resolvedInstanceId) {
+      const { data: inst } = await supabase
+        .from("whatsapp_instances")
+        .select("api_url, api_token, provider")
+        .eq("id", resolvedInstanceId)
+        .maybeSingle();
+      
+      if (inst) {
+        customApiUrl = inst.api_url;
+        customApiToken = inst.api_token;
+        resolvedProvider = inst.provider;
+      }
+    }
+
+    const config = getApiConfig({ provider: resolvedProvider, api_url: customApiUrl, api_token: customApiToken });
+
+    if (!config?.baseUrl) {
+      return new Response(JSON.stringify({ error: "WhatsApp API not configured." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const cleanPhone = phone.replace(/\D/g, "");
-    const baseUrl = whatsappApiUrl.replace(/\/+$/, "");
+    const baseUrl = config.baseUrl;
     
-    let endpoint = `${baseUrl}/send-text`;
+    let endpoint = "";
     let apiBody: any;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
 
-    if (mediaUrl) {
-      // Z-API handles image, video, audio separately, but we'll focus on image as it's common
-      endpoint = `${baseUrl}/send-image`;
-      apiBody = {
-        phone: cleanPhone,
-        image: mediaUrl,
-        caption: message || '',
-      };
+    if (config.provider === "whatsapi") {
+      headers["token"] = config.token || "";
+      if (mediaUrl) {
+        endpoint = `${baseUrl}/instance/send-link`; // WhatsAPI uses send-link or similar for media depending on spec
+        // Looking at common uazapi patterns (v2.0): /message/text, /message/image
+        // The provided spec was truncated, but standard is /message/text
+        endpoint = `${baseUrl}/message/text`;
+        if (mediaUrl) endpoint = `${baseUrl}/message/image`;
+        
+        apiBody = {
+          number: cleanPhone,
+          options: { delay: 1200, presence: "composing" }
+        };
+        if (mediaUrl) {
+          apiBody.image = mediaUrl;
+          apiBody.caption = message || "";
+        } else {
+          apiBody.text = message;
+        }
+      } else {
+        endpoint = `${baseUrl}/message/text`;
+        apiBody = {
+          number: cleanPhone,
+          text: message,
+          options: { delay: 1200, presence: "composing" }
+        };
+      }
     } else {
-      apiBody = {
-        phone: cleanPhone,
-        message: message,
-      };
+      // Legacy Z-API
+      endpoint = `${baseUrl}/send-text`;
+      const clientToken = config.token || Deno.env.get("ZAPI_CLIENT_TOKEN");
+      if (clientToken && !baseUrl.includes(clientToken)) headers["Client-Token"] = clientToken;
+
+      if (mediaUrl) {
+        endpoint = `${baseUrl}/send-image`;
+        apiBody = {
+          phone: cleanPhone,
+          image: mediaUrl,
+          caption: message || '',
+        };
+      } else {
+        apiBody = {
+          phone: cleanPhone,
+          message: message,
+        };
+      }
     }
 
     console.log(`Sending message via Z-API to ${cleanPhone}...`);

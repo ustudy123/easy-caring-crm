@@ -10,30 +10,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function getZApiBaseUrl(customUrl?: string | null, customToken?: string | null) {
-  const rawUrl = (customUrl || Deno.env.get("WHATSAPP_API_URL"))?.trim();
-  const instanceToken = (customToken || Deno.env.get("WHATSAPP_API_KEY"))?.trim();
+function getApiConfig(inst: { provider: string; api_url?: string | null; api_token?: string | null }) {
+  const provider = inst.provider || "uazapi";
+  const rawUrl = (inst.api_url || Deno.env.get("WHATSAPP_API_URL"))?.trim();
+  const token = (inst.api_token || Deno.env.get("WHATSAPP_API_KEY"))?.trim();
 
   if (!rawUrl) return null;
 
   let baseUrl = rawUrl.replace(/\/+$/, "");
+  
+  if (provider === "whatsapi") {
+    return { baseUrl, token, provider: "whatsapi" };
+  }
+
+  // Z-API (uazapi) legacy logic
   baseUrl = baseUrl.replace(/\/send-(text|image|video|audio|file|document)$/i, "");
-
-  if (baseUrl.includes("/token/")) {
-    return baseUrl;
-  }
-
-  if (instanceToken) {
+  if (!baseUrl.includes("/token/") && token) {
     if (/\/token$/i.test(baseUrl)) {
-      return `${baseUrl}/${instanceToken}`;
-    }
-
-    if (/\/instances\/[^/]+$/i.test(baseUrl)) {
-      return `${baseUrl}/token/${instanceToken}`;
+      baseUrl = `${baseUrl}/${token}`;
+    } else if (/\/instances\/[^/]+$/i.test(baseUrl)) {
+      baseUrl = `${baseUrl}/token/${token}`;
     }
   }
-
-  return baseUrl;
+  return { baseUrl, token, provider: "uazapi" };
 }
 
   // Function to search client in Citel ERP via shared Edge Function
@@ -62,11 +61,11 @@ function getZApiBaseUrl(customUrl?: string | null, customToken?: string | null) 
     return null;
   }
 
- // Function to send message via Z-API
- async function sendWhatsAppMessage(phone: string, text: string, isTest: boolean = false, customUrl?: string | null, customToken?: string | null) {
-    const apiBaseUrl = getZApiBaseUrl(customUrl, customToken);
-    if (!apiBaseUrl) {
-      console.error("WHATSAPP_API_URL not set");
+ // Function to send message
+ async function sendWhatsAppMessage(phone: string, text: string, isTest: boolean = false, inst: any) {
+    const config = getApiConfig(inst);
+    if (!config?.baseUrl) {
+      console.error("API not configured");
       return { error: "API not configured" };
     }
 
@@ -75,28 +74,35 @@ function getZApiBaseUrl(customUrl?: string | null, customToken?: string | null) 
       return { success: true, message: "Test mode: message not sent to real API" };
     }
     try {
-      const clientToken = customToken || Deno.env.get("ZAPI_CLIENT_TOKEN");
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (clientToken && !apiBaseUrl.includes(clientToken)) headers["Client-Token"] = clientToken;
+      let endpoint = "";
+      let body = {};
 
-      const response = await fetch(`${apiBaseUrl.replace(/\/+$/, "")}/send-text`, {
-       method: "POST",
-       headers,
-       body: JSON.stringify({
-         phone: phone,
-         message: text
-       })
-     });
-      const responseText = await response.text();
-      let responseData: any = {};
-
-      try {
-        responseData = responseText ? JSON.parse(responseText) : {};
-      } catch {
-        responseData = { raw: responseText };
+      if (config.provider === "whatsapi") {
+        headers["token"] = config.token || "";
+        endpoint = `${config.baseUrl}/message/text`;
+        body = {
+          number: phone,
+          text: text,
+          options: { delay: 1200, presence: "composing" }
+        };
+      } else {
+        const clientToken = config.token || Deno.env.get("ZAPI_CLIENT_TOKEN");
+        if (clientToken && !config.baseUrl.includes(clientToken)) headers["Client-Token"] = clientToken;
+        endpoint = `${config.baseUrl}/send-text`;
+        body = { phone, message: text };
       }
 
-      console.log("Z-API send-text response:", JSON.stringify(responseData));
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body)
+      });
+      const responseText = await response.text();
+      let responseData: any = {};
+      try { responseData = responseText ? JSON.parse(responseText) : {}; } catch { responseData = { raw: responseText }; }
+
+      console.log("Send-text response:", JSON.stringify(responseData));
       return response.ok ? responseData : { error: true, details: responseData, status: response.status };
    } catch (e) {
      console.error("Error sending WhatsApp message:", e);
@@ -283,7 +289,7 @@ serve(async (req) => {
         if (connectedPhoneClean) {
           const { data: inst } = await supabase
             .from("whatsapp_instances")
-            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token")
+            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token, provider")
             .eq("phone_number", connectedPhoneClean)
             .maybeSingle();
           receivedInstance = inst || null;
@@ -292,7 +298,7 @@ serve(async (req) => {
         if (!receivedInstance && connectedPhoneClean) {
           const { data: allInst } = await supabase
             .from("whatsapp_instances")
-            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token");
+            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token, provider");
           const wantedSuffix = phoneSuffix(connectedPhoneClean);
           if (wantedSuffix && allInst) {
             receivedInstance =
@@ -302,7 +308,7 @@ serve(async (req) => {
         if (!receivedInstance && instanceHint) {
           const { data: inst } = await supabase
             .from("whatsapp_instances")
-            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token")
+            .select("id, instance_type, store_id, seller_id, phone_number, api_url, api_token, provider")
             .or(`phone_number.eq.${instanceHint},id.eq.${instanceHint}`)
             .maybeSingle();
           receivedInstance = inst || null;
@@ -311,11 +317,11 @@ serve(async (req) => {
         console.log("Resolved instance:", JSON.stringify({ connectedPhoneClean, instanceHint, receivedInstanceId, type: receivedInstance?.instance_type }));
 
         // Z-API uses "ReceivedMessage" for incoming messages
-        const isMessageEvent = event === "ReceivedMessage" || event === "ReceivedCallback" || event === "messages" || event === "message" || event === "chats";
+        const isMessageEvent = event === "ReceivedMessage" || event === "ReceivedCallback" || event === "messages.upsert" || event === "messages" || event === "message" || event === "chats";
 
        if (isMessageEvent) {
           // Z-API uses 'phone' directly for incoming messages
-           const rawPhone = data.phone || data.wa_chatid || data.sender || data.chatid || data.from || "";
+           const rawPhone = data.phone || data.wa_chatid || data.sender || data.chatid || data.from || data.data?.key?.remoteJid || "";
          const cleanPhone = rawPhone.toString()
            .replace("@s.whatsapp.net", "")
            .replace("@c.us", "")
