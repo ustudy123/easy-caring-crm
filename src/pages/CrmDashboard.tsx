@@ -20,7 +20,7 @@ const iconMap: Record<string, any> = {
   Sparkles: Sparkles,
 };
 
-export default function Dashboard() {
+export default function CrmDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [modules, setModules] = useState<Module[]>([]);
