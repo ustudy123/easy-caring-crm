@@ -63,33 +63,35 @@ serve(async (req) => {
     const results: any[] = [];
 
     for (const inst of instances || []) {
-      // Only Z-API (uazapi) supports this live status probe
-      if (inst.provider !== "uazapi") {
-        results.push({ id: inst.id, status: inst.status, skipped: true });
-        continue;
-      }
-
-      const baseUrl = getZApiBaseUrl(inst.api_url, inst.api_token);
-      if (!baseUrl) {
+      const config = getApiConfig(inst);
+      if (!config?.baseUrl) {
         await supabase.from("whatsapp_instances").update({ status: "error" }).eq("id", inst.id);
         results.push({ id: inst.id, status: "error", reason: "missing_api_url" });
         continue;
       }
 
-      const clientToken = inst.api_token || Deno.env.get("ZAPI_CLIENT_TOKEN");
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (clientToken && !baseUrl.includes(clientToken)) headers["Client-Token"] = clientToken;
+      let statusEndpoint = "";
+
+      if (config.provider === "whatsapi") {
+        headers["token"] = config.token || "";
+        statusEndpoint = `${config.baseUrl}/instance/connection`;
+      } else {
+        const clientToken = config.token || Deno.env.get("ZAPI_CLIENT_TOKEN");
+        if (clientToken && !config.baseUrl.includes(clientToken)) headers["Client-Token"] = clientToken;
+        statusEndpoint = `${config.baseUrl}/status`;
+      }
 
       let newStatus: "connected" | "disconnected" | "qr_pending" | "error" = "disconnected";
       try {
-        const resp = await fetch(`${baseUrl}/status`, { method: "GET", headers });
+        const resp = await fetch(statusEndpoint, { method: "GET", headers });
         const text = await resp.text();
         let data: any = {};
         try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
 
-        console.log(`Z-API status for ${inst.name}:`, JSON.stringify(data));
+        console.log(`API status for ${inst.name}:`, JSON.stringify(data));
 
-        if (data?.connected === true || data?.smartphoneConnected === true) {
+        if (data?.connected === true || data?.smartphoneConnected === true || data?.status === "connected") {
           newStatus = "connected";
         } else if (data?.error) {
           newStatus = "error";
