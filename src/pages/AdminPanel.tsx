@@ -854,7 +854,6 @@ function StoresTab() {
     setAddress(s.address || "");
     setCity(s.city || "");
     setPhone(s.phone || "");
-    setEmployeeCount(String(s.employee_count ?? 0));
     setOpen(true);
   };
 
