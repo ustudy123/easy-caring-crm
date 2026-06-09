@@ -321,7 +321,7 @@ serve(async (req) => {
 
        if (isMessageEvent) {
           // Z-API uses 'phone' directly for incoming messages
-           const rawPhone = data.phone || data.wa_chatid || data.sender || data.chatid || data.from || "";
+           const rawPhone = data.phone || data.wa_chatid || data.sender || data.chatid || data.from || data.data?.key?.remoteJid || "";
          const cleanPhone = rawPhone.toString()
            .replace("@s.whatsapp.net", "")
            .replace("@c.us", "")
