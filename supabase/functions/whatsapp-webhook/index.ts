@@ -61,11 +61,11 @@ function getApiConfig(inst: { provider: string; api_url?: string | null; api_tok
     return null;
   }
 
- // Function to send message via Z-API
- async function sendWhatsAppMessage(phone: string, text: string, isTest: boolean = false, customUrl?: string | null, customToken?: string | null) {
-    const apiBaseUrl = getZApiBaseUrl(customUrl, customToken);
-    if (!apiBaseUrl) {
-      console.error("WHATSAPP_API_URL not set");
+ // Function to send message
+ async function sendWhatsAppMessage(phone: string, text: string, isTest: boolean = false, inst: any) {
+    const config = getApiConfig(inst);
+    if (!config?.baseUrl) {
+      console.error("API not configured");
       return { error: "API not configured" };
     }
 
@@ -74,28 +74,35 @@ function getApiConfig(inst: { provider: string; api_url?: string | null; api_tok
       return { success: true, message: "Test mode: message not sent to real API" };
     }
     try {
-      const clientToken = customToken || Deno.env.get("ZAPI_CLIENT_TOKEN");
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (clientToken && !apiBaseUrl.includes(clientToken)) headers["Client-Token"] = clientToken;
+      let endpoint = "";
+      let body = {};
 
-      const response = await fetch(`${apiBaseUrl.replace(/\/+$/, "")}/send-text`, {
-       method: "POST",
-       headers,
-       body: JSON.stringify({
-         phone: phone,
-         message: text
-       })
-     });
-      const responseText = await response.text();
-      let responseData: any = {};
-
-      try {
-        responseData = responseText ? JSON.parse(responseText) : {};
-      } catch {
-        responseData = { raw: responseText };
+      if (config.provider === "whatsapi") {
+        headers["token"] = config.token || "";
+        endpoint = `${config.baseUrl}/message/text`;
+        body = {
+          number: phone,
+          text: text,
+          options: { delay: 1200, presence: "composing" }
+        };
+      } else {
+        const clientToken = config.token || Deno.env.get("ZAPI_CLIENT_TOKEN");
+        if (clientToken && !config.baseUrl.includes(clientToken)) headers["Client-Token"] = clientToken;
+        endpoint = `${config.baseUrl}/send-text`;
+        body = { phone, message: text };
       }
 
-      console.log("Z-API send-text response:", JSON.stringify(responseData));
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body)
+      });
+      const responseText = await response.text();
+      let responseData: any = {};
+      try { responseData = responseText ? JSON.parse(responseText) : {}; } catch { responseData = { raw: responseText }; }
+
+      console.log("Send-text response:", JSON.stringify(responseData));
       return response.ok ? responseData : { error: true, details: responseData, status: response.status };
    } catch (e) {
      console.error("Error sending WhatsApp message:", e);
