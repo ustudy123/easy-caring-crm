@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppShell } from "@/components/AppShell";
 import AdminPanel from "./pages/AdminPanel";
 import Dashboard from "./pages/Dashboard";
+import CrmDashboard from "./pages/CrmDashboard";
 import Quiz from "./pages/Quiz";
 import Kanban from "./pages/Kanban";
 import Clientes from "./pages/Clientes";
