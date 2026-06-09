@@ -112,20 +112,19 @@ export default function Dashboard() {
         ) : (
           modules.map((mod) => {
             const Icon = iconMap[mod.icon] || LayoutDashboard;
-            const isQuiz = mod.id === 'quiz';
             
             return (
               <motion.div key={mod.id} variants={item}>
                 <Card 
-                  className={`group cursor-pointer overflow-hidden border-2 border-black/5 hover:border-brand-500/30 transition-all duration-300 rounded-3xl bg-white shadow-xl hover:shadow-2xl hover:shadow-brand-500/10 active:scale-[0.98]`}
+                  className="group cursor-pointer overflow-hidden border-2 border-black/5 hover:border-brand-500/30 transition-all duration-300 rounded-3xl bg-white shadow-xl hover:shadow-2xl hover:shadow-brand-500/10 active:scale-[0.98]"
                   onClick={() => handleModuleClick(mod.id)}
                 >
                   <CardContent className="p-8 relative">
                     {/* Background decorative elements */}
-                    <div className={`absolute -right-8 -top-8 w-32 h-32 rounded-full blur-3xl opacity-10 transition-colors group-hover:opacity-20 ${isQuiz ? 'bg-purple-500' : 'bg-brand-500'}`} />
+                    <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-3xl opacity-10 transition-colors group-hover:opacity-20 bg-brand-500" />
                     
                     <div className="flex flex-col h-full relative z-10">
-                      <div className={`p-4 rounded-2xl w-fit mb-6 transition-colors ${isQuiz ? 'bg-purple-100 text-purple-600 group-hover:bg-purple-500 group-hover:text-white' : 'bg-brand-50 text-brand-500 group-hover:bg-brand-500 group-hover:text-white'}`}>
+                      <div className="p-4 rounded-2xl w-fit mb-6 transition-colors bg-brand-50 text-brand-500 group-hover:bg-brand-500 group-hover:text-white">
                         <Icon className="h-8 w-8" />
                       </div>
                       
@@ -139,7 +138,7 @@ export default function Dashboard() {
                       
                       <div className="flex items-center text-sm font-bold mt-auto group-hover:gap-2 transition-all">
                         <span>Acessar módulo</span>
-                        <ChevronRight className={`h-4 w-4 ${isQuiz ? 'text-purple-500' : 'text-brand-500'}`} />
+                        <ChevronRight className="h-4 w-4 text-brand-500" />
                       </div>
                     </div>
                   </CardContent>
