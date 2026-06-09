@@ -3,9 +3,10 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Bell, AlertTriangle, MessageCircle, ShieldAlert, Paintbrush } from "lucide-react";
+import { Bell, AlertTriangle, MessageCircle, ShieldAlert, Paintbrush, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCrm, Notification } from "@/contexts/CrmContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Popover,
