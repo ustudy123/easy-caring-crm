@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Bell, AlertTriangle, MessageCircle, ShieldAlert } from "lucide-react";
+import { Bell, AlertTriangle, MessageCircle, ShieldAlert, Paintbrush } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCrm, Notification } from "@/contexts/CrmContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -208,6 +208,7 @@ export function AppShell() {
                 </Popover>
               </div>
             </header>
+          )}
             <main
               className={cn(
                 "flex-1 overflow-auto p-3 sm:p-5 md:p-6",
