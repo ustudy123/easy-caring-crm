@@ -97,8 +97,8 @@ export function AppShell() {
                   )}
                   {isHub && (
                     <div className="flex items-center gap-2 mr-2">
-                       <div className="h-8 w-8 rounded bg-brand-500 flex items-center justify-center">
-                          <Paintbrush className="h-5 w-5 text-white" />
+                       <div className="h-9 w-9 rounded-[8px] bg-white flex items-center justify-center p-1 ring-1 ring-black/5 shadow-sm">
+                          <img src={taecoLogo} alt="Taeco Tintas" className="h-full w-full object-contain" />
                        </div>
                     </div>
                   )}
