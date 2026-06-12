@@ -9,7 +9,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
  import { 
     Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
     AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
-    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle
+    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle, XCircle
   } from "lucide-react";
  import { getDisplayClientName, isGenericName } from "@/lib/clientUtils";
 import { Button } from "@/components/ui/button";
@@ -138,6 +138,8 @@ export default function Kanban() {
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [transferringLead, setTransferringLead] = useState<Lead | null>(null);
+  const [losingLead, setLosingLead] = useState<Lead | null>(null);
+  const [lostReason, setLostReason] = useState("");
   const [transferSellerId, setTransferSellerId] = useState("");
   const [transferReason, setTransferReason] = useState("");
   const [isTransferring, setIsTransferring] = useState(false);
@@ -149,6 +151,33 @@ export default function Kanban() {
 
   const clearFilters = () => {
     setFilterUrgency("all");
+  };
+
+  const handleMarkLost = async () => {
+    if (!losingLead) return;
+    const reason = lostReason.trim();
+    const closedAt = new Date().toISOString();
+
+    // Atualiza o lead para o estado perdido com o motivo
+    updateLead({ ...losingLead, stage: 'perdido', lostReason: reason || undefined, closedAt });
+
+    // Registra na timeline do cliente (se houver cliente com o mesmo telefone)
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: client } = await supabase
+      .from("clients").select("id").eq("phone", losingLead.clientPhone).maybeSingle();
+    if (client?.id) {
+      await supabase.from("interactions").insert({
+        client_id: client.id,
+        lead_id: losingLead.id,
+        type: "note",
+        description: `Negócio marcado como PERDIDO${reason ? `: ${reason}` : ""}`,
+        created_by: user?.id ?? null,
+      });
+    }
+
+    toast({ title: "Lead marcado como perdido", description: losingLead.clientName });
+    setLosingLead(null);
+    setLostReason("");
   };
 
   const handleTransferLead = async (sellerId: string, reason: string) => {
@@ -524,6 +553,13 @@ export default function Kanban() {
                                                     <Forward className="h-3 w-3" />
                                                   </button>
                                                   <button
+                                                    onClick={(e) => { e.stopPropagation(); setLosingLead(lead); }}
+                                                    className="p-1 rounded-lg hover:bg-red-100 text-red-500"
+                                                    title="Marcar como perdido"
+                                                  >
+                                                    <XCircle className="h-3 w-3" />
+                                                  </button>
+                                                  <button
                                                     onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
                                                     className="p-1 rounded-lg hover:bg-muted"
                                                   >
@@ -716,6 +752,37 @@ export default function Kanban() {
             >
               {isTransferring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Forward className="h-4 w-4" />}
               Transferir Agora
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Marcar como perdido */}
+      <Dialog open={!!losingLead} onOpenChange={(open) => { if (!open) { setLosingLead(null); setLostReason(""); } }}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-red-500" /> Marcar como perdido
+            </DialogTitle>
+            <DialogDescription>
+              {losingLead ? `Encerrar o negócio com ${losingLead.clientName} como perdido.` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label>Motivo da perda</Label>
+            <Textarea
+              placeholder="Ex: preço acima do orçamento, comprou do concorrente, sem retorno..."
+              value={lostReason}
+              onChange={(e) => setLostReason(e.target.value)}
+              className="rounded-xl"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setLosingLead(null); setLostReason(""); }}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleMarkLost}>
+              <XCircle className="h-4 w-4 mr-1" /> Confirmar perda
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -111,8 +111,13 @@ export default function CrmDashboard() {
   }, [followUps, startDate]);
 
   const totalLeads = filteredLeads.length;
-  const closedLeads = filteredLeads.filter((l) => l.stage === "fechamento" || l.stage === "pos_venda").length;
-  const conversionRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
+  const wonLeads = filteredLeads.filter((l) => l.stage === "fechamento" || l.stage === "pos_venda").length;
+  const lostLeads = filteredLeads.filter((l) => l.stage === "perdido").length;
+  const decidedLeads = wonLeads + lostLeads;
+  const closedLeads = wonLeads;
+  // Win rate real: ganhos sobre negócios decididos (ganhos + perdidos)
+  const winRate = decidedLeads > 0 ? Math.round((wonLeads / decidedLeads) * 100) : 0;
+  const conversionRate = winRate;
   const pendingFollowUps = filteredFollowUps.filter((f) => !f.completed).length;
   const responseLabel = avgResponseMin !== null ? `${avgResponseMin} min` : "...";
 
@@ -130,7 +135,7 @@ export default function CrmDashboard() {
   const prevClosedLeads = startDate ? prevPeriodLeads.filter((l) => l.stage === "fechamento" || l.stage === "pos_venda").length : 0;
   const prevConversionRate = startDate && prevPeriodLeads.length > 0 ? Math.round((prevClosedLeads / prevPeriodLeads.length) * 100) : 0;
 
-  const activeLeads = totalLeads - closedLeads;
+  const activeLeads = totalLeads - wonLeads - lostLeads;
   const activeLeadsDiff = startDate && prevActiveLeads > 0 ? Math.round(((activeLeads - prevActiveLeads) / prevActiveLeads) * 100) : null;
   const conversionDiff = startDate && prevConversionRate > 0 ? conversionRate - prevConversionRate : null;
 
@@ -144,7 +149,7 @@ export default function CrmDashboard() {
 
   const kpis = [
     { label: "Leads ativos", value: activeLeads, icon: Users, change: activeChange.text, positive: activeChange.positive, color: "#6C63FF", key: 'activeLeads' },
-    { label: "Taxa de conversão", value: `${conversionRate}%`, icon: Target, change: convChange.text, positive: convChange.positive, color: "#1D9E75", key: 'conversionRate' },
+    { label: "Taxa de ganho", value: `${winRate}%`, icon: Target, change: lostLeads > 0 ? `${lostLeads} perdidos` : convChange.text, positive: convChange.positive, color: "#1D9E75", key: 'conversionRate' },
     { label: "Tempo resposta", value: responseLabel, icon: Clock, change: "", positive: true, color: "#BA7517", key: 'responseTime' },
     { label: "Follow-ups", value: pendingFollowUps, icon: Phone, change: `${pendingFollowUps}`, positive: pendingFollowUps === 0, color: "#E24B4A", key: 'pendingFollowUps' },
   ];

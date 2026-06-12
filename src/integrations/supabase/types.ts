@@ -343,6 +343,8 @@ export type Database = {
           id: string
           interest_products: string | null
           next_follow_up: string | null
+          lost_reason: string | null
+          closed_at: string | null
           notes: string
           source: string
           stage: Database["public"]["Enums"]["kanban_stage"]
@@ -363,6 +365,8 @@ export type Database = {
           id?: string
           interest_products?: string | null
           next_follow_up?: string | null
+          lost_reason?: string | null
+          closed_at?: string | null
           notes?: string
           source?: string
           stage?: Database["public"]["Enums"]["kanban_stage"]
@@ -383,6 +387,8 @@ export type Database = {
           id?: string
           interest_products?: string | null
           next_follow_up?: string | null
+          lost_reason?: string | null
+          closed_at?: string | null
           notes?: string
           source?: string
           stage?: Database["public"]["Enums"]["kanban_stage"]
@@ -1304,6 +1310,7 @@ export type Database = {
         | "cross_sell"
         | "fechamento"
         | "pos_venda"
+        | "perdido"
       seller_role: "vendedor" | "gerente"
       whatsapp_instance_status:
         | "disconnected"

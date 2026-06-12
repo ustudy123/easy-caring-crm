@@ -1,4 +1,4 @@
-export type KanbanStage = 'abordagem' | 'sondagem' | 'recomendacao_tecnica' | 'demonstracao_valor' | 'contorno_objecoes' | 'cross_sell' | 'precificacao_especial' | 'fechamento' | 'pos_venda';
+export type KanbanStage = 'abordagem' | 'sondagem' | 'recomendacao_tecnica' | 'demonstracao_valor' | 'contorno_objecoes' | 'cross_sell' | 'precificacao_especial' | 'fechamento' | 'pos_venda' | 'perdido';
 
 export interface Lead {
   id: string;
@@ -19,6 +19,8 @@ export interface Lead {
    interestProducts?: string;
    storeName?: string;
    storeId?: string;
+   lostReason?: string;
+   closedAt?: string;
 }
 
 export interface Client {

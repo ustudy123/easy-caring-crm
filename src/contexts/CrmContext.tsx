@@ -61,6 +61,8 @@ function mapLeadFromDb(row: any): Lead {
      interestProducts: row.interest_products || undefined,
      storeName: row.store_name || undefined,
      storeId: row.store_id || undefined,
+     lostReason: row.lost_reason || undefined,
+     closedAt: row.closed_at || undefined,
   };
 }
 
@@ -277,6 +279,8 @@ export function CrmProvider({ children }: { children: ReactNode }) {
        interest_products: lead.interestProducts || null,
        store_name: lead.storeName || null,
        store_id: lead.storeId || null,
+       lost_reason: lead.lostReason || null,
+       closed_at: lead.closedAt || null,
     }).eq("id", lead.id);
     if (error) console.error("Error updating lead:", error);
   }, []);
