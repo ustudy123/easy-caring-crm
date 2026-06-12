@@ -30,6 +30,7 @@ export default function Quiz() {
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
     fetchQuestions();
@@ -129,6 +130,16 @@ export default function Quiz() {
     setShowResult(false);
     setSelectedOption(null);
     setIsCorrect(null);
+    setStarted(true);
+  };
+
+  const backToLanding = () => {
+    setCurrentQuestionIndex(0);
+    setScore(0);
+    setShowResult(false);
+    setSelectedOption(null);
+    setIsCorrect(null);
+    setStarted(false);
   };
 
   if (loading) {
@@ -155,6 +166,7 @@ export default function Quiz() {
 
   const currentQuestion = questions[currentQuestionIndex];
   const shouldShowResult = showResult || !currentQuestion;
+  const showLanding = !started && !showResult;
 
   return (
     <AppLayout title="Show das Tintas">
@@ -168,7 +180,37 @@ export default function Quiz() {
           Voltar ao Hub
         </Button>
         <AnimatePresence mode="wait">
-          {!shouldShowResult ? (
+          {showLanding ? (
+            <motion.div
+              key="landing"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              className="space-y-8 text-center pt-4"
+            >
+              <div className="space-y-3">
+                <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-brand-500 to-brand-400 mx-auto shadow-lg shadow-brand-500/25">
+                  <Trophy className="h-10 w-10 text-white" />
+                </div>
+                <h2 className="text-3xl font-black text-foreground">
+                  Show das <span className="text-brand-500">Tintas</span>
+                </h2>
+                <p className="text-muted-foreground max-w-sm mx-auto">
+                  Prove que você é um mestre das cores e suba no ranking dos especialistas.
+                </p>
+              </div>
+
+              <QuizLeaderboard currentUserId={user?.id} />
+
+              <Button
+                onClick={() => setStarted(true)}
+                disabled={questions.length === 0}
+                className="h-14 px-10 rounded-2xl font-bold text-lg bg-brand-500 hover:bg-brand-600 shadow-lg shadow-brand-500/25 gap-2"
+              >
+                <PaintBucket className="h-5 w-5" /> Iniciar Desafio
+              </Button>
+            </motion.div>
+          ) : !shouldShowResult ? (
             <motion.div
               key="quiz"
               initial={{ opacity: 0, x: 20 }}
@@ -275,10 +317,10 @@ export default function Quiz() {
                 </Button>
                 <Button 
                   variant="outline"
-                  onClick={() => window.location.href = '/'}
+                  onClick={backToLanding}
                   className="h-14 px-8 rounded-2xl font-bold border-2 gap-2"
                 >
-                  Voltar ao Hub <ArrowRight className="h-5 w-5" />
+                  <Trophy className="h-5 w-5" /> Ver Ranking
                 </Button>
               </div>
             </motion.div>
