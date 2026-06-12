@@ -80,7 +80,16 @@ function getApiConfig(inst?: { provider?: string; api_url?: string | null; api_t
   if (!rawUrl) return null;
 
   let baseUrl = rawUrl.replace(/\/+$/, "");
-  
+
+  // uazapiGO (ex.: ipazua.uazapi.com): POST {base}/send/text com header `token`.
+  // Detecta pelo domínio para não depender do campo provider estar preenchido.
+  if (provider === "uazapi_go" || /uazapi\./i.test(baseUrl)) {
+    baseUrl = baseUrl
+      .replace(/\/send\/(text|media|image|video|audio|file|document)$/i, "")
+      .replace(/\/send-(text|image|video|audio|file|document)$/i, "");
+    return { baseUrl, token, provider: "uazapi_go" };
+  }
+
   if (provider === "whatsapi") {
     return { baseUrl, token, provider: "whatsapi" };
   }
@@ -140,7 +149,12 @@ function getApiConfig(inst?: { provider?: string; api_url?: string | null; api_t
       let endpoint = "";
       let body = {};
 
-      if (config.provider === "whatsapi") {
+      if (config.provider === "uazapi_go") {
+        // uazapiGO: header `token` + endpoint /send/text + body {number, text}
+        headers["token"] = config.token || "";
+        endpoint = `${config.baseUrl}/send/text`;
+        body = { number: phone, text: text };
+      } else if (config.provider === "whatsapi") {
         headers["token"] = config.token || "";
         endpoint = `${config.baseUrl}/message/text`;
         body = {
