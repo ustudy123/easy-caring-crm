@@ -35,6 +35,43 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Pro
   }
 }
 
+// Chamada à OpenAI com fallback de modelo: tenta o primeiro e, se falhar
+// (sem acesso ao modelo, erro de API, etc.), cai para o próximo. Loga o erro
+// real para facilitar o diagnóstico nos logs da função.
+const OPENAI_MODELS = ["gpt-4o-mini", "gpt-3.5-turbo"];
+
+async function openaiChat(
+  messages: any[],
+  opts: { temperature?: number; max_tokens?: number; json?: boolean } = {}
+): Promise<string | null> {
+  const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+  if (!OPENAI_API_KEY) {
+    console.error("OPENAI_API_KEY não configurada");
+    return null;
+  }
+  for (const model of OPENAI_MODELS) {
+    try {
+      const payload: any = { model, messages, temperature: opts.temperature ?? 0.5 };
+      if (opts.max_tokens) payload.max_tokens = opts.max_tokens;
+      if (opts.json) payload.response_format = { type: "json_object" };
+
+      const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_API_KEY}` },
+        body: JSON.stringify(payload),
+      }, 12000);
+
+      const data = await response.json();
+      const content = data?.choices?.[0]?.message?.content;
+      if (content) return content;
+      console.error(`OpenAI sem conteúdo (modelo ${model}):`, JSON.stringify(data?.error || data));
+    } catch (e) {
+      console.error(`Erro na OpenAI (modelo ${model}):`, e);
+    }
+  }
+  return null;
+}
+
 function getApiConfig(inst: { provider: string; api_url?: string | null; api_token?: string | null }) {
   const provider = inst.provider || "uazapi";
   const rawUrl = (inst.api_url || Deno.env.get("WHATSAPP_API_URL"))?.trim();
@@ -162,23 +199,11 @@ function getApiConfig(inst: { provider: string; api_url?: string | null; api_tok
    `;
 
    try {
-     const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
-       method: "POST",
-       headers: {
-         "Content-Type": "application/json",
-         "Authorization": `Bearer ${OPENAI_API_KEY}`
-       },
-       body: JSON.stringify({
-         model: "gpt-4o-mini",
-         messages: [{ role: "user", content: prompt }],
-         temperature: 0
-       })
-     });
-     const data = await response.json();
-     const content = data.choices[0].message.content;
+     const content = await openaiChat([{ role: "user", content: prompt }], { temperature: 0, json: true });
+     if (!content) return null;
      return JSON.parse(content);
    } catch (e) {
-     console.error("Error calling OpenAI:", e);
+     console.error("Error parsing triage response:", e);
      return null;
    }
  }
@@ -243,29 +268,10 @@ ${missing.length
     : `Confirme rapidinho que vai chamar um consultor pra continuar. Ex.: "Show, já te conecto com um consultor pra finalizar 👍". Se pedir preço/estoque/orçamento, diga que um consultor humano resolve em seguida.`}
 `;
 
-  try {
-    const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...history
-        ],
-        temperature: 0.7,
-        max_tokens: 120
-      })
-    });
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || null;
-  } catch (e) {
-    console.error("Error calling OpenAI for auto-reply:", e);
-    return null;
-  }
+  return await openaiChat(
+    [{ role: "system", content: systemPrompt }, ...history],
+    { temperature: 0.7, max_tokens: 120 }
+  );
 }
 
 serve(async (req) => {
