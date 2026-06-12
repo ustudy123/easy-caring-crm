@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { ClientTimeline } from "@/components/ClientTimeline";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 16, scale: 0.97 }, show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring" as const, stiffness: 300, damping: 24 } } };
@@ -329,6 +330,7 @@ export default function Clientes() {
                     ))}
                   </div>
                 )}
+                <ClientTimeline clientId={selectedClient.id} />
                 <div className="flex justify-between pt-3 border-t border-border/40">
                   <Button
                     variant="destructive"
