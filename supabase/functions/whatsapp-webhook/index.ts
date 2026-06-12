@@ -355,7 +355,10 @@ serve(async (req) => {
 
           // Z-API text is usually in text.message
            const text = data.text?.message || data.wa_lastMessageTextVote || data.text || data.body || data.message?.conversation || "[mensagem sem texto]";
-          const messageId = data.messageId || data.messageid || data.id || crypto.randomUUID();
+          const messageId = data.messageId || data.messageid || data.id
+            || data.key?.id || data.message?.key?.id || data.data?.key?.id
+            || (data.phone && data.momment ? `${cleanPhone}-${data.momment}` : null)
+            || crypto.randomUUID();
           const isFromMe = data.fromMe || false;
            const isGroup = data.isGroup || rawPhone.includes("-") || false;
 
@@ -844,17 +847,32 @@ serve(async (req) => {
               );
 
               if (aiReply) {
-                await sendWhatsAppMessage(cleanPhone, aiReply, isTest);
+                // Debounce anti-duplicidade: se o webhook for reprocessado (reenvio
+                // do provedor), já teremos respondido este número há instantes. Só
+                // envia se NÃO houver resposta nossa nos últimos 60 segundos.
+                const debounceSince = new Date(Date.now() - 60000).toISOString();
+                const { count: recentOutbound } = await supabase
+                  .from("whatsapp_messages")
+                  .select("id", { count: "exact", head: true })
+                  .eq("phone", cleanPhone)
+                  .eq("is_from_me", true)
+                  .gte("timestamp", debounceSince);
 
-                // Store the AI reply in whatsapp_messages
-                await supabase.from("whatsapp_messages").insert({
-                  message_id: `ai-reply-${crypto.randomUUID()}`,
-                  phone: cleanPhone,
-                  body: aiReply,
-                  is_from_me: true,
-                  timestamp: new Date().toISOString(),
-                  raw_data: { type: "ai_auto_reply" }
-                });
+                if (recentOutbound && recentOutbound > 0) {
+                  console.log(`Auto-resposta ignorada (debounce): já respondemos ${cleanPhone} nos últimos 60s.`);
+                } else {
+                  await sendWhatsAppMessage(cleanPhone, aiReply, isTest);
+
+                  // Store the AI reply in whatsapp_messages
+                  await supabase.from("whatsapp_messages").insert({
+                    message_id: `ai-reply-${crypto.randomUUID()}`,
+                    phone: cleanPhone,
+                    body: aiReply,
+                    is_from_me: true,
+                    timestamp: new Date().toISOString(),
+                    raw_data: { type: "ai_auto_reply" }
+                  });
+                }
               }
             } catch (aiError) {
               console.error("Error generating AI auto-reply:", aiError);
