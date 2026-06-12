@@ -10,6 +10,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Saudação conforme a hora (fuso de São Paulo/RJ) do momento da mensagem.
+function saudacaoPorHora(tsMs: number): string {
+  let hora: number;
+  try {
+    hora = Number(new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "numeric", hour12: false }).format(new Date(tsMs)));
+  } catch {
+    hora = new Date(tsMs).getUTCHours() - 3; // fallback UTC-3
+    if (hora < 0) hora += 24;
+  }
+  if (hora >= 5 && hora < 12) return "Bom dia";
+  if (hora >= 12 && hora < 18) return "Boa tarde";
+  return "Boa noite";
+}
+
 // Evita que uma dependência externa lenta (OpenAI, ERP, API do WhatsApp)
 // trave o webhook até o timeout da plataforma (~150s). Aborta após `ms`.
 async function fetchWithTimeout(url: string, options: RequestInit = {}, ms = 10000): Promise<Response> {
@@ -194,7 +208,7 @@ function getApiConfig(inst?: { provider?: string; api_url?: string | null; api_t
 
     const storeNames = stores.map(s => s.name).join(", ");
     const prompt = `
-      Você é um assistente de triagem da *TF Tintas*, uma loja de materiais de construção, tintas, ferragens e acabamentos.
+      Você é um assistente de triagem da *Taeco Tintas*, uma loja de materiais de construção, tintas, ferragens e acabamentos.
       Um cliente enviou a seguinte mensagem: "${text}"
      
      As lojas disponíveis são: ${storeNames}
@@ -227,7 +241,8 @@ async function generateAutoReply(
   text: string,
   recentMessages: { body: string; is_from_me: boolean }[],
   clientName: string,
-  clientCtx: { storeName?: string | null; sellerName?: string | null; interestProducts?: string | null } = {}
+  clientCtx: { storeName?: string | null; sellerName?: string | null; interestProducts?: string | null } = {},
+  saudacao: string = "Olá"
 ) {
   if (!OPENAI_API_KEY) {
     console.error("OPENAI_API_KEY not set for auto-reply");
@@ -249,20 +264,21 @@ async function generateAutoReply(
   const knownLines = [knownStore, knownSeller, knownInterest].filter(Boolean).join("\n- ");
 
   const missing: string[] = [];
-  if (!clientCtx.storeName) missing.push("PREFERÊNCIA DE LOJA/UNIDADE (qual loja/unidade da TF Tintas o cliente prefere)");
-  if (!clientCtx.sellerName) missing.push("CÓDIGO (RAMAL) DE VENDEDOR (se já tem um vendedor da TF Tintas, peça o código; se não, basta confirmar)");
+  if (!clientCtx.storeName) missing.push("PREFERÊNCIA DE LOJA/UNIDADE (qual loja/unidade da Taeco Tintas o cliente prefere)");
+  if (!clientCtx.sellerName) missing.push("CÓDIGO (RAMAL) DE VENDEDOR (se já tem um vendedor da Taeco Tintas, peça o código; se não, basta confirmar)");
   if (!clientCtx.interestProducts) missing.push("INTERESSE/PRODUTO (ex.: tinta para parede, ferramentas, material elétrico, hidráulica, acabamentos)");
 
-  const systemPrompt = `Você atende os clientes da *TF Tintas* (tintas, materiais de construção, ferragens e acabamentos) pelo WhatsApp. Escreva como uma pessoa de verdade conversando no zap: simpático, natural e direto.
+  const systemPrompt = `Você atende os clientes da *Taeco Tintas* (tintas, materiais de construção, ferragens e acabamentos) pelo WhatsApp. Escreva como uma pessoa de verdade conversando no zap: simpático, natural e direto.
 
 SEU PAPEL: você é o primeiro contato (SDR). Não resolve o pedido nem passa preço — sua função é entender rapidinho o que o cliente precisa, coletar as informações pendentes e encaminhar pra um consultor.
 
 JEITO DE FALAR:
 - MUITO curto: 1 frase, no máximo 2 bem curtas. Nada de textão.
+- Conversacional: se for cumprimentar, use "${saudacao}" (condiz com o horário do cliente). Só cumprimente se ainda não cumprimentou nesta conversa.
 - Tom humano e leve, linguagem simples do dia a dia. Pode usar o nome do cliente de vez em quando (não toda hora).
 - Soe como gente, não como robô: evite "Como posso ajudá-lo?", "Prezado cliente", respostas decoradas e formalidade exagerada.
 - Sem listas, sem bullet, sem repetir saudação se já cumprimentou.
-- Faça UMA pergunta por vez. Não despeje tudo de uma vez.
+- Faça UMA pergunta por vez e trate UM assunto por mensagem. NUNCA despeje várias perguntas ou tudo de uma vez — é uma conversa, vai com calma.
 - Conduza sempre de volta ao objetivo: descobrir o que o cliente quer e encaminhar.
 
 NUNCA:
@@ -597,11 +613,12 @@ serve(async (req) => {
               const { error: createError } = await supabase.from("clients").upsert(clientData, { onConflict: 'phone' }).select("id").single();
  
               if (!createError) {
-                const greeting = erpClient 
-                  ? `Olá, *${erpClient.nome || erpClient.razao_social}*! 👋`
-                  : `Olá! 👋`;
-                const welcomeMsg = `${greeting} Aqui é da *TF Tintas* 😊 Bora te atender!\n\nVocê já é atendido por algum vendedor nosso? Se sim, me manda o *código* dele (ex: 1023). Se não, é só mandar *N* que eu te direciono 👍`;
-                await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest, receivedInstance);
+                const saud = saudacaoPorHora(tsMs);
+                const nome = erpClient ? (erpClient.nome || erpClient.razao_social) : null;
+                const abertura = nome ? `${saud}, *${nome}*! 😊` : `${saud}! 😊`;
+                // Conversa em duas mensagens, como uma pessoa de verdade.
+                await sendWhatsAppMessage(cleanPhone, `${abertura} Aqui é da *Taeco Tintas*, tudo bem? 🎨`, isTest, receivedInstance);
+                await sendWhatsAppMessage(cleanPhone, `Pra eu te encaminhar pro atendimento certo: você já é atendido por algum vendedor nosso? Se sim, me passa o *código* dele (ex: 1023). Se ainda não, é só me dizer que eu já te direciono 😊`, isTest, receivedInstance);
               }
             } else if (client.triaging) {
              // URA-style step machine
@@ -678,48 +695,52 @@ serve(async (req) => {
               };
 
              if (step === 'ask_code') {
-               const codeMatch = trimmed.match(/^\d{3,10}$/);
-               if (codeMatch) {
+               // Extrai um código (3-10 dígitos) mesmo que venha dentro de uma frase
+               // (ex.: "meu código é 1023"). Sem dígitos = cliente não tem código.
+               const codeInText = trimmed.match(/\d{3,10}/);
+               if (codeInText) {
+                 const code = codeInText[0];
                  const { data: sellerByCode } = await supabase
                    .from("sellers").select("id, name, store_id")
-                   .eq("code", trimmed).maybeSingle();
+                   .eq("code", code).maybeSingle();
                  if (sellerByCode) {
                    await assignToSeller(sellerByCode.id, sellerByCode.name, sellerByCode.store_id);
                  } else {
-                   await sendWhatsAppMessage(cleanPhone, `Hmm, não achei esse código aqui 🤔 Dá uma conferida e manda de novo, ou responde *N* que eu sigo te ajudando.`, isTest, receivedInstance);
+                   await sendWhatsAppMessage(cleanPhone, `Hmm, não achei esse código aqui 🤔 Dá uma conferida e manda de novo, ou se preferir é só me dizer que eu já te direciono 😊`, isTest, receivedInstance);
                  }
-                } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
-                   // Move to ask_store: pergunta a REGIÃO com opções específicas
-                   await updateClient({ triage_step: 'ask_store' });
-                   const storeOptions = `Sem problema! 😊 Pra te mandar pra loja mais perto, qual região fica melhor pra você?\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé\n\nÉ só responder com o *número* 👍`;
-                   await sendWhatsAppMessage(
-                     cleanPhone,
-                     storeOptions,
-                     isTest,
-                     receivedInstance
-                   );
                 } else {
-                  await sendWhatsAppMessage(cleanPhone, `Se você tem um vendedor com a gente, me manda o *código* dele (ex: 1023). Se não tiver, é só mandar *N* que eu te encaminho 😉`, isTest, receivedInstance);
+                   // Qualquer resposta sem código = não tem vendedor. Segue o fluxo
+                   // naturalmente, sem ficar exigindo um "N".
+                   await updateClient({ triage_step: 'ask_store' });
+                   const storeOptions = `Sem problema! 😊 Pra te mandar pra loja mais perto, qual região fica melhor pra você?\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé\n\nÉ só me dizer o *número* ou o nome da região 👍`;
+                   await sendWhatsAppMessage(cleanPhone, storeOptions, isTest, receivedInstance);
                 }
                 } else if (step === 'ask_store') {
                   const { data: stores } = await supabase.from("stores").select("id, name, city").order("name");
-                  
+
+                  // Aceita número (1/2/3) ou o nome da região (sem depender de acento)
+                  const norm = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                  let choice = trimmed;
+                  if (/niter/.test(norm)) choice = '1';
+                  else if (/barra|tijuca|rio/.test(norm)) choice = '2';
+                  else if (/maca/.test(norm)) choice = '3';
+
                   // Mapeamento manual conforme solicitado
                   // 1 — Niterói -> 25b7fb23-89c6-4abc-af6a-75c8c41e0dc2
                   // 2 — Rio de Janeiro (Barra da Tijuca) -> b7369414-9afe-4870-974e-45aa58173b8c
                   // 3 — Macaé -> Múltiplas lojas (Matriz, Aeroporto, Riviera)
 
-                  if (trimmed === '1') {
+                  if (choice === '1') {
                     const chosenStoreId = '25b7fb23-89c6-4abc-af6a-75c8c41e0dc2';
                     const chosenStoreName = 'Niterói';
                     await updateClient({ store_id: chosenStoreId, triaging: false, triage_step: null });
                     await finishWithStore(chosenStoreId, chosenStoreName);
-                  } else if (trimmed === '2') {
+                  } else if (choice === '2') {
                     const chosenStoreId = 'b7369414-9afe-4870-974e-45aa58173b8c';
                     const chosenStoreName = 'Barra da Tijuca';
                     await updateClient({ store_id: chosenStoreId, triaging: false, triage_step: null });
                     await finishWithStore(chosenStoreId, chosenStoreName);
-                  } else if (trimmed === '3') {
+                  } else if (choice === '3') {
                     // Macaé region routing with multiple stores priority: Matriz -> Aeroporto -> Riviera
                     const macaeStores = [
                       { id: 'a6b2da10-3e07-421f-b05c-cdc696bfe46a', name: 'Matriz' },
@@ -750,38 +771,35 @@ serve(async (req) => {
                   } else {
                     await sendWhatsAppMessage(
                       cleanPhone,
-                      `Acho que não peguei 😅 Me manda só o *número* da região:\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé`,
+                      `Acho que não peguei 😅 Me diz a região que fica melhor pra você — pode ser o número ou o nome:\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé`,
                       isTest,
                       receivedInstance
                     );
                   }
                 } else if (step === 'ask_seller') {
                 const storeId = client.store_id;
-                if (lower === 'n' || lower === 'nao' || lower === 'não') {
+                const codeInText = trimmed.match(/\d{3,10}/);
+                if (codeInText) {
+                   const { data: sellerByCode } = await supabase
+                     .from("sellers").select("id, name, store_id")
+                     .eq("code", codeInText[0]).maybeSingle();
+                   if (sellerByCode) {
+                     await assignToSeller(sellerByCode.id, sellerByCode.name, sellerByCode.store_id || storeId);
+                   } else {
+                     await sendWhatsAppMessage(cleanPhone, `Não encontrei esse código 🤔 Confere e manda de novo, ou se preferir é só me dizer que eu te passo pro próximo consultor disponível 😊`, isTest, receivedInstance);
+                   }
+                } else {
+                  // Sem código = segue pro próximo consultor disponível
                   const distributed = await distributeLead(storeId);
                   if (!distributed) {
                     const { data: store } = await supabase.from("stores").select("name").eq("id", storeId).maybeSingle();
                     await finishWithStore(storeId, store?.name);
                   }
-                } else {
-                 const codeMatch = trimmed.match(/^\d{3,10}$/);
-                 if (codeMatch) {
-                   const { data: sellerByCode } = await supabase
-                     .from("sellers").select("id, name, store_id")
-                     .eq("code", trimmed).maybeSingle();
-                   if (sellerByCode) {
-                     await assignToSeller(sellerByCode.id, sellerByCode.name, sellerByCode.store_id || storeId);
-                   } else {
-                     await sendWhatsAppMessage(cleanPhone, `Não encontrei esse código 🤔 Manda um válido, ou responde *N* que eu te passo pro próximo consultor disponível.`, isTest, receivedInstance);
-                   }
-                 } else {
-                   await sendWhatsAppMessage(cleanPhone, `Não peguei 🤔 Me manda o *código* do vendedor (ex: 1023), ou *N* que eu te passo pro próximo disponível.`, isTest, receivedInstance);
-                 }
-               }
+                }
              } else {
                // Unknown step — restart
                await updateClient({ triage_step: 'ask_code' });
-               await sendWhatsAppMessage(cleanPhone, `Oi de novo! 😊 Você é atendido por algum vendedor nosso? Me manda o *código* dele, ou *N* que eu sigo te ajudando.`, isTest, receivedInstance);
+               await sendWhatsAppMessage(cleanPhone, `Oi de novo! 😊 Você é atendido por algum vendedor nosso? Me manda o *código* dele, ou se não tiver é só me avisar que eu sigo te ajudando.`, isTest, receivedInstance);
              }
            } else {
             // Update existing client
@@ -801,9 +819,10 @@ serve(async (req) => {
               updateData.triage_step = 'ask_code';
               updateData.store_id = client.store_id || targetStoreId;
 
+              const saud2 = saudacaoPorHora(tsMs);
               const greetingName = client.name && !client.name.startsWith('Cliente ') ? `, *${client.name}*` : '';
-              const msg = `Oi${greetingName}! 😊 Aqui é da *TF Tintas*, vou te direcionar rapidinho!\n\nVocê é atendido por algum vendedor nosso? Manda o *código* dele (ex: 1023), ou *N* se não tiver 👍`;
-              await sendWhatsAppMessage(cleanPhone, msg, isTest, receivedInstance);
+              await sendWhatsAppMessage(cleanPhone, `${saud2}${greetingName}! 😊 Aqui é da *Taeco Tintas*, tudo bem? 🎨`, isTest, receivedInstance);
+              await sendWhatsAppMessage(cleanPhone, `Pra te direcionar certinho: você é atendido por algum vendedor nosso? Me manda o *código* dele (ex: 1023). Se ainda não, é só me dizer que eu cuido disso 😊`, isTest, receivedInstance);
 
               await supabase.from("clients").update(updateData).eq("id", client.id);
               return new Response(JSON.stringify({ success: true, action: "triage_restarted" }), {
@@ -877,7 +896,8 @@ serve(async (req) => {
                 text,
                 (recentMsgs || []).reverse(),
                 client.name || senderName,
-                { storeName, sellerName, interestProducts }
+                { storeName, sellerName, interestProducts },
+                saudacaoPorHora(tsMs)
               );
 
               if (aiReply) {
