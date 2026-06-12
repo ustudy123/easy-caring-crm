@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Trophy, Star, ArrowRight, RotateCcw, PaintBucket, Sparkles, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { QuizLeaderboard } from "@/components/QuizLeaderboard";
 
 interface Question {
   id: string;
@@ -257,11 +258,13 @@ export default function Quiz() {
                 </div>
               </div>
 
-              <Card className="bg-brand-50 border-brand-200 rounded-3xl p-8 max-w-md mx-auto">
-                <p className="text-brand-800 font-bold">
+              <Card className="bg-brand-50 border-brand-200 rounded-3xl p-6 max-w-md mx-auto">
+                <p className="text-brand-800 font-bold text-sm">
                   Sua pontuação foi salva no ranking. Continue treinando para se tornar um mestre das cores!
                 </p>
               </Card>
+
+              <QuizLeaderboard currentUserId={user?.id} />
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                 <Button 
