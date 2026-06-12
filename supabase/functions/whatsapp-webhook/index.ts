@@ -10,6 +10,31 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Evita que uma dependência externa lenta (OpenAI, ERP, API do WhatsApp)
+// trave o webhook até o timeout da plataforma (~150s). Aborta após `ms`.
+async function fetchWithTimeout(url: string, options: RequestInit = {}, ms = 10000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Executa uma promise com teto de tempo; se estourar, retorna `fallback`.
+async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: number | undefined;
+  const timeout = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms) as unknown as number;
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function getApiConfig(inst: { provider: string; api_url?: string | null; api_token?: string | null }) {
   const provider = inst.provider || "uazapi";
   const rawUrl = (inst.api_url || Deno.env.get("WHATSAPP_API_URL"))?.trim();
@@ -93,7 +118,7 @@ function getApiConfig(inst: { provider: string; api_url?: string | null; api_tok
         body = { phone, message: text };
       }
 
-      const response = await fetch(endpoint, {
+      const response = await fetchWithTimeout(endpoint, {
         method: "POST",
         headers,
         body: JSON.stringify(body)
@@ -137,7 +162,7 @@ function getApiConfig(inst: { provider: string; api_url?: string | null; api_tok
    `;
 
    try {
-     const response = await fetch("https://api.openai.com/v1/chat/completions", {
+     const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
        method: "POST",
        headers: {
          "Content-Type": "application/json",
@@ -211,7 +236,7 @@ ${missing.length
 `;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -510,7 +535,7 @@ serve(async (req) => {
 
             if (!client) {
               // 1. First message from a new client: Try to identify them via ERP Citel first
-              const erpClient = await searchCitelClient(cleanPhone, supabase);
+              const erpClient = await withTimeout(searchCitelClient(cleanPhone, supabase), 8000, null);
 
               const clientData = {
                 name: erpClient?.nome || erpClient?.razao_social || senderName,
