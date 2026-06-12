@@ -192,7 +192,7 @@ export function QuizLeaderboard({ currentUserId, limit = 100 }: { currentUserId?
             </div>
           )}
 
-          {rows.length > 3 && (
+          {rows.length > 0 && (
             <Button variant="outline" className="w-full mt-4 rounded-2xl font-bold gap-2" onClick={() => setShowFull(true)}>
               <List className="h-4 w-4" /> Ver ranking completo
             </Button>
