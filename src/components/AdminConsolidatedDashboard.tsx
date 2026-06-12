@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCrm } from "@/contexts/CrmContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, DollarSign, Target, FileText, MessageCircle, UserPlus, Repeat, AlertTriangle, Clock, TrendingUp, Trophy } from "lucide-react";
+import { Loader2, Users, DollarSign, Target, FileText, MessageCircle, UserPlus, Repeat, AlertTriangle, Clock, TrendingUp, Trophy, BarChart3 } from "lucide-react";
 import { startOfDay, startOfWeek, startOfMonth, startOfYear } from "date-fns";
 import { KANBAN_STAGES } from "@/types/crm";
 import { SellerPerformance } from "@/components/SellerPerformance";
@@ -34,7 +34,7 @@ interface StoreRow { id: string; name: string; }
 interface ClientRow { id: string; created_at: string; total_purchases: number | null; last_message_at: string | null; tags: string[] | null; store_id: string | null; }
 interface OrcamentoRow { id: string; status: string | null; created_at: string | null; store_id?: string | null; seller_id: string | null; }
 
-export function AdminConsolidatedDashboard() {
+export function AdminConsolidatedDashboard({ embedded = false }: { embedded?: boolean }) {
   const { leads } = useCrm();
   const [period, setPeriod] = useState<Period>("month");
   const [sellers, setSellers] = useState<SellerRow[]>([]);
@@ -140,6 +140,12 @@ export function AdminConsolidatedDashboard() {
 
   return (
     <div className="space-y-5">
+      {embedded && (
+        <div className="flex items-center gap-2 pt-2">
+          <BarChart3 className="h-5 w-5 text-brand-500" />
+          <h2 className="text-lg font-bold text-foreground">Painel administrativo consolidado</h2>
+        </div>
+      )}
       {/* Filtro de período */}
       <div className="flex flex-wrap gap-1.5">
         {PERIODS.map((p) => (
@@ -170,6 +176,7 @@ export function AdminConsolidatedDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Funil por etapa */}
+        {!embedded && (
         <Card className="border border-border/50 shadow-sm">
           <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-2"><Target className="h-4 w-4 text-brand-500" /> Funil por etapa</CardTitle></CardHeader>
           <CardContent className="space-y-2">
@@ -186,6 +193,7 @@ export function AdminConsolidatedDashboard() {
             ))}
           </CardContent>
         </Card>
+        )}
 
         {/* Orçamentos por status + Desempenho por loja */}
         <div className="space-y-4">
@@ -220,7 +228,7 @@ export function AdminConsolidatedDashboard() {
       </div>
 
       {/* Ranking de vendedores */}
-      <SellerPerformance />
+      {!embedded && <SellerPerformance />}
     </div>
   );
 }

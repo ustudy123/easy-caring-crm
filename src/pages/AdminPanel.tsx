@@ -164,7 +164,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { AdminConsolidatedDashboard } from "@/components/AdminConsolidatedDashboard";
 
 interface StoreRow {
   id: string;
@@ -797,9 +796,8 @@ export default function AdminPanel() {
   if (!isAdmin) return <Navigate to="/" replace />;
   return (
     <AppLayout title="Painel Administrativo">
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs defaultValue="stores" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" /> Visão Geral</TabsTrigger>
           <TabsTrigger value="stores" className="gap-1.5"><Store className="h-3.5 w-3.5" /> Lojas</TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Usuários & Papéis</TabsTrigger>
           <TabsTrigger value="reports" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Relatórios</TabsTrigger>
@@ -808,7 +806,6 @@ export default function AdminPanel() {
           <TabsTrigger value="logs" className="gap-1.5"><Terminal className="h-3.5 w-3.5" /> Webhook Logs</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview"><AdminConsolidatedDashboard /></TabsContent>
         <TabsContent value="stores"><StoresTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="reports"><ReportsTab /></TabsContent>

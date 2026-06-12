@@ -15,6 +15,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { subDays, subMonths, startOfDay, isAfter, format, startOfWeek, startOfMonth } from "date-fns";
 import { SellerPerformance } from "@/components/SellerPerformance";
+import { AdminConsolidatedDashboard } from "@/components/AdminConsolidatedDashboard";
+import { useRole } from "@/contexts/RoleContext";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
@@ -90,6 +92,7 @@ ChartSkeleton.displayName = "ChartSkeleton";
 
 export default function CrmDashboard() {
   const { leads, followUps } = useCrm();
+  const { isAdmin, isGerente } = useRole();
   const avgResponseMin = useAvgResponseTime();
   const [period, setPeriod] = useState<PeriodKey>("all");
   const [chartsReady, setChartsReady] = useState(false);
@@ -270,6 +273,12 @@ export default function CrmDashboard() {
         <motion.div variants={item} initial="hidden" animate="show">
           <SellerPerformance />
         </motion.div>
+
+        {(isAdmin || isGerente) && (
+          <motion.div variants={item} initial="hidden" animate="show">
+            <AdminConsolidatedDashboard embedded />
+          </motion.div>
+        )}
       </motion.div>
     </AppLayout>
   );
