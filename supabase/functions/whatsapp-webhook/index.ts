@@ -499,7 +499,7 @@ serve(async (req) => {
                 console.log(`Client ${cleanPhone} routed to seller ${sellerByCode.name} via code ${candidateCode}`);
                 await sendWhatsAppMessage(
                   cleanPhone,
-                  `Show, já te encaminho pra um consultor continuar com você 👍`,
+                  `Perfeito! Já passo você pra um dos nossos consultores, em breve te chamam por aqui 👍`,
                   isTest,
                   receivedInstance
                 );
@@ -600,7 +600,7 @@ serve(async (req) => {
                 const greeting = erpClient 
                   ? `Olá, *${erpClient.nome || erpClient.razao_social}*! 👋`
                   : `Olá! 👋`;
-                const welcomeMsg = `${greeting} Aqui é da *TF Tintas* 👋\n\nVocê já tem o *código* de algum vendedor nosso? Se tiver, é só mandar (ex: 1023). Se não, responde *N* que eu te direciono.`;
+                const welcomeMsg = `${greeting} Aqui é da *TF Tintas* 😊 Bora te atender!\n\nVocê já é atendido por algum vendedor nosso? Se sim, me manda o *código* dele (ex: 1023). Se não, é só mandar *N* que eu te direciono 👍`;
                 await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest, receivedInstance);
               }
             } else if (client.triaging) {
@@ -657,8 +657,8 @@ serve(async (req) => {
                     store_id: storeId,
                   });
                    const msg = storeName
-                     ? `Boa, anotei a unidade *${storeName}*! Já te conecto com um consultor 👍`
-                     : `Fechou! Já te encaminho pra um consultor 👍`;
+                     ? `Show, anotei a unidade *${storeName}* 👍 Já te conecto com um consultor de lá.`
+                     : `Fechou! Já te passo pra um consultor finalizar 👍`;
                   await sendWhatsAppMessage(cleanPhone, msg, isTest, receivedInstance);
                 }
               };
@@ -670,7 +670,7 @@ serve(async (req) => {
                 });
 
               if (!rpcErr && result?.success) {
-                  await sendWhatsAppMessage(cleanPhone, `Show, já te encaminho pra um consultor continuar com você 👍`, isTest, receivedInstance);
+                  await sendWhatsAppMessage(cleanPhone, `Perfeito! Já passo você pra um dos nossos consultores, em breve te chamam por aqui 👍`, isTest, receivedInstance);
                 } else {
                   // Fallback: if seller is inactive and has no substitute, distribute to store/general queue
                   await finishWithStore(storeId);
@@ -686,12 +686,12 @@ serve(async (req) => {
                  if (sellerByCode) {
                    await assignToSeller(sellerByCode.id, sellerByCode.name, sellerByCode.store_id);
                  } else {
-                   await sendWhatsAppMessage(cleanPhone, `Hmm, não achei esse código 🤔 Confere e manda de novo, ou responde *N* que eu sigo sem ele.`, isTest, receivedInstance);
+                   await sendWhatsAppMessage(cleanPhone, `Hmm, não achei esse código aqui 🤔 Dá uma conferida e manda de novo, ou responde *N* que eu sigo te ajudando.`, isTest, receivedInstance);
                  }
                 } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
                    // Move to ask_store: pergunta a REGIÃO com opções específicas
                    await updateClient({ triage_step: 'ask_store' });
-                   const storeOptions = `Em qual região você deseja ser atendido? 👋\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé\n\nResponda com o *número* da opção desejada.`;
+                   const storeOptions = `Sem problema! 😊 Pra te mandar pra loja mais perto, qual região fica melhor pra você?\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé\n\nÉ só responder com o *número* 👍`;
                    await sendWhatsAppMessage(
                      cleanPhone,
                      storeOptions,
@@ -699,7 +699,7 @@ serve(async (req) => {
                      receivedInstance
                    );
                 } else {
-                  await sendWhatsAppMessage(cleanPhone, `É só mandar o *código do vendedor* (ex: 1023), ou *N* se você não tiver 😉`, isTest, receivedInstance);
+                  await sendWhatsAppMessage(cleanPhone, `Se você tem um vendedor com a gente, me manda o *código* dele (ex: 1023). Se não tiver, é só mandar *N* que eu te encaminho 😉`, isTest, receivedInstance);
                 }
                 } else if (step === 'ask_store') {
                   const { data: stores } = await supabase.from("stores").select("id, name, city").order("name");
@@ -750,7 +750,7 @@ serve(async (req) => {
                   } else {
                     await sendWhatsAppMessage(
                       cleanPhone,
-                      `Opção inválida. Por favor, responda com o *número* da região:\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé`,
+                      `Acho que não peguei 😅 Me manda só o *número* da região:\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé`,
                       isTest,
                       receivedInstance
                     );
@@ -772,16 +772,16 @@ serve(async (req) => {
                    if (sellerByCode) {
                      await assignToSeller(sellerByCode.id, sellerByCode.name, sellerByCode.store_id || storeId);
                    } else {
-                     await sendWhatsAppMessage(cleanPhone, `Não encontrei esse código 🤔 Manda um válido ou responde *N* que te passo pro próximo disponível.`, isTest, receivedInstance);
+                     await sendWhatsAppMessage(cleanPhone, `Não encontrei esse código 🤔 Manda um válido, ou responde *N* que eu te passo pro próximo consultor disponível.`, isTest, receivedInstance);
                    }
                  } else {
-                   await sendWhatsAppMessage(cleanPhone, `Não peguei 🤔 Manda o *código* do vendedor (ex: 1023) ou *N* que te passo pro próximo.`, isTest, receivedInstance);
+                   await sendWhatsAppMessage(cleanPhone, `Não peguei 🤔 Me manda o *código* do vendedor (ex: 1023), ou *N* que eu te passo pro próximo disponível.`, isTest, receivedInstance);
                  }
                }
              } else {
                // Unknown step — restart
                await updateClient({ triage_step: 'ask_code' });
-               await sendWhatsAppMessage(cleanPhone, `Oi de novo! 👋 Tem o *código* de algum vendedor? Manda aqui ou responde *N* pra seguir.`, isTest, receivedInstance);
+               await sendWhatsAppMessage(cleanPhone, `Oi de novo! 😊 Você é atendido por algum vendedor nosso? Me manda o *código* dele, ou *N* que eu sigo te ajudando.`, isTest, receivedInstance);
              }
            } else {
             // Update existing client
@@ -802,7 +802,7 @@ serve(async (req) => {
               updateData.store_id = client.store_id || targetStoreId;
 
               const greetingName = client.name && !client.name.startsWith('Cliente ') ? `, *${client.name}*` : '';
-              const msg = `Oi${greetingName}! 👋 Aqui é da *TF Tintas*.\n\nPra te direcionar certinho: você já tem o *código* de algum vendedor nosso? Se tiver, manda aqui (ex: 1023). Se não, responde *N* 😉`;
+              const msg = `Oi${greetingName}! 😊 Aqui é da *TF Tintas*, vou te direcionar rapidinho!\n\nVocê é atendido por algum vendedor nosso? Manda o *código* dele (ex: 1023), ou *N* se não tiver 👍`;
               await sendWhatsAppMessage(cleanPhone, msg, isTest, receivedInstance);
 
               await supabase.from("clients").update(updateData).eq("id", client.id);
