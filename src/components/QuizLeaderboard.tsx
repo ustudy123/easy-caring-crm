@@ -2,6 +2,34 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Trophy, Medal, Loader2, RefreshCw } from "lucide-react";
+import { startOfDay, startOfWeek, startOfMonth, startOfYear } from "date-fns";
+
+type Period = "today" | "week" | "month" | "year" | "all";
+
+const PERIODS: { key: Period; label: string }[] = [
+  { key: "today", label: "Hoje" },
+  { key: "week", label: "Semana" },
+  { key: "month", label: "Mês" },
+  { key: "year", label: "Ano" },
+  { key: "all", label: "Geral" },
+];
+
+function sinceForPeriod(period: Period): string | null {
+  const now = new Date();
+  switch (period) {
+    case "today":
+      return startOfDay(now).toISOString();
+    case "week":
+      return startOfWeek(now, { weekStartsOn: 1 }).toISOString();
+    case "month":
+      return startOfMonth(now).toISOString();
+    case "year":
+      return startOfYear(now).toISOString();
+    case "all":
+    default:
+      return null;
+  }
+}
 
 interface LeaderboardRow {
   user_id: string;
@@ -16,14 +44,19 @@ const medalColor = (pos: number) =>
 export function QuizLeaderboard({ currentUserId, limit = 10 }: { currentUserId?: string; limit?: number }) {
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<Period>("week"); // padrão: Semana
 
   const fetchLeaderboard = useCallback(async () => {
-    const { data, error } = await supabase.rpc("get_quiz_leaderboard", { limit_count: limit });
+    const { data, error } = await supabase.rpc("get_quiz_leaderboard", {
+      limit_count: limit,
+      p_since: sinceForPeriod(period),
+    });
     if (!error && data) setRows(data as LeaderboardRow[]);
     setLoading(false);
-  }, [limit]);
+  }, [limit, period]);
 
   useEffect(() => {
+    setLoading(true);
     fetchLeaderboard();
 
     // Atualização em tempo real: quando qualquer um conclui o quiz, rebusca
@@ -56,13 +89,32 @@ export function QuizLeaderboard({ currentUserId, limit = 10 }: { currentUserId?:
         </button>
       </div>
 
+      {/* Filtros de período */}
+      <div className="flex flex-wrap gap-1.5 mb-4">
+        {PERIODS.map((p) => (
+          <button
+            key={p.key}
+            onClick={() => setPeriod(p.key)}
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+              period === p.key
+                ? "bg-brand-500 text-white"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
         </div>
       ) : rows.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-6">
-          Ainda não há pontuações. Seja o primeiro a jogar!
+          {period === "all"
+            ? "Ainda não há pontuações. Seja o primeiro a jogar!"
+            : "Nenhuma pontuação neste período ainda."}
         </p>
       ) : (
         <div className="space-y-2">
