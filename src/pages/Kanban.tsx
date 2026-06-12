@@ -142,14 +142,12 @@ export default function Kanban() {
   const [transferReason, setTransferReason] = useState("");
   const [isTransferring, setIsTransferring] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [filterSource, setFilterSource] = useState<string>("all");
   const [filterUrgency, setFilterUrgency] = useState<string>("all");
    const [showFilters, setShowFilters] = useState(false);
 
-  const hasActiveFilters = filterSource !== "all" || filterUrgency !== "all";
+  const hasActiveFilters = filterUrgency !== "all";
 
   const clearFilters = () => {
-    setFilterSource("all");
     setFilterUrgency("all");
   };
 
@@ -233,7 +231,6 @@ export default function Kanban() {
 
    const filteredLeads = leads.filter((l) => {
      if (!l.clientName.toLowerCase().includes(search.toLowerCase())) return false;
-     if (filterSource !== "all" && l.source !== filterSource) return false;
      if (filterUrgency !== "all") {
        const u = getUrgencyLevel(l);
        if (filterUrgency === "critical" && u !== "critical") return false;
@@ -328,23 +325,6 @@ export default function Kanban() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-64 space-y-3 rounded-xl" align="start">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Origem</label>
-                  <Select value={filterSource} onValueChange={setFilterSource}>
-                    <SelectTrigger className="h-8 text-xs rounded-lg"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                       <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                       <SelectItem value="instagram">Instagram</SelectItem>
-                       <SelectItem value="meta">Meta Ads</SelectItem>
-                       <SelectItem value="google">Google</SelectItem>
-                       <SelectItem value="site">Site</SelectItem>
-                       <SelectItem value="indicacao">Indicação</SelectItem>
-                       <SelectItem value="loja">Loja</SelectItem>
-                       <SelectItem value="campanha">Campanha</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-muted-foreground">Urgência</label>
                   <Select value={filterUrgency} onValueChange={setFilterUrgency}>
