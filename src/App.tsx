@@ -1,6 +1,6 @@
 import { UrgencyAlertPopup } from "@/components/UrgencyAlertPopup";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -43,6 +43,12 @@ const App = () => (
                     <Routes>
                       <Route element={<AppShell />}>
                         <Route path="/" element={<Dashboard />} />
+                        {/* Redirecionamentos defensivos: rotas legadas/erradas que apontam
+                            para um dashboard inexistente não devem cair em 404. */}
+                        <Route path="/dashboard" element={<Navigate to="/" replace />} />
+                        <Route path="/vendedor" element={<Navigate to="/" replace />} />
+                        <Route path="/seller" element={<Navigate to="/" replace />} />
+                        <Route path="/home" element={<Navigate to="/" replace />} />
                         <Route path="/crm-dashboard" element={<CrmDashboard />} />
                         <Route path="/quiz" element={<Quiz />} />
                         <Route path="/kanban" element={<Kanban />} />
