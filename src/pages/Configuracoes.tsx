@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
+import { AvatarUpload } from "@/components/AvatarUpload";
 
 export default function Configuracoes() {
   const { toast } = useToast();
@@ -222,6 +223,15 @@ export default function Configuracoes() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {user && (
+              <div className="p-4 rounded-[14px] border border-black/8 bg-white">
+                <AvatarUpload
+                  userId={user.id}
+                  initialUrl={seller?.avatar}
+                  displayName={seller?.name || user.email}
+                />
+              </div>
+            )}
             <div className="flex items-center justify-between p-4 rounded-[14px] border border-black/8 bg-white">
               <div className="space-y-0.5">
                 <p className="text-sm font-semibold flex items-center gap-2">
