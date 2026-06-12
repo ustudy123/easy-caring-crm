@@ -169,7 +169,7 @@ function getApiConfig(inst: { provider: string; api_url?: string | null; api_tok
          "Authorization": `Bearer ${OPENAI_API_KEY}`
        },
        body: JSON.stringify({
-         model: "gpt-3.5-turbo",
+         model: "gpt-4o-mini",
          messages: [{ role: "user", content: prompt }],
          temperature: 0
        })
@@ -251,7 +251,7 @@ ${missing.length
         "Authorization": `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           ...history
