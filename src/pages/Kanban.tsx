@@ -9,7 +9,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
  import { 
     Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
     AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
-    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle, XCircle
+    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle, XCircle, Download
   } from "lucide-react";
  import { getDisplayClientName, isGenericName } from "@/lib/clientUtils";
 import { Button } from "@/components/ui/button";
@@ -151,6 +151,26 @@ export default function Kanban() {
 
   const clearFilters = () => {
     setFilterUrgency("all");
+  };
+
+  const handleExportPipeline = () => {
+    const stageLabel = (k: string) => KANBAN_STAGES.find((s) => s.key === k)?.label ?? (k === "perdido" ? "Perdido" : k);
+    const sellerName = (id: string) => sellers.find((s) => s.id === id)?.name ?? "";
+    exportToCsv(
+      leads,
+      [
+        { key: "clientName", label: "Cliente" },
+        { key: "clientPhone", label: "Telefone" },
+        { key: "stage", label: "Estágio", format: (l) => stageLabel(l.stage) },
+        { key: "value", label: "Valor" },
+        { key: "source", label: "Origem" },
+        { key: "assignedTo", label: "Vendedor", format: (l) => sellerName(l.assignedTo) },
+        { key: "interestProducts", label: "Interesse/Produto" },
+        { key: "lostReason", label: "Motivo da perda" },
+        { key: "createdAt", label: "Criado em", format: (l) => new Date(l.createdAt).toLocaleDateString("pt-BR") },
+      ],
+      "pipeline",
+    );
   };
 
   const handleMarkLost = async () => {
@@ -338,6 +358,15 @@ export default function Kanban() {
           </div>
           <div className="flex gap-2 flex-wrap items-center">
             {loading && <span className="text-[10px] text-muted-foreground animate-pulse mr-2">Carregando...</span>}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-xl text-[10px] h-8"
+              onClick={handleExportPipeline}
+              disabled={leads.length === 0}
+            >
+              <Download className="h-3.5 w-3.5 mr-1" /> Exportar
+            </Button>
             <Button 
               variant="ghost" 
               size="sm" 

@@ -8,12 +8,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-  import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2, TrendingUp, RefreshCw, Loader2, Info } from "lucide-react";
+  import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2, TrendingUp, RefreshCw, Loader2, Info, Download } from "lucide-react";
  import { getDisplayClientName, isGenericName } from "@/lib/clientUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { ClientTimeline } from "@/components/ClientTimeline";
+import { exportToCsv } from "@/lib/exportCsv";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 16, scale: 0.97 }, show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring" as const, stiffness: 300, damping: 24 } } };
@@ -120,6 +121,24 @@ export default function Clientes() {
   const totalVolume = clients.reduce((s, c) => s + c.totalPurchases, 0);
   const fidelizados = clients.filter((c) => c.tags.includes("fidelizado")).length;
 
+  const handleExport = () => {
+    exportToCsv(
+      filtered,
+      [
+        { key: "name", label: "Nome" },
+        { key: "phone", label: "Telefone" },
+        { key: "email", label: "E-mail" },
+        { key: "city", label: "Cidade" },
+        { key: "address", label: "Endereço" },
+        { key: "totalPurchases", label: "Total Compras" },
+        { key: "tags", label: "Tags", format: (c) => (c.tags || []).join(", ") },
+        { key: "lastContact", label: "Último contato", format: (c) => c.lastContact ? new Date(c.lastContact).toLocaleDateString("pt-BR") : "" },
+        { key: "createdAt", label: "Cliente desde", format: (c) => new Date(c.createdAt).toLocaleDateString("pt-BR") },
+      ],
+      "clientes",
+    );
+  };
+
   const kpis = [
     { label: "Total de Clientes", value: clients.length, icon: Users, gradient: "from-[hsl(224,76%,48%)] to-[hsl(262,60%,55%)]" },
     { label: "Volume Total", value: `R$ ${totalVolume.toLocaleString("pt-BR")}`, icon: DollarSign, gradient: "from-[hsl(152,60%,42%)] to-[hsl(174,62%,38%)]" },
@@ -147,6 +166,9 @@ export default function Clientes() {
                Sincronizar ERP
              </Button>
            </div>
+           <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={handleExport} disabled={filtered.length === 0}>
+             <Download className="h-3.5 w-3.5 mr-1" /> Exportar CSV
+           </Button>
            <Button size="sm" className="w-full sm:w-auto bg-brand-500 hover:opacity-90 text-primary-foreground shadow-none" onClick={() => setShowNewClient(true)}>
              <Plus className="h-3.5 w-3.5 mr-1" /> Novo Cliente
            </Button>
