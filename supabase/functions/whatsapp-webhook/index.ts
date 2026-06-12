@@ -72,10 +72,10 @@ async function openaiChat(
   return null;
 }
 
-function getApiConfig(inst: { provider: string; api_url?: string | null; api_token?: string | null }) {
-  const provider = inst.provider || "uazapi";
-  const rawUrl = (inst.api_url || Deno.env.get("WHATSAPP_API_URL"))?.trim();
-  const token = (inst.api_token || Deno.env.get("WHATSAPP_API_KEY"))?.trim();
+function getApiConfig(inst?: { provider?: string; api_url?: string | null; api_token?: string | null } | null) {
+  const provider = inst?.provider || "uazapi";
+  const rawUrl = (inst?.api_url || Deno.env.get("WHATSAPP_API_URL"))?.trim();
+  const token = (inst?.api_token || Deno.env.get("WHATSAPP_API_KEY"))?.trim();
 
   if (!rawUrl) return null;
 
@@ -487,8 +487,7 @@ serve(async (req) => {
                   cleanPhone,
                   `Show, já te encaminho pra um consultor continuar com você 👍`,
                   isTest,
-                  receivedInstance?.api_url,
-                  receivedInstance?.api_token
+                  receivedInstance
                 );
                 return new Response(JSON.stringify({ success: true, action: "routed_by_code", seller: sellerByCode.name }), {
                   status: 200,
@@ -588,7 +587,7 @@ serve(async (req) => {
                   ? `Olá, *${erpClient.nome || erpClient.razao_social}*! 👋`
                   : `Olá! 👋`;
                 const welcomeMsg = `${greeting} Aqui é da *TF Tintas* 👋\n\nVocê já tem o *código* de algum vendedor nosso? Se tiver, é só mandar (ex: 1023). Se não, responde *N* que eu te direciono.`;
-                await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest, receivedInstance?.api_url, receivedInstance?.api_token);
+                await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest, receivedInstance);
               }
             } else if (client.triaging) {
              // URA-style step machine
@@ -646,7 +645,7 @@ serve(async (req) => {
                    const msg = storeName
                      ? `Boa, anotei a unidade *${storeName}*! Já te conecto com um consultor 👍`
                      : `Fechou! Já te encaminho pra um consultor 👍`;
-                  await sendWhatsAppMessage(cleanPhone, msg, isTest);
+                  await sendWhatsAppMessage(cleanPhone, msg, isTest, receivedInstance);
                 }
               };
 
@@ -657,7 +656,7 @@ serve(async (req) => {
                 });
 
               if (!rpcErr && result?.success) {
-                  await sendWhatsAppMessage(cleanPhone, `Show, já te encaminho pra um consultor continuar com você 👍`, isTest);
+                  await sendWhatsAppMessage(cleanPhone, `Show, já te encaminho pra um consultor continuar com você 👍`, isTest, receivedInstance);
                 } else {
                   // Fallback: if seller is inactive and has no substitute, distribute to store/general queue
                   await finishWithStore(storeId);
@@ -673,7 +672,7 @@ serve(async (req) => {
                  if (sellerByCode) {
                    await assignToSeller(sellerByCode.id, sellerByCode.name, sellerByCode.store_id);
                  } else {
-                   await sendWhatsAppMessage(cleanPhone, `Hmm, não achei esse código 🤔 Confere e manda de novo, ou responde *N* que eu sigo sem ele.`, isTest);
+                   await sendWhatsAppMessage(cleanPhone, `Hmm, não achei esse código 🤔 Confere e manda de novo, ou responde *N* que eu sigo sem ele.`, isTest, receivedInstance);
                  }
                 } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
                    // Move to ask_store: pergunta a REGIÃO com opções específicas
@@ -683,11 +682,10 @@ serve(async (req) => {
                      cleanPhone,
                      storeOptions,
                      isTest,
-                     receivedInstance?.api_url,
-                     receivedInstance?.api_token
+                     receivedInstance
                    );
                 } else {
-                  await sendWhatsAppMessage(cleanPhone, `É só mandar o *código do vendedor* (ex: 1023), ou *N* se você não tiver 😉`, isTest);
+                  await sendWhatsAppMessage(cleanPhone, `É só mandar o *código do vendedor* (ex: 1023), ou *N* se você não tiver 😉`, isTest, receivedInstance);
                 }
                 } else if (step === 'ask_store') {
                   const { data: stores } = await supabase.from("stores").select("id, name, city").order("name");
@@ -740,8 +738,7 @@ serve(async (req) => {
                       cleanPhone,
                       `Opção inválida. Por favor, responda com o *número* da região:\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé`,
                       isTest,
-                      receivedInstance?.api_url,
-                      receivedInstance?.api_token
+                      receivedInstance
                     );
                   }
                 } else if (step === 'ask_seller') {
@@ -761,16 +758,16 @@ serve(async (req) => {
                    if (sellerByCode) {
                      await assignToSeller(sellerByCode.id, sellerByCode.name, sellerByCode.store_id || storeId);
                    } else {
-                     await sendWhatsAppMessage(cleanPhone, `Não encontrei esse código 🤔 Manda um válido ou responde *N* que te passo pro próximo disponível.`, isTest);
+                     await sendWhatsAppMessage(cleanPhone, `Não encontrei esse código 🤔 Manda um válido ou responde *N* que te passo pro próximo disponível.`, isTest, receivedInstance);
                    }
                  } else {
-                   await sendWhatsAppMessage(cleanPhone, `Não peguei 🤔 Manda o *código* do vendedor (ex: 1023) ou *N* que te passo pro próximo.`, isTest);
+                   await sendWhatsAppMessage(cleanPhone, `Não peguei 🤔 Manda o *código* do vendedor (ex: 1023) ou *N* que te passo pro próximo.`, isTest, receivedInstance);
                  }
                }
              } else {
                // Unknown step — restart
                await updateClient({ triage_step: 'ask_code' });
-               await sendWhatsAppMessage(cleanPhone, `Oi de novo! 👋 Tem o *código* de algum vendedor? Manda aqui ou responde *N* pra seguir.`, isTest);
+               await sendWhatsAppMessage(cleanPhone, `Oi de novo! 👋 Tem o *código* de algum vendedor? Manda aqui ou responde *N* pra seguir.`, isTest, receivedInstance);
              }
            } else {
             // Update existing client
@@ -792,7 +789,7 @@ serve(async (req) => {
 
               const greetingName = client.name && !client.name.startsWith('Cliente ') ? `, *${client.name}*` : '';
               const msg = `Oi${greetingName}! 👋 Aqui é da *TF Tintas*.\n\nPra te direcionar certinho: você já tem o *código* de algum vendedor nosso? Se tiver, manda aqui (ex: 1023). Se não, responde *N* 😉`;
-              await sendWhatsAppMessage(cleanPhone, msg, isTest);
+              await sendWhatsAppMessage(cleanPhone, msg, isTest, receivedInstance);
 
               await supabase.from("clients").update(updateData).eq("id", client.id);
               return new Response(JSON.stringify({ success: true, action: "triage_restarted" }), {
@@ -884,7 +881,7 @@ serve(async (req) => {
                 if (recentOutbound && recentOutbound > 0) {
                   console.log(`Auto-resposta ignorada (debounce): já respondemos ${cleanPhone} nos últimos 60s.`);
                 } else {
-                  await sendWhatsAppMessage(cleanPhone, aiReply, isTest);
+                  await sendWhatsAppMessage(cleanPhone, aiReply, isTest, receivedInstance);
 
                   // Store the AI reply in whatsapp_messages
                   await supabase.from("whatsapp_messages").insert({
