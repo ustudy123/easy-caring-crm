@@ -20,10 +20,19 @@ interface Question {
   code?: string;
 }
 
+const QUESTIONS_PER_ROUND = 25;
+
+// Sorteia um lote de perguntas (rotatividade a cada partida)
+function selectRound(pool: Question[]): Question[] {
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, QUESTIONS_PER_ROUND);
+}
+
 export default function Quiz() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [allQuestions, setAllQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [showResult, setShowResult] = useState(false);
@@ -47,9 +56,10 @@ export default function Quiz() {
         ...q,
         options: q.options as string[]
       }));
-      setQuestions(formatted);
+      setAllQuestions(formatted);
+      setQuestions(selectRound(formatted));
     } else {
-      setQuestions([
+      const fallback = [
         {
           id: "1",
           question: "Qual dessas cores é primária?",
@@ -71,9 +81,22 @@ export default function Quiz() {
           correct_option_index: 1,
           difficulty: "Fácil"
         }
-      ]);
+      ];
+      setAllQuestions(fallback);
+      setQuestions(fallback);
     }
     setLoading(false);
+  };
+
+  // Inicia uma nova partida sorteando 25 perguntas do pool
+  const startRound = () => {
+    setQuestions(selectRound(allQuestions));
+    setCurrentQuestionIndex(0);
+    setScore(0);
+    setShowResult(false);
+    setSelectedOption(null);
+    setIsCorrect(null);
+    setStarted(true);
   };
 
   const handleOptionClick = (index: number) => {
@@ -125,12 +148,7 @@ export default function Quiz() {
   };
 
   const restartQuiz = () => {
-    setCurrentQuestionIndex(0);
-    setScore(0);
-    setShowResult(false);
-    setSelectedOption(null);
-    setIsCorrect(null);
-    setStarted(true);
+    startRound();
   };
 
   const backToLanding = () => {
@@ -203,7 +221,7 @@ export default function Quiz() {
               <QuizLeaderboard currentUserId={user?.id} />
 
               <Button
-                onClick={() => setStarted(true)}
+                onClick={startRound}
                 disabled={questions.length === 0}
                 className="h-14 px-10 rounded-2xl font-bold text-lg bg-brand-500 hover:bg-brand-600 shadow-lg shadow-brand-500/25 gap-2"
               >
