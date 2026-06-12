@@ -214,25 +214,33 @@ async function generateAutoReply(
   if (!clientCtx.sellerName) missing.push("CÓDIGO (RAMAL) DE VENDEDOR (se já tem um vendedor da TF Tintas, peça o código; se não, basta confirmar)");
   if (!clientCtx.interestProducts) missing.push("INTERESSE/PRODUTO (ex.: tinta para parede, ferramentas, material elétrico, hidráulica, acabamentos)");
 
-  const systemPrompt = `Você é o Assistente Virtual da *TF Tintas*, uma loja de materiais de construção, tintas, ferragens, acabamentos e itens para obra e reforma.
-O nome do cliente é ${clientName}. Seja educado, cordial e MUITO breve (1 a 2 frases curtas).
+  const systemPrompt = `Você atende os clientes da *TF Tintas* (tintas, materiais de construção, ferragens e acabamentos) pelo WhatsApp. Escreva como uma pessoa de verdade conversando no zap: simpático, natural e direto.
 
-REGRAS ABSOLUTAS:
-- NUNCA diga que não vendemos tintas ou materiais de construção — esse é exatamente o nosso ramo.
-- NUNCA mencione intercâmbio, educação, viagens, idiomas ou qualquer outro segmento.
-- NUNCA envie uma resposta genérica do tipo "Como posso ajudar?" sem fazer a pergunta de triagem pendente.
-- Faça SEMPRE UMA pergunta por vez, na ordem listada em "INFORMAÇÕES PENDENTES".
+SEU PAPEL: você é o primeiro contato (SDR). Não resolve o pedido nem passa preço — sua função é entender rapidinho o que o cliente precisa, coletar as informações pendentes e encaminhar pra um consultor.
+
+JEITO DE FALAR:
+- MUITO curto: 1 frase, no máximo 2 bem curtas. Nada de textão.
+- Tom humano e leve, linguagem simples do dia a dia. Pode usar o nome do cliente de vez em quando (não toda hora).
+- Soe como gente, não como robô: evite "Como posso ajudá-lo?", "Prezado cliente", respostas decoradas e formalidade exagerada.
+- Sem listas, sem bullet, sem repetir saudação se já cumprimentou.
+- Faça UMA pergunta por vez. Não despeje tudo de uma vez.
+- Conduza sempre de volta ao objetivo: descobrir o que o cliente quer e encaminhar.
+
+NUNCA:
+- Diga que não vendemos tintas/material de construção — é exatamente o nosso ramo.
+- Cite outros segmentos (intercâmbio, viagens, idiomas, etc.).
+- Enrole ou prolongue a conversa à toa.
 
 INFORMAÇÕES JÁ CONHECIDAS DO CLIENTE:
 ${knownLines ? `- ${knownLines}` : "- (nenhuma)"}
 
-INFORMAÇÕES PENDENTES (faça uma de cada vez, na ordem):
-${missing.length ? missing.map((m, i) => `${i + 1}. ${m}`).join("\n") : "(nenhuma — pode atender normalmente o pedido do cliente)"}
+INFORMAÇÕES PENDENTES (colete uma de cada vez, nesta ordem):
+${missing.length ? missing.map((m, i) => `${i + 1}. ${m}`).join("\n") : "(nenhuma — já dá pra encaminhar pro consultor)"}
 
-COMO RESPONDER AGORA:
+O QUE FAZER AGORA:
 ${missing.length
-    ? `Cumprimente brevemente pelo nome (apenas se o cliente acabou de mandar saudação) e faça SOMENTE a próxima pergunta pendente da lista acima. Não pule etapas. Não pergunte tudo de uma vez.`
-    : `Responda diretamente à pergunta/necessidade do cliente. Se for pedido de preço, estoque ou orçamento, diga que vai encaminhar para um consultor humano.`}
+    ? `Responda de forma natural ao que o cliente disse e, no mesmo fôlego, faça SÓ a próxima pergunta pendente da lista. Ex.: "Boa! Você prefere atendimento de qual loja?" — curto e humano.`
+    : `Confirme rapidinho que vai chamar um consultor pra continuar. Ex.: "Show, já te conecto com um consultor pra finalizar 👍". Se pedir preço/estoque/orçamento, diga que um consultor humano resolve em seguida.`}
 `;
 
   try {
@@ -248,8 +256,8 @@ ${missing.length
           { role: "system", content: systemPrompt },
           ...history
         ],
-        temperature: 0.2,
-        max_tokens: 200
+        temperature: 0.7,
+        max_tokens: 120
       })
     });
     const data = await response.json();
@@ -462,7 +470,7 @@ serve(async (req) => {
                 console.log(`Client ${cleanPhone} routed to seller ${sellerByCode.name} via code ${candidateCode}`);
                 await sendWhatsAppMessage(
                   cleanPhone,
-                  `Perfeito! Recebemos seu contato. Em instantes um de nossos consultores entrará em contato com você. ✅`,
+                  `Show, já te encaminho pra um consultor continuar com você 👍`,
                   isTest,
                   receivedInstance?.api_url,
                   receivedInstance?.api_token
@@ -564,7 +572,7 @@ serve(async (req) => {
                 const greeting = erpClient 
                   ? `Olá, *${erpClient.nome || erpClient.razao_social}*! 👋`
                   : `Olá! 👋`;
-                const welcomeMsg = `${greeting} Você está falando com a *TF Tintas*.\n\nVocê já possui o *código (ramal)* de um vendedor?\n\n👉 Se *sim*, digite o código agora (ex: 1023).\n👉 Se *não*, responda com *N* para continuar.`;
+                const welcomeMsg = `${greeting} Aqui é da *TF Tintas* 👋\n\nVocê já tem o *código* de algum vendedor nosso? Se tiver, é só mandar (ex: 1023). Se não, responde *N* que eu te direciono.`;
                 await sendWhatsAppMessage(cleanPhone, welcomeMsg, isTest, receivedInstance?.api_url, receivedInstance?.api_token);
               }
             } else if (client.triaging) {
@@ -621,8 +629,8 @@ serve(async (req) => {
                     store_id: storeId,
                   });
                    const msg = storeName
-                     ? `Perfeito! Recebemos sua escolha pela unidade *${storeName}*. Em instantes um de nossos consultores entrará em contato com você. ✅`
-                     : `Entendido! Em instantes um de nossos consultores entrará em contato com você. ✅`;
+                     ? `Boa, anotei a unidade *${storeName}*! Já te conecto com um consultor 👍`
+                     : `Fechou! Já te encaminho pra um consultor 👍`;
                   await sendWhatsAppMessage(cleanPhone, msg, isTest);
                 }
               };
@@ -634,7 +642,7 @@ serve(async (req) => {
                 });
 
               if (!rpcErr && result?.success) {
-                  await sendWhatsAppMessage(cleanPhone, `Perfeito! Recebemos seu contato. Em instantes um de nossos consultores entrará em contato com você. ✅`, isTest);
+                  await sendWhatsAppMessage(cleanPhone, `Show, já te encaminho pra um consultor continuar com você 👍`, isTest);
                 } else {
                   // Fallback: if seller is inactive and has no substitute, distribute to store/general queue
                   await finishWithStore(storeId);
@@ -650,7 +658,7 @@ serve(async (req) => {
                  if (sellerByCode) {
                    await assignToSeller(sellerByCode.id, sellerByCode.name, sellerByCode.store_id);
                  } else {
-                   await sendWhatsAppMessage(cleanPhone, `Não localizei esse código. Verifique e digite novamente, ou responda *N* para continuar sem código.`, isTest);
+                   await sendWhatsAppMessage(cleanPhone, `Hmm, não achei esse código 🤔 Confere e manda de novo, ou responde *N* que eu sigo sem ele.`, isTest);
                  }
                 } else if (lower === 'n' || lower === 'nao' || lower === 'não') {
                    // Move to ask_store: pergunta a REGIÃO com opções específicas
@@ -664,7 +672,7 @@ serve(async (req) => {
                      receivedInstance?.api_token
                    );
                 } else {
-                  await sendWhatsAppMessage(cleanPhone, `Por favor, digite seu *código de vendedor* (ex: 1023) ou responda *N* se não tiver.`, isTest);
+                  await sendWhatsAppMessage(cleanPhone, `É só mandar o *código do vendedor* (ex: 1023), ou *N* se você não tiver 😉`, isTest);
                 }
                 } else if (step === 'ask_store') {
                   const { data: stores } = await supabase.from("stores").select("id, name, city").order("name");
@@ -738,16 +746,16 @@ serve(async (req) => {
                    if (sellerByCode) {
                      await assignToSeller(sellerByCode.id, sellerByCode.name, sellerByCode.store_id || storeId);
                    } else {
-                     await sendWhatsAppMessage(cleanPhone, `Código não encontrado. Digite um código válido ou *N* para o próximo disponível.`, isTest);
+                     await sendWhatsAppMessage(cleanPhone, `Não encontrei esse código 🤔 Manda um válido ou responde *N* que te passo pro próximo disponível.`, isTest);
                    }
                  } else {
-                   await sendWhatsAppMessage(cleanPhone, `Não entendi. Digite o *código* do vendedor (ex: 1023) ou *N* para o próximo disponível.`, isTest);
+                   await sendWhatsAppMessage(cleanPhone, `Não peguei 🤔 Manda o *código* do vendedor (ex: 1023) ou *N* que te passo pro próximo.`, isTest);
                  }
                }
              } else {
                // Unknown step — restart
                await updateClient({ triage_step: 'ask_code' });
-               await sendWhatsAppMessage(cleanPhone, `Olá novamente! Você possui o *código* de um vendedor? Digite o código ou *N* para continuar.`, isTest);
+               await sendWhatsAppMessage(cleanPhone, `Oi de novo! 👋 Tem o *código* de algum vendedor? Manda aqui ou responde *N* pra seguir.`, isTest);
              }
            } else {
             // Update existing client
@@ -768,7 +776,7 @@ serve(async (req) => {
               updateData.store_id = client.store_id || targetStoreId;
 
               const greetingName = client.name && !client.name.startsWith('Cliente ') ? `, *${client.name}*` : '';
-              const msg = `Olá${greetingName}! 👋 Você está falando com a *TF Tintas*.\n\nAntes de continuar, preciso te direcionar para o atendimento certo.\n\nVocê já possui o *código (ramal)* de um vendedor?\n\n👉 Se *sim*, digite o código agora (ex: 1023).\n👉 Se *não*, responda com *N* para continuar.`;
+              const msg = `Oi${greetingName}! 👋 Aqui é da *TF Tintas*.\n\nPra te direcionar certinho: você já tem o *código* de algum vendedor nosso? Se tiver, manda aqui (ex: 1023). Se não, responde *N* 😉`;
               await sendWhatsAppMessage(cleanPhone, msg, isTest);
 
               await supabase.from("clients").update(updateData).eq("id", client.id);
