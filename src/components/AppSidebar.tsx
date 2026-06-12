@@ -119,16 +119,10 @@ export function AppSidebar({ className }: { className?: string }) {
     [role],
   );
   const toolsNav = useMemo(() => {
-    const nav = allToolsNav.filter(
+    return allToolsNav.filter(
       (item) => !item.roles || (role && item.roles.includes(role)),
     );
-    return nav.map((item) => {
-      if (item.url === "/conversas") {
-        return { ...item, badgeKey: "notifications" };
-      }
-      return item;
-    });
-  }, [role, notifications.length]);
+  }, [role]);
 
   const STORAGE_KEY = "crm-sidebar-dismissed";
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
