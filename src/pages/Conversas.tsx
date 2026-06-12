@@ -492,22 +492,21 @@ const mockContactNames: Record<string, string> = {
   useEffect(() => {
     if (selectedPhone && !useMock) {
       const markAsRead = async () => {
-        const unreadCount = messages.filter(
-          (m) => m.phone === selectedPhone && !m.is_from_me && !m.is_read
-        ).length;
-        if (unreadCount > 0) {
-          decrementUnreadWhatsApp(unreadCount);
-        }
-        const { error } = await supabase
-          .from("whatsapp_messages")
-          .update({ is_read: true })
-          .eq("phone", selectedPhone)
-          .eq("is_read", false)
-          .eq("is_from_me", false);
-        
+        // Usa RPC (SECURITY DEFINER) em vez de UPDATE direto: a RLS de
+        // whatsapp_messages bloqueava o update silenciosamente (0 linhas)
+        // para usuários não-admin, fazendo o contador nunca zerar.
+        const { data: affected, error } = await (supabase.rpc as any)(
+          "mark_whatsapp_read",
+          { p_phone: selectedPhone }
+        );
+
         if (error) {
           console.error("Erro ao marcar mensagens como lidas:", error);
         } else {
+          // Desconta do contador o número REAL de linhas marcadas no banco
+          if (typeof affected === "number" && affected > 0) {
+            decrementUnreadWhatsApp(affected);
+          }
           // Atualizar localmente as mensagens para refletir a mudança imediatamente
           setMessages(prev => prev.map(m => 
             (m.phone === selectedPhone && !m.is_from_me) ? { ...m, is_read: true } : m
