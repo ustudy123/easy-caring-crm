@@ -359,27 +359,36 @@ serve(async (req) => {
         const isMessageEvent = event === "ReceivedMessage" || event === "ReceivedCallback" || event === "messages.upsert" || event === "messages" || event === "message" || event === "chats";
 
        if (isMessageEvent) {
-          // Z-API uses 'phone' directly for incoming messages
-           const rawPhone = data.phone || data.wa_chatid || data.sender || data.chatid || data.from || data.data?.key?.remoteJid || "";
+          // uazapi aninha os dados em `message`; Z-API usa o nível de cima.
+          const msg = data.message || data.data || {};
+
+          const rawPhone = data.phone || msg.chatid || msg.sender || data.wa_chatid
+            || data.sender || data.chatid || data.from || data.chat?.id
+            || data.data?.key?.remoteJid || msg.key?.remoteJid || "";
          const cleanPhone = rawPhone.toString()
            .replace("@s.whatsapp.net", "")
            .replace("@c.us", "")
            .replace("@g.us", "")
            .replace(/[^0-9]/g, "");
 
-          // Z-API text is usually in text.message
-           const text = data.text?.message || data.wa_lastMessageTextVote || data.text || data.body || data.message?.conversation || "[mensagem sem texto]";
-          const messageId = data.messageId || data.messageid || data.id
-            || data.key?.id || data.message?.key?.id || data.data?.key?.id
-            || (data.phone && data.momment ? `${cleanPhone}-${data.momment}` : null)
-            || crypto.randomUUID();
-          const isFromMe = data.fromMe || false;
-           const isGroup = data.isGroup || rawPhone.includes("-") || false;
+          // Texto: uazapi usa message.text/content; Z-API usa text.message
+          const rawText = data.text?.message || msg.text || msg.content || msg.caption
+            || msg.body || msg.conversation || data.wa_lastMessageTextVote || data.text
+            || data.body || data.message?.conversation || "";
+          const text = (typeof rawText === "string" ? rawText : (rawText?.message || rawText?.text || "")) || "[mensagem sem texto]";
 
-          // Z-API uses ISO strings or timestamps
-           const rawTs = data.waitingMessage || data.momment || Date.now();
+          const messageId = data.messageId || data.messageid || msg.messageid || msg.id || data.id
+            || data.key?.id || msg.key?.id || data.data?.key?.id
+            || (cleanPhone && (msg.messageTimestamp || data.momment) ? `${cleanPhone}-${msg.messageTimestamp || data.momment}` : null)
+            || crypto.randomUUID();
+          const isFromMe = data.fromMe || msg.fromMe || false;
+           const isGroup = data.isGroup || msg.isGroup || msg.isgroup
+             || (rawPhone || "").toString().includes("@g.us") || (rawPhone || "").toString().includes("-") || false;
+
+          // Timestamp: uazapi usa messageTimestamp (segundos); Z-API ISO/ms
+           const rawTs = msg.messageTimestamp || data.waitingMessage || data.momment || Date.now();
           const tsMs = typeof rawTs === 'string' ? new Date(rawTs).getTime() : (rawTs > 1e12 ? rawTs : rawTs * 1000);
-           const senderName = data.senderName || data.name || data.pushName || `Cliente ${cleanPhone}`;
+           const senderName = msg.senderName || data.senderName || data.name || msg.pushName || data.pushName || `Cliente ${cleanPhone}`;
        const isTest = body.test_mode === true;
 
          console.log(`Parsed → phone: ${cleanPhone} | fromMe: ${isFromMe} | isGroup: ${isGroup} | text: "${text}"`);
