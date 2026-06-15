@@ -131,13 +131,18 @@ function getApiConfig(inst?: { provider?: string; api_url?: string | null; api_t
         return null;
       }
       if (data?.found && data.client) {
-        // Adapta o formato retornado pelo citel-get-client para o esperado pelo webhook
+        // Adapta o formato do citel-get-client e PRESERVA todos os campos úteis
         return {
           nome: data.client.name,
           email: data.client.email,
           endereco: data.client.address,
           cidade: data.client.city,
-          id: data.client.erpId
+          id: data.client.erpId,
+          cpfCnpj: data.client.cpfCnpj || null,
+          cep: data.client.zipCode || null,
+          limiteCredito: data.client.creditLimit || null,
+          ultimaCompra: data.client.lastPurchase || null,
+          strategy: data.strategy || null,
         };
       }
     } catch (e) {
@@ -590,7 +595,7 @@ serve(async (req) => {
 
             if (!client) {
               // 1. First message from a new client: Try to identify them via ERP Citel first
-              const erpClient = await withTimeout(searchCitelClient(cleanPhone, supabase), 8000, null);
+              const erpClient = await withTimeout(searchCitelClient(cleanPhone, supabase), 12000, null);
 
               const clientData = {
                 name: erpClient?.nome || erpClient?.razao_social || senderName,
@@ -598,7 +603,7 @@ serve(async (req) => {
                 email: erpClient?.email || null,
                 address: erpClient?.endereco || erpClient?.logradouro || null,
                 city: erpClient?.cidade || null,
-                total_purchases: erpClient?.total_compras || erpClient?.valor_total || 0,
+                erp_id: erpClient?.id || null,
                 status: 'novo',
                 triaging: true,
                 triage_step: 'ask_code',
@@ -606,7 +611,15 @@ serve(async (req) => {
                 last_message_from_client_at: new Date().toISOString(),
                 store_id: targetStoreId,
                 received_on_instance_id: receivedInstanceId,
-                notes: erpClient ? `Cliente identificado via ERP Citel. ID: ${erpClient.id || 'N/A'}` : null,
+                notes: erpClient
+                  ? [
+                      `Cliente identificado via ERP Citel (ID: ${erpClient.id || 'N/A'}).`,
+                      erpClient.cpfCnpj ? `CPF/CNPJ: ${erpClient.cpfCnpj}` : null,
+                      erpClient.cep ? `CEP: ${erpClient.cep}` : null,
+                      erpClient.ultimaCompra ? `Última compra: ${erpClient.ultimaCompra}` : null,
+                      erpClient.limiteCredito ? `Limite de crédito: ${erpClient.limiteCredito}` : null,
+                    ].filter(Boolean).join(" | ")
+                  : null,
                 tags: erpClient ? ['erp_citel'] : []
               };
 
