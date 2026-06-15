@@ -9,7 +9,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
  import { 
     Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
     AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
-    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle, XCircle, Download
+    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle, XCircle, Download, LayoutGrid, List
   } from "lucide-react";
  import { getDisplayClientName, isGenericName } from "@/lib/clientUtils";
 import { Button } from "@/components/ui/button";
@@ -135,6 +135,7 @@ export default function Kanban() {
    };
 
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [transferringLead, setTransferringLead] = useState<Lead | null>(null);
@@ -402,6 +403,20 @@ export default function Kanban() {
                 )}
               </PopoverContent>
             </Popover>
+            <div className="inline-flex rounded-xl border border-border/60 bg-card p-0.5 shrink-0">
+              <button
+                onClick={() => setViewMode("kanban")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${viewMode === "kanban" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" /> Kanban
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${viewMode === "list" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <List className="h-3.5 w-3.5" /> Lista
+              </button>
+            </div>
             <Button size="sm" variant="outline" className="rounded-xl border-kanban-objections/40 text-kanban-objections hover:bg-kanban-objections/10"
               onClick={() => navigate("/suporte-orcamento")}>
               <FileText className="h-3.5 w-3.5 mr-1" /> Suporte Orçamento
@@ -413,6 +428,7 @@ export default function Kanban() {
         </div>
 
         {/* Board Navigation for Mobile */}
+        {viewMode === "kanban" && (<>
         <div className="flex sm:hidden gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3">
           {KANBAN_STAGES.map((stage) => (
             <button
@@ -715,6 +731,73 @@ export default function Kanban() {
              </div>
            </div>
          </DragDropContext>
+         </>)}
+
+         {/* Visualização em Lista */}
+         {viewMode === "list" && (
+           <div className="rounded-2xl border border-border/50 bg-card overflow-hidden">
+             {filteredLeads.length === 0 ? (
+               <div className="py-16 text-center text-sm text-muted-foreground">Nenhum lead encontrado.</div>
+             ) : (
+               <div className="overflow-x-auto">
+                 <table className="w-full text-sm">
+                   <thead>
+                     <tr className="border-b border-border/50 bg-muted/30 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                       <th className="px-4 py-2.5 font-semibold">Cliente</th>
+                       <th className="px-4 py-2.5 font-semibold">Etapa</th>
+                       <th className="px-4 py-2.5 font-semibold text-right">Valor</th>
+                       <th className="px-4 py-2.5 font-semibold">Vendedor</th>
+                       <th className="px-4 py-2.5 font-semibold hidden md:table-cell">Loja</th>
+                       <th className="px-4 py-2.5 font-semibold hidden lg:table-cell">Atualizado</th>
+                       <th className="px-4 py-2.5 font-semibold text-right"></th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {[...filteredLeads]
+                       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+                       .map((lead) => {
+                         const stage = KANBAN_STAGES.find((s) => s.key === lead.stage);
+                         const seller = sellers.find((s) => s.id === lead.assignedTo);
+                         const urgency = getUrgencyLevel(lead);
+                         const dotClass = urgency === "critical" ? "bg-red-500" : urgency === "warning" ? "bg-yellow-500" : "bg-emerald-500";
+                         return (
+                           <tr
+                             key={lead.id}
+                             onClick={() => setEditingLead(lead)}
+                             className="border-b border-border/30 last:border-0 hover:bg-muted/40 cursor-pointer transition-colors"
+                           >
+                             <td className="px-4 py-3">
+                               <div className="flex items-center gap-2">
+                                 <span className={`h-2 w-2 rounded-full shrink-0 ${dotClass}`} />
+                                 <div className="min-w-0">
+                                   <p className="font-medium text-foreground truncate">{lead.clientName}</p>
+                                   <p className="text-[11px] text-muted-foreground truncate">{lead.clientPhone}</p>
+                                 </div>
+                               </div>
+                             </td>
+                             <td className="px-4 py-3">
+                               <Badge variant="secondary" className="text-[10px] font-bold rounded-full border-0 bg-foreground/8">{stage?.label || lead.stage}</Badge>
+                             </td>
+                             <td className="px-4 py-3 text-right font-semibold tabular-nums">
+                               {lead.value ? `R$ ${lead.value.toLocaleString("pt-BR")}` : "—"}
+                             </td>
+                             <td className="px-4 py-3 text-muted-foreground truncate">{seller?.name || "—"}</td>
+                             <td className="px-4 py-3 text-muted-foreground hidden md:table-cell truncate">{lead.storeName || "—"}</td>
+                             <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell whitespace-nowrap">
+                               {new Date(lead.updatedAt).toLocaleDateString("pt-BR")}
+                             </td>
+                             <td className="px-4 py-3 text-right">
+                               <Pencil className="h-3.5 w-3.5 text-muted-foreground inline" />
+                             </td>
+                           </tr>
+                         );
+                       })}
+                   </tbody>
+                 </table>
+               </div>
+             )}
+           </div>
+         )}
       </div>
       <NewLeadForm open={showNewLead} onOpenChange={setShowNewLead} onSubmit={addLead} />
       <EditLeadForm lead={editingLead} open={!!editingLead} onOpenChange={(open) => !open && setEditingLead(null)} onSubmit={updateLead} onDelete={deleteLead} />
