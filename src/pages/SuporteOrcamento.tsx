@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
@@ -48,6 +49,7 @@ export default function SuporteOrcamento() {
   const [erpResults, setErpResults] = useState<any[]>([]);
   const [searchingErp, setSearchingErp] = useState(false);
   const [selectedErpClient, setSelectedErpClient] = useState<any | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -446,7 +448,8 @@ export default function SuporteOrcamento() {
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
                                   {...provided.dragHandleProps}
-                                  className={`shadow-sm hover:shadow-md transition-all ${snapshot.isDragging ? "rotate-2 shadow-xl ring-2 ring-primary/20" : ""}`}
+                                  onClick={() => setSelectedRequest(req)}
+                                  className={`shadow-sm hover:shadow-md hover:ring-1 hover:ring-brand-500/30 transition-all cursor-pointer select-none ${snapshot.isDragging ? "rotate-2 shadow-xl ring-2 ring-primary/20" : ""}`}
                                 >
                                   <CardContent className="p-3 space-y-2">
                                     <div className="flex justify-between items-start gap-2">
@@ -477,15 +480,6 @@ export default function SuporteOrcamento() {
                                           PDF
                                         </Button>
                                       )}
-                                      <Button 
-                                        variant="ghost" 
-                                        className="h-6 px-2 text-[9px] ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onClick={() => {
-                                          toast.info("Detalhes em breve...");
-                                        }}
-                                      >
-                                        Ver mais
-                                      </Button>
                                     </div>
                                   </CardContent>
                                 </Card>
@@ -502,6 +496,91 @@ export default function SuporteOrcamento() {
             </div>
           </DragDropContext>
         )}
+
+        {/* Detalhes da solicitação */}
+        <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
+          <DialogContent className="rounded-2xl max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {selectedRequest?.request_type === "orcamento"
+                  ? <FileText className="h-5 w-5 text-brand-500" />
+                  : <DollarSign className="h-5 w-5 text-kanban-recommendation" />}
+                {selectedRequest?.client_name}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedRequest?.request_type === "orcamento" ? "Solicitação de orçamento" : "Negociação / precificação especial"}
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedRequest && (
+              <div className="space-y-3 py-1 text-sm">
+                <div className="rounded-xl bg-muted/40 p-3 space-y-2">
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Vendedor</span>
+                    <span className="font-medium text-right">{selectedRequest.vendedor_name}</span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Data</span>
+                    <span className="font-medium">{new Date(selectedRequest.created_at).toLocaleDateString("pt-BR")}</span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Status</span>
+                    <Badge variant="outline" className="text-[10px] uppercase">
+                      {selectedRequest.status === "pendente" ? "Pendente" : selectedRequest.status === "em_analise" ? "Em análise" : "Concluído"}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Detalhes</span>
+                  <p className="rounded-xl border border-border/40 p-3 whitespace-pre-wrap">{selectedRequest.notes || "—"}</p>
+                </div>
+
+                {selectedRequest.pdf_url && (
+                  <Button
+                    variant="secondary"
+                    className="w-full rounded-xl bg-brand-500/10 text-brand-500 hover:bg-brand-500/20 border-none"
+                    onClick={async () => {
+                      const { data } = await supabase.storage.from("pricing_attachments").createSignedUrl(selectedRequest.pdf_url!, 3600);
+                      if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                    }}
+                  >
+                    <Paperclip className="h-4 w-4 mr-1" /> Abrir anexo (PDF)
+                  </Button>
+                )}
+
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-xs text-muted-foreground">Mover para</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { key: "pendente", label: "Pendente" },
+                      { key: "em_analise", label: "Em análise" },
+                      { key: "concluido", label: "Concluído" },
+                    ] as const).map((s) => (
+                      <Button
+                        key={s.key}
+                        size="sm"
+                        variant={selectedRequest.status === s.key ? "default" : "outline"}
+                        className="rounded-xl text-xs"
+                        disabled={selectedRequest.status === s.key}
+                        onClick={async () => {
+                          await updateRequestStatus(selectedRequest.id, s.key);
+                          setSelectedRequest({ ...selectedRequest, status: s.key });
+                        }}
+                      >
+                        {s.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" className="rounded-xl" onClick={() => setSelectedRequest(null)}>Fechar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
