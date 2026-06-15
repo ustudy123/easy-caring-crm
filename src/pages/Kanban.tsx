@@ -136,6 +136,9 @@ export default function Kanban() {
 
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  const [pricingLead, setPricingLead] = useState<Lead | null>(null);
+  const [pricingNotes, setPricingNotes] = useState("");
+  const [submittingPricing, setSubmittingPricing] = useState(false);
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [transferringLead, setTransferringLead] = useState<Lead | null>(null);
@@ -246,29 +249,39 @@ export default function Kanban() {
     updateLead({ ...transferringLead, assignedTo: sellerId, storeId: targetSeller?.store_id || transferringLead.storeId });
   };
 
-  const handleRequestPricing = async (lead: Lead) => {
-    const { error: updateError } = await supabase
-      .from("leads")
-      .update({ stage: 'precificacao_especial' })
-      .eq("id", lead.id);
+  const handleRequestPricing = (lead: Lead) => {
+    setPricingNotes("");
+    setPricingLead(lead);
+  };
 
-    if (updateError) {
-      toast({ title: "Erro", description: updateError.message, variant: "destructive" });
-      return;
+  const submitPricing = async () => {
+    if (!pricingLead) return;
+    setSubmittingPricing(true);
+    try {
+      // Garante que o lead esteja na etapa de precificação especial
+      if (pricingLead.stage !== 'precificacao_especial') {
+        await supabase.from("leads").update({ stage: 'precificacao_especial' }).eq("id", pricingLead.id);
+        updateLead({ ...pricingLead, stage: 'precificacao_especial' });
+      }
+
+      const { error } = await supabase.from("pricing_support_requests").insert({
+        request_type: 'precificacao_especial',
+        client_name: pricingLead.clientName,
+        lead_id: pricingLead.id,
+        seller_id: pricingLead.assignedTo || userSeller?.id || null,
+        notes: pricingNotes || null,
+        status: 'pendente',
+      });
+      if (error) throw error;
+
+      toast({ title: "Precificação especial solicitada!", description: "A solicitação foi registrada para análise." });
+      setPricingLead(null);
+      setPricingNotes("");
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    } finally {
+      setSubmittingPricing(false);
     }
-
-    await supabase.from("pricing_support_requests").insert({
-      lead_id: lead.id,
-      seller_id: userSeller?.id,
-      status: 'pending'
-    });
-
-    toast({ 
-      title: "Solicitação enviada!", 
-      description: "O André foi notificado para análise de precificação especial.",
-    });
-    
-    updateLead({ ...lead, stage: 'precificacao_especial' });
   };
 
   const moveToNextStage = (lead: Lead) => {
@@ -346,6 +359,15 @@ export default function Kanban() {
     supabase.from("leads").update({ stage: newStage }).eq("id", result.draggableId).then(({ error }) => {
       if (error) console.error("Error updating lead stage:", error);
     });
+
+    // Ao entrar na etapa de precificação especial, abre o pop-up automaticamente
+    if (newStage === 'precificacao_especial') {
+      const movedLead = leads.find((l) => l.id === result.draggableId);
+      if (movedLead) {
+        setPricingNotes("");
+        setPricingLead({ ...movedLead, stage: 'precificacao_especial' });
+      }
+    }
   };
 
   return (
@@ -580,6 +602,15 @@ export default function Kanban() {
                                                   </span>
                                                 </div>
                                               )}
+                                              {lead.stage === 'precificacao_especial' && (
+                                                <button
+                                                  onClick={(e) => { e.stopPropagation(); handleRequestPricing(lead); }}
+                                                  className="inline-flex items-center gap-1 rounded-lg bg-kanban-pricing px-2.5 py-1 text-[11px] font-bold text-white shadow-sm hover:opacity-90 transition-opacity"
+                                                  title="Abrir precificação especial"
+                                                >
+                                                  <Zap className="h-3 w-3" /> Precificar
+                                                </button>
+                                              )}
                                                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
                                                   {lead.stage !== 'precificacao_especial' && lead.stage !== 'fechamento' && lead.stage !== 'pos_venda' && (
                                                     <button
@@ -806,6 +837,57 @@ export default function Kanban() {
         onOpenChange={(open) => !open && setPendingDeleteId(null)}
         onConfirm={() => { if (pendingDeleteId) { deleteLead(pendingDeleteId); setPendingDeleteId(null); } }}
       />
+
+      {/* Pop-up de Precificação Especial */}
+      <Dialog open={!!pricingLead} onOpenChange={(open) => { if (!open) { setPricingLead(null); setPricingNotes(""); } }}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-kanban-pricing" /> Precificação Especial
+            </DialogTitle>
+            <DialogDescription>
+              Solicite a análise de precificação para <strong>{pricingLead?.clientName}</strong> sem sair do Kanban.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="rounded-xl bg-muted/40 p-3 text-sm space-y-1">
+              <div className="flex justify-between gap-2">
+                <span className="text-muted-foreground">Cliente</span>
+                <span className="font-medium">{pricingLead?.clientName}</span>
+              </div>
+              {pricingLead?.clientPhone && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Telefone</span>
+                  <span className="font-medium">{pricingLead.clientPhone}</span>
+                </div>
+              )}
+              <div className="flex justify-between gap-2">
+                <span className="text-muted-foreground">Valor atual</span>
+                <span className="font-medium tabular-nums">{pricingLead?.value ? `R$ ${pricingLead.value.toLocaleString("pt-BR")}` : "—"}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Detalhes da precificação / desconto solicitado</Label>
+              <Textarea
+                value={pricingNotes}
+                onChange={(e) => setPricingNotes(e.target.value)}
+                placeholder="Ex.: cliente pediu 12% de desconto na linha premium para fechar o pedido..."
+                className="rounded-xl min-h-[100px]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" className="rounded-xl" onClick={() => { setPricingLead(null); setPricingNotes(""); }}>Cancelar</Button>
+            <Button className="rounded-xl bg-kanban-pricing hover:opacity-90" onClick={submitPricing} disabled={submittingPricing}>
+              {submittingPricing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Zap className="h-4 w-4 mr-1" />}
+              Solicitar precificação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!transferringLead} onOpenChange={(open) => !open && setTransferringLead(null)}>
         <DialogContent className="rounded-2xl">
