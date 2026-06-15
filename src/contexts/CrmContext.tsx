@@ -140,7 +140,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       .channel("follow-ups-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "follow_ups" }, (payload) => {
         if (payload.eventType === "INSERT") {
-          setFollowUps((prev) => [mapFollowUpFromDb(payload.new), ...prev]);
+          setFollowUps((prev) => prev.some((f) => f.id === payload.new.id) ? prev : [mapFollowUpFromDb(payload.new), ...prev]);
         } else if (payload.eventType === "UPDATE") {
           setFollowUps((prev) => prev.map((f) => f.id === payload.new.id ? mapFollowUpFromDb(payload.new) : f));
         } else if (payload.eventType === "DELETE") {
