@@ -10,6 +10,8 @@ import { Lead, KanbanStage } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
 import { isValidPhone, isValidEmail } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Database } from "lucide-react";
 
 interface NewLeadFormProps {
   open: boolean;
@@ -26,6 +28,36 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
      clientType: "", companyWorkSite: "", interestProducts: "", storeName: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [searchingErp, setSearchingErp] = useState(false);
+
+  const buscarNoErp = async () => {
+    const phone = form.clientPhone.replace(/\D/g, "");
+    if (phone.length < 10) {
+      toast({ title: "Telefone incompleto", description: "Preencha o telefone antes de buscar no ERP.", variant: "destructive" });
+      return;
+    }
+    setSearchingErp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("citel-get-client", { body: { phone } });
+      if (error) throw error;
+      if (data?.found && data.client) {
+        const c = data.client;
+        setForm((p) => ({
+          ...p,
+          clientName: c.name || p.clientName,
+          clientEmail: c.email || p.clientEmail,
+          notes: [p.notes, c.cpfCnpj ? `CPF/CNPJ: ${c.cpfCnpj}` : null, c.address ? `Endereço: ${c.address}` : null].filter(Boolean).join("\n"),
+        }));
+        toast({ title: "Cliente encontrado no ERP!", description: `${c.name} — dados preenchidos.` });
+      } else {
+        toast({ title: "Não encontrado", description: "Nenhum cliente com esse telefone no ERP." });
+      }
+    } catch (e: any) {
+      toast({ title: "Erro na busca ERP", description: e.message, variant: "destructive" });
+    } finally {
+      setSearchingErp(false);
+    }
+  };
 
   const update = (field: string, value: string) => {
     setForm((p) => ({ ...p, [field]: value }));
@@ -112,6 +144,17 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
               <Label>Telefone *</Label>
               <MaskedInput mask="phone" value={form.clientPhone} onValueChange={(_, masked) => update("clientPhone", masked)} placeholder="(11) 99999-0000" />
               {errors.clientPhone && <p className="text-xs text-destructive">{errors.clientPhone}</p>}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={buscarNoErp}
+                disabled={searchingErp}
+                className="mt-1.5 h-8 text-xs gap-1.5 rounded-lg border-brand-500/40 text-brand-500 hover:bg-brand-500/10"
+              >
+                {searchingErp ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
+                Trazer dados do ERP
+              </Button>
             </div>
             <div className="space-y-1.5">
               <Label>E-mail</Label>
