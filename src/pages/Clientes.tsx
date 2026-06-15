@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-  import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2, TrendingUp, RefreshCw, Loader2, Info, Download } from "lucide-react";
+  import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2, TrendingUp, RefreshCw, Loader2, Info, Download, CreditCard } from "lucide-react";
  import { getDisplayClientName, isGenericName } from "@/lib/clientUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
@@ -28,6 +28,8 @@ function mapClientFromDb(row: any): Client {
     email: row.email || undefined,
     address: row.address || undefined,
     city: row.city || undefined,
+    cpfCnpj: row.cpf_cnpj || undefined,
+    zipCode: row.zip_code || undefined,
     tags: row.tags || [],
     totalPurchases: Number(row.total_purchases),
     lastContact: row.last_contact || undefined,
@@ -128,6 +130,7 @@ export default function Clientes() {
         { key: "name", label: "Nome" },
         { key: "phone", label: "Telefone" },
         { key: "email", label: "E-mail" },
+        { key: "cpfCnpj", label: "CPF/CNPJ" },
         { key: "city", label: "Cidade" },
         { key: "address", label: "Endereço" },
         { key: "totalPurchases", label: "Total Compras" },
@@ -233,6 +236,11 @@ export default function Clientes() {
                     {client.email && (
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Mail className="h-3 w-3 shrink-0" /> <span className="truncate">{client.email}</span>
+                      </div>
+                    )}
+                    {client.cpfCnpj && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <CreditCard className="h-3 w-3 shrink-0" /> <span className="truncate">{client.cpfCnpj}</span>
                       </div>
                     )}
                     {client.city && (

@@ -30,6 +30,8 @@ export interface Client {
   email?: string;
   address?: string;
   city?: string;
+  cpfCnpj?: string;
+  zipCode?: string;
   tags: string[];
   totalPurchases: number;
   lastContact?: string;

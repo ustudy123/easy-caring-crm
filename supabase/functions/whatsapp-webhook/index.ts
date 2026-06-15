@@ -604,6 +604,8 @@ serve(async (req) => {
                 address: erpClient?.endereco || erpClient?.logradouro || null,
                 city: erpClient?.cidade || null,
                 erp_id: erpClient?.id || null,
+                cpf_cnpj: erpClient?.cpfCnpj || null,
+                zip_code: erpClient?.cep || null,
                 status: 'novo',
                 triaging: true,
                 triage_step: 'ask_code',
