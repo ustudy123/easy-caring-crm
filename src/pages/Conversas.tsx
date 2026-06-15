@@ -172,6 +172,7 @@ const mockContactNames: Record<string, string> = {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [useMock, setUseMock] = useState(false);
   const [contactNames, setContactNames] = useState<Record<string, string>>({});
+  const [contactPhotos, setContactPhotos] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
  const [isRecording, setIsRecording] = useState(false);
  const [recordingDuration, setRecordingDuration] = useState(0);
@@ -525,8 +526,15 @@ const mockContactNames: Record<string, string> = {
     const phones = conversations.map(c => c.phone);
     if (phones.length === 0) return;
      const names: Record<string, string> = {};
-     clients.forEach(c => { if (phones.includes(c.phone)) names[c.phone] = c.name; });
+     const photos: Record<string, string> = {};
+     clients.forEach(c => {
+       if (phones.includes(c.phone)) {
+         names[c.phone] = c.name;
+         if (c.profile_pic_url) photos[c.phone] = c.profile_pic_url;
+       }
+     });
      setContactNames(names);
+     setContactPhotos(photos);
   }, [useMock, conversations.length]);
 
    const chatMessages = useMemo(() => selectedConversation ? selectedConversation.messages : [], [selectedConversation]);
@@ -1107,8 +1115,16 @@ const mockContactNames: Record<string, string> = {
                         )}
                       >
                         {/* Avatar */}
-                        <div className="flex h-[49px] w-[49px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-50 text-brand-500 ring-1 ring-brand-500/10">
-                          {contactNames[conv.phone] ? (
+                        <div className="flex h-[49px] w-[49px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-brand-100 to-brand-50 text-brand-500 ring-1 ring-brand-500/10">
+                          {contactPhotos[conv.phone] ? (
+                            <img
+                              src={contactPhotos[conv.phone]}
+                              alt={contactNames[conv.phone] || formatPhone(conv.phone)}
+                              className="h-full w-full object-cover"
+                              referrerPolicy="no-referrer"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          ) : contactNames[conv.phone] ? (
                             <span className="text-sm font-semibold text-brand-500">{getInitials(contactNames[conv.phone])}</span>
                           ) : (
                             <User className="h-6 w-6" />
@@ -1223,8 +1239,16 @@ const mockContactNames: Record<string, string> = {
                 </Button>
                 {!isSearchingInChat ? (
                   <>
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                      {contactName ? (
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-muted-foreground">
+                      {selectedPhone && contactPhotos[selectedPhone] ? (
+                        <img
+                          src={contactPhotos[selectedPhone]}
+                          alt={contactName || formatPhone(selectedConversation.phone)}
+                          className="h-full w-full object-cover"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : contactName ? (
                         <span className="text-sm font-semibold text-white">{getInitials(contactName)}</span>
                       ) : (
                         <User className="h-5 w-5 text-white" />

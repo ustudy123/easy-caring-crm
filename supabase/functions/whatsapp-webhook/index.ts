@@ -424,6 +424,9 @@ serve(async (req) => {
            const rawTs = msg.messageTimestamp || data.waitingMessage || data.momment || Date.now();
           const tsMs = typeof rawTs === 'string' ? new Date(rawTs).getTime() : (rawTs > 1e12 ? rawTs : rawTs * 1000);
            const senderName = msg.senderName || data.senderName || data.name || msg.pushName || data.pushName || `Cliente ${cleanPhone}`;
+           // Foto de perfil do WhatsApp (uazapi: geralmente em chat.image/imagePreview)
+           const profilePic = data.chat?.image || data.chat?.imgUrl || data.chat?.imagePreview
+             || msg.senderPhoto || msg.photo || data.senderPhoto || data.photo || data.profilePicUrl || null;
        const isTest = body.test_mode === true;
 
          console.log(`Parsed → phone: ${cleanPhone} | fromMe: ${isFromMe} | isGroup: ${isGroup} | text: "${text}"`);
@@ -606,6 +609,7 @@ serve(async (req) => {
                 erp_id: erpClient?.id || null,
                 cpf_cnpj: erpClient?.cpfCnpj || null,
                 zip_code: erpClient?.cep || null,
+                profile_pic_url: profilePic || null,
                 status: 'novo',
                 triaging: true,
                 triage_step: 'ask_code',
@@ -823,6 +827,7 @@ serve(async (req) => {
               last_message_from_client_at: new Date().toISOString(),
               alert_status: 'none' // Reset alerts when new message arrives
             };
+            if (profilePic) updateData.profile_pic_url = profilePic; // mantém a foto fresca
 
             // Rule 1: Conversation must always have a current responsible.
             // Rule 6: If returning and unassigned, try to distribute or restart triage.
