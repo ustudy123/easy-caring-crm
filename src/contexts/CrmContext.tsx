@@ -125,7 +125,9 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       .channel("leads-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, (payload) => {
         if (payload.eventType === "INSERT") {
-          setLeads((prev) => [mapLeadFromDb(payload.new), ...prev]);
+          // Evita duplicação: o addLead já adiciona o lead de forma otimista,
+          // então só insere via realtime se ainda não estiver na lista.
+          setLeads((prev) => prev.some((l) => l.id === payload.new.id) ? prev : [mapLeadFromDb(payload.new), ...prev]);
         } else if (payload.eventType === "UPDATE") {
           setLeads((prev) => prev.map((l) => l.id === payload.new.id ? mapLeadFromDb(payload.new) : l));
         } else if (payload.eventType === "DELETE") {
