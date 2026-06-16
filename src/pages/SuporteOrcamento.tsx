@@ -134,7 +134,9 @@ export default function SuporteOrcamento() {
           notes: description,
           pdf_url: pdfUrl,
           pdf_name: pdfFile?.name,
-          seller_id: sellerId,
+          // Só grava seller_id se o usuário atual for um vendedor real (evita
+          // violar a FK quando o usuário é admin/suporte sem registro em sellers).
+          seller_id: sellers.some((s) => s.id === sellerId) ? sellerId : null,
           status: "pendente"
         });
 
