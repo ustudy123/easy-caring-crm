@@ -1131,7 +1131,8 @@ function UsersTab() {
                       <SelectItem value="vendedor">Vendedor</SelectItem>
                       <SelectItem value="gerente">Gerente</SelectItem>
                       <SelectItem value="suporte">Suporte</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
+                      {/* Admin não pode ser atribuído livremente; só aparece se o usuário já for admin */}
+                      {editRole === "admin" && <SelectItem value="admin">Admin</SelectItem>}
                     </SelectContent>
                   </Select>
                 </div>
