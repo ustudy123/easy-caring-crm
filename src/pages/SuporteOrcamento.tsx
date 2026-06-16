@@ -702,20 +702,20 @@ export default function SuporteOrcamento() {
                       placeholder="Escreva a resposta para o vendedor (ex.: orçamento aprovado, condições, observações)..."
                       className="min-h-[70px] text-sm"
                     />
-                    <div className="flex items-center gap-2">
-                      <label className="flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <label className="flex-1 min-w-0">
                         <input
                           type="file"
                           className="hidden"
                           onChange={(e) => setResponseFile(e.target.files?.[0] || null)}
                         />
-                        <span className="flex items-center gap-1.5 cursor-pointer text-xs rounded-lg border border-dashed border-border px-3 py-2 hover:bg-muted/50 truncate">
+                        <span className="flex items-center gap-1.5 cursor-pointer text-xs rounded-lg border border-dashed border-border px-3 py-2 hover:bg-muted/50 overflow-hidden">
                           <Paperclip className="h-3.5 w-3.5 shrink-0" />
-                          {responseFile ? responseFile.name : "Anexar arquivo (opcional)"}
+                          <span className="truncate">{responseFile ? responseFile.name : "Anexar arquivo (opcional)"}</span>
                         </span>
                       </label>
                       {responseFile && (
-                        <Button variant="ghost" size="sm" className="h-8 text-destructive" onClick={() => setResponseFile(null)}>Remover</Button>
+                        <Button variant="ghost" size="sm" className="h-8 text-destructive shrink-0" onClick={() => setResponseFile(null)}>Remover</Button>
                       )}
                     </div>
                     <Button
