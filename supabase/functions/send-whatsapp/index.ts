@@ -185,11 +185,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Sending message via Z-API to ${cleanPhone}...`);
-
-    const clientToken = customApiToken || Deno.env.get("ZAPI_CLIENT_TOKEN");
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (clientToken && !whatsappApiUrl.includes(clientToken)) headers["Client-Token"] = clientToken;
+    console.log(`Enviando mensagem (${config.provider}) para ${cleanPhone} via ${endpoint}...`);
 
     const apiResponse = await fetch(endpoint, {
       method: "POST",
