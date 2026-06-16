@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-   import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle, ShieldAlert, Forward } from "lucide-react";
+   import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle, ShieldAlert, Forward, ListFilter, Check } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
@@ -396,6 +397,14 @@ const mockContactNames: Record<string, string> = {
        });
        return c;
      }, [conversations, phoneStage]);
+
+     const filterOptions = [
+       { key: "all", label: "Todas" },
+       ...KANBAN_STAGES.map((s) => ({ key: s.key as string, label: s.label })),
+       { key: "sem_resposta", label: "Sem resposta" },
+       { key: "sem_lead", label: "Sem lead" },
+     ];
+     const activeFilterLabel = filterOptions.find((f) => f.key === stageFilter)?.label || "Filtrar";
 
      const filteredConversations = useMemo(() => {
        let filtered = conversations.filter((c) => {
@@ -1045,32 +1054,36 @@ const mockContactNames: Record<string, string> = {
               </div>
             </div>
 
-            {/* Filtros por etapa do Kanban */}
-            <div className="flex flex-wrap gap-1.5 px-2 pb-2">
-              {[
-                { key: "all", label: "Todas" },
-                ...KANBAN_STAGES.map((s) => ({ key: s.key as string, label: s.label })),
-                { key: "sem_resposta", label: "Sem resposta" },
-                { key: "sem_lead", label: "Sem lead" },
-              ].map((f) => {
-                const count = stageCounts[f.key] || 0;
-                const active = stageFilter === f.key;
-                return (
-                  <button
-                    key={f.key}
-                    onClick={() => setStageFilter(f.key)}
-                    className={cn(
-                      "flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors shrink-0",
-                      active ? "bg-brand-500 text-white" : "bg-muted/60 text-muted-foreground hover:bg-muted"
+            {/* Filtro por etapa do Kanban */}
+            <div className="px-2 pb-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-full text-xs">
+                    <ListFilter className="h-3.5 w-3.5" />
+                    {stageFilter === "all" ? "Filtrar por etapa" : activeFilterLabel}
+                    {stageFilter !== "all" && (
+                      <span className="rounded-full bg-brand-500/15 text-brand-500 px-1.5 text-[10px] font-bold">{stageCounts[stageFilter] || 0}</span>
                     )}
-                  >
-                    {f.label}
-                    {count > 0 && (
-                      <span className={cn("rounded-full px-1.5 text-[10px] font-bold", active ? "bg-white/25" : "bg-foreground/10")}>{count}</span>
-                    )}
-                  </button>
-                );
-              })}
+                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 max-h-[60vh] overflow-y-auto">
+                  {filterOptions.map((f) => (
+                    <DropdownMenuItem key={f.key} onClick={() => setStageFilter(f.key)} className="flex items-center justify-between gap-2 cursor-pointer">
+                      <span className="flex items-center gap-1.5">
+                        {stageFilter === f.key && <Check className="h-3.5 w-3.5 text-brand-500" />}
+                        <span className={stageFilter === f.key ? "font-semibold text-brand-500" : ""}>{f.label}</span>
+                      </span>
+                      <span className="text-xs text-muted-foreground tabular-nums">{stageCounts[f.key] || 0}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {stageFilter !== "all" && (
+                <button onClick={() => setStageFilter("all")} className="ml-2 text-xs text-muted-foreground hover:text-foreground underline">
+                  limpar
+                </button>
+              )}
             </div>
 
             {(activeTab === 'geral' || activeTab === 'loja') && filteredConversations.length > 0 && (
