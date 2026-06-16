@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useRole } from "@/contexts/RoleContext";
 import { useCrm } from "@/contexts/CrmContext";
+import { KANBAN_STAGES } from "@/types/crm";
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -68,6 +69,7 @@ interface WhatsAppMessage {
    phone: string;
    lastMessage: string;
    lastTimestamp: string;
+   lastFromMe?: boolean;
    unreadCount: number;
    messages: WhatsAppMessage[];
    assigned_seller_id?: string | null;
@@ -152,9 +154,10 @@ const mockContactNames: Record<string, string> = {
 // ── Component ──
  export default function Conversas() {
      const { isAdmin, isGerente, isVendedor, isSuporte, sellerId, storeId, role } = useRole();
-    const { decrementUnreadWhatsApp } = useCrm();
+    const { decrementUnreadWhatsApp, leads } = useCrm();
     const { instances: allInstances, byId: instancesById } = useInstances();
     const [instanceFilter, setInstanceFilter] = useState<string>("all");
+    const [stageFilter, setStageFilter] = useState<string>("all");
     const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
     const [clients, setClients] = useState<any[]>([]);
     const [stores, setStores] = useState<any[]>([]);
@@ -367,12 +370,32 @@ const mockContactNames: Record<string, string> = {
         if (!conv.lastTimestamp || currentTs >= lastTs) {
           conv.lastTimestamp = msg.timestamp || msg.created_at || "";
           conv.lastMessage = msg.body || "";
+          conv.lastFromMe = !!msg.is_from_me;
         }
         
         if (!msg.is_from_me && !msg.is_read) conv.unreadCount++;
       });
       return Array.from(map.values());
     }, [messages, clients]);
+
+     // Mapa telefone (normalizado, sem DDI) -> etapa do lead, para filtrar por etapa do Kanban
+     const normPhone = (p: string) => (p || "").replace(/\D/g, "").replace(/^55/, "");
+     const phoneStage = useMemo(() => {
+       const m: Record<string, string> = {};
+       (leads || []).forEach((l) => { if (l.clientPhone) m[normPhone(l.clientPhone)] = l.stage; });
+       return m;
+     }, [leads]);
+
+     const stageCounts = useMemo(() => {
+       const c: Record<string, number> = { all: conversations.length, sem_resposta: 0, sem_lead: 0 };
+       conversations.forEach((conv) => {
+         if (!conv.lastFromMe) c.sem_resposta++;
+         const st = phoneStage[normPhone(conv.phone)];
+         if (!st) c.sem_lead++;
+         else c[st] = (c[st] || 0) + 1;
+       });
+       return c;
+     }, [conversations, phoneStage]);
 
      const filteredConversations = useMemo(() => {
        let filtered = conversations.filter((c) => {
@@ -381,6 +404,18 @@ const mockContactNames: Record<string, string> = {
          // Multi-instance filter
          if (instanceFilter !== "all" && c.received_on_instance_id !== instanceFilter) {
            return false;
+         }
+
+         // Filtro por etapa do Kanban
+         if (stageFilter !== "all") {
+           if (stageFilter === "sem_resposta") {
+             // Última mensagem foi do cliente (aguardando nossa resposta)
+             if (c.lastFromMe) return false;
+           } else if (stageFilter === "sem_lead") {
+             if (phoneStage[normPhone(c.phone)]) return false;
+           } else if (phoneStage[normPhone(c.phone)] !== stageFilter) {
+             return false;
+           }
          }
  
          // Controle de acesso baseado no perfil e na aba
@@ -438,7 +473,7 @@ const mockContactNames: Record<string, string> = {
       
       // Default sort (Minhas): newest first
       return filtered.sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
-     }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente, instanceFilter]);
+     }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente, instanceFilter, stageFilter, phoneStage]);
 
   // Monitor conversations for stale messages to trigger alert popup
   useEffect(() => {
@@ -1009,7 +1044,35 @@ const mockContactNames: Record<string, string> = {
                 )}
               </div>
             </div>
-            
+
+            {/* Filtros por etapa do Kanban */}
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar px-2 pb-2">
+              {[
+                { key: "all", label: "Todas" },
+                ...KANBAN_STAGES.map((s) => ({ key: s.key as string, label: s.label })),
+                { key: "sem_resposta", label: "Sem resposta" },
+                { key: "sem_lead", label: "Sem lead" },
+              ].map((f) => {
+                const count = stageCounts[f.key] || 0;
+                const active = stageFilter === f.key;
+                return (
+                  <button
+                    key={f.key}
+                    onClick={() => setStageFilter(f.key)}
+                    className={cn(
+                      "flex items-center gap-1 whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold transition-colors shrink-0",
+                      active ? "bg-brand-500 text-white" : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {f.label}
+                    {count > 0 && (
+                      <span className={cn("rounded-full px-1.5 text-[10px] font-bold", active ? "bg-white/25" : "bg-foreground/10")}>{count}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
             {(activeTab === 'geral' || activeTab === 'loja') && filteredConversations.length > 0 && (
               <div className="px-2 pb-2">
                 <Button 
