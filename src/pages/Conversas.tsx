@@ -1046,7 +1046,7 @@ const mockContactNames: Record<string, string> = {
             </div>
 
             {/* Filtros por etapa do Kanban */}
-            <div className="flex gap-1.5 overflow-x-auto no-scrollbar px-2 pb-2">
+            <div className="flex flex-wrap gap-1.5 px-2 pb-2">
               {[
                 { key: "all", label: "Todas" },
                 ...KANBAN_STAGES.map((s) => ({ key: s.key as string, label: s.label })),
@@ -1060,7 +1060,7 @@ const mockContactNames: Record<string, string> = {
                     key={f.key}
                     onClick={() => setStageFilter(f.key)}
                     className={cn(
-                      "flex items-center gap-1 whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold transition-colors shrink-0",
+                      "flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors shrink-0",
                       active ? "bg-brand-500 text-white" : "bg-muted/60 text-muted-foreground hover:bg-muted"
                     )}
                   >
