@@ -51,6 +51,7 @@ export default function SuporteOrcamento() {
   const [selectedErpClient, setSelectedErpClient] = useState<any | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
   const [viewingPdf, setViewingPdf] = useState<string | null>(null);
+  const [pdfRawUrl, setPdfRawUrl] = useState<string | null>(null);
 
   const openAttachment = async (path: string) => {
     const { data, error } = await supabase.storage.from("pricing_attachments").createSignedUrl(path, 3600);
@@ -58,7 +59,23 @@ export default function SuporteOrcamento() {
       toast.error("Não foi possível abrir o anexo.");
       return;
     }
-    setViewingPdf(data.signedUrl);
+    setPdfRawUrl(data.signedUrl);
+    // Baixa como blob e exibe localmente — bloqueadores costumam barrar a URL
+    // direta do Supabase, mas não um blob local.
+    try {
+      const res = await fetch(data.signedUrl);
+      if (!res.ok) throw new Error("download falhou");
+      const blob = await res.blob();
+      setViewingPdf(URL.createObjectURL(blob));
+    } catch {
+      setViewingPdf(data.signedUrl);
+    }
+  };
+
+  const closePdf = () => {
+    if (viewingPdf && viewingPdf.startsWith("blob:")) URL.revokeObjectURL(viewingPdf);
+    setViewingPdf(null);
+    setPdfRawUrl(null);
   };
 
   const fetchRequests = async () => {
@@ -589,7 +606,7 @@ export default function SuporteOrcamento() {
         </Dialog>
 
         {/* Visualizador de PDF embutido */}
-        <Dialog open={!!viewingPdf} onOpenChange={(open) => !open && setViewingPdf(null)}>
+        <Dialog open={!!viewingPdf} onOpenChange={(open) => !open && closePdf()}>
           <DialogContent className="max-w-4xl w-[95vw] h-[85vh] p-0 overflow-hidden flex flex-col">
             <DialogHeader className="px-4 py-3 border-b">
               <DialogTitle className="flex items-center gap-2 text-base">
@@ -600,7 +617,7 @@ export default function SuporteOrcamento() {
               <iframe src={viewingPdf} title="Anexo PDF" className="flex-1 w-full border-0" />
             )}
             <div className="px-4 py-2 border-t text-center">
-              <a href={viewingPdf || "#"} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-500 hover:underline">
+              <a href={pdfRawUrl || "#"} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-500 hover:underline">
                 Não carregou? Abrir em nova aba
               </a>
             </div>
