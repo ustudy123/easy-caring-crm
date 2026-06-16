@@ -29,6 +29,11 @@ interface SupportRequest {
   erp_client_id?: string;
   created_by?: string;
   seller_id?: string;
+  response_notes?: string;
+  response_pdf_url?: string;
+  response_pdf_name?: string;
+  responded_at?: string;
+  responded_by_name?: string;
 }
 
 export default function SuporteOrcamento() {
@@ -52,6 +57,58 @@ export default function SuporteOrcamento() {
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
   const [viewingPdf, setViewingPdf] = useState<string | null>(null);
   const [pdfRawUrl, setPdfRawUrl] = useState<string | null>(null);
+  const [responseNotes, setResponseNotes] = useState("");
+  const [responseFile, setResponseFile] = useState<File | null>(null);
+  const [savingResponse, setSavingResponse] = useState(false);
+  const canRespond = isAdmin || isSuporte || isGerente;
+
+  // Pré-preenche a resposta ao abrir uma solicitação
+  useEffect(() => {
+    setResponseNotes(selectedRequest?.response_notes || "");
+    setResponseFile(null);
+  }, [selectedRequest?.id]);
+
+  const submitResponse = async () => {
+    if (!selectedRequest) return;
+    setSavingResponse(true);
+    try {
+      let respUrl = selectedRequest.response_pdf_url || null;
+      let respName = selectedRequest.response_pdf_name || null;
+      if (responseFile) {
+        const ext = responseFile.name.split(".").pop();
+        const filePath = `responses/${selectedRequest.id}-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("pricing_attachments").upload(filePath, responseFile);
+        if (upErr) throw upErr;
+        respUrl = filePath;
+        respName = responseFile.name;
+      }
+      const responderName = sellers.find((s) => s.id === sellerId)?.name
+        || (isAdmin ? "Administrador" : isSuporte ? "Suporte" : isGerente ? "Gerente" : "Equipe");
+      const { error } = await supabase.from("pricing_support_requests").update({
+        response_notes: responseNotes || null,
+        response_pdf_url: respUrl,
+        response_pdf_name: respName,
+        responded_at: new Date().toISOString(),
+        responded_by_name: responderName,
+      }).eq("id", selectedRequest.id);
+      if (error) throw error;
+      toast.success("Resposta salva!");
+      setResponseFile(null);
+      setSelectedRequest({
+        ...selectedRequest,
+        response_notes: responseNotes || undefined,
+        response_pdf_url: respUrl || undefined,
+        response_pdf_name: respName || undefined,
+        responded_at: new Date().toISOString(),
+        responded_by_name: responderName,
+      });
+      fetchRequests();
+    } catch (e: any) {
+      toast.error("Erro ao salvar resposta: " + e.message);
+    } finally {
+      setSavingResponse(false);
+    }
+  };
 
   const openAttachment = async (path: string) => {
     const { data, error } = await supabase.storage.from("pricing_attachments").createSignedUrl(path, 3600);
@@ -602,6 +659,72 @@ export default function SuporteOrcamento() {
                       onClick={() => downloadAttachment(selectedRequest.pdf_url!, selectedRequest.pdf_name)}
                     >
                       <Download className="h-4 w-4 mr-1" /> Baixar
+                    </Button>
+                  </div>
+                )}
+
+                {/* Resposta do suporte/admin (exibição) */}
+                {(selectedRequest.response_notes || selectedRequest.response_pdf_url) && (
+                  <div className="rounded-xl border border-brand-500/30 bg-brand-500/5 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-brand-500">Resposta do suporte</span>
+                      {selectedRequest.responded_at && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {selectedRequest.responded_by_name} · {new Date(selectedRequest.responded_at).toLocaleDateString("pt-BR")}
+                        </span>
+                      )}
+                    </div>
+                    {selectedRequest.response_notes && (
+                      <p className="text-sm whitespace-pre-wrap">{selectedRequest.response_notes}</p>
+                    )}
+                    {selectedRequest.response_pdf_url && (
+                      <div className="flex gap-2">
+                        <Button variant="secondary" size="sm" className="rounded-lg bg-brand-500/10 text-brand-500 hover:bg-brand-500/20 border-none" onClick={() => openAttachment(selectedRequest.response_pdf_url!)}>
+                          <Paperclip className="h-3.5 w-3.5 mr-1" /> Ver anexo da resposta
+                        </Button>
+                        <Button variant="outline" size="sm" className="rounded-lg" onClick={() => downloadAttachment(selectedRequest.response_pdf_url!, selectedRequest.response_pdf_name)}>
+                          <Download className="h-3.5 w-3.5 mr-1" /> Baixar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Formulário de resposta (suporte/admin/gerente) */}
+                {canRespond && (
+                  <div className="rounded-xl border border-border/50 p-3 space-y-2">
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      {selectedRequest.response_notes || selectedRequest.response_pdf_url ? "Editar resposta" : "Responder solicitação"}
+                    </span>
+                    <Textarea
+                      value={responseNotes}
+                      onChange={(e) => setResponseNotes(e.target.value)}
+                      placeholder="Escreva a resposta para o vendedor (ex.: orçamento aprovado, condições, observações)..."
+                      className="min-h-[70px] text-sm"
+                    />
+                    <div className="flex items-center gap-2">
+                      <label className="flex-1">
+                        <input
+                          type="file"
+                          className="hidden"
+                          onChange={(e) => setResponseFile(e.target.files?.[0] || null)}
+                        />
+                        <span className="flex items-center gap-1.5 cursor-pointer text-xs rounded-lg border border-dashed border-border px-3 py-2 hover:bg-muted/50 truncate">
+                          <Paperclip className="h-3.5 w-3.5 shrink-0" />
+                          {responseFile ? responseFile.name : "Anexar arquivo (opcional)"}
+                        </span>
+                      </label>
+                      {responseFile && (
+                        <Button variant="ghost" size="sm" className="h-8 text-destructive" onClick={() => setResponseFile(null)}>Remover</Button>
+                      )}
+                    </div>
+                    <Button
+                      className="w-full rounded-xl bg-brand-500 hover:bg-brand-600"
+                      disabled={savingResponse || (!responseNotes.trim() && !responseFile && !selectedRequest.response_notes && !selectedRequest.response_pdf_url)}
+                      onClick={submitResponse}
+                    >
+                      {savingResponse ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}
+                      Salvar resposta
                     </Button>
                   </div>
                 )}
