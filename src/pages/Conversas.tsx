@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
    import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle, ShieldAlert, Forward, ListFilter, Check } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Download } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -184,6 +185,7 @@ const mockContactNames: Record<string, string> = {
  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
  const audioChunksRef = useRef<Blob[]>([]);
  const timerIntervalRef = useRef<number | null>(null);
+ const cancelledRecordingRef = useRef(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [staleAlertConversation, setStaleAlertConversation] = useState<Conversation | null>(null);
@@ -847,13 +849,16 @@ const mockContactNames: Record<string, string> = {
 
      mediaRecorder.onstop = async () => {
        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-       if (audioBlob.size > 0) {
+       // Se a gravação foi cancelada, descarta sem enviar.
+       if (!cancelledRecordingRef.current && audioBlob.size > 0) {
          await uploadAndSendAudio(audioBlob);
        }
+       audioChunksRef.current = [];
        stream.getTracks().forEach(track => track.stop());
      };
 
      mediaRecorder.start();
+     cancelledRecordingRef.current = false;
      setIsRecording(true);
      setRecordingDuration(0);
      timerIntervalRef.current = window.setInterval(() => {
@@ -876,17 +881,45 @@ const mockContactNames: Record<string, string> = {
    }
  };
 
+ const cancelRecording = () => {
+   if (mediaRecorderRef.current && isRecording) {
+     cancelledRecordingRef.current = true; // sinaliza pro onstop descartar
+     mediaRecorderRef.current.stop();
+     setIsRecording(false);
+     setRecordingDuration(0);
+     if (timerIntervalRef.current) {
+       clearInterval(timerIntervalRef.current);
+       timerIntervalRef.current = null;
+     }
+   }
+ };
+
  const uploadAndSendAudio = async (blob: Blob) => {
    if (!selectedPhone) return;
-
-   const loadingToast = toast.loading("Enviando áudio...");
+   const phone = selectedPhone;
    setSending(true);
+
+   // Feedback instantâneo: toca o áudio local na hora, antes do upload/envio.
+   const tempId = `temp-audio-${Date.now()}`;
+   const localUrl = URL.createObjectURL(blob);
+   const optimistic: WhatsAppMessage = {
+     id: tempId,
+     message_id: tempId,
+     phone,
+     body: "",
+     is_from_me: true,
+     media_url: localUrl,
+     media_type: 'audio',
+     timestamp: new Date().toISOString(),
+     created_at: new Date().toISOString(),
+   };
+   setMessages((prev) => [...prev, optimistic]);
 
    try {
      const fileName = `${Math.random()}.webm`;
-     const filePath = `${selectedPhone}/${fileName}`;
+     const filePath = `${phone}/${fileName}`;
 
-     const { data: uploadData, error: uploadError } = await supabase.storage
+     const { error: uploadError } = await supabase.storage
        .from('whatsapp_media')
        .upload(filePath, blob);
 
@@ -903,7 +936,7 @@ const mockContactNames: Record<string, string> = {
 
       const { error: invokeError } = await supabase.functions.invoke("send-whatsapp", {
         body: { 
-          phone: selectedPhone, 
+          phone, 
           message: "", 
           mediaUrl: publicUrl,
           mediaType: 'audio',
@@ -914,26 +947,12 @@ const mockContactNames: Record<string, string> = {
 
       if (invokeError) throw invokeError;
 
-      // Adicionar áudio localmente para feedback instantâneo
-      const newMessage: WhatsAppMessage = {
-        id: `temp-audio-${Date.now()}`,
-        message_id: `temp-audio-${Date.now()}`,
-        phone: selectedPhone,
-        body: "",
-        is_from_me: true,
-        media_url: publicUrl,
-        media_type: 'audio',
-        timestamp: new Date().toISOString(),
-        created_at: new Date().toISOString()
-      };
-
-      setMessages(prev => [...prev, newMessage]);
-
-      toast.dismiss(loadingToast);
-     toast.success("Áudio enviado com sucesso!");
+      // Atualiza a otimista com a URL definitiva (o realtime depois substitui pela do banco)
+      setMessages((prev) => prev.map((m) => m.id === tempId ? { ...m, media_url: publicUrl } : m));
    } catch (err: any) {
      console.error("Erro ao enviar áudio:", err);
-     toast.dismiss(loadingToast);
+     // Remove a otimista em caso de falha
+     setMessages((prev) => prev.filter((m) => m.id !== tempId));
      toast.error(`Erro ao enviar áudio: ${err.message || 'Erro desconhecido'}`);
    } finally {
      setSending(false);
@@ -1607,36 +1626,50 @@ const mockContactNames: Record<string, string> = {
                   className="hidden"
                   onChange={handleFileAttach}
                 />
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-10 w-10 text-muted-foreground hover:text-foreground shrink-0 rounded-full"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Paperclip className="h-6 w-6" />
-                </Button>
-                <Input
-                  placeholder="Digite uma mensagem"
-                  value={isRecording ? `Gravando... ${formatDuration(recordingDuration)}` : messageInput}
-                  onChange={(e) => !isRecording && setMessageInput(e.target.value)}
-                  className={cn(
-                    "flex-1 h-[42px] rounded-lg bg-card border-0 text-[15px] placeholder:text-muted-foreground/50 focus-visible:ring-0 shadow-sm",
-                    isRecording && "text-red-500 font-medium animate-pulse"
+                {isRecording ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0 rounded-full"
+                    onClick={cancelRecording}
+                    title="Cancelar gravação"
+                  >
+                    <Trash2 className="h-6 w-6" />
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-10 w-10 text-muted-foreground hover:text-foreground shrink-0 rounded-full"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Paperclip className="h-6 w-6" />
+                  </Button>
+                )}
+                <div className="relative flex-1">
+                  {isRecording && (
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
                   )}
-                  readOnly={isRecording}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                />
+                  <Input
+                    placeholder="Digite uma mensagem"
+                    value={isRecording ? `Gravando... ${formatDuration(recordingDuration)}` : messageInput}
+                    onChange={(e) => !isRecording && setMessageInput(e.target.value)}
+                    className={cn(
+                      "h-[42px] rounded-lg bg-card border-0 text-[15px] placeholder:text-muted-foreground/50 focus-visible:ring-0 shadow-sm w-full",
+                      isRecording && "text-red-500 font-medium pl-7"
+                    )}
+                    readOnly={isRecording}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                  />
+                </div>
                 <Button
                   size="icon"
-                  className={cn(
-                    "h-[48px] w-[48px] rounded-full shrink-0 shadow-md transition-all",
-                    isRecording && "bg-red-500 hover:bg-red-600 animate-pulse"
-                  )}
+                  className="h-[48px] w-[48px] rounded-full shrink-0 shadow-md transition-all"
                   style={{ backgroundColor: "hsl(var(--wa-green))" }}
                   disabled={(!messageInput.trim() && !isRecording && sending) || sending}
                   onClick={() => {
@@ -1648,11 +1681,14 @@ const mockContactNames: Record<string, string> = {
                       startRecording();
                     }
                   }}
+                  title={isRecording ? "Enviar áudio" : messageInput.trim() ? "Enviar" : "Gravar áudio"}
                 >
                   {messageInput.trim() ? (
                     <Send className="h-5 w-5 text-white" />
+                  ) : isRecording ? (
+                    <Send className="h-5 w-5 text-white" />
                   ) : (
-                    <Mic className={cn("h-6 w-6 text-white", isRecording && "scale-125")} />
+                    <Mic className="h-6 w-6 text-white" />
                   )}
                 </Button>
               </div>
