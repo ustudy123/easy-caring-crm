@@ -50,6 +50,16 @@ export default function SuporteOrcamento() {
   const [searchingErp, setSearchingErp] = useState(false);
   const [selectedErpClient, setSelectedErpClient] = useState<any | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
+  const [viewingPdf, setViewingPdf] = useState<string | null>(null);
+
+  const openAttachment = async (path: string) => {
+    const { data, error } = await supabase.storage.from("pricing_attachments").createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) {
+      toast.error("Não foi possível abrir o anexo.");
+      return;
+    }
+    setViewingPdf(data.signedUrl);
+  };
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -470,12 +480,9 @@ export default function SuporteOrcamento() {
                                         <Button 
                                           variant="secondary" 
                                           className="h-6 px-2 text-[9px] font-semibold bg-brand-500/10 text-brand-500 hover:bg-brand-500/20 border-none"
-                                          onClick={async (e) => {
+                                          onClick={(e) => {
                                             e.stopPropagation();
-                                            const { data } = await supabase.storage
-                                              .from("pricing_attachments")
-                                              .createSignedUrl(req.pdf_url!, 3600);
-                                            if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                                            openAttachment(req.pdf_url!);
                                           }}
                                         >
                                           <Paperclip className="h-3 w-3 mr-1" />
@@ -542,10 +549,7 @@ export default function SuporteOrcamento() {
                   <Button
                     variant="secondary"
                     className="w-full rounded-xl bg-brand-500/10 text-brand-500 hover:bg-brand-500/20 border-none"
-                    onClick={async () => {
-                      const { data } = await supabase.storage.from("pricing_attachments").createSignedUrl(selectedRequest.pdf_url!, 3600);
-                      if (data?.signedUrl) window.open(data.signedUrl, "_blank");
-                    }}
+                    onClick={() => openAttachment(selectedRequest.pdf_url!)}
                   >
                     <Paperclip className="h-4 w-4 mr-1" /> Abrir anexo (PDF)
                   </Button>
@@ -581,6 +585,25 @@ export default function SuporteOrcamento() {
             <DialogFooter>
               <Button variant="outline" className="rounded-xl" onClick={() => setSelectedRequest(null)}>Fechar</Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Visualizador de PDF embutido */}
+        <Dialog open={!!viewingPdf} onOpenChange={(open) => !open && setViewingPdf(null)}>
+          <DialogContent className="max-w-4xl w-[95vw] h-[85vh] p-0 overflow-hidden flex flex-col">
+            <DialogHeader className="px-4 py-3 border-b">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <Paperclip className="h-4 w-4 text-brand-500" /> Anexo do orçamento
+              </DialogTitle>
+            </DialogHeader>
+            {viewingPdf && (
+              <iframe src={viewingPdf} title="Anexo PDF" className="flex-1 w-full border-0" />
+            )}
+            <div className="px-4 py-2 border-t text-center">
+              <a href={viewingPdf || "#"} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-500 hover:underline">
+                Não carregou? Abrir em nova aba
+              </a>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
