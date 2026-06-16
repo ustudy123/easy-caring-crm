@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X } from "lucide-react";
+import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,6 +76,30 @@ export default function SuporteOrcamento() {
     if (viewingPdf && viewingPdf.startsWith("blob:")) URL.revokeObjectURL(viewingPdf);
     setViewingPdf(null);
     setPdfRawUrl(null);
+  };
+
+  const downloadAttachment = async (path: string, name?: string) => {
+    const { data, error } = await supabase.storage.from("pricing_attachments").createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) {
+      toast.error("Não foi possível baixar o anexo.");
+      return;
+    }
+    try {
+      const res = await fetch(data.signedUrl);
+      if (!res.ok) throw new Error("download falhou");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name || path.split("/").pop() || "anexo.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      // fallback: abre a URL direta (o navegador faz o download)
+      window.open(data.signedUrl, "_blank");
+    }
   };
 
   const fetchRequests = async () => {
@@ -563,13 +587,23 @@ export default function SuporteOrcamento() {
                 </div>
 
                 {selectedRequest.pdf_url && (
-                  <Button
-                    variant="secondary"
-                    className="w-full rounded-xl bg-brand-500/10 text-brand-500 hover:bg-brand-500/20 border-none"
-                    onClick={() => openAttachment(selectedRequest.pdf_url!)}
-                  >
-                    <Paperclip className="h-4 w-4 mr-1" /> Abrir anexo (PDF)
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      className="flex-1 rounded-xl bg-brand-500/10 text-brand-500 hover:bg-brand-500/20 border-none"
+                      onClick={() => openAttachment(selectedRequest.pdf_url!)}
+                    >
+                      <Paperclip className="h-4 w-4 mr-1" /> Abrir anexo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="rounded-xl"
+                      title="Baixar anexo"
+                      onClick={() => downloadAttachment(selectedRequest.pdf_url!, selectedRequest.pdf_name)}
+                    >
+                      <Download className="h-4 w-4 mr-1" /> Baixar
+                    </Button>
+                  </div>
                 )}
 
                 <div className="space-y-1.5 pt-1">
