@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { useRole } from "@/contexts/RoleContext";
 import { useCrm } from "@/contexts/CrmContext";
 import { KANBAN_STAGES } from "@/types/crm";
+import { useSearchParams } from "react-router-dom";
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -533,6 +534,23 @@ const mockContactNames: Record<string, string> = {
     setSelectedPhone(phone);
     setShowMobileChat(true);
   };
+
+  // Deep-link: ao chegar de /conversas?phone=... (ex.: clique no Kanban),
+  // abre direto a conversa daquele cliente.
+  const [deepLinkParams, setDeepLinkParams] = useSearchParams();
+  useEffect(() => {
+    const target = deepLinkParams.get("phone");
+    if (!target || loading) return;
+    const norm = (p: string) => (p || "").replace(/\D/g, "").replace(/^55/, "");
+    const conv = conversations.find((c) => norm(c.phone) === norm(target));
+    if (conv) {
+      handleSelectConversation(conv.phone);
+    } else {
+      toast.info("Esse cliente ainda não tem conversa registrada no WhatsApp.");
+    }
+    deepLinkParams.delete("phone");
+    setDeepLinkParams(deepLinkParams, { replace: true });
+  }, [deepLinkParams, loading, conversations]);
 
   useEffect(() => {
     if (selectedPhone && !useMock) {

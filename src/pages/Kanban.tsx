@@ -9,7 +9,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
  import { 
     Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
     AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
-    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle, XCircle, Download, LayoutGrid, List
+    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle, XCircle, Download, LayoutGrid, List, MessageCircle
   } from "lucide-react";
  import { getDisplayClientName, isGenericName } from "@/lib/clientUtils";
 import { Button } from "@/components/ui/button";
@@ -622,6 +622,13 @@ export default function Kanban() {
                                                     </button>
                                                   )}
                                                   <button
+                                                    onClick={(e) => { e.stopPropagation(); navigate(`/conversas?phone=${lead.clientPhone.replace(/\D/g, "")}`); }}
+                                                    className="p-1 rounded-lg hover:bg-green-100 text-green-600"
+                                                    title="Abrir conversa no WhatsApp"
+                                                  >
+                                                    <MessageCircle className="h-3 w-3" />
+                                                  </button>
+                                                  <button
                                                     onClick={(e) => { e.stopPropagation(); setTransferringLead(lead); }}
                                                     className="p-1 rounded-lg hover:bg-blue-100 text-brand-500"
                                                     title="Transferir"
@@ -818,7 +825,16 @@ export default function Kanban() {
                                {new Date(lead.updatedAt).toLocaleDateString("pt-BR")}
                              </td>
                              <td className="px-4 py-3 text-right">
-                               <Pencil className="h-3.5 w-3.5 text-muted-foreground inline" />
+                               <div className="inline-flex items-center gap-2">
+                                 <button
+                                   onClick={(e) => { e.stopPropagation(); navigate(`/conversas?phone=${lead.clientPhone.replace(/\D/g, "")}`); }}
+                                   className="text-green-600 hover:text-green-700"
+                                   title="Abrir conversa no WhatsApp"
+                                 >
+                                   <MessageCircle className="h-3.5 w-3.5" />
+                                 </button>
+                                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                               </div>
                              </td>
                            </tr>
                          );
