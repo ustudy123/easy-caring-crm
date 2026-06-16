@@ -629,7 +629,18 @@ serve(async (req) => {
                 tags: erpClient ? ['erp_citel'] : []
               };
 
-              const { error: createError } = await supabase.from("clients").upsert(clientData, { onConflict: 'phone' }).select("id").single();
+              let { error: createError } = await supabase.from("clients").upsert(clientData, { onConflict: 'phone' }).select("id").single();
+
+              // Resiliência: se falhar por coluna inexistente (migração não aplicada),
+              // tenta de novo sem os campos opcionais, pra não quebrar o atendimento.
+              if (createError) {
+                console.error("Falha ao criar cliente, tentando sem campos opcionais:", createError.message);
+                const slim: any = { ...clientData };
+                delete slim.cpf_cnpj; delete slim.zip_code; delete slim.profile_pic_url; delete slim.erp_id;
+                const retry = await supabase.from("clients").upsert(slim, { onConflict: 'phone' }).select("id").single();
+                createError = retry.error;
+                if (createError) console.error("Criação de cliente ainda falhando:", createError.message);
+              }
  
               if (!createError) {
                 const saud = saudacaoPorHora(tsMs);
@@ -881,10 +892,15 @@ serve(async (req) => {
                }
              }
 
-            await supabase
-              .from("clients")
-              .update(updateData)
-              .eq("id", client.id);
+            {
+              const { error: updErr } = await supabase.from("clients").update(updateData).eq("id", client.id);
+              if (updErr && updateData.profile_pic_url) {
+                // Coluna de foto pode não existir ainda — tenta sem ela.
+                const slim: any = { ...updateData };
+                delete slim.profile_pic_url;
+                await supabase.from("clients").update(slim).eq("id", client.id);
+              }
+            }
 
             // Auto-reply with AI ONLY for clients without an assigned seller.
             // Once a vendor is assigned, the vendor handles the conversation — IA stays out.
