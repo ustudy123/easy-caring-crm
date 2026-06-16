@@ -620,7 +620,7 @@ export default function SuporteOrcamento() {
             </DialogHeader>
 
             {selectedRequest && (
-              <div className="space-y-3 py-1 text-sm">
+              <div className="space-y-3 py-1 text-sm min-w-0 overflow-hidden">
                 <div className="rounded-xl bg-muted/40 p-3 space-y-2">
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Vendedor</span>
