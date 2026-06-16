@@ -538,7 +538,7 @@ export default function Kanban() {
                                       onDelete={() => setPendingDeleteId(lead.id)}
                                       onMoveNext={stage.key !== "pos_venda" ? () => moveToNextStage(lead) : undefined}
                                     >
-                                       <div className={`
+                                       <div onClick={() => setEditingLead(lead)} className={`
                                          rounded-[10px] border-l-[3px] p-3.5 
                                          ${urgency === "ok" ? "bg-card" : ""} 
                                          text-card-foreground
@@ -611,6 +611,13 @@ export default function Kanban() {
                                                   <Zap className="h-3 w-3" /> Precificar
                                                 </button>
                                               )}
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); navigate(`/conversas?phone=${lead.clientPhone.replace(/\D/g, "")}`); }}
+                                                className="p-1 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-600"
+                                                title="Abrir conversa no WhatsApp"
+                                              >
+                                                <MessageCircle className="h-3.5 w-3.5" />
+                                              </button>
                                                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
                                                   {lead.stage !== 'precificacao_especial' && lead.stage !== 'fechamento' && lead.stage !== 'pos_venda' && (
                                                     <button
@@ -621,13 +628,6 @@ export default function Kanban() {
                                                       <Zap className="h-3 w-3" />
                                                     </button>
                                                   )}
-                                                  <button
-                                                    onClick={(e) => { e.stopPropagation(); navigate(`/conversas?phone=${lead.clientPhone.replace(/\D/g, "")}`); }}
-                                                    className="p-1 rounded-lg hover:bg-green-100 text-green-600"
-                                                    title="Abrir conversa no WhatsApp"
-                                                  >
-                                                    <MessageCircle className="h-3 w-3" />
-                                                  </button>
                                                   <button
                                                     onClick={(e) => { e.stopPropagation(); setTransferringLead(lead); }}
                                                     className="p-1 rounded-lg hover:bg-blue-100 text-brand-500"
