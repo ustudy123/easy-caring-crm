@@ -315,9 +315,22 @@ const mockContactNames: Record<string, string> = {
         if (payload.eventType === "INSERT") {
           setMessages((prev) => {
             const newMsg = payload.new as WhatsAppMessage;
-            // Avoid duplicates: check if message already exists by id or message_id
+            // Já existe (por id ou message_id) → ignora
             if (prev.some(m => m.id === newMsg.id || m.message_id === newMsg.message_id)) {
               return prev;
+            }
+            // Substitui uma mensagem otimista temporária equivalente (mesmo texto/origem, recente)
+            const tempIdx = prev.findIndex(m =>
+              typeof m.id === "string" && m.id.startsWith("temp-") &&
+              m.is_from_me === newMsg.is_from_me &&
+              m.body === newMsg.body &&
+              m.phone === newMsg.phone &&
+              Math.abs(new Date(m.timestamp || m.created_at || 0).getTime() - new Date(newMsg.timestamp || newMsg.created_at || 0).getTime()) < 30000
+            );
+            if (tempIdx !== -1) {
+              const copy = [...prev];
+              copy[tempIdx] = newMsg;
+              return copy;
             }
             return [...prev, newMsg];
           });
@@ -786,10 +799,12 @@ const mockContactNames: Record<string, string> = {
          toast.error("Erro ao enviar mensagem. Tente novamente.");
          setMessageInput(text);
        } else {
-         // Adicionar mensagem localmente para feedback instantâneo
+         // Adicionar mensagem localmente para feedback instantâneo.
+         // Usa o message_id real retornado pela função, para o realtime deduplicar.
+         const realId = (data as any)?.messageId || `temp-${Date.now()}`;
          const newMessage: WhatsAppMessage = {
            id: `temp-${Date.now()}`,
-           message_id: `temp-${Date.now()}`,
+           message_id: realId,
            phone: selectedPhone,
            body: text,
            is_from_me: true,
