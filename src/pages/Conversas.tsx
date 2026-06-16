@@ -778,16 +778,30 @@ const mockContactNames: Record<string, string> = {
    const handleSendMessage = async () => {
      if (!messageInput.trim() || !selectedPhone || sending) return;
      const text = messageInput.trim();
+     const phone = selectedPhone;
      setMessageInput("");
      setSending(true);
- 
+
+     // Feedback instantâneo: adiciona a mensagem ANTES de enviar.
+     const tempId = `temp-${Date.now()}`;
+     const optimistic: WhatsAppMessage = {
+       id: tempId,
+       message_id: tempId,
+       phone,
+       body: text,
+       is_from_me: true,
+       timestamp: new Date().toISOString(),
+       created_at: new Date().toISOString(),
+     };
+     setMessages((prev) => [...prev, optimistic]);
+
      const currentSeller = sellers.find(s => s.id === sellerId);
      const { data: { user } } = await supabase.auth.getUser();
- 
+
      try {
        const { data, error } = await supabase.functions.invoke("send-whatsapp", {
-         body: { 
-           phone: selectedPhone, 
+         body: {
+           phone,
            message: text,
            senderId: user?.id,
            senderName: currentSeller?.name || role
@@ -796,36 +810,23 @@ const mockContactNames: Record<string, string> = {
 
        if (error) {
          console.error("Erro ao enviar mensagem:", error);
-         toast.error("Erro ao enviar mensagem. Tente novamente.");
+         // Remove a mensagem otimista e devolve o texto pro campo
+         setMessages((prev) => prev.filter((m) => m.id !== tempId));
          setMessageInput(text);
+         toast.error("Erro ao enviar mensagem. Tente novamente.");
        } else {
-         // Adicionar mensagem localmente para feedback instantâneo.
-         // Usa o message_id real retornado pela função, para o realtime deduplicar.
-         const realId = (data as any)?.messageId || `temp-${Date.now()}`;
-         const newMessage: WhatsAppMessage = {
-           id: `temp-${Date.now()}`,
-           message_id: realId,
-           phone: selectedPhone,
-           body: text,
-           is_from_me: true,
-           timestamp: new Date().toISOString(),
-           created_at: new Date().toISOString()
-         };
-         
-         setMessages(prev => {
-           if (prev.some(m => m.body === text && m.is_from_me && 
-               Math.abs(new Date(m.timestamp || m.created_at || 0).getTime() - new Date().getTime()) < 5000)) {
-             return prev;
-           }
-           return [...prev, newMessage];
-         });
-
-         toast.success("Mensagem enviada com sucesso!");
+         // Sucesso: o realtime substitui a otimista pela real (mesmo texto/origem/horário).
+         // Como reforço, já marca o message_id real na otimista.
+         const realId = (data as any)?.messageId;
+         if (realId) {
+           setMessages((prev) => prev.map((m) => m.id === tempId ? { ...m, message_id: realId } : m));
+         }
        }
     } catch (err) {
       console.error("Erro ao enviar mensagem:", err);
-      toast.error("Falha na conexão. Verifique sua internet.");
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
       setMessageInput(text);
+      toast.error("Falha na conexão. Verifique sua internet.");
     } finally {
       setSending(false);
     }
