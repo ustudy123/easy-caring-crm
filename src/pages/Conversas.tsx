@@ -17,6 +17,7 @@ import { useRole } from "@/contexts/RoleContext";
 import { useCrm } from "@/contexts/CrmContext";
 import { KANBAN_STAGES } from "@/types/crm";
 import { useSearchParams } from "react-router-dom";
+import { EmojiPicker } from "@/components/EmojiPicker";
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1612,14 +1613,7 @@ const mockContactNames: Record<string, string> = {
 
               {/* Message input bar - WhatsApp style */}
               <div className="flex items-center gap-2 px-3 py-2 shrink-0" style={{ backgroundColor: "hsl(var(--wa-light))" }}>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-10 w-10 text-muted-foreground hover:text-foreground shrink-0 rounded-full"
-                  onClick={() => toast.info("Emoji picker em desenvolvimento.")}
-                >
-                  <Smile className="h-6 w-6" />
-                </Button>
+                <EmojiPicker onSelect={(emoji) => setMessageInput((prev) => prev + emoji)} />
                 <input
                   type="file"
                   ref={fileInputRef}
