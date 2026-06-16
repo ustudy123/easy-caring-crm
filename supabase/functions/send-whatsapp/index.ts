@@ -14,7 +14,15 @@ function getApiConfig(inst: { provider: string; api_url?: string | null; api_tok
   if (!rawUrl) return null;
 
   let baseUrl = rawUrl.replace(/\/+$/, "");
-  
+
+  // uazapiGO (ex.: ipazua.uazapi.com): POST {base}/send/text com header `token`.
+  if (provider === "uazapi_go" || /uazapi\./i.test(baseUrl)) {
+    baseUrl = baseUrl
+      .replace(/\/send\/(text|media|image|video|audio|file|document)$/i, "")
+      .replace(/\/send-(text|image|video|audio|file|document)$/i, "");
+    return { baseUrl, token, provider: "uazapi_go" };
+  }
+
   if (provider === "whatsapi") {
     return { baseUrl, token, provider: "whatsapi" };
   }
@@ -119,7 +127,17 @@ serve(async (req) => {
     let apiBody: any;
     const headers: Record<string, string> = { "Content-Type": "application/json" };
 
-    if (config.provider === "whatsapi") {
+    if (config.provider === "uazapi_go") {
+      // uazapiGO: header `token` + /send/text (ou /send/media para anexos)
+      headers["token"] = config.token || "";
+      if (mediaUrl) {
+        endpoint = `${baseUrl}/send/media`;
+        apiBody = { number: cleanPhone, type: mediaType || "image", file: mediaUrl, text: message || "" };
+      } else {
+        endpoint = `${baseUrl}/send/text`;
+        apiBody = { number: cleanPhone, text: message };
+      }
+    } else if (config.provider === "whatsapi") {
       headers["token"] = config.token || "";
       if (mediaUrl) {
         endpoint = `${baseUrl}/instance/send-link`; // WhatsAPI uses send-link or similar for media depending on spec
