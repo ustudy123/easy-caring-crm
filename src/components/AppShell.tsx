@@ -50,7 +50,11 @@ export function AppShell() {
 
   const handleSlaNotificationClick = (notif: Notification) => {
     markNotificationRead(notif.id);
-    navigate("/conversas");
+    if (notif.type === "quiz_reminder") {
+      navigate("/quiz");
+    } else {
+      navigate("/conversas");
+    }
   };
 
   const handleWhatsAppNotificationClick = () => {
@@ -180,10 +184,12 @@ export function AppShell() {
                           className="flex items-center gap-3 p-3.5 hover:bg-muted/40 transition-colors cursor-pointer"
                         >
                           <div
-                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${notif.type === "sla_critical" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"}`}
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${notif.type === "sla_critical" ? "bg-destructive/10 text-destructive" : notif.type === "quiz_reminder" ? "bg-brand-500/10 text-brand-500" : "bg-warning/10 text-warning"}`}
                           >
                             {notif.type === "sla_critical" ? (
                               <ShieldAlert className="h-4 w-4" />
+                            ) : notif.type === "quiz_reminder" ? (
+                              <Paintbrush className="h-4 w-4" />
                             ) : (
                               <AlertTriangle className="h-4 w-4" />
                             )}
