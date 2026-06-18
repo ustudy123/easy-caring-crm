@@ -338,7 +338,7 @@ const mockContactNames: Record<string, string> = {
      const row: any = (rows || []).find((r: any) => r.contact_category) || (rows || [])[0];
      if (row) {
        setAssocCategory(row.contact_category || "");
-       if (row.linked_erp_client_id) {
+       if (row.linked_erp_client_id || row.linked_erp_client_name) {
          setSelectedErpClient({ erpId: row.linked_erp_client_id, name: row.linked_erp_client_name });
        }
      }
@@ -379,7 +379,7 @@ const mockContactNames: Record<string, string> = {
      try {
        const updates: any = {
          contact_category: assocCategory,
-         linked_erp_client_id: isIntermediary ? (selectedErpClient.erpId || null) : null,
+         linked_erp_client_id: isIntermediary ? (selectedErpClient.erpId || selectedErpClient.document || null) : null,
          linked_erp_client_name: isIntermediary ? (selectedErpClient.name || null) : null,
        };
        // Atualiza por telefone (cobre eventuais linhas duplicadas do mesmo contato).
