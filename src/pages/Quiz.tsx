@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trophy, Star, RotateCcw, PaintBucket, Sparkles, ChevronLeft } from "lucide-react";
+import { Trophy, Star, RotateCcw, PaintBucket, Sparkles, ChevronLeft, Timer } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { QuizLeaderboard } from "@/components/QuizLeaderboard";
@@ -20,6 +20,7 @@ interface Question {
 }
 
 const QUESTIONS_PER_ROUND = 10;
+const SECONDS_PER_QUESTION = 15;
 
 // Sorteia um lote de perguntas (rotatividade a cada partida)
 function selectRound(pool: Question[]): Question[] {
@@ -39,6 +40,7 @@ export default function Quiz() {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [started, setStarted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(SECONDS_PER_QUESTION);
 
   useEffect(() => {
     fetchQuestions();
@@ -114,23 +116,28 @@ export default function Quiz() {
     setStarted(true);
   };
 
-  const handleOptionClick = (index: number) => {
+  // Registra a resposta. index = opção escolhida, ou null quando o tempo esgota.
+  const lockAnswer = (index: number | null) => {
     if (selectedOption !== null) return;
 
     const activeQuestion = questions[currentQuestionIndex];
     if (!activeQuestion) return;
-    
-    setSelectedOption(index);
-    const correct = index === activeQuestion.correct_option_index;
+
+    // -1 marca "respondido sem seleção" (tempo esgotado): trava as opções e
+    // revela a correta, sem marcar nenhuma como errada pelo usuário.
+    setSelectedOption(index === null ? -1 : index);
+    const correct = index !== null && index === activeQuestion.correct_option_index;
     setIsCorrect(correct);
-    
+
     // 5 pontos por resposta correta (modelo definido na reunião)
     const POINTS_PER_CORRECT = 5;
     const nextScore = correct ? score + POINTS_PER_CORRECT : score;
-    
+
     if (correct) {
       setScore(nextScore);
       toast.success("Resposta correta! +5 pontos 🎨", { duration: 1500 });
+    } else if (index === null) {
+      toast.error("Tempo esgotado! ⏱️", { duration: 1500 });
     } else {
       toast.error("Ops! Não foi dessa vez. 🖌️", { duration: 1500 });
     }
@@ -146,6 +153,25 @@ export default function Quiz() {
       }
     }, 2000);
   };
+
+  const handleOptionClick = (index: number) => lockAnswer(index);
+
+  // Reinicia o cronômetro a cada nova pergunta.
+  useEffect(() => {
+    if (!started || showResult) return;
+    setTimeLeft(SECONDS_PER_QUESTION);
+  }, [currentQuestionIndex, started, showResult]);
+
+  // Contagem regressiva: 15s por pergunta. Ao zerar, conta como tempo esgotado.
+  useEffect(() => {
+    if (!started || showResult || selectedOption !== null) return;
+    if (timeLeft <= 0) {
+      lockAnswer(null);
+      return;
+    }
+    const t = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [timeLeft, started, showResult, selectedOption]);
 
   const saveAttempt = async (finalScore: number) => {
     if (!user) return;
@@ -285,6 +311,21 @@ export default function Quiz() {
                     {score.toLocaleString("pt-BR")} pts
                   </div>
                 </motion.div>
+              </div>
+
+              {/* Cronômetro: 15 segundos por pergunta */}
+              <div className="flex items-center gap-3">
+                <Timer className={`h-4 w-4 shrink-0 ${timeLeft <= 5 ? "text-red-400" : "text-amber-300"}`} />
+                <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                  <motion.div
+                    className={`h-full ${timeLeft <= 5 ? "bg-red-400" : "bg-gradient-to-r from-amber-300 to-amber-500"}`}
+                    animate={{ width: `${(timeLeft / SECONDS_PER_QUESTION) * 100}%` }}
+                    transition={{ ease: "linear", duration: 0.3 }}
+                  />
+                </div>
+                <span className={`text-sm font-black tabular-nums w-9 text-right ${timeLeft <= 5 ? "text-red-400" : "text-amber-300"}`}>
+                  {timeLeft}s
+                </span>
               </div>
 
               {/* Pergunta */}
