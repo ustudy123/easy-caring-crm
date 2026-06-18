@@ -87,6 +87,10 @@ export default function Kanban() {
    const { byId: instancesById } = useInstances();
    const clientInstanceByPhone = useClientInstanceMap();
    const [userSeller, setUserSeller] = useState<any>(null);
+   // Gate de classificação obrigatória ao fechar a venda.
+   const [classifyLead, setClassifyLead] = useState<Lead | null>(null);
+   const [classifyCategory, setClassifyCategory] = useState("");
+   const [savingClassify, setSavingClassify] = useState(false);
    useEffect(() => {
      const fetchUserSeller = async () => {
        const { data: { user } } = await supabase.auth.getUser();
@@ -288,7 +292,67 @@ export default function Kanban() {
     const stageKeys = KANBAN_STAGES.map(s => s.key);
     const idx = stageKeys.indexOf(lead.stage);
     if (idx < stageKeys.length - 1) {
-      updateLead({ ...lead, stage: stageKeys[idx + 1] });
+      const nextStage = stageKeys[idx + 1];
+      if (nextStage === 'fechamento') {
+        gateFechamento(lead, () => updateLead({ ...lead, stage: nextStage }));
+        return;
+      }
+      updateLead({ ...lead, stage: nextStage });
+    }
+  };
+
+  // Categorias de classificação obrigatória do cliente.
+  const CONTACT_CATEGORIES: { value: string; label: string }[] = [
+    { value: "sindico", label: "Síndico" },
+    { value: "comprador", label: "Comprador" },
+    { value: "pintor", label: "Pintor" },
+    { value: "arquiteto", label: "Arquiteto" },
+    { value: "construtor", label: "Construtor" },
+    { value: "consumidor_final", label: "Consumidor final" },
+  ];
+
+  // Verifica se o cliente (por telefone) já tem categoria definida.
+  const clientHasCategory = async (phone: string): Promise<boolean> => {
+    const { data } = await supabase.from("clients").select("contact_category").eq("phone", phone);
+    return (data || []).some((r: any) => r.contact_category);
+  };
+
+  // Gate: só executa a ação (mover pra Fechamento) se houver categoria; senão,
+  // abre o diálogo de classificação obrigatória.
+  const gateFechamento = async (lead: Lead, proceed: () => void) => {
+    const ok = await clientHasCategory(lead.clientPhone);
+    if (ok) { proceed(); return; }
+    setClassifyCategory("");
+    setClassifyLead(lead);
+  };
+
+  const saveClassification = async () => {
+    if (!classifyLead || !classifyCategory) {
+      toast({ title: "Selecione uma categoria", description: "É obrigatório classificar o cliente para fechar a venda.", variant: "destructive" });
+      return;
+    }
+    setSavingClassify(true);
+    try {
+      const { data: updated, error } = await supabase
+        .from("clients")
+        .update({ contact_category: classifyCategory } as any)
+        .eq("phone", classifyLead.clientPhone)
+        .select("id");
+      if (error) throw error;
+      // Se o lead não tinha cadastro de cliente, cria um mínimo já classificado.
+      if (!updated || updated.length === 0) {
+        const { error: insErr } = await supabase
+          .from("clients")
+          .insert({ name: classifyLead.clientName, phone: classifyLead.clientPhone, contact_category: classifyCategory } as any);
+        if (insErr) throw insErr;
+      }
+      updateLead({ ...classifyLead, stage: 'fechamento' });
+      toast({ title: "Cliente classificado!", description: "Venda movida para Fechamento." });
+      setClassifyLead(null);
+    } catch (e: any) {
+      toast({ title: "Erro ao classificar", description: e.message || String(e), variant: "destructive" });
+    } finally {
+      setSavingClassify(false);
     }
   };
 
@@ -350,9 +414,23 @@ export default function Kanban() {
      el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
    };
 
-  const onDragEnd = (result: DropResult) => {
+  const onDragEnd = async (result: DropResult) => {
     if (!result.destination) return;
     const newStage = result.destination.droppableId as KanbanStage;
+
+    // Classificação obrigatória antes de fechar a venda.
+    if (newStage === 'fechamento') {
+      const movedLead = leads.find((l) => l.id === result.draggableId);
+      if (movedLead && movedLead.stage !== 'fechamento') {
+        const ok = await clientHasCategory(movedLead.clientPhone);
+        if (!ok) {
+          setClassifyCategory("");
+          setClassifyLead(movedLead);
+          return; // não move até classificar
+        }
+      }
+    }
+
     setLeads((prev) =>
       prev.map((l) => (l.id === result.draggableId ? { ...l, stage: newStage } : l))
     );
@@ -993,6 +1071,37 @@ export default function Kanban() {
             </Button>
             <Button variant="destructive" onClick={handleMarkLost}>
               <XCircle className="h-4 w-4 mr-1" /> Confirmar perda
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!classifyLead} onOpenChange={(open) => { if (!open) setClassifyLead(null); }}>
+        <DialogContent className="rounded-2xl max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Classifique o cliente</DialogTitle>
+            <DialogDescription>
+              Para fechar a venda de <strong>{classifyLead?.clientName}</strong>, é obrigatório informar o tipo de cliente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5 py-1">
+            <Label className="text-xs font-semibold">Tipo de cliente</Label>
+            <Select value={classifyCategory} onValueChange={setClassifyCategory}>
+              <SelectTrigger><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
+              <SelectContent>
+                {CONTACT_CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground pt-1">
+              Para intermediários (pintor, arquiteto…), você pode vincular o cliente final do ERP em Conversas → Associar conversa.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClassifyLead(null)}>Cancelar</Button>
+            <Button onClick={saveClassification} disabled={savingClassify}>
+              {savingClassify ? "Salvando..." : "Classificar e fechar"}
             </Button>
           </DialogFooter>
         </DialogContent>
