@@ -521,9 +521,13 @@ serve(async (req) => {
               });
               if (!assignErr) {
                 console.log(`Client ${cleanPhone} routed to seller ${sellerByCode.name} via code ${candidateCode}`);
+                const sellerFirstName = (sellerByCode.name || "").trim().split(/\s+/)[0];
+                const confirmMsg = sellerFirstName
+                  ? `Perfeito! Em breve o vendedor *${sellerFirstName}* vai te atender por aqui 👍`
+                  : `Perfeito! Já passo você pra um dos nossos consultores, em breve te chamam por aqui 👍`;
                 await sendWhatsAppMessage(
                   cleanPhone,
-                  `Perfeito! Já passo você pra um dos nossos consultores, em breve te chamam por aqui 👍`,
+                  confirmMsg,
                   isTest,
                   receivedInstance
                 );
@@ -717,7 +721,11 @@ serve(async (req) => {
                 });
 
               if (!rpcErr && result?.success) {
-                  await sendWhatsAppMessage(cleanPhone, `Perfeito! Já passo você pra um dos nossos consultores, em breve te chamam por aqui 👍`, isTest, receivedInstance);
+                  const firstName = (sellerName || "").trim().split(/\s+/)[0];
+                  const msg = firstName
+                    ? `Perfeito! Em breve o vendedor *${firstName}* vai te atender por aqui 👍`
+                    : `Perfeito! Já passo você pra um dos nossos consultores, em breve te chamam por aqui 👍`;
+                  await sendWhatsAppMessage(cleanPhone, msg, isTest, receivedInstance);
                 } else {
                   // Fallback: if seller is inactive and has no substitute, distribute to store/general queue
                   await finishWithStore(storeId);
