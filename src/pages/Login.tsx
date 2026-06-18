@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Eye, EyeOff, Mail, Lock, User as UserIcon, ArrowLeft } from "lucide-react";
+import { Loader2, Eye, EyeOff, AtSign, Lock, User as UserIcon, ArrowLeft } from "lucide-react";
+import { apelidoToEmail, apelidoToSlug, resolveLoginEmail } from "@/lib/auth";
 import taecoLogo from "@/assets/taeco-logo.png";
 
 export default function Login() {
@@ -14,9 +15,9 @@ export default function Login() {
   const navigate = useNavigate();
   const [isSignUp, setIsSignUp] = useState(false);
   const [isForgot, setIsForgot] = useState(false);
-  const [email, setEmail] = useState("");
+  const [apelido, setApelido] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -25,7 +26,14 @@ export default function Login() {
     setLoading(true);
 
     if (isForgot) {
-      const { error } = await resetPassword(email);
+      // Redefinição por e-mail só funciona para contas com e-mail real.
+      // Quem usa apelido (e-mail interno) deve pedir ao administrador.
+      if (!apelido.includes("@")) {
+        setLoading(false);
+        toast.info("Para redefinir a senha, peça ao administrador. O login por apelido não usa e-mail.");
+        return;
+      }
+      const { error } = await resetPassword(apelido.trim());
       setLoading(false);
       if (error) {
         toast.error(error.message);
@@ -37,18 +45,28 @@ export default function Login() {
     }
 
     if (isSignUp) {
-      const { error } = await signUp(email, password, displayName);
+      if (!apelidoToSlug(apelido)) {
+        setLoading(false);
+        toast.error("Escolha um apelido válido (letras ou números).");
+        return;
+      }
+      const email = apelidoToEmail(apelido);
+      const { error } = await signUp(email, password, apelido.trim(), fullName.trim());
       setLoading(false);
       if (error) {
-        toast.error(error.message);
+        const msg = /already registered|already been registered|exists/i.test(error.message || "")
+          ? "Esse apelido já está em uso. Escolha outro."
+          : error.message;
+        toast.error(msg);
       } else {
-        toast.success("Conta criada! Verifique seu e-mail para confirmar.");
+        toast.success("Conta criada! Aguarde a aprovação do administrador para acessar.");
       }
     } else {
+      const email = resolveLoginEmail(apelido);
       const { error } = await signIn(email, password);
       setLoading(false);
       if (error) {
-        toast.error("E-mail ou senha inválidos.");
+        toast.error("Apelido ou senha inválidos.");
       } else {
         navigate("/");
       }
@@ -79,24 +97,24 @@ export default function Login() {
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
               {isForgot
-                ? "Enviaremos um link de recuperação por e-mail"
+                ? "Se você usa e-mail, enviaremos um link. Login por apelido: peça ao administrador."
                 : isSignUp
                 ? "Preencha os dados para começar"
-                : "Entre com suas credenciais para continuar"}
+                : "Entre com seu apelido e senha para continuar"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4" noValidate aria-label={isForgot ? "Formulário de recuperação de senha" : isSignUp ? "Formulário de cadastro" : "Formulário de login"}>
               {isSignUp && !isForgot && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="displayName" className="text-xs font-semibold">Nome completo</Label>
+                  <Label htmlFor="fullName" className="text-xs font-semibold">Nome completo</Label>
                   <div className="relative">
                     <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
                     <Input
-                      id="displayName"
+                      id="fullName"
                       placeholder="Seu nome completo"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
                       required
                       autoComplete="name"
                       className="pl-9 h-10 transition-shadow focus-visible:shadow-sm"
@@ -105,21 +123,26 @@ export default function Login() {
                 </div>
               )}
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-xs font-semibold">E-mail</Label>
+                <Label htmlFor="apelido" className="text-xs font-semibold">
+                  {isSignUp ? "Como quer ser chamado (apelido)" : isForgot ? "Apelido ou e-mail" : "Apelido"}
+                </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
+                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="apelido"
+                    type="text"
+                    placeholder={isSignUp ? "Ex.: Dedé" : "Seu apelido"}
+                    value={apelido}
+                    onChange={(e) => setApelido(e.target.value)}
                     required
-                    autoComplete="email"
-                    inputMode="email"
+                    autoComplete="username"
+                    autoCapitalize="none"
                     className="pl-9 h-10 transition-shadow focus-visible:shadow-sm"
                   />
                 </div>
+                {isSignUp && (
+                  <p className="text-[11px] text-muted-foreground mt-1">É assim que você vai entrar e aparecer no sistema.</p>
+                )}
               </div>
               {!isForgot && (
                 <div className="space-y-1.5">
