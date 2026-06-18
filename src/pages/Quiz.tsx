@@ -19,7 +19,7 @@ interface Question {
   code?: string;
 }
 
-const QUESTIONS_PER_ROUND = 25;
+const QUESTIONS_PER_ROUND = 10;
 
 // Sorteia um lote de perguntas (rotatividade a cada partida)
 function selectRound(pool: Question[]): Question[] {
@@ -108,18 +108,13 @@ export default function Quiz() {
     const correct = index === activeQuestion.correct_option_index;
     setIsCorrect(correct);
     
-    // Simple point system based on difficulty
-    const pointsMap: Record<string, number> = {
-      "Fácil": 100,
-      "Intermediária": 200,
-      "Difícil": 300
-    };
-    const points = pointsMap[activeQuestion.difficulty] || 100;
-    const nextScore = correct ? score + points : score;
+    // 5 pontos por resposta correta (modelo definido na reunião)
+    const POINTS_PER_CORRECT = 5;
+    const nextScore = correct ? score + POINTS_PER_CORRECT : score;
     
     if (correct) {
       setScore(nextScore);
-      toast.success("Resposta correta! 🎨", { duration: 1500 });
+      toast.success("Resposta correta! +5 pontos 🎨", { duration: 1500 });
     } else {
       toast.error("Ops! Não foi dessa vez. 🖌️", { duration: 1500 });
     }
@@ -142,7 +137,7 @@ export default function Quiz() {
       user_id: user.id,
       score: finalScore,
       total_questions: questions.length,
-      correct_answers: Math.round(finalScore / 100)
+      correct_answers: Math.round(finalScore / 5)
     });
   };
 
@@ -245,7 +240,7 @@ export default function Quiz() {
                   <Sparkles className="h-6 w-6" /> Iniciar Desafio
                 </Button>
               </motion.div>
-              <p className="text-white/40 text-xs">25 perguntas · prêmios crescentes · ranking ao vivo</p>
+              <p className="text-white/40 text-xs">10 perguntas · 5 pontos por acerto · ranking ao vivo</p>
             </motion.div>
           ) : !shouldShowResult ? (
             <motion.div
@@ -271,7 +266,7 @@ export default function Quiz() {
                 >
                   <div className="absolute inset-0 rounded-2xl bg-amber-400/40 blur-lg" />
                   <div className="relative bg-gradient-to-r from-amber-300 to-amber-500 text-[#3a2800] px-5 py-2 rounded-2xl font-black text-lg shadow-[0_0_20px_rgba(245,184,46,0.4)] tabular-nums">
-                    R$ {score.toLocaleString("pt-BR")}
+                    {score.toLocaleString("pt-BR")} pts
                   </div>
                 </motion.div>
               </div>
@@ -356,7 +351,7 @@ export default function Quiz() {
                   transition={{ type: "spring", stiffness: 200, damping: 12, delay: 0.15 }}
                   className="text-6xl font-black text-amber-400 tabular-nums drop-shadow-[0_2px_15px_rgba(245,184,46,0.4)]"
                 >
-                  R$ {score.toLocaleString("pt-BR")}
+                  {score.toLocaleString("pt-BR")} pts
                 </motion.div>
                 <p className="text-white/60">
                   Pontuação salva no ranking. Continue treinando para virar o mestre das cores!

@@ -60,7 +60,7 @@ function Rank({ row, pos, isMe }: { row: LeaderboardRow; pos: number; isMe?: boo
         </p>
         <p className="text-[11px] text-white/40">{row.attempts} {row.attempts === 1 ? "tentativa" : "tentativas"}</p>
       </div>
-      <div className="text-sm font-black text-amber-400 tabular-nums shrink-0">R$ {row.best_score.toLocaleString("pt-BR")}</div>
+      <div className="text-sm font-black text-amber-400 tabular-nums shrink-0">{row.best_score.toLocaleString("pt-BR")} pts</div>
     </div>
   );
 }
@@ -87,7 +87,7 @@ function PodiumSpot({ row, pos, isMe }: { row: LeaderboardRow; pos: number; isMe
         {row.display_name}
         {isMe && <span className="block text-[9px] text-amber-400">(você)</span>}
       </p>
-      <p className="text-sm font-black text-amber-400 tabular-nums">R$ {row.best_score.toLocaleString("pt-BR")}</p>
+      <p className="text-sm font-black text-amber-400 tabular-nums">{row.best_score.toLocaleString("pt-BR")} pts</p>
     </div>
   );
 }
