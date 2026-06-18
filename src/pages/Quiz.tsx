@@ -42,13 +42,29 @@ export default function Quiz() {
 
   useEffect(() => {
     fetchQuestions();
-  }, []);
+  }, [user]);
 
   const fetchQuestions = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("quiz_questions")
-      .select("*");
+
+    // Assuntos que este vendedor recebe (segmentação). Se não houver
+    // configuração, recebe todos os assuntos.
+    let subjects: string[] | null = null;
+    if (user) {
+      const { data: sellerRow } = await supabase
+        .from("sellers")
+        .select("quiz_subjects")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const qs = ((sellerRow as { quiz_subjects?: string[] } | null)?.quiz_subjects as string[] | null) ?? null;
+      if (qs && qs.length > 0) subjects = qs;
+    }
+
+    let query = supabase.from("quiz_questions").select("*");
+    if (subjects && subjects.length > 0) {
+      query = query.in("subject", subjects);
+    }
+    const { data, error } = await query;
 
     if (!error && data && data.length > 0) {
       const formatted = data.map(q => ({
