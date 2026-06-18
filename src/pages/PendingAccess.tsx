@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, LogOut, Mail } from "lucide-react";
+import { Clock, LogOut, User as UserIcon } from "lucide-react";
 
 export default function PendingAccess() {
   const { user, signOut } = useAuth();
@@ -27,12 +27,18 @@ export default function PendingAccess() {
             </p>
           </div>
 
-          {user?.email && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground border border-border/40 rounded-md px-3 py-2">
-              <Mail className="h-4 w-4 shrink-0" />
-              <span className="truncate">{user.email}</span>
-            </div>
-          )}
+          {(() => {
+            const apelido =
+              (user?.user_metadata?.display_name as string | undefined) ||
+              user?.email?.split("@")[0] ||
+              "";
+            return apelido ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground border border-border/40 rounded-md px-3 py-2">
+                <UserIcon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{apelido}</span>
+              </div>
+            ) : null;
+          })()}
 
           <Button onClick={signOut} variant="outline" className="w-full">
             <LogOut className="h-4 w-4 mr-2" />
