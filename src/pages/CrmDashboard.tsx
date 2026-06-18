@@ -17,6 +17,7 @@ import { subDays, subMonths, startOfDay, isAfter, format, startOfWeek, startOfMo
 import { SellerPerformance } from "@/components/SellerPerformance";
 import { AdminConsolidatedDashboard } from "@/components/AdminConsolidatedDashboard";
 import { QuizAdminStats } from "@/components/QuizAdminStats";
+import { ClientOriginReport } from "@/components/ClientOriginReport";
 import { useRole } from "@/contexts/RoleContext";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
@@ -280,6 +281,10 @@ export default function CrmDashboard() {
             <AdminConsolidatedDashboard embedded />
           </motion.div>
         )}
+
+        <motion.div variants={item} initial="hidden" animate="show">
+          <ClientOriginReport />
+        </motion.div>
 
         <motion.div variants={item} initial="hidden" animate="show">
           <QuizAdminStats />
