@@ -961,22 +961,31 @@ function UsersTab() {
   const [editIsAvailable, setEditIsAvailable] = useState<boolean>(true);
   const [editStatus, setEditStatus] = useState<string>("active");
   const [editSubstituteId, setEditSubstituteId] = useState<string>("");
+  const [editQuizSubjects, setEditQuizSubjects] = useState<string[]>([]);
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
-    const [usersRes, storesRes] = await Promise.all([
+    const [usersRes, storesRes, subjectsRes] = await Promise.all([
       supabase.rpc("admin_list_users"),
       supabase.from("stores").select("*").order("name"),
+      supabase.from("quiz_questions").select("subject"),
     ]);
     if (usersRes.error) toast.error(usersRes.error.message);
     if (usersRes.data) setUsers(usersRes.data as AdminUserRow[]);
     if (storesRes.data) setStores(storesRes.data);
+    if (subjectsRes.data) {
+      const uniq = Array.from(new Set(
+        (subjectsRes.data as any[]).map((r) => (r.subject || "").trim()).filter(Boolean)
+      )).sort((a, b) => a.localeCompare(b, "pt-BR"));
+      setAvailableSubjects(uniq);
+    }
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const openEdit = (u: AdminUserRow) => {
+  const openEdit = async (u: AdminUserRow) => {
     setEditing(u);
     setEditRole(u.role || "vendedor");
     setEditStoreId(u.store_id || "");
@@ -986,7 +995,15 @@ function UsersTab() {
     setEditIsAvailable(u.is_available ?? true);
     setEditStatus(u.status || "active");
     setEditSubstituteId(u.substitute_id || "");
+    setEditQuizSubjects([]);
+    if (u.user_id) {
+      const { data } = await supabase.from("sellers").select("quiz_subjects").eq("user_id", u.user_id).maybeSingle();
+      setEditQuizSubjects(((data as any)?.quiz_subjects as string[] | null) || []);
+    }
   };
+
+  const toggleSubject = (s: string) =>
+    setEditQuizSubjects((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
   const handleSave = async () => {
     if (!editing) return;
@@ -1015,6 +1032,13 @@ function UsersTab() {
     });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
+    // Grava os assuntos do quiz do vendedor (separado da RPC).
+    if (editRole === "vendedor") {
+      await supabase
+        .from("sellers")
+        .update({ quiz_subjects: editQuizSubjects.length ? editQuizSubjects : null } as any)
+        .eq("user_id", editing.user_id);
+    }
     toast.success("Função atribuída!");
     setEditing(null);
     fetchData();
@@ -1216,6 +1240,33 @@ function UsersTab() {
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                )}
+                {editRole === "vendedor" && (
+                  <div className="pt-1">
+                    <Label>Assuntos do Quiz</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Selecione os assuntos que cairão no quiz deste vendedor. Deixe tudo desmarcado para incluir <strong>todos</strong> os assuntos.
+                    </p>
+                    {availableSubjects.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Nenhum assunto cadastrado nas perguntas ainda.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {availableSubjects.map((s) => {
+                          const on = editQuizSubjects.includes(s);
+                          return (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => toggleSubject(s)}
+                              className={`px-3 py-1 rounded-full text-sm border capitalize transition-colors ${on ? "bg-brand-500 text-white border-brand-500" : "bg-muted text-muted-foreground border-transparent hover:border-border"}`}
+                            >
+                              {s}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
                 <Button onClick={handleSave} disabled={saving} className="w-full">
