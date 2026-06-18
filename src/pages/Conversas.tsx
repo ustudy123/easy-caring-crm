@@ -322,17 +322,26 @@ const mockContactNames: Record<string, string> = {
    // ---- Associar conversa (categoria + vínculo com cliente do ERP) ----
    const INTERMEDIARY_CATEGORIES = ["sindico", "comprador", "pintor", "arquiteto", "construtor"];
 
-   const openAssocModal = () => {
-     const client = clients.find((c) => normalizePhone(c.phone) === normalizePhone(selectedConversation?.phone || ""));
-     setAssocCategory((client as any)?.contact_category || "");
-     setSelectedErpClient(
-       (client as any)?.linked_erp_client_id
-         ? { erpId: (client as any).linked_erp_client_id, name: (client as any).linked_erp_client_name }
-         : null
-     );
+   const openAssocModal = async () => {
+     setAssocCategory("");
+     setSelectedErpClient(null);
      setErpSearchQuery("");
      setErpResults([]);
      setIsAssocModalOpen(true);
+     const phone = selectedConversation?.phone;
+     if (!phone) return;
+     // Lê a associação atual direto do banco (evita array em memória desatualizado).
+     const { data: rows } = await supabase
+       .from("clients")
+       .select("contact_category, linked_erp_client_id, linked_erp_client_name")
+       .eq("phone", phone);
+     const row: any = (rows || []).find((r: any) => r.contact_category) || (rows || [])[0];
+     if (row) {
+       setAssocCategory(row.contact_category || "");
+       if (row.linked_erp_client_id) {
+         setSelectedErpClient({ erpId: row.linked_erp_client_id, name: row.linked_erp_client_name });
+       }
+     }
    };
 
    const handleErpSearch = async () => {
@@ -368,18 +377,25 @@ const mockContactNames: Record<string, string> = {
      }
      setSavingAssoc(true);
      try {
-       const client = clients.find((c) => normalizePhone(c.phone) === normalizePhone(selectedConversation.phone));
-       if (!client) throw new Error("Contato não encontrado.");
        const updates: any = {
          contact_category: assocCategory,
          linked_erp_client_id: isIntermediary ? (selectedErpClient.erpId || null) : null,
          linked_erp_client_name: isIntermediary ? (selectedErpClient.name || null) : null,
        };
-       const { error } = await supabase.from("clients").update(updates).eq("id", (client as any).id);
+       // Atualiza por telefone (cobre eventuais linhas duplicadas do mesmo contato).
+       const { data: updated, error } = await supabase
+         .from("clients")
+         .update(updates)
+         .eq("phone", selectedConversation.phone)
+         .select("id");
        if (error) throw error;
+       if (!updated || updated.length === 0) {
+         toast.error("Não encontrei o cadastro deste contato para associar.");
+         return;
+       }
        toast.success(isIntermediary ? `Conversa associada a ${selectedErpClient.name}` : "Categoria salva!");
        setIsAssocModalOpen(false);
-       fetchData();
+       fetchData(true);
      } catch (e: any) {
        toast.error(`Erro ao salvar associação: ${e.message || e}`);
      } finally {
