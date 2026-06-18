@@ -8,6 +8,7 @@ import { Trophy, Star, RotateCcw, PaintBucket, Sparkles, ChevronLeft, Timer } fr
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { QuizLeaderboard } from "@/components/QuizLeaderboard";
+import { computeQuizLevel, QuizLevelResult } from "@/lib/quizLevel";
 
 interface Question {
   id: string;
@@ -41,10 +42,28 @@ export default function Quiz() {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [started, setStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(SECONDS_PER_QUESTION);
+  const [levelInfo, setLevelInfo] = useState<QuizLevelResult | null>(null);
 
   useEffect(() => {
     fetchQuestions();
   }, [user]);
+
+  useEffect(() => {
+    fetchLevel();
+  }, [user]);
+
+  // Calcula o nível do vendedor a partir do desempenho acumulado (automático).
+  const fetchLevel = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("quiz_attempts")
+      .select("total_questions, correct_answers")
+      .eq("user_id", user.id);
+    const rows = (data ?? []) as { total_questions: number | null; correct_answers: number | null }[];
+    const answered = rows.reduce((s, r) => s + (r.total_questions || 0), 0);
+    const correct = rows.reduce((s, r) => s + (r.correct_answers || 0), 0);
+    setLevelInfo(computeQuizLevel(answered, correct));
+  };
 
   const fetchQuestions = async () => {
     setLoading(true);
@@ -181,6 +200,7 @@ export default function Quiz() {
       total_questions: questions.length,
       correct_answers: Math.round(finalScore / 5)
     });
+    fetchLevel();
   };
 
   const restartQuiz = () => {
@@ -270,6 +290,35 @@ export default function Quiz() {
                   Responda, acumule prêmios e prove que você é o maior mestre das cores no ranking dos especialistas.
                 </p>
               </div>
+
+              {levelInfo && (
+                <div className="rounded-2xl bg-white/[0.06] border border-white/10 p-4 text-left max-w-sm mx-auto w-full">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Seu nível</p>
+                      <p className="text-lg font-black text-amber-300">{levelInfo.current.label}</p>
+                    </div>
+                    {levelInfo.next ? (
+                      <p className="text-xs text-white/50 text-right">
+                        Próximo<br /><span className="text-white/80 font-bold">{levelInfo.next.label}</span>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-amber-300 font-bold">Nível máximo 🏆</p>
+                    )}
+                  </div>
+                  {levelInfo.next && (
+                    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-300 to-amber-500"
+                        style={{ width: `${Math.round(levelInfo.progressToNext * 100)}%` }}
+                      />
+                    </div>
+                  )}
+                  <p className="text-[11px] text-white/40 mt-2">
+                    {levelInfo.answered} perguntas respondidas · {Math.round(levelInfo.accuracy * 100)}% de acerto
+                  </p>
+                </div>
+              )}
 
               <QuizLeaderboard currentUserId={user?.id} />
 
