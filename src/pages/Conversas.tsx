@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-   import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle, ShieldAlert, Forward, ListFilter, Check } from "lucide-react";
+   import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle, ShieldAlert, Forward, ListFilter, Check, Link2 } from "lucide-react";
 import { Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Download } from "lucide-react";
@@ -121,6 +121,10 @@ function formatPhone(phone: string) {
   return phone;
 }
 
+function normalizePhone(phone: string) {
+  return (phone || "").replace(/\D/g, "");
+}
+
 function getInitials(name: string) {
   return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 }
@@ -197,6 +201,15 @@ const mockContactNames: Record<string, string> = {
    const [selectedTransferSeller, setSelectedTransferSeller] = useState<string>("");
   const [transferReason, setTransferReason] = useState("");
    const [isTransferring, setIsTransferring] = useState(false);
+
+   // "Associar conversa": categoria do contato + vínculo com cliente do ERP
+   const [isAssocModalOpen, setIsAssocModalOpen] = useState(false);
+   const [assocCategory, setAssocCategory] = useState<string>("");
+   const [erpSearchQuery, setErpSearchQuery] = useState("");
+   const [erpSearching, setErpSearching] = useState(false);
+   const [erpResults, setErpResults] = useState<any[]>([]);
+   const [selectedErpClient, setSelectedErpClient] = useState<any | null>(null);
+   const [savingAssoc, setSavingAssoc] = useState(false);
 
     const fetchData = useCallback(async (silent = false) => {
       if (!silent) setLoading(true);
@@ -306,7 +319,74 @@ const mockContactNames: Record<string, string> = {
      }
    };
 
- 
+   // ---- Associar conversa (categoria + vínculo com cliente do ERP) ----
+   const INTERMEDIARY_CATEGORIES = ["sindico", "comprador", "pintor", "arquiteto", "construtor"];
+
+   const openAssocModal = () => {
+     const client = clients.find((c) => normalizePhone(c.phone) === normalizePhone(selectedConversation?.phone || ""));
+     setAssocCategory((client as any)?.contact_category || "");
+     setSelectedErpClient(
+       (client as any)?.linked_erp_client_id
+         ? { erpId: (client as any).linked_erp_client_id, name: (client as any).linked_erp_client_name }
+         : null
+     );
+     setErpSearchQuery("");
+     setErpResults([]);
+     setIsAssocModalOpen(true);
+   };
+
+   const handleErpSearch = async () => {
+     if (erpSearchQuery.trim().length < 2) {
+       toast.error("Digite ao menos 2 caracteres do nome.");
+       return;
+     }
+     setErpSearching(true);
+     setErpResults([]);
+     try {
+       const { data, error } = await supabase.functions.invoke("citel-search-name", { body: { name: erpSearchQuery.trim() } });
+       if (error) throw error;
+       if (data?.error) throw new Error(data.error);
+       const results = data?.results || [];
+       setErpResults(results);
+       if (results.length === 0) toast.info("Nenhum cliente encontrado no ERP com esse nome.");
+     } catch (e: any) {
+       toast.error(`Erro ao buscar no ERP: ${e.message || e}`);
+     } finally {
+       setErpSearching(false);
+     }
+   };
+
+   const handleSaveAssociation = async () => {
+     if (!selectedConversation?.phone || !assocCategory) {
+       toast.error("Selecione uma categoria.");
+       return;
+     }
+     const isIntermediary = INTERMEDIARY_CATEGORIES.includes(assocCategory);
+     if (isIntermediary && !selectedErpClient) {
+       toast.error("Selecione o cliente do ERP a vincular.");
+       return;
+     }
+     setSavingAssoc(true);
+     try {
+       const client = clients.find((c) => normalizePhone(c.phone) === normalizePhone(selectedConversation.phone));
+       if (!client) throw new Error("Contato não encontrado.");
+       const updates: any = {
+         contact_category: assocCategory,
+         linked_erp_client_id: isIntermediary ? (selectedErpClient.erpId || null) : null,
+         linked_erp_client_name: isIntermediary ? (selectedErpClient.name || null) : null,
+       };
+       const { error } = await supabase.from("clients").update(updates).eq("id", (client as any).id);
+       if (error) throw error;
+       toast.success(isIntermediary ? `Conversa associada a ${selectedErpClient.name}` : "Categoria salva!");
+       setIsAssocModalOpen(false);
+       fetchData();
+     } catch (e: any) {
+       toast.error(`Erro ao salvar associação: ${e.message || e}`);
+     } finally {
+       setSavingAssoc(false);
+     }
+   };
+
    useEffect(() => {
      fetchData();
    }, [fetchData]);
@@ -1422,6 +1502,24 @@ const mockContactNames: Record<string, string> = {
                             </Tooltip>
                           </TooltipProvider>
                         )}
+                        {(isAdmin || isGerente || isVendedor || isSuporte) && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={openAssocModal}
+                                  aria-label="Associar conversa"
+                                  className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-full"
+                                >
+                                  <Link2 className="h-5 w-5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Associar conversa</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         {isAdmin && (
                         <TooltipProvider>
                           <Tooltip>
@@ -1810,6 +1908,93 @@ const mockContactNames: Record<string, string> = {
           </Button>
         </DialogFooter>
       </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAssocModalOpen} onOpenChange={setIsAssocModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Associar conversa</DialogTitle>
+            <DialogDescription>
+              Classifique o contato. Se for intermediário, vincule ao cliente final cadastrado no ERP.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Categoria do contato</Label>
+              <Select value={assocCategory} onValueChange={(v) => { setAssocCategory(v); setSelectedErpClient(null); setErpResults([]); }}>
+                <SelectTrigger><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sindico">Síndico</SelectItem>
+                  <SelectItem value="comprador">Comprador</SelectItem>
+                  <SelectItem value="pintor">Pintor</SelectItem>
+                  <SelectItem value="arquiteto">Arquiteto</SelectItem>
+                  <SelectItem value="construtor">Construtor</SelectItem>
+                  <SelectItem value="consumidor_final">Consumidor final</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {assocCategory && assocCategory !== "consumidor_final" && (
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Cliente final no ERP</Label>
+                {selectedErpClient ? (
+                  <div className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">{selectedErpClient.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {selectedErpClient.erpId ? `Código ${selectedErpClient.erpId}` : ""}{selectedErpClient.document ? ` · ${selectedErpClient.document}` : ""}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedErpClient(null)}>Trocar</Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Nome do cliente no ERP"
+                        value={erpSearchQuery}
+                        onChange={(e) => setErpSearchQuery(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleErpSearch(); } }}
+                      />
+                      <Button onClick={handleErpSearch} disabled={erpSearching} className="shrink-0">
+                        {erpSearching ? "Buscando..." : "Buscar"}
+                      </Button>
+                    </div>
+                    {erpResults.length > 0 && (
+                      <div className="max-h-52 overflow-y-auto rounded-lg border border-border/60 divide-y">
+                        {erpResults.map((r, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => { setSelectedErpClient(r); setErpResults([]); }}
+                            className="w-full text-left px-3 py-2 hover:bg-muted/40 transition-colors"
+                          >
+                            <p className="text-sm font-medium truncate">{r.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {r.erpId ? `Código ${r.erpId}` : ""}{r.document ? ` · ${r.document}` : ""}{r.city ? ` · ${r.city}` : ""}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {assocCategory === "consumidor_final" && (
+              <p className="text-xs text-muted-foreground">
+                Consumidor final: o próprio contato é o cliente — não precisa vincular ao ERP.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssocModalOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveAssociation} disabled={savingAssoc}>
+              {savingAssoc ? "Salvando..." : "Salvar associação"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </AppLayout>
   );
