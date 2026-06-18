@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,6 +36,8 @@ export default function Quiz() {
   const [allQuestions, setAllQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
+  // Acertos por assunto na rodada atual (para o painel de desempenho do admin).
+  const subjectStatsRef = useRef<Record<string, { answered: number; correct: number }>>({});
   const [showResult, setShowResult] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -126,6 +128,7 @@ export default function Quiz() {
 
   // Inicia uma nova partida sorteando 25 perguntas do pool
   const startRound = () => {
+    subjectStatsRef.current = {};
     setQuestions(selectRound(allQuestions));
     setCurrentQuestionIndex(0);
     setScore(0);
@@ -147,6 +150,13 @@ export default function Quiz() {
     setSelectedOption(index === null ? -1 : index);
     const correct = index !== null && index === activeQuestion.correct_option_index;
     setIsCorrect(correct);
+
+    // Acumula acerto por assunto (tempo esgotado conta como respondida e errada).
+    const subj = (activeQuestion.subject || "Geral").trim() || "Geral";
+    const cur = subjectStatsRef.current[subj] || { answered: 0, correct: 0 };
+    cur.answered += 1;
+    if (correct) cur.correct += 1;
+    subjectStatsRef.current[subj] = cur;
 
     // 5 pontos por resposta correta (modelo definido na reunião)
     const POINTS_PER_CORRECT = 5;
@@ -198,8 +208,9 @@ export default function Quiz() {
       user_id: user.id,
       score: finalScore,
       total_questions: questions.length,
-      correct_answers: Math.round(finalScore / 5)
-    });
+      correct_answers: Math.round(finalScore / 5),
+      subject_breakdown: subjectStatsRef.current,
+    } as any);
     fetchLevel();
   };
 

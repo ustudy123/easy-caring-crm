@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { computeQuizLevel } from "@/lib/quizLevel";
 import { startOfWeek, startOfMonth } from "date-fns";
-import { Paintbrush, Trophy, Target, ListChecks, AlertTriangle, Loader2 } from "lucide-react";
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { Paintbrush, Trophy, Target, ListChecks, AlertTriangle, Loader2, TrendingUp, BookOpen } from "lucide-react";
 
 interface Attempt {
   user_id: string;
@@ -13,7 +14,11 @@ interface Attempt {
   completed_at: string;
   is_penalty: boolean;
   skipped_inactive: boolean;
+  subject_breakdown: Record<string, { answered: number; correct: number }> | null;
 }
+
+interface SubjectStat { subject: string; answered: number; correct: number; accuracy: number; }
+interface DailyPoint { date: string; points: number; }
 
 interface SellerStat {
   userId: string;
@@ -54,11 +59,24 @@ function fmtDate(d: string | null): string {
   return new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
+function fmtDay(d: string): string {
+  const [, m, day] = d.split("-");
+  return `${day}/${m}`;
+}
+
+function barColor(acc: number): string {
+  if (acc < 0.5) return "bg-red-500";
+  if (acc < 0.75) return "bg-amber-500";
+  return "bg-emerald-500";
+}
+
 export function QuizAdminStats() {
   const [period, setPeriod] = useState("week");
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<SellerStat[]>([]);
   const [summary, setSummary] = useState({ participants: 0, totalActive: 0, avgAccuracy: 0, totalQuestions: 0, totalPenalties: 0 });
+  const [subjects, setSubjects] = useState<SubjectStat[]>([]);
+  const [daily, setDaily] = useState<DailyPoint[]>([]);
 
   useEffect(() => {
     let cancel = false;
@@ -66,7 +84,7 @@ export function QuizAdminStats() {
       setLoading(true);
       try {
         const since = sinceISO(period);
-        let q = supabase.from("quiz_attempts").select("user_id, score, total_questions, correct_answers, completed_at, is_penalty, skipped_inactive");
+        let q = supabase.from("quiz_attempts").select("user_id, score, total_questions, correct_answers, completed_at, is_penalty, skipped_inactive, subject_breakdown");
         if (since) q = q.gte("completed_at", since);
         const [sellersRes, attemptsRes] = await Promise.all([
           supabase.from("sellers").select("name, user_id, is_active"),
@@ -113,6 +131,33 @@ export function QuizAdminStats() {
           totalPenalties: stats.reduce((t, s) => t + s.penalties, 0),
         });
         setRows(stats);
+
+        // Desempenho por assunto (apenas tentativas reais com breakdown).
+        const subjAgg = new Map<string, { answered: number; correct: number }>();
+        for (const a of attempts) {
+          if (a.is_penalty || a.skipped_inactive || !a.subject_breakdown) continue;
+          for (const [subj, v] of Object.entries(a.subject_breakdown)) {
+            const cur = subjAgg.get(subj) || { answered: 0, correct: 0 };
+            cur.answered += (v as any)?.answered || 0;
+            cur.correct += (v as any)?.correct || 0;
+            subjAgg.set(subj, cur);
+          }
+        }
+        setSubjects(
+          [...subjAgg.entries()]
+            .map(([subject, v]) => ({ subject, answered: v.answered, correct: v.correct, accuracy: v.answered > 0 ? v.correct / v.answered : 0 }))
+            .filter((s) => s.answered > 0)
+            .sort((a, b) => a.accuracy - b.accuracy)
+        );
+
+        // Evolução: pontos por dia (tentativas reais).
+        const dayAgg = new Map<string, number>();
+        for (const a of attempts) {
+          if (a.is_penalty || a.skipped_inactive || !a.completed_at) continue;
+          const day = a.completed_at.slice(0, 10);
+          dayAgg.set(day, (dayAgg.get(day) || 0) + (a.score || 0));
+        }
+        setDaily([...dayAgg.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([date, points]) => ({ date, points })));
       } finally {
         if (!cancel) setLoading(false);
       }
@@ -194,6 +239,57 @@ export function QuizAdminStats() {
                   })}
                 </tbody>
               </table>
+            </div>
+
+            {daily.length > 1 && (
+              <div className="pt-1">
+                <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                  <TrendingUp className="h-3.5 w-3.5 text-brand-500" /> Evolução de pontos da equipe
+                </p>
+                <ResponsiveContainer width="100%" height={130}>
+                  <AreaChart data={daily} margin={{ top: 5, right: 8, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="quizPts" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#F37021" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="#F37021" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" tickFormatter={fmtDay} fontSize={10} tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" />
+                    <Tooltip
+                      labelFormatter={(d) => fmtDay(String(d))}
+                      formatter={(v: any) => [`${v} pts`, "Pontos"]}
+                      contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid hsl(var(--border))" }}
+                    />
+                    <Area type="monotone" dataKey="points" stroke="#F37021" strokeWidth={2} fill="url(#quizPts)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            <div className="pt-1">
+              <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                <BookOpen className="h-3.5 w-3.5 text-brand-500" /> Desempenho por assunto
+                <span className="font-normal text-[11px]">(do mais fraco ao mais forte — onde treinar)</span>
+              </p>
+              {subjects.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Os dados por assunto aparecem conforme a equipe joga novas rodadas.
+                </p>
+              ) : (
+                <div className="space-y-2.5">
+                  {subjects.map((s) => (
+                    <div key={s.subject}>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="font-medium capitalize text-foreground">{s.subject}</span>
+                        <span className="tabular-nums text-muted-foreground">{Math.round(s.accuracy * 100)}% · {s.answered} resp.</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div className={`h-full rounded-full ${barColor(s.accuracy)}`} style={{ width: `${Math.max(Math.round(s.accuracy * 100), 3)}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}
