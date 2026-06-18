@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppLayout } from "@/components/AppLayout";
+import { ShowDasTintasBlock } from "@/components/ShowDasTintasBlock";
 
 interface Module {
   id: string;
@@ -148,6 +149,10 @@ export default function Dashboard() {
           })
         )}
       </motion.div>
+
+      <div className="w-full max-w-xl mt-12">
+        <ShowDasTintasBlock />
+      </div>
 
       {/* Footer / Decorative splashes */}
       <div className="fixed bottom-0 left-0 -z-10 opacity-10 pointer-events-none">

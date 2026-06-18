@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { subDays, subMonths, startOfDay, isAfter, format, startOfWeek, startOfMonth } from "date-fns";
 import { SellerPerformance } from "@/components/SellerPerformance";
 import { AdminConsolidatedDashboard } from "@/components/AdminConsolidatedDashboard";
+import { ShowDasTintasBlock } from "@/components/ShowDasTintasBlock";
 import { useRole } from "@/contexts/RoleContext";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
@@ -279,6 +280,10 @@ export default function CrmDashboard() {
             <AdminConsolidatedDashboard embedded />
           </motion.div>
         )}
+
+        <motion.div variants={item} initial="hidden" animate="show">
+          <ShowDasTintasBlock />
+        </motion.div>
       </motion.div>
     </AppLayout>
   );
