@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Sparkles,
   Home,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -86,6 +87,13 @@ const allToolsNav: NavItem[] = [
     icon: FileText,
     badgeKey: null,
     roles: ["admin", "suporte"],
+  },
+  {
+    title: "Vendas CRM x ERP",
+    url: "/relatorio-vendas",
+    icon: TrendingUp,
+    badgeKey: null,
+    roles: ["admin", "gerente"],
   },
   {
     title: "Admin",

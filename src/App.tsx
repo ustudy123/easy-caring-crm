@@ -19,6 +19,7 @@ import Agenda from "./pages/Agenda";
 import Configuracoes from "./pages/Configuracoes";
 import Conversas from "./pages/Conversas";
 import SuporteOrcamento from "./pages/SuporteOrcamento";
+import RelatorioVendasCRM from "./pages/RelatorioVendasCRM";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -58,6 +59,7 @@ const App = () => (
                         <Route path="/configuracoes" element={<Configuracoes />} />
                         <Route path="/suporte-orcamento" element={<SuporteOrcamento />} />
                         <Route path="/admin" element={<AdminPanel />} />
+                        <Route path="/relatorio-vendas" element={<RelatorioVendasCRM />} />
                         <Route path="*" element={<NotFound />} />
                       </Route>
                     </Routes>
