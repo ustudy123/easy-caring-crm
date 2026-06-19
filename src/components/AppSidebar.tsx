@@ -179,6 +179,13 @@ export function AppSidebar({ className }: { className?: string }) {
     user?.email?.split("@")[0] ||
     "User";
 
+  // Apelido (display_name) é o que aparece na sidebar — nunca o e-mail.
+  const apelido =
+    user?.user_metadata?.display_name ||
+    user?.email?.split("@")[0] ||
+    "Usuário";
+  const fullName = user?.user_metadata?.full_name || "";
+
   const renderItem = (item: { title: string; url: string; icon: React.ComponentType<any>; badgeKey: string | null }) => {
     const isActive = location.pathname === item.url;
     const badge = getBadge(item.badgeKey);
@@ -373,11 +380,13 @@ export function AppSidebar({ className }: { className?: string }) {
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-[12.5px] font-semibold text-white/90 leading-tight">
-                {firstName}
+                {apelido}
               </span>
-              <span className="truncate text-[10.5px] text-white/40 leading-tight mt-0.5">
-                {user?.email}
-              </span>
+              {fullName && (
+                <span className="truncate text-[10.5px] text-white/40 leading-tight mt-0.5">
+                  {fullName}
+                </span>
+              )}
             </div>
             <button
               onClick={async () => {
