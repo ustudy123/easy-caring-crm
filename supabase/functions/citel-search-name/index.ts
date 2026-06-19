@@ -53,6 +53,48 @@ function extractArray(data: any): any[] {
   return [];
 }
 
+function stripAccents(s: string): string {
+  return (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+// Chave fonética: normaliza variações comuns de grafia em PT-BR para comparar
+// nomes "que soam igual" (Raphael/Rafael, Matheus/Mateus, Thayná/Tainá...).
+function phoneticKey(s: string): string {
+  return stripAccents((s || "").toLowerCase())
+    .replace(/ph/g, "f")
+    .replace(/th/g, "t")
+    .replace(/y/g, "i")
+    .replace(/h/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+// Gera variações de grafia do termo digitado, pra consultar o ERP com cada uma.
+function nameVariants(name: string): string[] {
+  const base = name.trim();
+  const out = new Set<string>([base]);
+  const add = (v: string) => { if (v && v.trim() && v !== base) out.add(v); };
+  add(stripAccents(base));
+  add(base.replace(/ph/gi, "f"));
+  add(base.replace(/f/gi, "ph"));
+  add(base.replace(/th/gi, "t"));
+  add(base.replace(/y/gi, "i"));
+  return [...out].slice(0, 6);
+}
+
+function rankByName(results: any[], query: string): any[] {
+  const qk = phoneticKey(query);
+  const score = (n: string) => {
+    const rk = phoneticKey(n);
+    if (rk === qk) return 0;
+    if (rk.startsWith(qk)) return 1;
+    if (rk.includes(qk)) return 2;
+    if (qk.includes(rk)) return 3;
+    return 4;
+  };
+  return [...results].sort((a, b) => score(a.name) - score(b.name) || (a.name || "").length - (b.name || "").length);
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -67,11 +109,9 @@ Deno.serve(async (req) => {
     const companyCode = Deno.env.get("CITEL_EMPRESA") || "1";
     const headers = { Authorization: `Basic ${auth}`, Accept: "application/json" };
     const emp = `codigoEmpresa=${encodeURIComponent(companyCode)}`;
-    const nm = encodeURIComponent(name);
 
-    // O ERP varia o caminho/parâmetro do filtro por nome. Tentamos as
-    // combinações mais prováveis até uma trazer resultados.
-    const candidates = [
+    // Monta os caminhos/parâmetros possíveis do ERP para um termo já codificado.
+    const templates = (nm: string) => [
       `${apiUrl}/cliente?${emp}&nome=${nm}`,
       `${apiUrl}/cliente?${emp}&nome=${nm}&paginacao=50`,
       `${apiUrl}/cliente?${emp}&razaoSocial=${nm}`,
@@ -81,37 +121,61 @@ Deno.serve(async (req) => {
       `${apiUrl}/cadastrosgerais/v10/cliente?${emp}&nome=${nm}`,
     ];
 
-    let lastStatus = 0;
-    let lastBody: any = null;
-
-    for (const url of candidates) {
-      console.log(`[citel-search-name] GET ${url}`);
+    const fetchUrl = async (url: string): Promise<{ status: number; data: any } | null> => {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 15_000);
-      let res: Response;
       try {
-        res = await fetch(url, { headers, signal: ctrl.signal });
+        const res = await fetch(url, { headers, signal: ctrl.signal });
+        const text = await res.text();
+        let data: any = null;
+        try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+        return { status: res.status, data };
       } catch (e: any) {
-        clearTimeout(timer);
         console.error(`[citel-search-name] fetch error: ${e.message}`);
-        continue;
+        return null;
+      } finally {
+        clearTimeout(timer);
       }
-      clearTimeout(timer);
+    };
 
-      const text = await res.text();
-      let data: any = null;
-      try { data = text ? JSON.parse(text) : null; } catch { data = text; }
-      lastStatus = res.status;
-      lastBody = data;
-      console.log(`[citel-search-name] status=${res.status} preview=${JSON.stringify(data).slice(0, 300)}`);
+    const variants = nameVariants(name);
+    console.log(`[citel-search-name] termo="${name}" variações=${JSON.stringify(variants)}`);
 
-      if (!res.ok) continue;
+    const merged = new Map<string, any>();
+    let lastStatus = 0;
+    let lastBody: any = null;
+    let workingTemplate = -1;
 
-      const items = extractArray(data);
-      const results = items.map(mapErpClient).filter(c => c.name);
-      if (results.length > 0) {
-        return json({ found: true, total: results.length, results, query: name });
+    // 1) Descobre qual template o ERP aceita (primeiro HTTP 200), usando o termo original.
+    for (let i = 0; i < templates(encodeURIComponent(variants[0])).length; i++) {
+      const url = templates(encodeURIComponent(variants[0]))[i];
+      const r = await fetchUrl(url);
+      if (!r) continue;
+      lastStatus = r.status; lastBody = r.data;
+      if (r.status >= 200 && r.status < 300) {
+        workingTemplate = i;
+        for (const c of extractArray(r.data).map(mapErpClient).filter((c: any) => c.name)) {
+          merged.set(String(c.erpId || c.document || c.name).toLowerCase(), c);
+        }
+        break;
       }
+    }
+
+    // 2) Consulta as demais variações no template que funcionou e junta tudo.
+    if (workingTemplate >= 0) {
+      for (let v = 1; v < variants.length; v++) {
+        const url = templates(encodeURIComponent(variants[v]))[workingTemplate];
+        const r = await fetchUrl(url);
+        if (!r || r.status < 200 || r.status >= 300) continue;
+        for (const c of extractArray(r.data).map(mapErpClient).filter((c: any) => c.name)) {
+          merged.set(String(c.erpId || c.document || c.name).toLowerCase(), c);
+        }
+      }
+    }
+
+    const results = rankByName([...merged.values()], name);
+    if (results.length > 0) {
+      return json({ found: true, total: results.length, results, query: name });
     }
 
     return json({ found: false, total: 0, results: [], query: name, lastStatus, lastBody });
