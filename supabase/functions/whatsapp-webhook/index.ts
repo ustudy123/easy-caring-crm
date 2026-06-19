@@ -744,15 +744,16 @@ serve(async (req) => {
                  if (sellerByCode) {
                    await assignToSeller(sellerByCode.id, sellerByCode.name, sellerByCode.store_id);
                  } else {
-                   const attempts = (client.triage_code_attempts || 0) + 1;
-                   if (attempts >= 3) {
-                     // Errou o código 3 vezes: para de pedir o código e oferece a região.
+                   // Incremento atômico (resistente a mensagens em sequência rápida).
+                   const { data: bumped } = await supabase.rpc("bump_triage_code_attempts", { p_client_id: client.id });
+                   const attempts = typeof bumped === "number" ? bumped : 1;
+                   if (attempts >= 2) {
+                     // Errou o código pela 2ª vez: para de pedir o código e oferece a região.
                      await updateClient({ triage_step: 'ask_store', triage_code_attempts: 0 });
                      const storeOptions = `Sem problema! Não consegui localizar esse código 😊 Pra te direcionar pra loja certa, qual região fica melhor pra você?\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé\n\nÉ só me dizer o *número* ou o nome da região 👍`;
                      await sendWhatsAppMessage(cleanPhone, storeOptions, isTest, receivedInstance);
                    } else {
-                     await updateClient({ triage_code_attempts: attempts });
-                     await sendWhatsAppMessage(cleanPhone, `Hmm, não achei esse código aqui 🤔 Dá uma conferida e manda de novo (tentativa ${attempts} de 3), ou se preferir é só me dizer que eu já te direciono 😊`, isTest, receivedInstance);
+                     await sendWhatsAppMessage(cleanPhone, `Hmm, não achei esse código aqui 🤔 Dá uma conferida e manda de novo, ou se preferir é só me dizer que eu já te direciono 😊`, isTest, receivedInstance);
                    }
                  }
                 } else {
