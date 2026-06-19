@@ -733,11 +733,13 @@ serve(async (req) => {
               };
 
              if (step === 'ask_code') {
-               // Extrai um código (3-10 dígitos) mesmo que venha dentro de uma frase
-               // (ex.: "meu código é 1023"). Sem dígitos = cliente não tem código.
-               const codeInText = trimmed.match(/\d{3,10}/);
-               if (codeInText) {
-                 const code = codeInText[0];
+               // Detecta um código: mensagem só com números (ex.: "89") OU um número
+               // de 3-10 dígitos dentro de uma frase (ex.: "meu código é 1023").
+               // Mensagem sem número nenhum = cliente não tem código.
+               const isPureNumber = /^\d{1,10}$/.test(trimmed);
+               const codeMatch = trimmed.match(/\d{3,10}/);
+               const code = isPureNumber ? trimmed : (codeMatch ? codeMatch[0] : null);
+               if (code) {
                  const { data: sellerByCode } = await supabase
                    .from("sellers").select("id, name, store_id")
                    .eq("code", code).maybeSingle();
@@ -750,18 +752,16 @@ serve(async (req) => {
                    if (attempts >= 2) {
                      // Errou o código pela 2ª vez: para de pedir o código e oferece a região.
                      await updateClient({ triage_step: 'ask_store', triage_code_attempts: 0 });
-                     const storeOptions = `Sem problema! Não consegui localizar esse código 😊 Pra te direcionar pra loja certa, qual região fica melhor pra você?\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé\n\nÉ só me dizer o *número* ou o nome da região 👍`;
-                     await sendWhatsAppMessage(cleanPhone, storeOptions, isTest, receivedInstance);
+                     await sendWhatsAppMessage(cleanPhone, `Sem problemas! 😊 Vou te direcionar pela região, então. Você fica mais perto de *Niterói*, *Rio (Barra da Tijuca)* ou *Macaé*? É só me dizer o nome 🙂`, isTest, receivedInstance);
                    } else {
-                     await sendWhatsAppMessage(cleanPhone, `Hmm, não achei esse código aqui 🤔 Dá uma conferida e manda de novo, ou se preferir é só me dizer que eu já te direciono 😊`, isTest, receivedInstance);
+                     await sendWhatsAppMessage(cleanPhone, `Hmm, esse código não confere aqui 🤔 Dá uma conferidinha e manda de novo, por favor — ou, se preferir, é só dizer que eu já te direciono 😊`, isTest, receivedInstance);
                    }
                  }
                 } else {
-                   // Qualquer resposta sem código = não tem vendedor. Segue o fluxo
+                   // Qualquer resposta sem número = não tem vendedor. Segue o fluxo
                    // naturalmente, sem ficar exigindo um "N".
                    await updateClient({ triage_step: 'ask_store' });
-                   const storeOptions = `Sem problema! 😊 Pra te mandar pra loja mais perto, qual região fica melhor pra você?\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé\n\nÉ só me dizer o *número* ou o nome da região 👍`;
-                   await sendWhatsAppMessage(cleanPhone, storeOptions, isTest, receivedInstance);
+                   await sendWhatsAppMessage(cleanPhone, `Tranquilo! 😊 Então me conta: você está mais pra qual lado — *Niterói*, *Rio (Barra da Tijuca)* ou *Macaé*? É só me dizer o nome da região 🙂`, isTest, receivedInstance);
                 }
                 } else if (step === 'ask_store') {
                   const { data: stores } = await supabase.from("stores").select("id, name, city").order("name");
@@ -819,7 +819,7 @@ serve(async (req) => {
                   } else {
                     await sendWhatsAppMessage(
                       cleanPhone,
-                      `Acho que não peguei 😅 Me diz a região que fica melhor pra você — pode ser o número ou o nome:\n\n1 — Niterói\n2 — Rio de Janeiro (Barra da Tijuca)\n3 — Macaé`,
+                      `Acho que não peguei 😅 Você fica mais perto de *Niterói*, *Rio (Barra da Tijuca)* ou *Macaé*? Pode me dizer o nome 🙂`,
                       isTest,
                       receivedInstance
                     );
