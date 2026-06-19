@@ -60,6 +60,7 @@ export default function Login() {
         toast.error(msg);
       } else {
         toast.success("Conta criada! Aguarde a aprovação do administrador para acessar.");
+        navigate("/");
       }
     } else {
       const email = resolveLoginEmail(apelido);
