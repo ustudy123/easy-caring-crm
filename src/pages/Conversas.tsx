@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-   import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle, ShieldAlert, Forward, ListFilter, Check, Link2 } from "lucide-react";
+   import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle, ShieldAlert, Forward, ListFilter, Check, Link2, Plus } from "lucide-react";
 import { Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Download } from "lucide-react";
@@ -211,6 +211,13 @@ const mockContactNames: Record<string, string> = {
    const [selectedErpClient, setSelectedErpClient] = useState<any | null>(null);
    const [savingAssoc, setSavingAssoc] = useState(false);
 
+   // Nova conversa (iniciar ativamente com um número)
+   const [newChatOpen, setNewChatOpen] = useState(false);
+   const [newChatPhone, setNewChatPhone] = useState("");
+   const [newChatName, setNewChatName] = useState("");
+   const [newChatMessage, setNewChatMessage] = useState("");
+   const [newChatSending, setNewChatSending] = useState(false);
+
     const fetchData = useCallback(async (silent = false) => {
       if (!silent) setLoading(true);
       try {
@@ -400,6 +407,40 @@ const mockContactNames: Record<string, string> = {
        toast.error(`Erro ao salvar associação: ${e.message || e}`);
      } finally {
        setSavingAssoc(false);
+     }
+   };
+
+   const handleStartNewChat = async () => {
+     const digits = newChatPhone.replace(/\D/g, "");
+     if (digits.length < 10) { toast.error("Informe um número válido com DDD (ex.: 21 99999-8888)."); return; }
+     const fullPhone = digits.startsWith("55") ? digits : `55${digits}`;
+     const text = newChatMessage.trim();
+     if (!text) { toast.error("Escreva a primeira mensagem."); return; }
+     setNewChatSending(true);
+     try {
+       const { data: { user } } = await supabase.auth.getUser();
+       // Cria/atualiza o contato se um nome foi informado.
+       const { data: existing } = await supabase.from("clients").select("id").eq("phone", fullPhone).maybeSingle();
+       if (newChatName.trim()) {
+         if (existing?.id) {
+           await supabase.from("clients").update({ name: newChatName.trim() }).eq("id", existing.id);
+         } else {
+           await supabase.from("clients").insert({ name: newChatName.trim(), phone: fullPhone } as any);
+         }
+       }
+       const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+         body: { phone: fullPhone, message: text, senderId: user?.id },
+       });
+       if (error) throw error;
+       if (data?.error) throw new Error(data.error);
+       toast.success("Conversa iniciada!");
+       setNewChatOpen(false);
+       setSelectedPhone(fullPhone);
+       fetchData();
+     } catch (e: any) {
+       toast.error(`Erro ao iniciar conversa: ${e.message || e}`);
+     } finally {
+       setNewChatSending(false);
      }
    };
 
@@ -1124,6 +1165,12 @@ const mockContactNames: Record<string, string> = {
 
            {/* Search and Tabs */}
            <div className="px-2 py-2.5 bg-white/70 backdrop-blur-sm space-y-2 border-b border-border/60">
+             <Button
+               onClick={() => { setNewChatPhone(""); setNewChatName(""); setNewChatMessage(""); setNewChatOpen(true); }}
+               className="w-full h-9 rounded-lg bg-brand-500 hover:opacity-90 text-white text-sm gap-2"
+             >
+               <Plus className="h-4 w-4" /> Nova conversa
+             </Button>
              <div className="relative">
                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
                <Input
@@ -2008,6 +2055,51 @@ const mockContactNames: Record<string, string> = {
             <Button variant="outline" onClick={() => setIsAssocModalOpen(false)}>Cancelar</Button>
             <Button onClick={handleSaveAssociation} disabled={savingAssoc}>
               {savingAssoc ? "Salvando..." : "Salvar associação"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova conversa</DialogTitle>
+            <DialogDescription>
+              Inicie um atendimento mandando a primeira mensagem para um número.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Número (com DDD)</Label>
+              <Input
+                placeholder="Ex.: 21 99999-8888"
+                value={newChatPhone}
+                onChange={(e) => setNewChatPhone(e.target.value)}
+                inputMode="tel"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Nome <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+              <Input
+                placeholder="Nome do contato"
+                value={newChatName}
+                onChange={(e) => setNewChatName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Primeira mensagem</Label>
+              <Textarea
+                placeholder="Escreva a mensagem que será enviada..."
+                value={newChatMessage}
+                onChange={(e) => setNewChatMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewChatOpen(false)}>Cancelar</Button>
+            <Button onClick={handleStartNewChat} disabled={newChatSending} className="gap-1.5">
+              <Send className="h-4 w-4" /> {newChatSending ? "Enviando..." : "Enviar"}
             </Button>
           </DialogFooter>
         </DialogContent>
