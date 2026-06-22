@@ -149,6 +149,7 @@ export default function Kanban() {
   const [losingLead, setLosingLead] = useState<Lead | null>(null);
   const [lostReason, setLostReason] = useState("");
   const [lostNote, setLostNote] = useState("");
+  const [saleType, setSaleType] = useState<"unica" | "recorrente" | "">("");
 
   // Motivos padronizados de encerramento/perda (para gerar estatística).
   const LOST_REASONS = [
@@ -159,6 +160,7 @@ export default function Kanban() {
     "Tentativas de contato esgotadas",
     "Cliente não tem interesse",
   ];
+  const VENDA_CONCLUIDA = "Venda concluída";
   const [transferSellerId, setTransferSellerId] = useState("");
   const [transferReason, setTransferReason] = useState("");
   const [isTransferring, setIsTransferring] = useState(false);
@@ -201,12 +203,38 @@ export default function Kanban() {
     }
     const note = lostNote.trim();
     const closedAt = new Date().toISOString();
-
-    // Atualiza o lead para o estado perdido com o motivo padronizado
-    updateLead({ ...losingLead, stage: 'perdido', lostReason: reason, closedAt });
-
-    // Registra na timeline do cliente (se houver cliente com o mesmo telefone)
     const { data: { user } } = await supabase.auth.getUser();
+
+    // --- Venda concluída → pós-venda + contagem de compra do cliente ---
+    if (reason === VENDA_CONCLUIDA) {
+      if (!saleType) {
+        toast({ title: "Marque o tipo de compra", description: "Informe se o cliente é de compra única ou recorrente.", variant: "destructive" });
+        return;
+      }
+      updateLead({ ...losingLead, stage: 'pos_venda', closedAt });
+      const { data: client } = await (supabase
+        .from("clients").select("id, purchase_count").eq("phone", losingLead.clientPhone).maybeSingle() as any);
+      if (client?.id) {
+        await supabase.from("clients").update({
+          purchase_count: ((client as any).purchase_count || 0) + 1,
+          client_type: saleType,
+          last_purchase_at: closedAt,
+        } as any).eq("id", client.id);
+        await supabase.from("interactions").insert({
+          client_id: client.id,
+          lead_id: losingLead.id,
+          type: "note",
+          description: `VENDA CONCLUÍDA — cliente ${saleType === "recorrente" ? "recorrente" : "de compra única"}${losingLead.value ? ` (R$ ${losingLead.value})` : ""}`,
+          created_by: user?.id ?? null,
+        });
+      }
+      toast({ title: "Venda concluída! 🎉", description: saleType === "recorrente" ? "Cliente marcado como recorrente." : "Movido para o pós-venda." });
+      setLosingLead(null); setLostReason(""); setLostNote(""); setSaleType("");
+      return;
+    }
+
+    // --- Perda: marca como perdido com motivo padronizado ---
+    updateLead({ ...losingLead, stage: 'perdido', lostReason: reason, closedAt });
     const { data: client } = await supabase
       .from("clients").select("id").eq("phone", losingLead.clientPhone).maybeSingle();
     if (client?.id) {
@@ -223,6 +251,7 @@ export default function Kanban() {
     setLosingLead(null);
     setLostReason("");
     setLostNote("");
+    setSaleType("");
   };
 
   const handleTransferLead = async (sellerId: string, reason: string) => {
@@ -1062,51 +1091,77 @@ export default function Kanban() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: Marcar como perdido */}
-      <Dialog open={!!losingLead} onOpenChange={(open) => { if (!open) { setLosingLead(null); setLostReason(""); setLostNote(""); } }}>
+      {/* Dialog: Encerrar atendimento (venda concluída ou perda) */}
+      <Dialog open={!!losingLead} onOpenChange={(open) => { if (!open) { setLosingLead(null); setLostReason(""); setLostNote(""); setSaleType(""); } }}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-red-500" /> Marcar como perdido
+              <XCircle className="h-5 w-5 text-muted-foreground" /> Encerrar atendimento
             </DialogTitle>
             <DialogDescription>
-              {losingLead ? `Encerrar o negócio com ${losingLead.clientName} como perdido.` : ""}
+              {losingLead ? `Encerrar o atendimento de ${losingLead.clientName}.` : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
               <Label>Motivo do encerramento</Label>
-              <Select value={lostReason} onValueChange={setLostReason}>
+              <Select value={lostReason} onValueChange={(v) => { setLostReason(v); setSaleType(""); }}>
                 <SelectTrigger><SelectValue placeholder="Selecione o motivo" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={VENDA_CONCLUIDA}>✅ Venda concluída</SelectItem>
                   {LOST_REASONS.map((r) => (
                     <SelectItem key={r} value={r}>{r}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label>Observação <span className="text-xs font-normal text-muted-foreground">(opcional)</span></Label>
-              <Textarea
-                placeholder="Detalhe extra, se quiser (ex.: origem da negativa, concorrente citado...)"
-                value={lostNote}
-                onChange={(e) => setLostNote(e.target.value)}
-                className="rounded-xl"
-              />
-            </div>
-            {lostReason === "Cliente não tem interesse" && (
-              <p className="text-[11px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-                Lembrete: registre a origem da negativa na observação e mantenha um follow-up mensal com conteúdo de valor (não só preço).
-              </p>
+
+            {lostReason === VENDA_CONCLUIDA ? (
+              <div className="space-y-1.5">
+                <Label>Tipo de compra</Label>
+                <Select value={saleType} onValueChange={(v) => setSaleType(v as any)}>
+                  <SelectTrigger><SelectValue placeholder="Compra única ou recorrente?" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unica">Compra única</SelectItem>
+                    <SelectItem value="recorrente">Cliente recorrente</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground pt-0.5">
+                  A venda vai para o Pós-Venda. Clientes recorrentes (que compraram mais de uma vez) aparecem na guia <strong>Recorrentes</strong> em Clientes.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Observação <span className="text-xs font-normal text-muted-foreground">(opcional)</span></Label>
+                  <Textarea
+                    placeholder="Detalhe extra, se quiser (ex.: origem da negativa, concorrente citado...)"
+                    value={lostNote}
+                    onChange={(e) => setLostNote(e.target.value)}
+                    className="rounded-xl"
+                  />
+                </div>
+                {lostReason === "Cliente não tem interesse" && (
+                  <p className="text-[11px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                    Lembrete: registre a origem da negativa na observação e mantenha um follow-up mensal com conteúdo de valor (não só preço).
+                  </p>
+                )}
+              </>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setLosingLead(null); setLostReason(""); setLostNote(""); }}>
+            <Button variant="outline" onClick={() => { setLosingLead(null); setLostReason(""); setLostNote(""); setSaleType(""); }}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleMarkLost}>
-              <XCircle className="h-4 w-4 mr-1" /> Confirmar perda
-            </Button>
+            {lostReason === VENDA_CONCLUIDA ? (
+              <Button onClick={handleMarkLost} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                Concluir venda
+              </Button>
+            ) : (
+              <Button variant="destructive" onClick={handleMarkLost}>
+                <XCircle className="h-4 w-4 mr-1" /> Confirmar perda
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

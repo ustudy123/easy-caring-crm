@@ -37,6 +37,9 @@ export interface Client {
   lastContact?: string;
   createdAt: string;
   notes?: string;
+  purchaseCount?: number;
+  clientType?: string;
+  lastPurchaseAt?: string;
 }
 
 export interface Interaction {

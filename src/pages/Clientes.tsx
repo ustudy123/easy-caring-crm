@@ -35,6 +35,9 @@ function mapClientFromDb(row: any): Client {
     lastContact: row.last_contact || undefined,
     createdAt: row.created_at,
     notes: row.notes || undefined,
+    purchaseCount: Number(row.purchase_count) || 0,
+    clientType: row.client_type || undefined,
+    lastPurchaseAt: row.last_purchase_at || undefined,
   };
 }
 
@@ -45,6 +48,7 @@ export default function Clientes() {
    const [clients, setClients] = useState<Client[]>([]);
    const [isSyncing, setIsSyncing] = useState(false);
   const [showNewClient, setShowNewClient] = useState(false);
+  const [tab, setTab] = useState<"todos" | "recorrentes">("todos");
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
    const fetchClients = async () => {
@@ -113,12 +117,15 @@ export default function Clientes() {
     await supabase.from("clients").delete().eq("id", id);
   };
 
+  const isRecurring = (c: Client) => (c.purchaseCount ?? 0) >= 2 || c.clientType === "recorrente";
   const filtered = clients.filter(
     (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.phone.includes(search) ||
-      c.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()))
+      (tab === "recorrentes" ? isRecurring(c) : true) &&
+      (c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.phone.includes(search) ||
+        c.tags.some((t) => t.toLowerCase().includes(search.toLowerCase())))
   );
+  const recurringCount = clients.filter(isRecurring).length;
 
   const totalVolume = clients.reduce((s, c) => s + c.totalPurchases, 0);
   const fidelizados = clients.filter((c) => c.tags.includes("fidelizado")).length;
@@ -177,7 +184,28 @@ export default function Clientes() {
            </Button>
          </motion.div>
 
-        {/* KPI Cards */}
+        {/* Abas: Todos / Recorrentes */}
+        <div className="flex gap-1 rounded-full bg-muted p-1 w-fit">
+          <button
+            onClick={() => setTab("todos")}
+            className={`px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${tab === "todos" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            Todos os clientes
+          </button>
+          <button
+            onClick={() => setTab("recorrentes")}
+            className={`px-4 py-1.5 text-sm font-medium rounded-full transition-colors flex items-center gap-1.5 ${tab === "recorrentes" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            Recorrentes
+            <span className={`text-xs rounded-full px-1.5 ${tab === "recorrentes" ? "bg-brand-500 text-white" : "bg-muted-foreground/15 text-muted-foreground"}`}>{recurringCount}</span>
+          </button>
+        </div>
+
+        {tab === "recorrentes" && (
+          <p className="text-xs text-muted-foreground -mt-1">
+            Clientes que compraram mais de uma vez ou marcados como recorrentes no pós-venda.
+          </p>
+        )}
         <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {kpis.map((kpi) => (
             <motion.div key={kpi.label} variants={item}>
