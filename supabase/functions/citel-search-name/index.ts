@@ -138,47 +138,79 @@ Deno.serve(async (req) => {
       }
     };
 
-    const variants = nameVariants(name);
-    console.log(`[citel-search-name] termo="${name}" variações=${JSON.stringify(variants)}`);
-
-    const merged = new Map<string, any>();
+    const keyOf = (c: any) => String(c.erpId || c.document || c.name).toLowerCase();
     let lastStatus = 0;
     let lastBody: any = null;
     let workingTemplate = -1;
 
-    // 1) Descobre qual template o ERP aceita (primeiro HTTP 200), usando o termo original.
-    for (let i = 0; i < templates(encodeURIComponent(variants[0])).length; i++) {
-      const url = templates(encodeURIComponent(variants[0]))[i];
-      const r = await fetchUrl(url);
-      if (!r) continue;
-      lastStatus = r.status; lastBody = r.data;
-      if (r.status >= 200 && r.status < 300) {
-        workingTemplate = i;
-        for (const c of extractArray(r.data).map(mapErpClient).filter((c: any) => c.name)) {
-          merged.set(String(c.erpId || c.document || c.name).toLowerCase(), c);
+    // Busca no ERP os candidatos para UM termo (com suas variações de grafia),
+    // descobrindo/reaproveitando o template de URL que o ERP aceita.
+    const collectForTerm = async (term: string): Promise<Map<string, any>> => {
+      const out = new Map<string, any>();
+      const vars = nameVariants(term);
+      const ingest = (data: any) => {
+        for (const c of extractArray(data).map(mapErpClient).filter((c: any) => c.name)) {
+          out.set(keyOf(c), c);
         }
-        break;
-      }
-    }
-
-    // 2) Consulta as demais variações no template que funcionou e junta tudo.
-    if (workingTemplate >= 0) {
-      for (let v = 1; v < variants.length; v++) {
-        const url = templates(encodeURIComponent(variants[v]))[workingTemplate];
-        const r = await fetchUrl(url);
-        if (!r || r.status < 200 || r.status >= 300) continue;
-        for (const c of extractArray(r.data).map(mapErpClient).filter((c: any) => c.name)) {
-          merged.set(String(c.erpId || c.document || c.name).toLowerCase(), c);
+      };
+      // Descobre o template (primeiro HTTP 200) na primeira vez.
+      if (workingTemplate < 0) {
+        const tpls = templates(encodeURIComponent(vars[0]));
+        for (let i = 0; i < tpls.length; i++) {
+          const r = await fetchUrl(tpls[i]);
+          if (!r) continue;
+          lastStatus = r.status; lastBody = r.data;
+          if (r.status >= 200 && r.status < 300) { workingTemplate = i; ingest(r.data); break; }
         }
+        if (workingTemplate < 0) return out;
+        for (let v = 1; v < vars.length; v++) {
+          const r = await fetchUrl(templates(encodeURIComponent(vars[v]))[workingTemplate]);
+          if (r && r.status >= 200 && r.status < 300) ingest(r.data);
+        }
+        return out;
       }
+      for (const v of vars) {
+        const r = await fetchUrl(templates(encodeURIComponent(v))[workingTemplate]);
+        if (r && r.status >= 200 && r.status < 300) ingest(r.data);
+      }
+      return out;
+    };
+
+    // Separa o que foi digitado em termos (ex.: "André Cunha" -> ["André","Cunha"]).
+    const terms = name.split(/\s+/).map((t) => t.trim()).filter((t) => t.length >= 2);
+    console.log(`[citel-search-name] termo="${name}" termos=${JSON.stringify(terms)}`);
+
+    const pool = new Map<string, any>();
+
+    if (terms.length <= 1) {
+      // Um termo só: busca normal (com variações de grafia).
+      for (const [k, v] of await collectForTerm(name)) pool.set(k, v);
+      const results = rankByName([...pool.values()], name);
+      return results.length
+        ? json({ found: true, total: results.length, results, query: name })
+        : json({ found: false, total: 0, results: [], query: name, lastStatus, lastBody });
     }
 
-    const results = rankByName([...merged.values()], name);
-    if (results.length > 0) {
-      return json({ found: true, total: results.length, results, query: name });
+    // Vários termos: monta o conjunto consultando os 2 termos mais distintivos
+    // (os mais longos), depois filtra quem contém TODOS os termos, em qualquer ordem.
+    const queryTerms = [...terms].sort((a, b) => b.length - a.length).slice(0, 2);
+    for (const t of queryTerms) {
+      for (const [k, v] of await collectForTerm(t)) pool.set(k, v);
     }
 
-    return json({ found: false, total: 0, results: [], query: name, lastStatus, lastBody });
+    const termKeys = terms.map(phoneticKey).filter(Boolean);
+    const matchesAll = (c: any) => {
+      const ck = phoneticKey(c.name);
+      return termKeys.every((tk) => ck.includes(tk));
+    };
+
+    let results = [...pool.values()].filter(matchesAll);
+    if (results.length === 0) results = [...pool.values()]; // melhor esforço se nada casar 100%
+    results = rankByName(results, name);
+
+    return results.length
+      ? json({ found: true, total: results.length, results, query: name })
+      : json({ found: false, total: 0, results: [], query: name, lastStatus, lastBody });
   } catch (e: any) {
     console.error("[citel-search-name] fatal", e);
     return json({ error: e.message }, 500);
