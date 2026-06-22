@@ -12,6 +12,7 @@ import {
   Sparkles,
   Home,
   TrendingUp,
+  Repeat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -63,6 +64,13 @@ const allMainNav: NavItem[] = [
     title: "Clientes",
     url: "/clientes",
     icon: Users,
+    badgeKey: null,
+    roles: ["admin", "gerente"],
+  },
+  {
+    title: "Clientes Recorrentes",
+    url: "/clientes-recorrentes",
+    icon: Repeat,
     badgeKey: null,
     roles: ["admin", "gerente"],
   },
