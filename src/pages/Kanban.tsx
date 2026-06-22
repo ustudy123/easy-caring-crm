@@ -148,6 +148,17 @@ export default function Kanban() {
   const [transferringLead, setTransferringLead] = useState<Lead | null>(null);
   const [losingLead, setLosingLead] = useState<Lead | null>(null);
   const [lostReason, setLostReason] = useState("");
+  const [lostNote, setLostNote] = useState("");
+
+  // Motivos padronizados de encerramento/perda (para gerar estatística).
+  const LOST_REASONS = [
+    "Sem budget no momento",
+    "Lead duplicado / já atendido",
+    "Sem necessidade ou interesse (só pesquisando)",
+    "Prioriza preço absoluto",
+    "Tentativas de contato esgotadas",
+    "Cliente não tem interesse",
+  ];
   const [transferSellerId, setTransferSellerId] = useState("");
   const [transferReason, setTransferReason] = useState("");
   const [isTransferring, setIsTransferring] = useState(false);
@@ -184,10 +195,15 @@ export default function Kanban() {
   const handleMarkLost = async () => {
     if (!losingLead) return;
     const reason = lostReason.trim();
+    if (!reason) {
+      toast({ title: "Selecione um motivo", description: "Escolha o motivo do encerramento para registrar a estatística.", variant: "destructive" });
+      return;
+    }
+    const note = lostNote.trim();
     const closedAt = new Date().toISOString();
 
-    // Atualiza o lead para o estado perdido com o motivo
-    updateLead({ ...losingLead, stage: 'perdido', lostReason: reason || undefined, closedAt });
+    // Atualiza o lead para o estado perdido com o motivo padronizado
+    updateLead({ ...losingLead, stage: 'perdido', lostReason: reason, closedAt });
 
     // Registra na timeline do cliente (se houver cliente com o mesmo telefone)
     const { data: { user } } = await supabase.auth.getUser();
@@ -198,7 +214,7 @@ export default function Kanban() {
         client_id: client.id,
         lead_id: losingLead.id,
         type: "note",
-        description: `Negócio marcado como PERDIDO${reason ? `: ${reason}` : ""}`,
+        description: `Negócio marcado como PERDIDO: ${reason}${note ? ` — ${note}` : ""}`,
         created_by: user?.id ?? null,
       });
     }
@@ -206,6 +222,7 @@ export default function Kanban() {
     toast({ title: "Lead marcado como perdido", description: losingLead.clientName });
     setLosingLead(null);
     setLostReason("");
+    setLostNote("");
   };
 
   const handleTransferLead = async (sellerId: string, reason: string) => {
@@ -1046,7 +1063,7 @@ export default function Kanban() {
       </Dialog>
 
       {/* Dialog: Marcar como perdido */}
-      <Dialog open={!!losingLead} onOpenChange={(open) => { if (!open) { setLosingLead(null); setLostReason(""); } }}>
+      <Dialog open={!!losingLead} onOpenChange={(open) => { if (!open) { setLosingLead(null); setLostReason(""); setLostNote(""); } }}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1056,17 +1073,35 @@ export default function Kanban() {
               {losingLead ? `Encerrar o negócio com ${losingLead.clientName} como perdido.` : ""}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 py-2">
-            <Label>Motivo da perda</Label>
-            <Textarea
-              placeholder="Ex: preço acima do orçamento, comprou do concorrente, sem retorno..."
-              value={lostReason}
-              onChange={(e) => setLostReason(e.target.value)}
-              className="rounded-xl"
-            />
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>Motivo do encerramento</Label>
+              <Select value={lostReason} onValueChange={setLostReason}>
+                <SelectTrigger><SelectValue placeholder="Selecione o motivo" /></SelectTrigger>
+                <SelectContent>
+                  {LOST_REASONS.map((r) => (
+                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Observação <span className="text-xs font-normal text-muted-foreground">(opcional)</span></Label>
+              <Textarea
+                placeholder="Detalhe extra, se quiser (ex.: origem da negativa, concorrente citado...)"
+                value={lostNote}
+                onChange={(e) => setLostNote(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            {lostReason === "Cliente não tem interesse" && (
+              <p className="text-[11px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                Lembrete: registre a origem da negativa na observação e mantenha um follow-up mensal com conteúdo de valor (não só preço).
+              </p>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setLosingLead(null); setLostReason(""); }}>
+            <Button variant="outline" onClick={() => { setLosingLead(null); setLostReason(""); setLostNote(""); }}>
               Cancelar
             </Button>
             <Button variant="destructive" onClick={handleMarkLost}>
