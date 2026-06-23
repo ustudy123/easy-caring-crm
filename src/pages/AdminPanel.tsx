@@ -975,10 +975,11 @@ function UsersTab() {
     if (usersRes.data) setUsers(usersRes.data as AdminUserRow[]);
     if (storesRes.data) setStores(storesRes.data);
     if (subjectsRes.data) {
-      const uniq = Array.from(new Set(
-        (subjectsRes.data as any[]).map((r) => (r.subject || "").trim()).filter(Boolean)
-      )).sort((a, b) => a.localeCompare(b, "pt-BR"));
-      setAvailableSubjects(uniq);
+      const fromDb = (subjectsRes.data as any[]).map((r) => (r.subject || "").trim()).filter(Boolean);
+      // Tipos de tinta padrão sempre disponíveis, mesmo se ainda não houver pergunta marcada.
+      const STANDARD = ["Imobiliária", "Industrial", "Automotiva"];
+      const extras = Array.from(new Set(fromDb)).filter((s) => !STANDARD.includes(s)).sort((a, b) => a.localeCompare(b, "pt-BR"));
+      setAvailableSubjects([...STANDARD, ...extras]);
     }
     setLoading(false);
   }, []);

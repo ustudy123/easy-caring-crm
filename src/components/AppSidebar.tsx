@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Repeat,
   ClipboardList,
+  Paintbrush,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -110,6 +111,13 @@ const allToolsNav: NavItem[] = [
     icon: ClipboardList,
     badgeKey: null,
     roles: ["admin", "gerente"],
+  },
+  {
+    title: "Assuntos do Quiz",
+    url: "/quiz-perguntas",
+    icon: Paintbrush,
+    badgeKey: null,
+    roles: ["admin"],
   },
   {
     title: "Admin",
