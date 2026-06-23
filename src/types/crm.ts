@@ -21,6 +21,7 @@ export interface Lead {
    storeId?: string;
    lostReason?: string;
    closedAt?: string;
+   archived?: boolean;
 }
 
 export interface Client {

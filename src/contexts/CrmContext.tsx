@@ -63,6 +63,7 @@ function mapLeadFromDb(row: any): Lead {
      storeId: row.store_id || undefined,
      lostReason: row.lost_reason || undefined,
      closedAt: row.closed_at || undefined,
+     archived: row.archived ?? false,
   };
 }
 
@@ -109,7 +110,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
          supabase.from("sellers").select("*").order("name"),
          supabase.from("notifications").select("*").eq("is_read", false).order("created_at", { ascending: false }),
       ]);
-      if (leadsRes.data) setLeads(leadsRes.data.map(mapLeadFromDb));
+      if (leadsRes.data) setLeads(leadsRes.data.filter((r: any) => !r.archived).map(mapLeadFromDb));
       if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
        if (sellersRes.data) setSellers(sellersRes.data.map(mapSellerFromDb));
       if (whatsappRes.count != null) setUnreadWhatsAppCount(whatsappRes.count);
@@ -125,11 +126,16 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       .channel("leads-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, (payload) => {
         if (payload.eventType === "INSERT") {
+          if ((payload.new as any).archived) return;
           // Evita duplicação: o addLead já adiciona o lead de forma otimista,
           // então só insere via realtime se ainda não estiver na lista.
           setLeads((prev) => prev.some((l) => l.id === payload.new.id) ? prev : [mapLeadFromDb(payload.new), ...prev]);
         } else if (payload.eventType === "UPDATE") {
-          setLeads((prev) => prev.map((l) => l.id === payload.new.id ? mapLeadFromDb(payload.new) : l));
+          if ((payload.new as any).archived) {
+            setLeads((prev) => prev.filter((l) => l.id !== payload.new.id));
+          } else {
+            setLeads((prev) => prev.map((l) => l.id === payload.new.id ? mapLeadFromDb(payload.new) : l));
+          }
         } else if (payload.eventType === "DELETE") {
           setLeads((prev) => prev.filter((l) => l.id !== payload.old.id));
         }

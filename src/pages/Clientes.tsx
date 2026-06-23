@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Client } from "@/types/crm";
+import { Client, KANBAN_STAGES } from "@/types/crm";
 import { NewClientForm } from "@/components/forms/NewClientForm";
 import { EditClientForm } from "@/components/forms/EditClientForm";
 import { Card, CardContent } from "@/components/ui/card";
@@ -117,6 +117,23 @@ export default function Clientes() {
     setClients((prev) => prev.filter((c) => c.id !== id));
     setSelectedClient(null);
     await supabase.from("clients").delete().eq("id", id);
+  };
+
+  const handleNovaCompra = async (client: Client) => {
+    const firstStage = KANBAN_STAGES[0]?.key || "abordagem";
+    const { error } = await supabase.from("leads").insert({
+      client_name: client.name,
+      client_phone: client.phone,
+      stage: firstStage,
+      value: 0,
+      source: "recompra",
+      tags: [],
+    } as any);
+    if (error) {
+      toast({ title: "Erro ao criar a compra", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Nova compra iniciada", description: `Um novo card de ${client.name} foi criado no Kanban.` });
   };
 
   const isRecurring = (c: Client) => (c.purchaseCount ?? 0) >= 2 || c.clientType === "recorrente";
@@ -281,6 +298,22 @@ export default function Clientes() {
                           {tag}
                         </Badge>
                       ))}
+                    </div>
+                  )}
+
+                  {recurringPage && (
+                    <div className="mt-3 flex items-center justify-between gap-2 pt-3 border-t border-border/40">
+                      <span className="text-[11px] text-muted-foreground">
+                        {(client.purchaseCount ?? 0)} compra(s)
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1"
+                        onClick={(e) => { e.stopPropagation(); handleNovaCompra(client); }}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Nova compra
+                      </Button>
                     </div>
                   )}
                 </CardContent>

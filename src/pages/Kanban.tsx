@@ -211,7 +211,15 @@ export default function Kanban() {
         toast({ title: "Marque o tipo de compra", description: "Informe se o cliente é de compra única ou recorrente.", variant: "destructive" });
         return;
       }
-      updateLead({ ...losingLead, stage: 'pos_venda', closedAt });
+      const isRecorrente = saleType === "recorrente";
+      if (isRecorrente) {
+        // Recorrente: arquiva o card (sai do Kanban) e o cliente vai pra guia Recorrentes.
+        await supabase.from("leads").update({ stage: 'pos_venda', archived: true, closed_at: closedAt } as any).eq("id", losingLead.id);
+        setLeads((prev) => prev.filter((l) => l.id !== losingLead.id));
+      } else {
+        // Compra única: vai pro Pós-Venda e permanece no board.
+        updateLead({ ...losingLead, stage: 'pos_venda', closedAt });
+      }
       const { data: client } = await (supabase
         .from("clients").select("id, purchase_count").eq("phone", losingLead.clientPhone).maybeSingle() as any);
       if (client?.id) {
