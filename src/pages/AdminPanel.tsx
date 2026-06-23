@@ -966,21 +966,15 @@ function UsersTab() {
   const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
-    const [usersRes, storesRes, subjectsRes] = await Promise.all([
+    const [usersRes, storesRes] = await Promise.all([
       supabase.rpc("admin_list_users"),
       supabase.from("stores").select("*").order("name"),
-      supabase.from("quiz_questions").select("subject"),
     ]);
     if (usersRes.error) toast.error(usersRes.error.message);
     if (usersRes.data) setUsers(usersRes.data as AdminUserRow[]);
     if (storesRes.data) setStores(storesRes.data);
-    if (subjectsRes.data) {
-      const fromDb = (subjectsRes.data as any[]).map((r) => (r.subject || "").trim()).filter(Boolean);
-      // Tipos de tinta padrão sempre disponíveis, mesmo se ainda não houver pergunta marcada.
-      const STANDARD = ["Imobiliária", "Industrial", "Automotiva"];
-      const extras = Array.from(new Set(fromDb)).filter((s) => !STANDARD.includes(s)).sort((a, b) => a.localeCompare(b, "pt-BR"));
-      setAvailableSubjects([...STANDARD, ...extras]);
-    }
+    // Assuntos do quiz = os 3 tipos de tinta (o admin escolhe 1, 2 ou os 3 por vendedor).
+    setAvailableSubjects(["Imobiliária", "Industrial", "Automotiva"]);
     setLoading(false);
   }, []);
 
