@@ -13,6 +13,7 @@ import {
   Home,
   TrendingUp,
   Repeat,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -100,6 +101,13 @@ const allToolsNav: NavItem[] = [
     title: "Vendas CRM x ERP",
     url: "/relatorio-vendas",
     icon: TrendingUp,
+    badgeKey: null,
+    roles: ["admin", "gerente"],
+  },
+  {
+    title: "Relatório de Encerramentos",
+    url: "/relatorio-encerramentos",
+    icon: ClipboardList,
     badgeKey: null,
     roles: ["admin", "gerente"],
   },

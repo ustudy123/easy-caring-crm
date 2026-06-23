@@ -20,6 +20,7 @@ import Configuracoes from "./pages/Configuracoes";
 import Conversas from "./pages/Conversas";
 import SuporteOrcamento from "./pages/SuporteOrcamento";
 import RelatorioVendasCRM from "./pages/RelatorioVendasCRM";
+import RelatorioEncerramentos from "./pages/RelatorioEncerramentos";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -61,6 +62,7 @@ const App = () => (
                         <Route path="/suporte-orcamento" element={<SuporteOrcamento />} />
                         <Route path="/admin" element={<AdminPanel />} />
                         <Route path="/relatorio-vendas" element={<RelatorioVendasCRM />} />
+                        <Route path="/relatorio-encerramentos" element={<RelatorioEncerramentos />} />
                         <Route path="*" element={<NotFound />} />
                       </Route>
                     </Routes>
