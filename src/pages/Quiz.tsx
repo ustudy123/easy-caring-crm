@@ -23,9 +23,16 @@ interface Question {
 const QUESTIONS_PER_ROUND = 10;
 const SECONDS_PER_QUESTION = 15;
 
-// Sorteia um lote de perguntas (rotatividade a cada partida)
-function selectRound(pool: Question[]): Question[] {
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+// Dificuldade máxima liberada por nível (todos começam no Fácil e vão subindo).
+const LEVEL_MAX_DIFFICULTY: Record<string, number> = {
+  basico: 1, intermediario: 2, avancado: 3, especialista: 4,
+};
+
+// Sorteia um lote de perguntas, respeitando a dificuldade liberada pelo nível.
+function selectRound(pool: Question[], maxDifficulty: number): Question[] {
+  let eligible = pool.filter((q) => (Number(q.difficulty) || 1) <= maxDifficulty);
+  if (eligible.length < QUESTIONS_PER_ROUND) eligible = pool; // garante perguntas suficientes
+  const shuffled = [...eligible].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, QUESTIONS_PER_ROUND);
 }
 
@@ -45,6 +52,7 @@ export default function Quiz() {
   const [started, setStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(SECONDS_PER_QUESTION);
   const [levelInfo, setLevelInfo] = useState<QuizLevelResult | null>(null);
+  const [maxDifficulty, setMaxDifficulty] = useState(1);
 
   useEffect(() => {
     fetchQuestions();
@@ -64,7 +72,9 @@ export default function Quiz() {
     const rows = (data ?? []) as { total_questions: number | null; correct_answers: number | null }[];
     const answered = rows.reduce((s, r) => s + (r.total_questions || 0), 0);
     const correct = rows.reduce((s, r) => s + (r.correct_answers || 0), 0);
-    setLevelInfo(computeQuizLevel(answered, correct));
+    const level = computeQuizLevel(answered, correct);
+    setLevelInfo(level);
+    setMaxDifficulty(LEVEL_MAX_DIFFICULTY[level.current.key] ?? 1);
   };
 
   const fetchQuestions = async () => {
@@ -85,9 +95,21 @@ export default function Quiz() {
 
     let query = supabase.from("quiz_questions").select("*");
     if (subjects && subjects.length > 0) {
-      query = query.in("subject", subjects);
+      // quiz_subjects do vendedor = tipos de tinta; pega perguntas que sirvam a algum deles.
+      query = query.overlaps("paint_types", subjects);
     }
     const { data, error } = await query;
+
+    // Dificuldade liberada pelo nível atual do vendedor.
+    let md = 1;
+    if (user) {
+      const { data: att } = await supabase.from("quiz_attempts").select("total_questions, correct_answers").eq("user_id", user.id);
+      const ar = (att ?? []) as { total_questions: number | null; correct_answers: number | null }[];
+      const ans = ar.reduce((s, r) => s + (r.total_questions || 0), 0);
+      const cor = ar.reduce((s, r) => s + (r.correct_answers || 0), 0);
+      md = LEVEL_MAX_DIFFICULTY[computeQuizLevel(ans, cor).current.key] ?? 1;
+      setMaxDifficulty(md);
+    }
 
     if (!error && data && data.length > 0) {
       const formatted = data.map(q => ({
@@ -95,7 +117,7 @@ export default function Quiz() {
         options: q.options as string[]
       }));
       setAllQuestions(formatted);
-      setQuestions(selectRound(formatted));
+      setQuestions(selectRound(formatted, md));
     } else {
       const fallback = [
         {
@@ -129,7 +151,7 @@ export default function Quiz() {
   // Inicia uma nova partida sorteando 25 perguntas do pool
   const startRound = () => {
     subjectStatsRef.current = {};
-    setQuestions(selectRound(allQuestions));
+    setQuestions(selectRound(allQuestions, maxDifficulty));
     setCurrentQuestionIndex(0);
     setScore(0);
     setShowResult(false);
