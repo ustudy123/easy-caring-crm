@@ -1029,10 +1029,16 @@ function UsersTab() {
     if (error) { toast.error(error.message); return; }
     // Grava os assuntos do quiz do vendedor (separado da RPC).
     if (editRole === "vendedor") {
-      await supabase
+      const { error: subjErr } = await supabase
         .from("sellers")
         .update({ quiz_subjects: editQuizSubjects.length ? editQuizSubjects : null } as any)
         .eq("user_id", editing.user_id);
+      if (subjErr) {
+        toast.error(`Função salva, mas os assuntos do quiz não: ${subjErr.message}`);
+        setEditing(null);
+        fetchData();
+        return;
+      }
     }
     toast.success("Função atribuída!");
     setEditing(null);
