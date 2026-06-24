@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Repeat,
   ClipboardList,
+  CalendarOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -108,6 +109,13 @@ const allToolsNav: NavItem[] = [
     title: "Relatório de Encerramentos",
     url: "/relatorio-encerramentos",
     icon: ClipboardList,
+    badgeKey: null,
+    roles: ["admin", "gerente"],
+  },
+  {
+    title: "Feriados",
+    url: "/feriados",
+    icon: CalendarOff,
     badgeKey: null,
     roles: ["admin", "gerente"],
   },
