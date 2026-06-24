@@ -770,7 +770,7 @@ export default function Kanban() {
                                                   <button
                                                     onClick={(e) => { e.stopPropagation(); setLosingLead(lead); }}
                                                     className="p-1 rounded-lg hover:bg-red-100 text-red-500"
-                                                    title="Marcar como perdido"
+                                                    title="Encerrar atendimento"
                                                   >
                                                     <XCircle className="h-3 w-3" />
                                                   </button>
