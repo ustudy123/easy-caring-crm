@@ -145,8 +145,9 @@ export default function Clientes() {
         c.tags.some((t) => t.toLowerCase().includes(search.toLowerCase())))
   );
 
-  const totalVolume = clients.reduce((s, c) => s + c.totalPurchases, 0);
-  const fidelizados = clients.filter((c) => c.tags.includes("fidelizado")).length;
+  const baseClients = recurringPage ? clients.filter(isRecurring) : clients;
+  const totalVolume = baseClients.reduce((s, c) => s + c.totalPurchases, 0);
+  const fidelizados = baseClients.filter((c) => c.tags.includes("fidelizado")).length;
 
   const handleExport = () => {
     exportToCsv(
@@ -168,7 +169,7 @@ export default function Clientes() {
   };
 
   const kpis = [
-    { label: "Total de Clientes", value: clients.length, icon: Users, gradient: "from-[hsl(224,76%,48%)] to-[hsl(262,60%,55%)]" },
+    { label: recurringPage ? "Clientes Recorrentes" : "Total de Clientes", value: baseClients.length, icon: Users, gradient: "from-[hsl(224,76%,48%)] to-[hsl(262,60%,55%)]" },
     { label: "Volume Total", value: `R$ ${totalVolume.toLocaleString("pt-BR")}`, icon: DollarSign, gradient: "from-[hsl(152,60%,42%)] to-[hsl(174,62%,38%)]" },
     { label: "Fidelizados", value: fidelizados, icon: TrendingUp, gradient: "from-[hsl(338,76%,52%)] to-[hsl(28,86%,52%)]" },
   ];
