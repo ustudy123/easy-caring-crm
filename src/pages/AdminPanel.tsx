@@ -171,6 +171,7 @@ interface StoreRow {
   address: string | null;
   city: string | null;
   phone: string | null;
+  erp_company_code: string | null;
   employee_count: number;
 }
 
@@ -826,6 +827,7 @@ function StoresTab() {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [phone, setPhone] = useState("");
+  const [erpCode, setErpCode] = useState("");
   
   const [saving, setSaving] = useState(false);
 
@@ -839,7 +841,7 @@ function StoresTab() {
 
   const resetForm = () => {
     setEditingId(null);
-    setName(""); setAddress(""); setCity(""); setPhone("");
+    setName(""); setAddress(""); setCity(""); setPhone(""); setErpCode("");
   };
 
   const openNew = () => {
@@ -853,6 +855,7 @@ function StoresTab() {
     setAddress(s.address || "");
     setCity(s.city || "");
     setPhone(s.phone || "");
+    setErpCode((s as any).erp_company_code || "");
     setOpen(true);
   };
 
@@ -864,6 +867,7 @@ function StoresTab() {
       address: address || null,
       city: city || null,
       phone: phone || null,
+      erp_company_code: erpCode.trim() || null,
     };
     const { error } = editingId
       ? await supabase.from("stores").update(payload).eq("id", editingId)
@@ -900,6 +904,7 @@ function StoresTab() {
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Cidade</Label><Input value={city} onChange={e => setCity(e.target.value)} /></div>
                 <div><Label>Telefone</Label><Input value={phone} onChange={e => setPhone(e.target.value)} /></div>
+                <div><Label>Código da empresa (Autcom)</Label><Input value={erpCode} onChange={e => setErpCode(e.target.value)} placeholder="Ex: 001" /></div>
               </div>
               <Button onClick={handleSave} disabled={saving} className="w-full">
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} {editingId ? "Salvar alterações" : "Cadastrar"}
