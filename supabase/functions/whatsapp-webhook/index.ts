@@ -590,6 +590,36 @@ serve(async (req) => {
             }
           }
 
+          // ── FERIADO: se a loja-alvo está fechada hoje, avisa o cliente e (se configurado) redireciona.
+          if (targetStoreId) {
+            const todayBR = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // YYYY-MM-DD
+            const { data: holiday } = await supabase
+              .from("store_holidays")
+              .select("message, redirect_store_id")
+              .eq("store_id", targetStoreId)
+              .eq("holiday_date", todayBR)
+              .maybeSingle();
+            if (holiday) {
+              // Envia o aviso só uma vez por dia para o mesmo cliente.
+              const alreadyToday = (client as any)?.holiday_notified_on === todayBR;
+              if (!alreadyToday) {
+                const hmsg = holiday.message || "Olá! Hoje nossa loja está fechada em razão de feriado. Assim que retornarmos, entraremos em contato. Obrigado pela compreensão!";
+                await sendWhatsAppMessage(cleanPhone, hmsg, isTest, receivedInstance);
+                await supabase.from("clients").update({ holiday_notified_on: todayBR }).eq("phone", cleanPhone);
+              }
+              if (holiday.redirect_store_id) {
+                console.log(`Feriado: loja ${targetStoreId} fechada → redirecionando atendimento para ${holiday.redirect_store_id}`);
+                targetStoreId = holiday.redirect_store_id; // segue o fluxo normal, mas na loja substituta
+              } else {
+                // Sem loja substituta: só avisa e encerra o processamento deste evento.
+                return new Response(JSON.stringify({ success: true, action: "holiday_closed_no_redirect", store_id: targetStoreId }), {
+                  status: 200,
+                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+              }
+            }
+          }
+
           // Helper to log transfers
           const logTransfer = async (clientId: string, fromId: string | null, toId: string | null, reason: string) => {
             await supabase.from("service_transfers").insert({
