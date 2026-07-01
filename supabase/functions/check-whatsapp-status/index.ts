@@ -15,12 +15,21 @@ function getApiConfig(inst: { provider: string; api_url?: string | null; api_tok
   if (!rawUrl) return null;
 
   let baseUrl = rawUrl.replace(/\/+$/, "");
-  
+
+  // uazapiGO (ex.: ipazua.uazapi.com): header `token`, endpoints /instance/status e /send/text.
+  if (provider === "uazapi_go" || provider === "uazapi" || /uazapi\./i.test(baseUrl)) {
+    baseUrl = baseUrl
+      .replace(/\/send\/(text|media|image|video|audio|file|document)$/i, "")
+      .replace(/\/send-(text|image|video|audio|file|document)$/i, "")
+      .replace(/\/instance\/(status|connection|connect|disconnect|qrcode)$/i, "");
+    return { baseUrl, token, provider: "uazapi_go" };
+  }
+
   if (provider === "whatsapi") {
     return { baseUrl, token, provider: "whatsapi" };
   }
 
-  // Z-API (uazapi) legacy logic
+  // Z-API (legacy) logic
   baseUrl = baseUrl.replace(/\/(send-(text|image|video|audio|file|document)|status|qr-code|restart|disconnect)$/i, "");
   if (!baseUrl.includes("/token/") && token) {
     if (/\/token$/i.test(baseUrl)) {
@@ -29,7 +38,7 @@ function getApiConfig(inst: { provider: string; api_url?: string | null; api_tok
       baseUrl = `${baseUrl}/token/${token}`;
     }
   }
-  return { baseUrl, token, provider: "uazapi" };
+  return { baseUrl, token, provider: "zapi" };
 }
 
 serve(async (req) => {
@@ -73,7 +82,10 @@ serve(async (req) => {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       let statusEndpoint = "";
 
-      if (config.provider === "whatsapi") {
+      if (config.provider === "uazapi_go") {
+        headers["token"] = config.token || "";
+        statusEndpoint = `${config.baseUrl}/instance/status`;
+      } else if (config.provider === "whatsapi") {
         headers["token"] = config.token || "";
         statusEndpoint = `${config.baseUrl}/instance/connection`;
       } else {
@@ -89,14 +101,21 @@ serve(async (req) => {
         let data: any = {};
         try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
 
-        console.log(`API status for ${inst.name}:`, JSON.stringify(data));
+        console.log(`API status for ${inst.name} (${config.provider}) @ ${statusEndpoint}:`, JSON.stringify(data));
 
-        if (data?.connected === true || data?.smartphoneConnected === true || data?.status === "connected") {
+        // Detecção robusta (uazapi/z-api/whatsapi): checa vários formatos de resposta.
+        const nested = data?.instance || {};
+        const st = String(data?.status ?? data?.state ?? nested?.status ?? nested?.state ?? "").toLowerCase();
+        const isConnected =
+          data?.connected === true || data?.smartphoneConnected === true ||
+          data?.loggedIn === true || nested?.loggedIn === true ||
+          st === "connected" || st === "open";
+
+        if (isConnected) {
           newStatus = "connected";
         } else if (data?.error) {
           newStatus = "error";
         } else {
-          // Not connected; if a session/QR is expected it's pending, otherwise disconnected
           newStatus = "disconnected";
         }
       } catch (e) {
