@@ -74,7 +74,6 @@ const allMainNav: NavItem[] = [
     url: "/clientes-recorrentes",
     icon: Repeat,
     badgeKey: null,
-    roles: ["admin", "gerente"],
   },
   {
     title: "Agenda",
