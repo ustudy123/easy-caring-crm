@@ -491,34 +491,33 @@ serve(async (req) => {
                 }
 
                 if (holiday.redirect_store_id) {
-                  // 2) Redirecionamento real para a loja substituta.
+                  // 2) Redirecionamento: joga o cliente na FILA da loja substituta
+                  //    (sem atribuir a um vendedor específico — fica na fila até alguém da loja responder).
                   const { data: subStore } = await supabase.from("stores").select("name").eq("id", holiday.redirect_store_id).maybeSingle();
                   const subName = subStore?.name || "outra unidade";
 
-                  // move o cliente para a loja substituta e registra o aviso do dia
+                  // move o cliente para a loja substituta, sem vendedor atribuído
                   await supabase.from("clients")
-                    .update({ store_id: holiday.redirect_store_id, triaging: false, triage_step: null, holiday_notified_on: todayBR })
+                    .update({ store_id: holiday.redirect_store_id, assigned_seller_id: null, triaging: false, triage_step: null, holiday_notified_on: todayBR })
                     .eq("phone", cleanPhone);
 
-                  // tenta pegar um vendedor disponível da loja substituta (round-robin) e atribuir
-                  let assignedName = "";
-                  const { data: nextSeller } = await supabase.rpc("get_next_seller_for_distribution", { _store_id: holiday.redirect_store_id });
-                  if (nextSeller && nextSeller.length > 0) {
-                    const picked = nextSeller[0];
-                    await supabase.rpc("assign_client_with_redirection", { _phone: cleanPhone, _seller_id: picked.id });
-                    await supabase.rpc("mark_seller_assigned", { _seller_id: picked.id });
-                    assignedName = picked.name || "";
-                  }
-
                   if (!notifiedToday) {
+                    // cria o lead na fila da loja substituta (stage inicial), para os vendedores dela pegarem
+                    await supabase.from("leads").insert({
+                      client_name: (hClient as any)?.name || senderName || cleanPhone,
+                      client_phone: cleanPhone,
+                      source: "whatsapp",
+                      stage: "abordagem",
+                      store_id: holiday.redirect_store_id,
+                    });
                     await sendWhatsAppMessage(
                       cleanPhone,
-                      `Seu atendimento está sendo direcionado para a loja *${subName}*${assignedName ? `, com o consultor *${assignedName}*` : ""}. Em breve entraremos em contato. 😊`,
+                      `Seu atendimento está sendo direcionado para a loja *${subName}*. Em breve um consultor de lá vai te atender por aqui. 😊`,
                       isTest,
                       receivedInstance
                     );
                   }
-                  console.log(`Feriado: loja ${hStoreId} fechada → redirecionado para ${holiday.redirect_store_id} (${subName})${assignedName ? ` / vendedor ${assignedName}` : " / sem vendedor livre"}`);
+                  console.log(`Feriado: loja ${hStoreId} fechada → cliente enviado para a FILA da loja ${holiday.redirect_store_id} (${subName})`);
                 } else {
                   // sem loja substituta: só registra o aviso do dia
                   if (!notifiedToday) await supabase.from("clients").update({ holiday_notified_on: todayBR }).eq("phone", cleanPhone);
