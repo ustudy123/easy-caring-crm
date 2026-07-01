@@ -463,7 +463,7 @@ serve(async (req) => {
         // If incoming message (not from me, not group), handle lead distribution logic
         if (!isFromMe && cleanPhone && !isGroup) {
           // ── FERIADO (checado ANTES de multi-instância, código de vendedor e triagem):
-          // se a loja-alvo está fechada hoje, envia a mensagem automática e encerra.
+          // se a loja-alvo está fechada hoje, envia a mensagem automática e (se configurado) redireciona.
           {
             const { data: hClient } = await supabase
               .from("clients")
@@ -482,19 +482,48 @@ serve(async (req) => {
                 .eq("holiday_date", todayBR)
                 .maybeSingle();
               if (holiday) {
-                // Aviso automático (uma vez por dia por cliente).
-                if ((hClient as any)?.holiday_notified_on !== todayBR) {
+                const notifiedToday = (hClient as any)?.holiday_notified_on === todayBR;
+
+                // 1) Aviso automático da loja fechada (uma vez por dia por cliente).
+                if (!notifiedToday) {
                   const hmsg = holiday.message || "Olá! Hoje nossa loja está fechada em razão de feriado. Assim que retornarmos, entraremos em contato. Obrigado pela compreensão!";
                   await sendWhatsAppMessage(cleanPhone, hmsg, isTest, receivedInstance);
-                  await supabase.from("clients").update({ holiday_notified_on: todayBR }).eq("phone", cleanPhone);
                 }
-                // Se tem loja substituta, move o cliente para ela (as próximas mensagens já caem na loja aberta).
+
                 if (holiday.redirect_store_id) {
+                  // 2) Redirecionamento real para a loja substituta.
+                  const { data: subStore } = await supabase.from("stores").select("name").eq("id", holiday.redirect_store_id).maybeSingle();
+                  const subName = subStore?.name || "outra unidade";
+
+                  // move o cliente para a loja substituta e registra o aviso do dia
                   await supabase.from("clients")
-                    .update({ store_id: holiday.redirect_store_id, triaging: false, triage_step: null })
+                    .update({ store_id: holiday.redirect_store_id, triaging: false, triage_step: null, holiday_notified_on: todayBR })
                     .eq("phone", cleanPhone);
-                  console.log(`Feriado: loja ${hStoreId} fechada → cliente redirecionado para ${holiday.redirect_store_id}`);
+
+                  // tenta pegar um vendedor disponível da loja substituta (round-robin) e atribuir
+                  let assignedName = "";
+                  const { data: nextSeller } = await supabase.rpc("get_next_seller_for_distribution", { _store_id: holiday.redirect_store_id });
+                  if (nextSeller && nextSeller.length > 0) {
+                    const picked = nextSeller[0];
+                    await supabase.rpc("assign_client_with_redirection", { _phone: cleanPhone, _seller_id: picked.id });
+                    await supabase.rpc("mark_seller_assigned", { _seller_id: picked.id });
+                    assignedName = picked.name || "";
+                  }
+
+                  if (!notifiedToday) {
+                    await sendWhatsAppMessage(
+                      cleanPhone,
+                      `Seu atendimento está sendo direcionado para a loja *${subName}*${assignedName ? `, com o consultor *${assignedName}*` : ""}. Em breve entraremos em contato. 😊`,
+                      isTest,
+                      receivedInstance
+                    );
+                  }
+                  console.log(`Feriado: loja ${hStoreId} fechada → redirecionado para ${holiday.redirect_store_id} (${subName})${assignedName ? ` / vendedor ${assignedName}` : " / sem vendedor livre"}`);
+                } else {
+                  // sem loja substituta: só registra o aviso do dia
+                  if (!notifiedToday) await supabase.from("clients").update({ holiday_notified_on: todayBR }).eq("phone", cleanPhone);
                 }
+
                 return new Response(JSON.stringify({
                   success: true,
                   action: holiday.redirect_store_id ? "holiday_redirected" : "holiday_closed",
