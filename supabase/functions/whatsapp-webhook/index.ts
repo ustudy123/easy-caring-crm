@@ -462,6 +462,48 @@ serve(async (req) => {
  
         // If incoming message (not from me, not group), handle lead distribution logic
         if (!isFromMe && cleanPhone && !isGroup) {
+          // ── FERIADO (checado ANTES de multi-instância, código de vendedor e triagem):
+          // se a loja-alvo está fechada hoje, envia a mensagem automática e encerra.
+          {
+            const { data: hClient } = await supabase
+              .from("clients")
+              .select("store_id, holiday_notified_on")
+              .eq("phone", cleanPhone)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            const hStoreId = (hClient as any)?.store_id || receivedInstance?.store_id || null;
+            if (hStoreId) {
+              const todayBR = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // YYYY-MM-DD
+              const { data: holiday } = await supabase
+                .from("store_holidays")
+                .select("message, redirect_store_id")
+                .eq("store_id", hStoreId)
+                .eq("holiday_date", todayBR)
+                .maybeSingle();
+              if (holiday) {
+                // Aviso automático (uma vez por dia por cliente).
+                if ((hClient as any)?.holiday_notified_on !== todayBR) {
+                  const hmsg = holiday.message || "Olá! Hoje nossa loja está fechada em razão de feriado. Assim que retornarmos, entraremos em contato. Obrigado pela compreensão!";
+                  await sendWhatsAppMessage(cleanPhone, hmsg, isTest, receivedInstance);
+                  await supabase.from("clients").update({ holiday_notified_on: todayBR }).eq("phone", cleanPhone);
+                }
+                // Se tem loja substituta, move o cliente para ela (as próximas mensagens já caem na loja aberta).
+                if (holiday.redirect_store_id) {
+                  await supabase.from("clients")
+                    .update({ store_id: holiday.redirect_store_id, triaging: false, triage_step: null })
+                    .eq("phone", cleanPhone);
+                  console.log(`Feriado: loja ${hStoreId} fechada → cliente redirecionado para ${holiday.redirect_store_id}`);
+                }
+                return new Response(JSON.stringify({
+                  success: true,
+                  action: holiday.redirect_store_id ? "holiday_redirected" : "holiday_closed",
+                  store_id: hStoreId,
+                }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+              }
+            }
+          }
+
           // ── MULTI-INSTANCE: If message arrived on a seller's direct number,
           // skip triage entirely and route straight to that seller.
           if (receivedInstance?.instance_type === 'seller' && receivedInstance?.seller_id) {
@@ -586,36 +628,6 @@ serve(async (req) => {
                 targetStoreId = store.id;
                 console.log(`Detected store preference: ${store.name}`);
                 break;
-              }
-            }
-          }
-
-          // ── FERIADO: se a loja-alvo está fechada hoje, avisa o cliente e (se configurado) redireciona.
-          if (targetStoreId) {
-            const todayBR = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // YYYY-MM-DD
-            const { data: holiday } = await supabase
-              .from("store_holidays")
-              .select("message, redirect_store_id")
-              .eq("store_id", targetStoreId)
-              .eq("holiday_date", todayBR)
-              .maybeSingle();
-            if (holiday) {
-              // Envia o aviso só uma vez por dia para o mesmo cliente.
-              const alreadyToday = (client as any)?.holiday_notified_on === todayBR;
-              if (!alreadyToday) {
-                const hmsg = holiday.message || "Olá! Hoje nossa loja está fechada em razão de feriado. Assim que retornarmos, entraremos em contato. Obrigado pela compreensão!";
-                await sendWhatsAppMessage(cleanPhone, hmsg, isTest, receivedInstance);
-                await supabase.from("clients").update({ holiday_notified_on: todayBR }).eq("phone", cleanPhone);
-              }
-              if (holiday.redirect_store_id) {
-                console.log(`Feriado: loja ${targetStoreId} fechada → redirecionando atendimento para ${holiday.redirect_store_id}`);
-                targetStoreId = holiday.redirect_store_id; // segue o fluxo normal, mas na loja substituta
-              } else {
-                // Sem loja substituta: só avisa e encerra o processamento deste evento.
-                return new Response(JSON.stringify({ success: true, action: "holiday_closed_no_redirect", store_id: targetStoreId }), {
-                  status: 200,
-                  headers: { ...corsHeaders, "Content-Type": "application/json" },
-                });
               }
             }
           }
