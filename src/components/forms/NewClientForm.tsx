@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { Client } from "@/types/crm";
-import { isValidPhone, isValidEmail } from "@/lib/masks";
+import { isValidPhone, isValidEmail, normalizePhoneBR } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Search } from "lucide-react";
@@ -105,7 +105,7 @@ export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormPro
     const newClient: Client = {
       id: crypto.randomUUID(),
       name: form.name.trim(),
-      phone: form.phone.trim(),
+      phone: normalizePhoneBR(form.phone),
       email: form.email.trim() || undefined,
       address: form.address.trim() || undefined,
       city: form.city.trim() || undefined,

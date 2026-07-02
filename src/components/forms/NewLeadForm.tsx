@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MaskedInput } from "@/components/ui/masked-input";
 import { Lead, KanbanStage } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
-import { isValidPhone, isValidEmail } from "@/lib/masks";
+import { isValidPhone, isValidEmail, normalizePhoneBR } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Database } from "lucide-react";
@@ -81,7 +81,7 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
     const newLead: Lead = {
       id: crypto.randomUUID(),
       clientName: form.clientName.trim(),
-      clientPhone: form.clientPhone.trim(),
+      clientPhone: normalizePhoneBR(form.clientPhone),
       clientEmail: form.clientEmail.trim() || undefined,
       stage: form.stage,
       value: Number(form.value) || 0,

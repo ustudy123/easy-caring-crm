@@ -1,3 +1,4 @@
+import { maskPhone } from "@/lib/masks";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
@@ -252,7 +253,7 @@ export default function Clientes() {
                                 {displayName}
                               </p>
                               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                                <Phone className="h-3 w-3" />{client.phone}
+                                <Phone className="h-3 w-3" />{maskPhone(client.phone)}
                               </div>
                             </div>
                           </>
@@ -370,7 +371,7 @@ export default function Clientes() {
               <div className="space-y-4 mt-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
-                    { label: "Telefone", value: selectedClient.phone, icon: Phone },
+                    { label: "Telefone", value: maskPhone(selectedClient.phone), icon: Phone },
                     { label: "E-mail", value: selectedClient.email || "—", icon: Mail },
                     { label: "Cidade", value: selectedClient.city || "—", icon: MapPin },
                     { label: "Total Compras", value: `R$ ${selectedClient.totalPurchases.toLocaleString("pt-BR")}`, icon: DollarSign, highlight: true },

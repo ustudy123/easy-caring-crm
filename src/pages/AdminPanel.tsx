@@ -870,8 +870,8 @@ function StoresTab() {
       erp_company_code: erpCode.trim() || null,
     };
     const { error } = editingId
-      ? await supabase.from("stores").update(payload).eq("id", editingId)
-      : await supabase.from("stores").insert(payload);
+      ? await supabase.from("stores").update(payload as any).eq("id", editingId)
+      : await supabase.from("stores").insert(payload as any);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success(editingId ? "Loja atualizada!" : "Loja cadastrada!");
