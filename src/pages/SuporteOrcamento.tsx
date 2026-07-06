@@ -90,7 +90,7 @@ export default function SuporteOrcamento() {
         response_pdf_name: respName,
         responded_at: new Date().toISOString(),
         responded_by_name: responderName,
-      }).eq("id", selectedRequest.id);
+      } as any).eq("id", selectedRequest.id);
       if (error) throw error;
       toast.success("Resposta salva!");
       setResponseFile(null);
