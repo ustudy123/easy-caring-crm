@@ -178,6 +178,8 @@ export default function SuporteOrcamento() {
       }));
 
       setRequests(formatted);
+      // Mantém o item aberto no detalhe sincronizado com o banco.
+      setSelectedRequest((cur) => (cur ? (formatted.find((x: any) => x.id === cur.id) || cur) : cur));
     } catch (error: any) {
       toast.error("Erro ao carregar solicitações: " + error.message);
     } finally {
@@ -187,6 +189,17 @@ export default function SuporteOrcamento() {
 
   useEffect(() => {
     fetchRequests();
+  }, []);
+
+  // Realtime: reflete ao vivo as mudanças de status/resposta entre vendas e suporte.
+  useEffect(() => {
+    const channel = supabase
+      .channel("pricing-support-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "pricing_support_requests" }, () => {
+        fetchRequests();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const handleErpSearch = async () => {
