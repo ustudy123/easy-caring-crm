@@ -91,10 +91,10 @@ export const KANBAN_STAGES: { key: KanbanStage; label: string; color: string }[]
   { key: 'abordagem', label: 'Abordagem', color: 'kanban-approach' },
   { key: 'sondagem', label: 'Sondagem', color: 'kanban-probing' },
   { key: 'recomendacao_tecnica', label: 'Recomendação', color: 'kanban-recommendation' },
+  { key: 'precificacao_especial', label: 'Orçamento e Preço', color: 'kanban-pricing' },
   { key: 'demonstracao_valor', label: 'Demonstração', color: 'kanban-demonstration' },
   { key: 'contorno_objecoes', label: 'Objeções', color: 'kanban-objections' },
   { key: 'cross_sell', label: 'Cross-sell', color: 'kanban-crosssell' },
-  { key: 'precificacao_especial', label: 'Precificação Especial', color: 'kanban-pricing' },
   { key: 'fechamento', label: 'Fechamento', color: 'kanban-closing' },
   { key: 'pos_venda', label: 'Pós-Venda', color: 'kanban-postsale' },
 ];

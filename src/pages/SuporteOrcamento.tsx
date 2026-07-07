@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download } from "lucide-react";
+import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,6 +59,11 @@ export default function SuporteOrcamento() {
   const [pdfRawUrl, setPdfRawUrl] = useState<string | null>(null);
   const [responseNotes, setResponseNotes] = useState("");
   const [responseFile, setResponseFile] = useState<File | null>(null);
+  // Edição da própria solicitação pelo vendedor (2.6)
+  const [editReqOpen, setEditReqOpen] = useState(false);
+  const [editReqNotes, setEditReqNotes] = useState("");
+  const [editReqFile, setEditReqFile] = useState<File | null>(null);
+  const [savingReqEdit, setSavingReqEdit] = useState(false);
   const [savingResponse, setSavingResponse] = useState(false);
   const canRespond = isAdmin || isSuporte || isGerente;
 
@@ -107,6 +112,38 @@ export default function SuporteOrcamento() {
       toast.error("Erro ao salvar resposta: " + e.message);
     } finally {
       setSavingResponse(false);
+    }
+  };
+
+  const saveRequestEdit = async () => {
+    if (!selectedRequest) return;
+    setSavingReqEdit(true);
+    try {
+      let pdfUrl = selectedRequest.pdf_url || null;
+      let pdfName = (selectedRequest as any).pdf_name || null;
+      if (editReqFile) {
+        const ext = editReqFile.name.split(".").pop();
+        const filePath = `requests/${selectedRequest.id}-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("pricing_attachments").upload(filePath, editReqFile);
+        if (upErr) throw upErr;
+        pdfUrl = filePath;
+        pdfName = editReqFile.name;
+      }
+      const { error } = await supabase.from("pricing_support_requests").update({
+        notes: editReqNotes,
+        pdf_url: pdfUrl,
+        pdf_name: pdfName,
+      } as any).eq("id", selectedRequest.id);
+      if (error) throw error;
+      toast.success("Solicitação atualizada!");
+      setSelectedRequest({ ...selectedRequest, notes: editReqNotes, pdf_url: pdfUrl || undefined, pdf_name: pdfName || undefined } as any);
+      setEditReqOpen(false);
+      setEditReqFile(null);
+      fetchRequests();
+    } catch (e: any) {
+      toast.error("Erro ao atualizar: " + (e.message || e));
+    } finally {
+      setSavingReqEdit(false);
     }
   };
 
@@ -332,12 +369,17 @@ export default function SuporteOrcamento() {
   const pendingCount = filteredRequests.filter((r) => r.status === "pendente").length;
   const inAnalysisCount = filteredRequests.filter((r) => r.status === "em_analise").length;
   const completedCount = filteredRequests.filter((r) => r.status === "concluido").length;
+  const respondedReqs = filteredRequests.filter((r: any) => r.responded_at && r.created_at);
+  const avgResponseMins = respondedReqs.length > 0
+    ? Math.round(respondedReqs.reduce((acc: number, r: any) => acc + (new Date(r.responded_at).getTime() - new Date(r.created_at).getTime()) / 60000, 0) / respondedReqs.length)
+    : null;
+  const avgResponseLabel = avgResponseMins == null ? "—" : avgResponseMins < 60 ? `${avgResponseMins} min` : `${(avgResponseMins / 60).toFixed(1)} h`;
 
   return (
     <AppLayout title="Suporte a Orçamento">
       <div className="space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card>
             <CardContent className="flex items-center gap-4 p-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/15">
@@ -368,6 +410,17 @@ export default function SuporteOrcamento() {
               <div>
                 <p className="text-2xl font-medium text-foreground">{completedCount}</p>
                 <p className="text-xs text-muted-foreground">Concluídos</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-4 p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/15">
+                <Clock className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-medium text-foreground">{avgResponseLabel}</p>
+                <p className="text-xs text-muted-foreground">Tempo médio de resposta</p>
               </div>
             </CardContent>
           </Card>
@@ -675,6 +728,29 @@ export default function SuporteOrcamento() {
                       <Download className="h-4 w-4 mr-1" /> Baixar
                     </Button>
                   </div>
+                )}
+
+                {/* Edição da própria solicitação (2.6) — para quem criou */}
+                {(selectedRequest.created_by === sellerId || selectedRequest.seller_id === sellerId || isAdmin) && (
+                  editReqOpen ? (
+                    <div className="rounded-xl border border-amber-300/60 bg-amber-50/50 p-3 space-y-2">
+                      <span className="text-xs font-semibold text-amber-700">Editar solicitação</span>
+                      <Textarea value={editReqNotes} onChange={(e) => setEditReqNotes(e.target.value)} rows={3} placeholder="Detalhes da solicitação..." />
+                      <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                        <Paperclip className="h-3.5 w-3.5" />
+                        <span className="truncate">{editReqFile ? editReqFile.name : "Anexar/substituir arquivo (opcional)"}</span>
+                        <input type="file" className="hidden" onChange={(e) => setEditReqFile(e.target.files?.[0] || null)} />
+                      </label>
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="outline" size="sm" onClick={() => { setEditReqOpen(false); setEditReqFile(null); }}>Cancelar</Button>
+                        <Button size="sm" onClick={saveRequestEdit} disabled={savingReqEdit}>{savingReqEdit ? "Salvando..." : "Salvar"}</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button variant="outline" size="sm" className="rounded-xl" onClick={() => { setEditReqNotes(selectedRequest.notes || ""); setEditReqFile(null); setEditReqOpen(true); }}>
+                      <Pencil className="h-3.5 w-3.5 mr-1" /> Editar solicitação
+                    </Button>
+                  )
                 )}
 
                 {/* Resposta do suporte/admin (exibição) */}
