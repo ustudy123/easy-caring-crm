@@ -5,11 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
  import { useCrm } from "@/contexts/CrmContext";
  import { useToast } from "@/hooks/use-toast";
 import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
+import { ProjectsDialog } from "@/components/ProjectsDialog";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
  import { 
     Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
     AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
-    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle, XCircle, Download, LayoutGrid, List, MessageCircle
+    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle, XCircle, Download, LayoutGrid, List, MessageCircle, FolderKanban
   } from "lucide-react";
  import { getDisplayClientName, isGenericName } from "@/lib/clientUtils";
 import { Button } from "@/components/ui/button";
@@ -152,6 +153,7 @@ export default function Kanban() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [transferringLead, setTransferringLead] = useState<Lead | null>(null);
   const [losingLead, setLosingLead] = useState<Lead | null>(null);
+  const [projectsLead, setProjectsLead] = useState<Lead | null>(null);
   const [lostReason, setLostReason] = useState("");
   const [lostNote, setLostNote] = useState("");
   const [saleType, setSaleType] = useState<"unica" | "recorrente" | "">("");
@@ -763,6 +765,13 @@ export default function Kanban() {
                                                     <Forward className="h-3 w-3" />
                                                   </button>
                                                   <button
+                                                    onClick={(e) => { e.stopPropagation(); setProjectsLead(lead); }}
+                                                    className="p-1 rounded-lg hover:bg-purple-100 text-purple-600"
+                                                    title="Projetos"
+                                                  >
+                                                    <FolderKanban className="h-3 w-3" />
+                                                  </button>
+                                                  <button
                                                     onClick={(e) => { e.stopPropagation(); setLosingLead(lead); }}
                                                     className="p-1 rounded-lg hover:bg-red-100 text-red-500"
                                                     title="Encerrar atendimento"
@@ -1093,6 +1102,16 @@ export default function Kanban() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog: Projetos do cliente */}
+      {projectsLead && (
+        <ProjectsDialog
+          open={!!projectsLead}
+          onOpenChange={(o) => { if (!o) setProjectsLead(null); }}
+          clientPhone={projectsLead.clientPhone}
+          clientName={projectsLead.clientName}
+        />
+      )}
 
       {/* Dialog: Encerrar atendimento (venda concluída ou perda) */}
       <Dialog open={!!losingLead} onOpenChange={(open) => { if (!open) { setLosingLead(null); setLostReason(""); setLostNote(""); setSaleType(""); } }}>
