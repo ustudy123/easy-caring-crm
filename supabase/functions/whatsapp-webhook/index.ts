@@ -649,7 +649,8 @@ serve(async (req) => {
           }
 
           // Lead distribution logic: check for store preference in the message
-          const { data: allStores } = await supabase.from("stores").select("id, name");
+          const { data: allStoresRaw } = await supabase.from("stores").select("id, name, is_external_team");
+          const allStores = (allStoresRaw || []).filter((s: any) => !s.is_external_team);
           if (allStores) {
             for (const store of allStores) {
               if (normalizedText.includes(store.name.toLowerCase())) {
@@ -834,7 +835,8 @@ serve(async (req) => {
                    await sendWhatsAppMessage(cleanPhone, `Tranquilo! 😊 Então me conta: você está mais pra qual lado — *Niterói*, *Rio (Barra da Tijuca)* ou *Macaé*? É só me dizer o nome da região 🙂`, isTest, receivedInstance);
                 }
                 } else if (step === 'ask_store') {
-                  const { data: stores } = await supabase.from("stores").select("id, name, city").order("name");
+                  const { data: storesRaw } = await supabase.from("stores").select("id, name, city, is_external_team").order("name");
+                  const stores = (storesRaw || []).filter((s: any) => !s.is_external_team);
 
                   // Aceita número (1/2/3) ou o nome da região (sem depender de acento)
                   const norm = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");

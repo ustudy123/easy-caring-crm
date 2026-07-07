@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import { WebhookLogsTab } from "@/components/WebhookLogsTab";
 import { WhatsAppInstancesTab } from "@/components/WhatsAppInstancesTab";
 import { AppLayout } from "@/components/AppLayout";
@@ -172,6 +173,7 @@ interface StoreRow {
   city: string | null;
   phone: string | null;
   erp_company_code?: string | null;
+  is_external_team?: boolean;
   employee_count: number;
 }
 
@@ -828,6 +830,7 @@ function StoresTab() {
   const [city, setCity] = useState("");
   const [phone, setPhone] = useState("");
   const [erpCode, setErpCode] = useState("");
+  const [isExternal, setIsExternal] = useState(false);
   
   const [saving, setSaving] = useState(false);
 
@@ -841,7 +844,7 @@ function StoresTab() {
 
   const resetForm = () => {
     setEditingId(null);
-    setName(""); setAddress(""); setCity(""); setPhone(""); setErpCode("");
+    setName(""); setAddress(""); setCity(""); setPhone(""); setErpCode(""); setIsExternal(false);
   };
 
   const openNew = () => {
@@ -856,6 +859,7 @@ function StoresTab() {
     setCity(s.city || "");
     setPhone(s.phone || "");
     setErpCode((s as any).erp_company_code || "");
+    setIsExternal(!!(s as any).is_external_team);
     setOpen(true);
   };
 
@@ -868,6 +872,7 @@ function StoresTab() {
       city: city || null,
       phone: phone || null,
       erp_company_code: erpCode.trim() || null,
+      is_external_team: isExternal,
     };
     const { error } = editingId
       ? await supabase.from("stores").update(payload as any).eq("id", editingId)
@@ -906,6 +911,13 @@ function StoresTab() {
                 <div><Label>Telefone</Label><Input value={phone} onChange={e => setPhone(e.target.value)} /></div>
                 <div><Label>Código da empresa (Autcom)</Label><Input value={erpCode} onChange={e => setErpCode(e.target.value)} placeholder="Ex: 001" /></div>
               </div>
+              <label className="flex items-start gap-2 rounded-lg border border-border/60 p-2.5 cursor-pointer">
+                <Checkbox checked={isExternal} onCheckedChange={(v) => setIsExternal(!!v)} className="mt-0.5" />
+                <span className="text-sm">
+                  Equipe de Venda Externa
+                  <span className="block text-[11px] text-muted-foreground font-normal">Não segue o fluxo de loja (triagem/URA) e não aparece como opção de loja no atendimento.</span>
+                </span>
+              </label>
               <Button onClick={handleSave} disabled={saving} className="w-full">
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} {editingId ? "Salvar alterações" : "Cadastrar"}
               </Button>
@@ -927,7 +939,12 @@ function StoresTab() {
           <TableBody>
             {stores.map(s => (
               <TableRow key={s.id}>
-                <TableCell className="font-medium">{s.name}</TableCell>
+                <TableCell className="font-medium">
+                  {s.name}
+                  {(s as any).is_external_team && (
+                    <Badge variant="secondary" className="ml-2 text-[10px] bg-purple-100 text-purple-700">Venda Externa</Badge>
+                  )}
+                </TableCell>
                 <TableCell>{s.city || "—"}</TableCell>
                 <TableCell>{s.phone || "—"}</TableCell>
                 <TableCell className="text-center tabular-nums">{s.employee_count ?? 0}</TableCell>
