@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { InstanceBadge } from "@/components/InstanceBadge";
 import { useInstances, useClientInstanceMap } from "@/hooks/useInstances";
+import { exportToCsv } from "@/lib/exportCsv";
 
 const stageColorMap: Record<KanbanStage, string> = {
   abordagem: "border-l-kanban-approach",
@@ -42,6 +43,7 @@ const stageColorMap: Record<KanbanStage, string> = {
   precificacao_especial: "border-l-kanban-pricing",
   fechamento: "border-l-kanban-closing",
   pos_venda: "border-l-kanban-postsale",
+  perdido: "border-l-red-500",
 };
 
 const stageBgMap: Record<KanbanStage, string> = {
@@ -54,6 +56,7 @@ const stageBgMap: Record<KanbanStage, string> = {
   precificacao_especial: "bg-kanban-pricing/8 text-kanban-pricing",
   fechamento: "bg-kanban-closing/8 text-kanban-closing",
   pos_venda: "bg-kanban-postsale/8 text-kanban-postsale",
+  perdido: "bg-red-500/8 text-red-500",
 };
 
 const stageDotMap: Record<KanbanStage, string> = {
@@ -66,6 +69,7 @@ const stageDotMap: Record<KanbanStage, string> = {
   precificacao_especial: "bg-kanban-pricing",
   fechamento: "bg-kanban-closing",
   pos_venda: "bg-kanban-postsale",
+  perdido: "bg-red-500",
 };
 
 const stageHeaderGradient: Record<KanbanStage, string> = {
@@ -78,6 +82,7 @@ const stageHeaderGradient: Record<KanbanStage, string> = {
   precificacao_especial: "from-kanban-pricing/15 to-kanban-pricing/5",
   fechamento: "from-kanban-closing/15 to-kanban-closing/5",
   pos_venda: "from-kanban-postsale/15 to-kanban-postsale/5",
+  perdido: "from-red-500/15 to-red-500/5",
 };
 
 export default function Kanban() {
@@ -472,18 +477,8 @@ export default function Kanban() {
     if (!result.destination) return;
     const newStage = result.destination.droppableId as KanbanStage;
 
-    // Classificação obrigatória antes de fechar a venda.
-    if (newStage === 'fechamento') {
-      const movedLead = leads.find((l) => l.id === result.draggableId);
-      if (movedLead && movedLead.stage !== 'fechamento') {
-        const ok = await clientHasCategory(movedLead.clientPhone);
-        if (!ok) {
-          setClassifyCategory("");
-          setClassifyLead(movedLead);
-          return; // não move até classificar
-        }
-      }
-    }
+    // "Fechamento" é uma etapa de processo — mover o card para lá NÃO encerra a venda.
+    // O encerramento é uma ação explícita (botão "Encerrar atendimento") nas etapas certas.
 
     setLeads((prev) =>
       prev.map((l) => (l.id === result.draggableId ? { ...l, stage: newStage } : l))
@@ -767,13 +762,15 @@ export default function Kanban() {
                                                   >
                                                     <Forward className="h-3 w-3" />
                                                   </button>
-                                                  <button
-                                                    onClick={(e) => { e.stopPropagation(); setLosingLead(lead); }}
-                                                    className="p-1 rounded-lg hover:bg-red-100 text-red-500"
-                                                    title="Encerrar atendimento"
-                                                  >
-                                                    <XCircle className="h-3 w-3" />
+                                                  {(lead.stage === 'contorno_objecoes' || lead.stage === 'pos_venda') && (
+                                                    <button
+                                                      onClick={(e) => { e.stopPropagation(); setLosingLead(lead); }}
+                                                      className="p-1 rounded-lg hover:bg-red-100 text-red-500"
+                                                      title="Encerrar atendimento"
+                                                    >
+                                                      <XCircle className="h-3 w-3" />
                                                   </button>
+                                                  )}
                                                   <button
                                                     onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
                                                     className="p-1 rounded-lg hover:bg-muted"
