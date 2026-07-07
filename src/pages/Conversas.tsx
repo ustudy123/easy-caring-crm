@@ -219,6 +219,32 @@ const mockContactNames: Record<string, string> = {
    const [newChatName, setNewChatName] = useState("");
    const [newChatMessage, setNewChatMessage] = useState("");
    const [newChatSending, setNewChatSending] = useState(false);
+   // Busca de cliente (ERP) para preencher a nova conversa
+   const [newChatSearch, setNewChatSearch] = useState("");
+   const [newChatResults, setNewChatResults] = useState<any[]>([]);
+   const [newChatSearching, setNewChatSearching] = useState(false);
+
+   const handleNewChatSearch = async () => {
+     if (newChatSearch.trim().length < 2) { toast.error("Digite pelo menos 2 caracteres"); return; }
+     setNewChatSearching(true);
+     try {
+       const { data, error } = await supabase.functions.invoke("citel-search-name", { body: { name: newChatSearch.trim() } });
+       if (error) throw error;
+       setNewChatResults(data?.results || []);
+       if (!data?.found) toast.info("Nenhum cliente encontrado no ERP");
+     } catch (e: any) {
+       toast.error("Erro na busca: " + (e.message || e));
+     } finally {
+       setNewChatSearching(false);
+     }
+   };
+
+   const pickNewChatClient = (c: any) => {
+     if (c.phone) setNewChatPhone(c.phone);
+     setNewChatName(c.name || "");
+     setNewChatResults([]);
+     setNewChatSearch("");
+   };
 
     const fetchData = useCallback(async (silent = false) => {
       if (!silent) setLoading(true);
@@ -2095,6 +2121,38 @@ const mockContactNames: Record<string, string> = {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Buscar cliente <span className="font-normal text-muted-foreground">(nome, CNPJ, CPF ou código)</span></Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Buscar cliente no ERP..."
+                  value={newChatSearch}
+                  onChange={(e) => setNewChatSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleNewChatSearch()}
+                />
+                <Button size="sm" variant="secondary" onClick={handleNewChatSearch} disabled={newChatSearching}>
+                  {newChatSearching ? "..." : "Buscar"}
+                </Button>
+              </div>
+              {newChatResults.length > 0 && (
+                <div className="max-h-44 overflow-y-auto rounded-lg border border-border/60 divide-y">
+                  {newChatResults.map((c) => (
+                    <button
+                      key={c.erpId || c.document || c.name}
+                      onClick={() => pickNewChatClient(c)}
+                      className="w-full text-left p-2 hover:bg-muted transition-colors"
+                    >
+                      <p className="text-sm font-medium">{c.name}</p>
+                      <p className="text-[11px] text-muted-foreground flex gap-1.5 flex-wrap items-center mt-0.5">
+                        {c.erpId && <span className="bg-muted px-1.5 py-0.5 rounded">COD: {c.erpId}</span>}
+                        {c.document && <span>{c.document}</span>}
+                        {c.phone && <span>• {c.phone}</span>}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Número (com DDD)</Label>
               <Input

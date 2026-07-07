@@ -455,8 +455,9 @@ export default function SuporteOrcamento() {
                             <div className="flex justify-between items-start">
                               <div className="space-y-0.5">
                                 <p className="text-sm font-semibold group-hover:text-brand-500 transition-colors">{client.name}</p>
-                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                  <span className="bg-muted px-1.5 py-0.5 rounded">ID: {client.erpId}</span>
+                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
+                                  <span className="bg-muted px-1.5 py-0.5 rounded">COD: {client.erpId}</span>
+                                  {client.document && <span>{client.document}</span>}
                                   {client.phone && <span>• {client.phone}</span>}
                                 </div>
                               </div>

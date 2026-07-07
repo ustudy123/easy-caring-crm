@@ -171,7 +171,7 @@ interface StoreRow {
   address: string | null;
   city: string | null;
   phone: string | null;
-  erp_company_code: string | null;
+  erp_company_code?: string | null;
   employee_count: number;
 }
 
@@ -1056,6 +1056,14 @@ function UsersTab() {
     else { toast.success("Função removida"); fetchData(); }
   };
 
+  const handleDeleteUser = async (u: AdminUserRow) => {
+    const nome = u.seller_name || u.display_name || u.email || "este usuário";
+    if (!window.confirm(`Excluir ${nome} permanentemente? Essa ação não pode ser desfeita.`)) return;
+    const { error } = await supabase.rpc("admin_delete_user" as any, { _user_id: u.user_id } as any);
+    if (error) toast.error("Erro ao excluir: " + error.message);
+    else { toast.success("Usuário excluído"); fetchData(); }
+  };
+
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
 
   return (
@@ -1126,6 +1134,11 @@ function UsersTab() {
                     {u.role && u.role !== "admin" && (
                       <Button variant="ghost" size="icon" onClick={() => handleRevoke(u.user_id)} title="Revogar">
                         <ShieldOff className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
+                    {u.role !== "admin" && (
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(u)} title="Excluir usuário">
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     )}
                   </div>
