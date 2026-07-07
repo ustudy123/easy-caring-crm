@@ -762,15 +762,13 @@ export default function Kanban() {
                                                   >
                                                     <Forward className="h-3 w-3" />
                                                   </button>
-                                                  {(lead.stage === 'contorno_objecoes' || lead.stage === 'pos_venda') && (
-                                                    <button
-                                                      onClick={(e) => { e.stopPropagation(); setLosingLead(lead); }}
-                                                      className="p-1 rounded-lg hover:bg-red-100 text-red-500"
-                                                      title="Encerrar atendimento"
-                                                    >
-                                                      <XCircle className="h-3 w-3" />
+                                                  <button
+                                                    onClick={(e) => { e.stopPropagation(); setLosingLead(lead); }}
+                                                    className="p-1 rounded-lg hover:bg-red-100 text-red-500"
+                                                    title="Encerrar atendimento"
+                                                  >
+                                                    <XCircle className="h-3 w-3" />
                                                   </button>
-                                                  )}
                                                   <button
                                                     onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
                                                     className="p-1 rounded-lg hover:bg-muted"
