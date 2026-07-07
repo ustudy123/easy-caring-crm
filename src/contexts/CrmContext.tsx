@@ -64,6 +64,7 @@ function mapLeadFromDb(row: any): Lead {
      lostReason: row.lost_reason || undefined,
      closedAt: row.closed_at || undefined,
      archived: row.archived ?? false,
+     urgencyAcknowledgedAt: row.urgency_acknowledged_at || undefined,
   };
 }
 

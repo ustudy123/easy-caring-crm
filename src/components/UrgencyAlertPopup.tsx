@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { useCrm } from "@/contexts/CrmContext";
 import { useRole } from "@/contexts/RoleContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,6 +47,7 @@ export function UrgencyAlertPopup() {
     // Find first lead that matches urgency rules for current user
     const leadWithAlert = leads.find((lead) => {
       if (dismissedLeads.has(lead.id)) return false;
+      if (lead.urgencyAcknowledgedAt) return false; // já deram "Estou ciente"
       if (lead.stage === "fechamento" || lead.stage === "pos_venda") return false;
 
       const urgency = getUrgencyLevel(lead);
@@ -77,8 +79,13 @@ export function UrgencyAlertPopup() {
 
   const handleDismiss = () => {
     if (activeAlert) {
+      const leadId = activeAlert.id;
+      // Persiste a ciência no banco: não reaparece para ninguém (vendedor/gerente/admin).
+      supabase.from("leads").update({ urgency_acknowledged_at: new Date().toISOString() } as any).eq("id", leadId).then(({ error }) => {
+        if (error) console.error("Erro ao registrar ciência do alerta:", error);
+      });
       setDismissedLeads((prev) => {
-        const next = new Set([...prev, activeAlert.id]);
+        const next = new Set([...prev, leadId]);
         if (storageKey) {
           try {
             localStorage.setItem(storageKey, JSON.stringify([...next]));

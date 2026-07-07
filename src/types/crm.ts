@@ -22,6 +22,7 @@ export interface Lead {
    lostReason?: string;
    closedAt?: string;
    archived?: boolean;
+   urgencyAcknowledgedAt?: string;
 }
 
 export interface Client {
