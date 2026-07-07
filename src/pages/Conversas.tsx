@@ -173,6 +173,8 @@ const mockContactNames: Record<string, string> = {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  // Telefones abertos que ainda não têm mensagem no WhatsApp (conversa "vazia" para iniciar).
+  const [virtualPhones, setVirtualPhones] = useState<string[]>([]);
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [chatSearch, setChatSearch] = useState("");
@@ -530,8 +532,28 @@ const mockContactNames: Record<string, string> = {
         
         if (!msg.is_from_me && !msg.is_read) conv.unreadCount++;
       });
+      // Adiciona conversas "vazias" (telefones abertos sem mensagem ainda), para o vendedor iniciar.
+      const strip = (p: string) => (p || "").replace(/\D/g, "").replace(/^55/, "");
+      virtualPhones.forEach((vp) => {
+        if (!map.has(vp) && !Array.from(map.keys()).some((k) => strip(k) === strip(vp))) {
+          const client = clients.find((c) => strip(c.phone) === strip(vp));
+          map.set(vp, {
+            phone: vp,
+            lastMessage: "",
+            lastTimestamp: "",
+            unreadCount: 0,
+            messages: [],
+            assigned_seller_id: client?.assigned_seller_id,
+            store_id: client?.store_id,
+            status: client?.status,
+            alert_status: client?.alert_status,
+            last_message_from_client_at: client?.last_message_from_client_at,
+            received_on_instance_id: client?.received_on_instance_id,
+          });
+        }
+      });
       return Array.from(map.values());
-    }, [messages, clients]);
+    }, [messages, clients, virtualPhones]);
 
      // Mapa telefone (normalizado, sem DDI) -> etapa do lead, para filtrar por etapa do Kanban
      const normPhone = (p: string) => (p || "").replace(/\D/g, "").replace(/^55/, "");
@@ -699,7 +721,11 @@ const mockContactNames: Record<string, string> = {
     if (conv) {
       handleSelectConversation(conv.phone);
     } else {
-      toast.info("Esse cliente ainda não tem conversa registrada no WhatsApp.");
+      // Ainda não há conversa no WhatsApp: abre uma conversa vazia para o vendedor iniciar.
+      const digits = (target || "").replace(/\D/g, "");
+      const canonical = (digits.length === 10 || digits.length === 11) ? `55${digits}` : digits;
+      setVirtualPhones((prev) => (prev.includes(canonical) ? prev : [...prev, canonical]));
+      handleSelectConversation(canonical);
     }
     deepLinkParams.delete("phone");
     setDeepLinkParams(deepLinkParams, { replace: true });
