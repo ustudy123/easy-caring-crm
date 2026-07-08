@@ -14,6 +14,7 @@
 -- Remove políticas de UPDATE antigas (nome atual + legado)
 DROP POLICY IF EXISTS "Managers and admins can update pricing requests" ON public.pricing_support_requests;
 DROP POLICY IF EXISTS "Managers/Admins can update pricing requests" ON public.pricing_support_requests;
+DROP POLICY IF EXISTS "Support team and owner can update pricing requests" ON public.pricing_support_requests;
 
 CREATE POLICY "Support team and owner can update pricing requests"
 ON public.pricing_support_requests FOR UPDATE TO authenticated
