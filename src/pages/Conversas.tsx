@@ -125,6 +125,24 @@ function normalizePhone(phone: string) {
   return (phone || "").replace(/\D/g, "");
 }
 
+// Busca todas as linhas de uma query paginando de 1000 em 1000. O Supabase
+// corta em 1000 por padrão e, com ordenação ascendente, isso esconde as linhas
+// MAIS NOVAS quando há mais que isso (ex.: mensagens recém-enviadas somem).
+async function fetchAllRows(
+  makeQuery: (from: number, to: number) => any,
+): Promise<{ data: any[]; error?: any }> {
+  const pageSize = 1000;
+  let all: any[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await makeQuery(from, from + pageSize - 1);
+    if (error) return { data: all, error };
+    if (!data || data.length === 0) break;
+    all = all.concat(data);
+    if (data.length < pageSize) break;
+  }
+  return { data: all };
+}
+
 function getInitials(name: string) {
   return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 }
@@ -252,8 +270,8 @@ const mockContactNames: Record<string, string> = {
       if (!silent) setLoading(true);
       try {
         const [msgsRes, clientsRes, sellersRes, storesRes] = await Promise.all([
-           supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }),
-           supabase.from("clients").select("*, alert_status"),
+           fetchAllRows((f, t) => supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }).range(f, t)),
+           fetchAllRows((f, t) => supabase.from("clients").select("*, alert_status").order("created_at", { ascending: true }).range(f, t)),
            supabase.from("sellers").select("id, name, code, store_id, is_active, user_id"),
            supabase.from("stores").select("id, name")
         ]);
