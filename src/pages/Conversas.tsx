@@ -449,17 +449,10 @@ const mockContactNames: Record<string, string> = {
      setNewChatSending(true);
      try {
        const { data: { user } } = await supabase.auth.getUser();
-       // Cria/atualiza o contato se um nome foi informado.
-       const { data: existing } = await supabase.from("clients").select("id").eq("phone", fullPhone).maybeSingle();
-       if (newChatName.trim()) {
-         if (existing?.id) {
-           await supabase.from("clients").update({ name: newChatName.trim() }).eq("id", existing.id);
-         } else {
-           await supabase.from("clients").insert({ name: newChatName.trim(), phone: fullPhone } as any);
-         }
-       }
+       // O registro do contato é criado pela função send-whatsapp (service role),
+       // evitando a RLS de INSERT de clients que exige store_id.
        const { data, error } = await supabase.functions.invoke("send-whatsapp", {
-         body: { phone: fullPhone, message: text, senderId: user?.id },
+         body: { phone: fullPhone, message: text, senderId: user?.id, contactName: newChatName.trim() || undefined },
        });
        if (error) throw error;
        if (data?.error) throw new Error(data.error);

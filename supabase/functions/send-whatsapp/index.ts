@@ -46,7 +46,7 @@ serve(async (req) => {
 
   try {
      const body = await req.json();
-      const { phone, message, mediaUrl, mediaType, senderId, senderName, instanceId } = body;
+      const { phone, message, mediaUrl, mediaType, senderId, senderName, instanceId, contactName } = body;
 
     if (!phone || (!message && !mediaUrl)) {
       return new Response(JSON.stringify({ error: "phone and (message or mediaUrl) are required" }), {
@@ -59,6 +59,14 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Vendedor que está enviando (para escolher instância e vincular o cliente novo).
+    let sellerRow: any = null;
+    if (senderId) {
+      const { data } = await supabase
+        .from("sellers").select("id, store_id").eq("user_id", senderId).maybeSingle();
+      sellerRow = data;
+    }
 
     let resolvedInstanceId: string | null = instanceId || null;
     let customApiUrl: string | null = null;
@@ -80,12 +88,6 @@ serve(async (req) => {
     // instância padrão — senão o envio cai no env global (normalmente não
     // configurado no setup multi-instância) e retorna erro.
     if (!resolvedInstanceId) {
-      let sellerRow: any = null;
-      if (senderId) {
-        const { data } = await supabase
-          .from("sellers").select("id, store_id").eq("user_id", senderId).maybeSingle();
-        sellerRow = data;
-      }
       // 1) instância conectada do próprio vendedor
       if (sellerRow?.id) {
         const { data } = await supabase.from("whatsapp_instances")
@@ -267,15 +269,37 @@ serve(async (req) => {
       received_on_instance_id: resolvedInstanceId,
     });
 
-    // Update client metadata for response tracking
-    await supabase
+    // Garante o registro do cliente (para a conversa aparecer nomeada na lista).
+    // Roda como service role, então não esbarra na RLS de INSERT de clients.
+    const { data: existingClient } = await supabase
       .from("clients")
-      .update({
+      .select("id, name")
+      .eq("phone", cleanPhone)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingClient?.id) {
+      const upd: any = {
         last_seller_response_at: new Date().toISOString(),
         alert_status: 'none',
-        alert_notified_at: null
-      })
-      .eq("phone", cleanPhone);
+        alert_notified_at: null,
+      };
+      // Preenche o nome só se o cliente ainda não tem um nome "de verdade".
+      if (contactName && (!existingClient.name || existingClient.name === cleanPhone)) {
+        upd.name = contactName;
+      }
+      await supabase.from("clients").update(upd).eq("id", existingClient.id);
+    } else {
+      // Conversa nova: cria o cliente com o nome informado e vincula ao vendedor.
+      await supabase.from("clients").insert({
+        name: contactName || senderName || cleanPhone,
+        phone: cleanPhone,
+        assigned_seller_id: sellerRow?.id ?? null,
+        store_id: sellerRow?.store_id ?? null,
+        last_seller_response_at: new Date().toISOString(),
+      } as any);
+    }
 
     return new Response(JSON.stringify({ success: true, messageId, instanceId: resolvedInstanceId }), {
       status: 200,
