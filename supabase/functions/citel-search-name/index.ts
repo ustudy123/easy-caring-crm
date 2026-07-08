@@ -27,6 +27,23 @@ function pickStr(raw: Record<string, any>, ...keys: string[]): string | undefine
   return undefined;
 }
 
+// O Citel aninha o contato do cliente (ex.: clienteCompradorPrincipal), podendo
+// vir como objeto ou array. Busca a primeira chave preenchida lá dentro.
+function pickFromNested(raw: Record<string, any>, nestedKey: string, ...keys: string[]): string | undefined {
+  const n = raw[nestedKey];
+  if (Array.isArray(n)) {
+    for (const item of n) {
+      if (item && typeof item === "object") {
+        const v = pickStr(item as Record<string, any>, ...keys);
+        if (v) return v;
+      }
+    }
+  } else if (n && typeof n === "object") {
+    return pickStr(n as Record<string, any>, ...keys);
+  }
+  return undefined;
+}
+
 function mapErpClient(raw: Record<string, any>) {
   const addressParts = [
     pickStr(raw, "endereco", "address", "logradouro", "rua"),
@@ -37,8 +54,15 @@ function mapErpClient(raw: Record<string, any>) {
     erpId: pickStr(raw, "id", "codigo", "code", "cod", "codCliente", "cod_cliente", "idCliente"),
     name: pickStr(raw, "nome", "name", "razaoSocial", "razao_social", "fantasia") || "Cliente ERP",
     document: pickStr(raw, "cpf", "cnpj", "cpfCnpj", "numeroDocumento", "documento"),
-    email: pickStr(raw, "email", "e_mail", "eMail"),
-    phone: pickStr(raw, "telefone", "celular", "fone", "whatsapp"),
+    email: pickStr(raw, "email", "e_mail", "eMail")
+      || pickFromNested(raw, "clienteCompradorPrincipal", "emailCompraPrincipal", "email"),
+    phone: pickStr(raw, "telefone", "celular", "fone", "whatsapp",
+                   "telefone1", "telefonePrincipal", "telefoneComercial",
+                   "celular1", "fone1", "telefoneCelular", "numeroTelefone")
+      || pickFromNested(raw, "clienteCompradorPrincipal",
+                        "telefoneCompraPrincipal", "foneCompraPrincipal",
+                        "celularCompraPrincipal", "whatsappCompraPrincipal",
+                        "telefone", "celular", "fone", "whatsapp"),
     city: pickStr(raw, "cidade", "city", "municipio"),
     address: addressParts.length ? addressParts.join(", ") : pickStr(raw, "address"),
   };

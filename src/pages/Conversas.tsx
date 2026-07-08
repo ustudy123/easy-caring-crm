@@ -223,6 +223,7 @@ const mockContactNames: Record<string, string> = {
    const [newChatSearch, setNewChatSearch] = useState("");
    const [newChatResults, setNewChatResults] = useState<any[]>([]);
    const [newChatSearching, setNewChatSearching] = useState(false);
+   const [newChatErpClient, setNewChatErpClient] = useState<any | null>(null);
 
    const handleNewChatSearch = async () => {
      if (newChatSearch.trim().length < 2) { toast.error("Digite pelo menos 2 caracteres"); return; }
@@ -240,8 +241,9 @@ const mockContactNames: Record<string, string> = {
    };
 
    const pickNewChatClient = (c: any) => {
-     if (c.phone) setNewChatPhone(c.phone);
+     if (c.phone) setNewChatPhone(String(c.phone));
      setNewChatName(c.name || "");
+     setNewChatErpClient(c);
      setNewChatResults([]);
      setNewChatSearch("");
    };
@@ -1218,7 +1220,7 @@ const mockContactNames: Record<string, string> = {
            {/* Search and Tabs */}
            <div className="px-2 py-2.5 bg-white/70 backdrop-blur-sm space-y-2 border-b border-border/60">
              <Button
-               onClick={() => { setNewChatPhone(""); setNewChatName(""); setNewChatMessage(""); setNewChatOpen(true); }}
+               onClick={() => { setNewChatPhone(""); setNewChatName(""); setNewChatMessage(""); setNewChatErpClient(null); setNewChatResults([]); setNewChatSearch(""); setNewChatOpen(true); }}
                className="w-full h-9 rounded-lg bg-brand-500 hover:opacity-90 text-white text-sm gap-2"
              >
                <Plus className="h-4 w-4" /> Nova conversa
@@ -2153,6 +2155,23 @@ const mockContactNames: Record<string, string> = {
                 </div>
               )}
             </div>
+            {newChatErpClient && (
+              <div className="flex items-start justify-between gap-2 rounded-lg border border-brand-500/30 bg-brand-500/5 p-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{newChatErpClient.name}</p>
+                  <p className="text-[11px] text-muted-foreground flex gap-1.5 flex-wrap items-center mt-0.5">
+                    {newChatErpClient.erpId && <span className="bg-muted px-1.5 py-0.5 rounded">COD: {newChatErpClient.erpId}</span>}
+                    {newChatErpClient.document && <span>{newChatErpClient.document}</span>}
+                    {newChatErpClient.phone
+                      ? <span className="text-emerald-600">✓ telefone preenchido</span>
+                      : <span className="text-amber-600">sem telefone no ERP — digite o número abaixo</span>}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setNewChatErpClient(null)} className="text-muted-foreground hover:text-foreground shrink-0">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Número (com DDD)</Label>
               <Input
