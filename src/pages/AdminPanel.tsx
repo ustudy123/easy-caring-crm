@@ -1005,7 +1005,8 @@ function UsersTab() {
   const openEdit = async (u: AdminUserRow) => {
     setEditing(u);
     setEditRole(u.role || "vendedor");
-    setEditStoreId(u.store_id || "");
+    const uStore = stores.find((s) => s.id === u.store_id);
+    setEditStoreId(uStore?.is_external_team ? "external" : (u.store_id || ""));
     setEditName(u.seller_name || u.display_name || "");
     setEditCode(u.seller_code || "");
     setEditIsActive(u.is_active ?? true);
@@ -1022,6 +1023,23 @@ function UsersTab() {
   const toggleSubject = (s: string) =>
     setEditQuizSubjects((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
+  // Resolve a loja canônica de "Vendedor Externo": reusa uma equipe de venda
+  // externa já existente ou cria uma na primeira vez que for usada.
+  const ensureExternalStore = async (): Promise<string | null> => {
+    const existing = stores.find((s) => s.is_external_team);
+    if (existing) return existing.id;
+    const { data, error } = await supabase
+      .from("stores")
+      .insert({ name: "Vendedor Externo", is_external_team: true } as any)
+      .select("id")
+      .single();
+    if (error || !data) {
+      toast.error("Não foi possível criar a equipe de venda externa: " + (error?.message || ""));
+      return null;
+    }
+    return data.id;
+  };
+
   const handleSave = async () => {
     if (!editing) return;
     if (editRole !== "admin" && !editStoreId) {
@@ -1036,10 +1054,15 @@ function UsersTab() {
       }
     }
     setSaving(true);
+    let storeIdToSave: string | null = editRole === "admin" ? null : editStoreId;
+    if (editRole !== "admin" && editStoreId === "external") {
+      storeIdToSave = await ensureExternalStore();
+      if (!storeIdToSave) { setSaving(false); return; }
+    }
     const { error } = await supabase.rpc("admin_assign_user_role", {
       _user_id: editing.user_id,
       _role: editRole as any,
-      _store_id: editRole === "admin" ? null : editStoreId,
+      _store_id: storeIdToSave,
       _seller_name: editName || null,
       _seller_code: editRole === "vendedor" ? (editCode.trim() || null) : null,
       _is_active: editIsActive,
@@ -1200,22 +1223,16 @@ function UsersTab() {
                     <Select value={editStoreId} onValueChange={setEditStoreId}>
                       <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                       <SelectContent>
-                        {stores.some(s => !s.is_external_team) && (
-                          <SelectGroup>
-                            <SelectLabel>Lojas</SelectLabel>
-                            {stores.filter(s => !s.is_external_team).map(s => (
-                              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                            ))}
-                          </SelectGroup>
-                        )}
-                        {stores.some(s => s.is_external_team) && (
-                          <SelectGroup>
-                            <SelectLabel>Venda Externa</SelectLabel>
-                            {stores.filter(s => s.is_external_team).map(s => (
-                              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                            ))}
-                          </SelectGroup>
-                        )}
+                        <SelectGroup>
+                          <SelectLabel>Lojas</SelectLabel>
+                          {stores.filter(s => !s.is_external_team).map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          ))}
+                        </SelectGroup>
+                        <SelectGroup>
+                          <SelectLabel>Venda Externa</SelectLabel>
+                          <SelectItem value="external">Vendedor Externo</SelectItem>
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </div>
