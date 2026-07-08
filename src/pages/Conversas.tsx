@@ -468,7 +468,15 @@ const mockContactNames: Record<string, string> = {
        setSelectedPhone(fullPhone);
        fetchData();
      } catch (e: any) {
-       toast.error(`Erro ao iniciar conversa: ${e.message || e}`);
+       let msg = e?.message || String(e);
+       // supabase.functions.invoke esconde o corpo no e.context (Response) em erros non-2xx.
+       try {
+         if (e?.context && typeof e.context.json === "function") {
+           const b = await e.context.json();
+           if (b?.error) msg = b.error + (b.details ? ` — ${typeof b.details === "string" ? b.details : JSON.stringify(b.details)}` : "");
+         }
+       } catch { /* mantém a mensagem original */ }
+       toast.error(`Erro ao iniciar conversa: ${msg}`);
      } finally {
        setNewChatSending(false);
      }
