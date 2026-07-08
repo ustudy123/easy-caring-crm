@@ -61,7 +61,7 @@ const allMainNav: NavItem[] = [
     badgeKey: null,
     roles: ["admin", "gerente"],
   },
-  { title: "Kanban", url: "/kanban", icon: Columns3, badgeKey: "newLeads" },
+  { title: "Kanban", url: "/kanban", icon: Columns3, badgeKey: "newLeads", roles: ["admin", "gerente", "vendedor"] },
   {
     title: "Clientes",
     url: "/clientes",
