@@ -48,21 +48,24 @@ export function SwipeableCard({ children, onEdit, onDelete, onMoveNext }: Swipea
 
   return (
     <div className="relative overflow-hidden rounded-lg sm:overflow-visible">
-      {/* Background actions revealed on swipe */}
-      <div className="absolute inset-y-0 right-0 flex items-stretch sm:hidden">
-        <button
-          onClick={() => { onEdit(); resetSwipe(); }}
-          className="flex w-[65px] items-center justify-center bg-primary text-primary-foreground text-xs font-bold"
-        >
-          ✏️ Editar
-        </button>
-        <button
-          onClick={() => { onDelete(); resetSwipe(); }}
-          className="flex w-[65px] items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-r-lg"
-        >
-          🗑️ Excluir
-        </button>
-      </div>
+      {/* Ações reveladas ao arrastar (só quando arrastado, senão vazam através
+          de cards translúcidos) */}
+      {offset < 0 && (
+        <div className="absolute inset-y-0 right-0 flex items-stretch sm:hidden">
+          <button
+            onClick={() => { onEdit(); resetSwipe(); }}
+            className="flex w-[65px] items-center justify-center bg-primary text-primary-foreground text-xs font-bold"
+          >
+            ✏️ Editar
+          </button>
+          <button
+            onClick={() => { onDelete(); resetSwipe(); }}
+            className="flex w-[65px] items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-r-lg"
+          >
+            🗑️ Excluir
+          </button>
+        </div>
+      )}
 
       {/* Foreground card */}
       <div
