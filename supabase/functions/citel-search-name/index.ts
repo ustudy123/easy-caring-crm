@@ -102,7 +102,7 @@ function nameVariants(name: string): string[] {
   add(base.replace(/f/gi, "ph"));
   add(base.replace(/th/gi, "t"));
   add(base.replace(/y/gi, "i"));
-  return [...out].slice(0, 6);
+  return [...out].slice(0, 4);
 }
 
 function rankByName(results: any[], query: string): any[] {
@@ -118,6 +118,11 @@ function rankByName(results: any[], query: string): any[] {
   return [...results].sort((a, b) => score(a.name) - score(b.name) || (a.name || "").length - (b.name || "").length);
 }
 
+
+// Cache do índice de template de URL que o ERP aceita. Persiste entre invocações
+// "quentes" da função, evitando redescobrir o endpoint (várias chamadas HTTP
+// sequenciais) a cada busca — principal causa da lentidão.
+let cachedWorkingTemplate = -1;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -165,10 +170,10 @@ Deno.serve(async (req) => {
     const keyOf = (c: any) => String(c.erpId || c.document || c.name).toLowerCase();
     let lastStatus = 0;
     let lastBody: any = null;
-    let workingTemplate = -1;
 
-    // Busca no ERP os candidatos para UM termo (com suas variações de grafia),
-    // descobrindo/reaproveitando o template de URL que o ERP aceita.
+    // Busca no ERP os candidatos para UM termo (com suas variações de grafia).
+    // Reaproveita o template já descoberto (cache de módulo) e dispara as
+    // variações em paralelo, em vez de uma a uma.
     const collectForTerm = async (term: string): Promise<Map<string, any>> => {
       const out = new Map<string, any>();
       const vars = nameVariants(term);
@@ -177,26 +182,30 @@ Deno.serve(async (req) => {
           out.set(keyOf(c), c);
         }
       };
-      // Descobre o template (primeiro HTTP 200) na primeira vez.
-      if (workingTemplate < 0) {
+
+      // Descobre o template (primeiro HTTP 200) só se ainda não conhecido.
+      if (cachedWorkingTemplate < 0) {
         const tpls = templates(encodeURIComponent(vars[0]));
         for (let i = 0; i < tpls.length; i++) {
           const r = await fetchUrl(tpls[i]);
           if (!r) continue;
           lastStatus = r.status; lastBody = r.data;
-          if (r.status >= 200 && r.status < 300) { workingTemplate = i; ingest(r.data); break; }
+          if (r.status >= 200 && r.status < 300) { cachedWorkingTemplate = i; ingest(r.data); break; }
         }
-        if (workingTemplate < 0) return out;
-        for (let v = 1; v < vars.length; v++) {
-          const r = await fetchUrl(templates(encodeURIComponent(vars[v]))[workingTemplate]);
-          if (r && r.status >= 200 && r.status < 300) ingest(r.data);
-        }
+        if (cachedWorkingTemplate < 0) return out;
+        // demais variações em paralelo
+        const rest = await Promise.all(
+          vars.slice(1).map((v) => fetchUrl(templates(encodeURIComponent(v))[cachedWorkingTemplate])),
+        );
+        for (const r of rest) if (r && r.status >= 200 && r.status < 300) ingest(r.data);
         return out;
       }
-      for (const v of vars) {
-        const r = await fetchUrl(templates(encodeURIComponent(v))[workingTemplate]);
-        if (r && r.status >= 200 && r.status < 300) ingest(r.data);
-      }
+
+      // Template conhecido: todas as variações em paralelo.
+      const all = await Promise.all(
+        vars.map((v) => fetchUrl(templates(encodeURIComponent(v))[cachedWorkingTemplate])),
+      );
+      for (const r of all) if (r && r.status >= 200 && r.status < 300) ingest(r.data);
       return out;
     };
 
@@ -218,8 +227,14 @@ Deno.serve(async (req) => {
     // Vários termos: monta o conjunto consultando os 2 termos mais distintivos
     // (os mais longos), depois filtra quem contém TODOS os termos, em qualquer ordem.
     const queryTerms = [...terms].sort((a, b) => b.length - a.length).slice(0, 2);
-    for (const t of queryTerms) {
-      for (const [k, v] of await collectForTerm(t)) pool.set(k, v);
+    if (cachedWorkingTemplate < 0) {
+      // Cold start: resolve o template com o 1º termo, depois os demais em paralelo.
+      for (const [k, v] of await collectForTerm(queryTerms[0])) pool.set(k, v);
+      const maps = await Promise.all(queryTerms.slice(1).map(collectForTerm));
+      for (const m of maps) for (const [k, v] of m) pool.set(k, v);
+    } else {
+      const maps = await Promise.all(queryTerms.map(collectForTerm));
+      for (const m of maps) for (const [k, v] of m) pool.set(k, v);
     }
 
     const termKeys = terms.map(phoneticKey).filter(Boolean);
