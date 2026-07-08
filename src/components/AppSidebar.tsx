@@ -98,6 +98,14 @@ const allToolsNav: NavItem[] = [
     roles: ["admin", "suporte"],
   },
   {
+    // Mesma página, rótulo amigável para o vendedor (ele vê só as próprias solicitações).
+    title: "Orçamentos/Negociações",
+    url: "/suporte-orcamento",
+    icon: FileText,
+    badgeKey: null,
+    roles: ["vendedor"],
+  },
+  {
     title: "Vendas CRM x ERP",
     url: "/relatorio-vendas",
     icon: TrendingUp,
