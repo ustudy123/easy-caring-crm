@@ -1073,7 +1073,7 @@ function UsersTab() {
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     // Grava os assuntos do quiz do vendedor (separado da RPC).
-    if (editRole === "vendedor") {
+    if (["vendedor", "gerente", "suporte"].includes(editRole)) {
       const { error: subjErr } = await supabase
         .from("sellers")
         .update({ quiz_subjects: editQuizSubjects.length ? editQuizSubjects : null } as any)
@@ -1306,11 +1306,11 @@ function UsersTab() {
                     </div>
                   </div>
                 )}
-                {editRole === "vendedor" && (
+                {["vendedor", "gerente", "suporte"].includes(editRole) && (
                   <div className="pt-1">
                     <Label>Assuntos do Quiz</Label>
                     <p className="text-xs text-muted-foreground mb-2">
-                      Selecione os assuntos que cairão no quiz deste vendedor. Deixe tudo desmarcado para incluir <strong>todos</strong> os assuntos.
+                      Selecione os assuntos que cairão no quiz deste usuário. Deixe tudo desmarcado para incluir <strong>todos</strong> os assuntos.
                     </p>
                     {availableSubjects.length === 0 ? (
                       <p className="text-xs text-muted-foreground">Nenhum assunto cadastrado nas perguntas ainda.</p>
