@@ -457,6 +457,9 @@ const mockContactNames: Record<string, string> = {
        if (error) throw error;
        if (data?.error) throw new Error(data.error);
        toast.success("Conversa iniciada!");
+       if (data?.message_saved === false) {
+         toast.error("Mensagem enviada, mas não registrada no sistema: " + (data.message_error || "erro desconhecido"));
+       }
        setNewChatOpen(false);
        // Mantém a conversa recém-criada visível e aberta: limpa a busca (que
        // poderia escondê-la) e fixa o telefone como conversa aberta, para não

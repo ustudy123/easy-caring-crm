@@ -256,7 +256,7 @@ serve(async (req) => {
 
     const messageId = apiData?.messageId || apiData?.zaapId || apiData?.id || crypto.randomUUID();
 
-    await supabase.from("whatsapp_messages").insert({
+    const { error: msgInsertErr } = await supabase.from("whatsapp_messages").insert({
       message_id: messageId,
       phone: cleanPhone,
       body: message || (mediaUrl ? `[Arquivo: ${mediaType || 'mídia'}]` : ''),
@@ -268,6 +268,9 @@ serve(async (req) => {
       sender_name: senderName,
       received_on_instance_id: resolvedInstanceId,
     });
+    if (msgInsertErr) {
+      console.error("Falha ao gravar whatsapp_messages:", JSON.stringify(msgInsertErr));
+    }
 
     // Garante o registro do cliente (para a conversa aparecer nomeada na lista).
     // Roda como service role, então não esbarra na RLS de INSERT de clients.
@@ -285,8 +288,9 @@ serve(async (req) => {
         alert_status: 'none',
         alert_notified_at: null,
       };
-      // Preenche o nome só se o cliente ainda não tem um nome "de verdade".
-      if (contactName && (!existingClient.name || existingClient.name === cleanPhone)) {
+      // "Nova conversa" passa contactName explicitamente (o usuário digitou),
+      // então respeita o nome informado mesmo que o cliente já tenha um.
+      if (contactName) {
         upd.name = contactName;
       }
       await supabase.from("clients").update(upd).eq("id", existingClient.id);
@@ -301,7 +305,13 @@ serve(async (req) => {
       } as any);
     }
 
-    return new Response(JSON.stringify({ success: true, messageId, instanceId: resolvedInstanceId }), {
+    return new Response(JSON.stringify({
+      success: true,
+      messageId,
+      instanceId: resolvedInstanceId,
+      message_saved: !msgInsertErr,
+      message_error: msgInsertErr?.message ?? null,
+    }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
