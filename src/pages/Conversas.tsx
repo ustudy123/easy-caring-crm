@@ -458,6 +458,11 @@ const mockContactNames: Record<string, string> = {
        if (data?.error) throw new Error(data.error);
        toast.success("Conversa iniciada!");
        setNewChatOpen(false);
+       // Mantém a conversa recém-criada visível e aberta: limpa a busca (que
+       // poderia escondê-la) e fixa o telefone como conversa aberta, para não
+       // sumir enquanto o recarregamento traz a mensagem/cliente.
+       setSearch("");
+       setVirtualPhones((prev) => (prev.includes(fullPhone) ? prev : [...prev, fullPhone]));
        setSelectedPhone(fullPhone);
        fetchData();
      } catch (e: any) {
