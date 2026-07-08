@@ -256,8 +256,8 @@ serve(async (req) => {
 
     const messageId = apiData?.messageId || apiData?.zaapId || apiData?.id || crypto.randomUUID();
 
-    const { error: msgInsertErr } = await supabase.from("whatsapp_messages").insert({
-      message_id: messageId,
+    const buildRow = (mid: string) => ({
+      message_id: mid,
       phone: cleanPhone,
       body: message || (mediaUrl ? `[Arquivo: ${mediaType || 'mídia'}]` : ''),
       media_url: mediaUrl,
@@ -268,6 +268,12 @@ serve(async (req) => {
       sender_name: senderName,
       received_on_instance_id: resolvedInstanceId,
     });
+    let { error: msgInsertErr } = await supabase.from("whatsapp_messages").insert(buildRow(messageId));
+    // Alguns gateways repetem/omitem o id, colidindo com a UNIQUE(message_id).
+    // Se o erro for conflito de id, refaz com um id garantidamente único.
+    if (msgInsertErr && (msgInsertErr.code === "23505" || /duplicat|unique/i.test(msgInsertErr.message || ""))) {
+      ({ error: msgInsertErr } = await supabase.from("whatsapp_messages").insert(buildRow(crypto.randomUUID())));
+    }
     if (msgInsertErr) {
       console.error("Falha ao gravar whatsapp_messages:", JSON.stringify(msgInsertErr));
     }
