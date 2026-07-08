@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -1200,7 +1200,22 @@ function UsersTab() {
                     <Select value={editStoreId} onValueChange={setEditStoreId}>
                       <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                       <SelectContent>
-                        {stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                        {stores.some(s => !s.is_external_team) && (
+                          <SelectGroup>
+                            <SelectLabel>Lojas</SelectLabel>
+                            {stores.filter(s => !s.is_external_team).map(s => (
+                              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )}
+                        {stores.some(s => s.is_external_team) && (
+                          <SelectGroup>
+                            <SelectLabel>Venda Externa</SelectLabel>
+                            {stores.filter(s => s.is_external_team).map(s => (
+                              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
