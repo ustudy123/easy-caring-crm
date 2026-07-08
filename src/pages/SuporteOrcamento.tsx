@@ -89,14 +89,17 @@ export default function SuporteOrcamento() {
       }
       const responderName = sellers.find((s) => s.id === sellerId)?.name
         || (isAdmin ? "Administrador" : isSuporte ? "Suporte" : isGerente ? "Gerente" : "Equipe");
-      const { error } = await supabase.from("pricing_support_requests").update({
+      const { data: updated, error } = await supabase.from("pricing_support_requests").update({
         response_notes: responseNotes || null,
         response_pdf_url: respUrl,
         response_pdf_name: respName,
         responded_at: new Date().toISOString(),
         responded_by_name: responderName,
-      } as any).eq("id", selectedRequest.id);
+      } as any).eq("id", selectedRequest.id).select("id");
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        throw new Error("Você não tem permissão para responder esta solicitação (nenhuma linha atualizada).");
+      }
       toast.success("Resposta salva!");
       setResponseFile(null);
       setSelectedRequest({
@@ -129,12 +132,15 @@ export default function SuporteOrcamento() {
         pdfUrl = filePath;
         pdfName = editReqFile.name;
       }
-      const { error } = await supabase.from("pricing_support_requests").update({
+      const { data: updated, error } = await supabase.from("pricing_support_requests").update({
         notes: editReqNotes,
         pdf_url: pdfUrl,
         pdf_name: pdfName,
-      } as any).eq("id", selectedRequest.id);
+      } as any).eq("id", selectedRequest.id).select("id");
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        throw new Error("Você não tem permissão para editar esta solicitação (nenhuma linha atualizada).");
+      }
       toast.success("Solicitação atualizada!");
       setSelectedRequest({ ...selectedRequest, notes: editReqNotes, pdf_url: pdfUrl || undefined, pdf_name: pdfName || undefined } as any);
       setEditReqOpen(false);
@@ -321,12 +327,17 @@ export default function SuporteOrcamento() {
 
   const updateRequestStatus = async (id: string, status: SupportRequest["status"]) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("pricing_support_requests")
         .update({ status })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id");
 
       if (error) throw error;
+      // Sem erro mas 0 linhas = bloqueio de RLS. Não deixa a UI mentir "salvo".
+      if (!data || data.length === 0) {
+        throw new Error("Você não tem permissão para mover esta solicitação (nenhuma linha atualizada).");
+      }
 
       setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
       toast.success("Status atualizado!");
