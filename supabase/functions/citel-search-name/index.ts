@@ -172,8 +172,7 @@ Deno.serve(async (req) => {
     let lastBody: any = null;
 
     // Busca no ERP os candidatos para UM termo (com suas variações de grafia).
-    // Reaproveita o template já descoberto (cache de módulo) e dispara as
-    // variações em paralelo, em vez de uma a uma.
+    // Reaproveita o template já descoberto (cache de módulo) entre as chamadas.
     const collectForTerm = async (term: string): Promise<Map<string, any>> => {
       const out = new Map<string, any>();
       const vars = nameVariants(term);
@@ -183,29 +182,28 @@ Deno.serve(async (req) => {
         }
       };
 
-      // Descobre o template (primeiro HTTP 200) só se ainda não conhecido.
-      if (cachedWorkingTemplate < 0) {
-        const tpls = templates(encodeURIComponent(vars[0]));
-        for (let i = 0; i < tpls.length; i++) {
-          const r = await fetchUrl(tpls[i]);
-          if (!r) continue;
-          lastStatus = r.status; lastBody = r.data;
-          if (r.status >= 200 && r.status < 300) { cachedWorkingTemplate = i; ingest(r.data); break; }
+      // Tenta as variações de grafia UMA DE CADA VEZ e para assim que achar
+      // resultados. Sequencial (não paralelo) de propósito: o ERP engasga com
+      // muitas requisições simultâneas, ficando mais lento. No caso comum, o
+      // nome bate na 1ª variação e é só 1 chamada.
+      for (const v of vars) {
+        const enc = encodeURIComponent(v);
+        if (cachedWorkingTemplate < 0) {
+          // Descobre o template (primeiro HTTP 200) na primeira vez.
+          const tpls = templates(enc);
+          for (let i = 0; i < tpls.length; i++) {
+            const r = await fetchUrl(tpls[i]);
+            if (!r) continue;
+            lastStatus = r.status; lastBody = r.data;
+            if (r.status >= 200 && r.status < 300) { cachedWorkingTemplate = i; ingest(r.data); break; }
+          }
+        } else {
+          const r = await fetchUrl(templates(enc)[cachedWorkingTemplate]);
+          if (r) { lastStatus = r.status; lastBody = r.data; }
+          if (r && r.status >= 200 && r.status < 300) ingest(r.data);
         }
-        if (cachedWorkingTemplate < 0) return out;
-        // demais variações em paralelo
-        const rest = await Promise.all(
-          vars.slice(1).map((v) => fetchUrl(templates(encodeURIComponent(v))[cachedWorkingTemplate])),
-        );
-        for (const r of rest) if (r && r.status >= 200 && r.status < 300) ingest(r.data);
-        return out;
+        if (out.size > 0) break; // achou → não precisa tentar mais variações
       }
-
-      // Template conhecido: todas as variações em paralelo.
-      const all = await Promise.all(
-        vars.map((v) => fetchUrl(templates(encodeURIComponent(v))[cachedWorkingTemplate])),
-      );
-      for (const r of all) if (r && r.status >= 200 && r.status < 300) ingest(r.data);
       return out;
     };
 
@@ -227,14 +225,8 @@ Deno.serve(async (req) => {
     // Vários termos: monta o conjunto consultando os 2 termos mais distintivos
     // (os mais longos), depois filtra quem contém TODOS os termos, em qualquer ordem.
     const queryTerms = [...terms].sort((a, b) => b.length - a.length).slice(0, 2);
-    if (cachedWorkingTemplate < 0) {
-      // Cold start: resolve o template com o 1º termo, depois os demais em paralelo.
-      for (const [k, v] of await collectForTerm(queryTerms[0])) pool.set(k, v);
-      const maps = await Promise.all(queryTerms.slice(1).map(collectForTerm));
-      for (const m of maps) for (const [k, v] of m) pool.set(k, v);
-    } else {
-      const maps = await Promise.all(queryTerms.map(collectForTerm));
-      for (const m of maps) for (const [k, v] of m) pool.set(k, v);
+    for (const t of queryTerms) {
+      for (const [k, v] of await collectForTerm(t)) pool.set(k, v);
     }
 
     const termKeys = terms.map(phoneticKey).filter(Boolean);
