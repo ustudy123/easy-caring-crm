@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
 import { useRole } from "@/contexts/RoleContext";
+import { useSearchParams } from "react-router-dom";
 
 type RequestType = "orcamento" | "precificacao_especial";
 
@@ -39,6 +40,7 @@ interface SupportRequest {
 export default function SuporteOrcamento() {
   const { sellers } = useCrm();
   const { role, isAdmin, isGerente, isSuporte, sellerId } = useRole();
+  const [searchParams] = useSearchParams();
   const [requests, setRequests] = useState<SupportRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -294,7 +296,7 @@ export default function SuporteOrcamento() {
         .insert({
           request_type: requestType as any,
           client_name: selectedErpClient.name,
-          erp_client_id: selectedErpClient.erpId,
+          erp_client_id: selectedErpClient.erpId || null,
           notes: description,
           pdf_url: pdfUrl,
           pdf_name: pdfFile?.name,
@@ -323,6 +325,20 @@ export default function SuporteOrcamento() {
     setPdfFile(null);
     setErpSearch("");
     setErpResults([]);
+  };
+
+  // Cliente vindo do Kanban (?cliente=...): pré-preenche a solicitação.
+  const [pendingClient, setPendingClient] = useState(() => searchParams.get("cliente") || "");
+
+  const openNewRequest = (type: RequestType) => {
+    resetForm();
+    setRequestType(type);
+    if (pendingClient) {
+      // Pré-seleciona o cliente do Kanban (sem ERP id; o vendedor pode trocar).
+      setSelectedErpClient({ name: pendingClient, erpId: "" });
+      setPendingClient("");
+    }
+    setShowForm(true);
   };
 
   const updateRequestStatus = async (id: string, status: SupportRequest["status"]) => {
@@ -456,22 +472,29 @@ export default function SuporteOrcamento() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => { setRequestType("orcamento"); setShowForm(true); resetForm(); }}
-              className="bg-brand-500"
-              size="sm"
-            >
-              <FileText className="h-3.5 w-3.5 mr-1" /> Solicitar Orçamento
-            </Button>
-            <Button
-              onClick={() => { setRequestType("precificacao_especial"); setShowForm(true); resetForm(); }}
-              variant="outline"
-              size="sm"
-              className="border-kanban-recommendation text-kanban-recommendation hover:bg-kanban-recommendation/10"
-            >
-              <DollarSign className="h-3.5 w-3.5 mr-1" /> Negociação Especial
-            </Button>
+          <div className="flex flex-col gap-2 items-end">
+            {pendingClient && (
+              <p className="text-[11px] text-brand-600 bg-brand-500/10 px-2.5 py-1 rounded-md">
+                Solicitação para <strong>{pendingClient}</strong> — escolha o tipo:
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => openNewRequest("orcamento")}
+                className="bg-brand-500"
+                size="sm"
+              >
+                <FileText className="h-3.5 w-3.5 mr-1" /> Solicitar Orçamento
+              </Button>
+              <Button
+                onClick={() => openNewRequest("precificacao_especial")}
+                variant="outline"
+                size="sm"
+                className="border-kanban-recommendation text-kanban-recommendation hover:bg-kanban-recommendation/10"
+              >
+                <DollarSign className="h-3.5 w-3.5 mr-1" /> Negociação Especial
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -542,7 +565,7 @@ export default function SuporteOrcamento() {
                       </div>
                       <div>
                         <p className="text-sm font-bold text-brand-600">{selectedErpClient.name}</p>
-                        <p className="text-[10px] text-muted-foreground">ERP ID: {selectedErpClient.erpId}</p>
+                        <p className="text-[10px] text-muted-foreground">{selectedErpClient.erpId ? `ERP ID: ${selectedErpClient.erpId}` : "Cliente do Kanban — busque no ERP para vincular"}</p>
                       </div>
                     </div>
                     <Button 

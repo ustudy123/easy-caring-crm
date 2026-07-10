@@ -146,10 +146,6 @@ export default function Kanban() {
 
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
-  const [pricingLead, setPricingLead] = useState<Lead | null>(null);
-  const [pricingNotes, setPricingNotes] = useState("");
-  const [pricingType, setPricingType] = useState<'precificacao_especial' | 'orcamento'>('precificacao_especial');
-  const [submittingPricing, setSubmittingPricing] = useState(false);
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [transferringLead, setTransferringLead] = useState<Lead | null>(null);
@@ -315,43 +311,11 @@ export default function Kanban() {
     updateLead({ ...transferringLead, assignedTo: sellerId, storeId: targetSeller?.store_id || transferringLead.storeId });
   };
 
-  const handleRequestPricing = (lead: Lead, type: 'precificacao_especial' | 'orcamento' = 'precificacao_especial') => {
-    setPricingNotes("");
-    setPricingType(type);
-    setPricingLead(lead);
-  };
-
-  const submitPricing = async () => {
-    if (!pricingLead) return;
-    setSubmittingPricing(true);
-    try {
-      // Só a precificação especial move o lead de etapa; orçamento mantém a etapa atual.
-      if (pricingType === 'precificacao_especial' && pricingLead.stage !== 'precificacao_especial') {
-        await supabase.from("leads").update({ stage: 'precificacao_especial' }).eq("id", pricingLead.id);
-        updateLead({ ...pricingLead, stage: 'precificacao_especial' });
-      }
-
-      const { error } = await supabase.from("pricing_support_requests").insert({
-        request_type: pricingType,
-        client_name: pricingLead.clientName,
-        lead_id: pricingLead.id,
-        seller_id: pricingLead.assignedTo || userSeller?.id || null,
-        notes: pricingNotes || null,
-        status: 'pendente',
-      });
-      if (error) throw error;
-
-      toast({
-        title: pricingType === 'orcamento' ? "Orçamento solicitado!" : "Precificação especial solicitada!",
-        description: "A solicitação foi registrada para análise.",
-      });
-      setPricingLead(null);
-      setPricingNotes("");
-    } catch (e: any) {
-      toast({ title: "Erro", description: e.message, variant: "destructive" });
-    } finally {
-      setSubmittingPricing(false);
-    }
+  const handleRequestPricing = (lead: Lead) => {
+    // Vai para a página de Orçamentos/Negociações com o cliente já preenchido.
+    // O vendedor escolhe lá se é orçamento ou negociação especial, usando o
+    // formulário completo (busca no ERP, descrição, anexo de PDF).
+    navigate(`/suporte-orcamento?cliente=${encodeURIComponent(lead.clientName || "")}`);
   };
 
   const moveToNextStage = (lead: Lead) => {
@@ -494,15 +458,6 @@ export default function Kanban() {
       if (error) console.error("Error updating lead stage:", error);
     });
 
-    // Ao entrar na etapa de precificação especial, abre o pop-up automaticamente
-    if (newStage === 'precificacao_especial') {
-      const movedLead = leads.find((l) => l.id === result.draggableId);
-      if (movedLead) {
-        setPricingNotes("");
-        setPricingType('precificacao_especial');
-        setPricingLead({ ...movedLead, stage: 'precificacao_especial' });
-      }
-    }
   };
 
   return (
@@ -995,80 +950,6 @@ export default function Kanban() {
         onOpenChange={(open) => !open && setPendingDeleteId(null)}
         onConfirm={() => { if (pendingDeleteId) { deleteLead(pendingDeleteId); setPendingDeleteId(null); } }}
       />
-
-      {/* Pop-up de Precificação Especial */}
-      <Dialog open={!!pricingLead} onOpenChange={(open) => { if (!open) { setPricingLead(null); setPricingNotes(""); } }}>
-        <DialogContent className="rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-kanban-pricing" />
-              {pricingType === 'orcamento' ? 'Solicitar Orçamento' : 'Precificação Especial'}
-            </DialogTitle>
-            <DialogDescription>
-              {pricingType === 'orcamento'
-                ? <>Envie uma solicitação de orçamento para <strong>{pricingLead?.clientName}</strong> ao time de suporte.</>
-                : <>Solicite a análise de precificação para <strong>{pricingLead?.clientName}</strong> sem sair do Kanban.</>}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {/* Vendedor escolhe o tipo de solicitação */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setPricingType('precificacao_especial')}
-                className={`rounded-xl border p-2.5 text-xs font-semibold transition-colors ${pricingType === 'precificacao_especial' ? 'border-kanban-pricing bg-kanban-pricing/10 text-kanban-pricing' : 'border-border/60 text-muted-foreground hover:bg-muted/50'}`}
-              >
-                Precificação Especial
-              </button>
-              <button
-                type="button"
-                onClick={() => setPricingType('orcamento')}
-                className={`rounded-xl border p-2.5 text-xs font-semibold transition-colors ${pricingType === 'orcamento' ? 'border-primary bg-primary/10 text-primary' : 'border-border/60 text-muted-foreground hover:bg-muted/50'}`}
-              >
-                Solicitar Orçamento
-              </button>
-            </div>
-
-            <div className="rounded-xl bg-muted/40 p-3 text-sm space-y-1">
-              <div className="flex justify-between gap-2">
-                <span className="text-muted-foreground">Cliente</span>
-                <span className="font-medium">{pricingLead?.clientName}</span>
-              </div>
-              {pricingLead?.clientPhone && (
-                <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">Telefone</span>
-                  <span className="font-medium">{pricingLead.clientPhone}</span>
-                </div>
-              )}
-              <div className="flex justify-between gap-2">
-                <span className="text-muted-foreground">Valor atual</span>
-                <span className="font-medium tabular-nums">{pricingLead?.value ? `R$ ${pricingLead.value.toLocaleString("pt-BR")}` : "—"}</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{pricingType === 'orcamento' ? 'Detalhes da solicitação de orçamento' : 'Detalhes da precificação / desconto solicitado'}</Label>
-              <Textarea
-                value={pricingNotes}
-                onChange={(e) => setPricingNotes(e.target.value)}
-                placeholder={pricingType === 'orcamento'
-                  ? "Ex.: cliente quer orçamento de 50 latas de tinta acrílica branca fosca..."
-                  : "Ex.: cliente pediu 12% de desconto na linha premium para fechar o pedido..."}
-                className="rounded-xl min-h-[100px]"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" className="rounded-xl" onClick={() => { setPricingLead(null); setPricingNotes(""); }}>Cancelar</Button>
-            <Button className="rounded-xl bg-kanban-pricing hover:opacity-90" onClick={submitPricing} disabled={submittingPricing}>
-              {submittingPricing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Zap className="h-4 w-4 mr-1" />}
-              {pricingType === 'orcamento' ? 'Solicitar orçamento' : 'Solicitar precificação'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={!!transferringLead} onOpenChange={(open) => !open && setTransferringLead(null)}>
         <DialogContent className="rounded-2xl">
