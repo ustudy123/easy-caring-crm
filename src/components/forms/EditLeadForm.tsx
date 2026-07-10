@@ -24,7 +24,7 @@ interface EditLeadFormProps {
 export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: EditLeadFormProps) {
   const { toast } = useToast();
   const sellers = useSellers();
-  const { isVendedor } = useRole();
+  const { isVendedor, sellerId, sellerName } = useRole();
   const [form, setForm] = useState({
      clientName: "", clientPhone: "", clientEmail: "", value: "",
      source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "abordagem" as KanbanStage,
@@ -185,14 +185,27 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
             </div>
             <div className="space-y-1.5">
               <Label>Vendedor</Label>
-              <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)} disabled={isVendedor}>
-                <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                <SelectContent>
-                  {sellers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isVendedor ? (
+                <Input
+                  value={
+                    form.assignedTo
+                      ? (sellers.find((s) => s.id === form.assignedTo)?.name
+                          || (form.assignedTo === sellerId ? (sellerName || "Você") : "Vendedor"))
+                      : "Não atribuído"
+                  }
+                  disabled
+                  readOnly
+                />
+              ) : (
+                <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                  <SelectContent>
+                    {sellers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               {isVendedor && <p className="text-[11px] text-muted-foreground">Só um gerente/admin pode alterar o vendedor.</p>}
             </div>
             <div className="col-span-2 space-y-1.5">

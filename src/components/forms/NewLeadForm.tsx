@@ -23,7 +23,7 @@ interface NewLeadFormProps {
 export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) {
   const { toast } = useToast();
   const sellers = useSellers();
-  const { isVendedor, sellerId } = useRole();
+  const { isVendedor, sellerId, sellerName } = useRole();
   const [form, setForm] = useState({
      clientName: "", clientPhone: "", clientEmail: "", value: "",
      source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "abordagem" as KanbanStage,
@@ -208,15 +208,21 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
             </div>
             <div className="space-y-1.5">
               <Label>Vendedor</Label>
-              <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)} disabled={isVendedor}>
-                <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                <SelectContent>
-                  {sellers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {isVendedor && <p className="text-[11px] text-muted-foreground">O lead será vinculado a você.</p>}
+              {isVendedor ? (
+                <>
+                  <Input value={sellerName || "Você"} disabled readOnly />
+                  <p className="text-[11px] text-muted-foreground">O lead será vinculado a você.</p>
+                </>
+              ) : (
+                <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                  <SelectContent>
+                    {sellers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Tags (separadas por vírgula)</Label>

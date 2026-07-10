@@ -4,6 +4,7 @@ import { useUserRole, AppRole } from "@/hooks/useUserRole";
 interface RoleContextType {
   role: AppRole | null;
   sellerId: string | null;
+  sellerName: string | null;
   storeId: string | null;
   loading: boolean;
   isAdmin: boolean;
@@ -15,13 +16,14 @@ interface RoleContextType {
 const RoleContext = createContext<RoleContextType | null>(null);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
-  const { role, sellerId, storeId, loading } = useUserRole();
+  const { role, sellerId, sellerName, storeId, loading } = useUserRole();
 
   return (
     <RoleContext.Provider
       value={{
         role,
         sellerId,
+        sellerName,
         storeId,
         loading,
         isAdmin: role === "admin",
