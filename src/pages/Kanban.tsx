@@ -148,6 +148,7 @@ export default function Kanban() {
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [pricingLead, setPricingLead] = useState<Lead | null>(null);
   const [pricingNotes, setPricingNotes] = useState("");
+  const [pricingType, setPricingType] = useState<'precificacao_especial' | 'orcamento'>('precificacao_especial');
   const [submittingPricing, setSubmittingPricing] = useState(false);
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -314,8 +315,9 @@ export default function Kanban() {
     updateLead({ ...transferringLead, assignedTo: sellerId, storeId: targetSeller?.store_id || transferringLead.storeId });
   };
 
-  const handleRequestPricing = (lead: Lead) => {
+  const handleRequestPricing = (lead: Lead, type: 'precificacao_especial' | 'orcamento' = 'precificacao_especial') => {
     setPricingNotes("");
+    setPricingType(type);
     setPricingLead(lead);
   };
 
@@ -323,14 +325,14 @@ export default function Kanban() {
     if (!pricingLead) return;
     setSubmittingPricing(true);
     try {
-      // Garante que o lead esteja na etapa de precificação especial
-      if (pricingLead.stage !== 'precificacao_especial') {
+      // Só a precificação especial move o lead de etapa; orçamento mantém a etapa atual.
+      if (pricingType === 'precificacao_especial' && pricingLead.stage !== 'precificacao_especial') {
         await supabase.from("leads").update({ stage: 'precificacao_especial' }).eq("id", pricingLead.id);
         updateLead({ ...pricingLead, stage: 'precificacao_especial' });
       }
 
       const { error } = await supabase.from("pricing_support_requests").insert({
-        request_type: 'precificacao_especial',
+        request_type: pricingType,
         client_name: pricingLead.clientName,
         lead_id: pricingLead.id,
         seller_id: pricingLead.assignedTo || userSeller?.id || null,
@@ -339,7 +341,10 @@ export default function Kanban() {
       });
       if (error) throw error;
 
-      toast({ title: "Precificação especial solicitada!", description: "A solicitação foi registrada para análise." });
+      toast({
+        title: pricingType === 'orcamento' ? "Orçamento solicitado!" : "Precificação especial solicitada!",
+        description: "A solicitação foi registrada para análise.",
+      });
       setPricingLead(null);
       setPricingNotes("");
     } catch (e: any) {
@@ -494,6 +499,7 @@ export default function Kanban() {
       const movedLead = leads.find((l) => l.id === result.draggableId);
       if (movedLead) {
         setPricingNotes("");
+        setPricingType('precificacao_especial');
         setPricingLead({ ...movedLead, stage: 'precificacao_especial' });
       }
     }
@@ -752,7 +758,7 @@ export default function Kanban() {
                                                     <button
                                                       onClick={(e) => { e.stopPropagation(); handleRequestPricing(lead); }}
                                                       className="p-1 rounded-lg hover:bg-yellow-100 text-yellow-600"
-                                                      title="Precificação Especial"
+                                                      title="Precificação especial ou orçamento"
                                                     >
                                                       <Zap className="h-3 w-3" />
                                                     </button>
@@ -995,14 +1001,35 @@ export default function Kanban() {
         <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-kanban-pricing" /> Precificação Especial
+              <Zap className="h-5 w-5 text-kanban-pricing" />
+              {pricingType === 'orcamento' ? 'Solicitar Orçamento' : 'Precificação Especial'}
             </DialogTitle>
             <DialogDescription>
-              Solicite a análise de precificação para <strong>{pricingLead?.clientName}</strong> sem sair do Kanban.
+              {pricingType === 'orcamento'
+                ? <>Envie uma solicitação de orçamento para <strong>{pricingLead?.clientName}</strong> ao time de suporte.</>
+                : <>Solicite a análise de precificação para <strong>{pricingLead?.clientName}</strong> sem sair do Kanban.</>}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            {/* Vendedor escolhe o tipo de solicitação */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setPricingType('precificacao_especial')}
+                className={`rounded-xl border p-2.5 text-xs font-semibold transition-colors ${pricingType === 'precificacao_especial' ? 'border-kanban-pricing bg-kanban-pricing/10 text-kanban-pricing' : 'border-border/60 text-muted-foreground hover:bg-muted/50'}`}
+              >
+                Precificação Especial
+              </button>
+              <button
+                type="button"
+                onClick={() => setPricingType('orcamento')}
+                className={`rounded-xl border p-2.5 text-xs font-semibold transition-colors ${pricingType === 'orcamento' ? 'border-primary bg-primary/10 text-primary' : 'border-border/60 text-muted-foreground hover:bg-muted/50'}`}
+              >
+                Solicitar Orçamento
+              </button>
+            </div>
+
             <div className="rounded-xl bg-muted/40 p-3 text-sm space-y-1">
               <div className="flex justify-between gap-2">
                 <span className="text-muted-foreground">Cliente</span>
@@ -1021,11 +1048,13 @@ export default function Kanban() {
             </div>
 
             <div className="space-y-2">
-              <Label>Detalhes da precificação / desconto solicitado</Label>
+              <Label>{pricingType === 'orcamento' ? 'Detalhes da solicitação de orçamento' : 'Detalhes da precificação / desconto solicitado'}</Label>
               <Textarea
                 value={pricingNotes}
                 onChange={(e) => setPricingNotes(e.target.value)}
-                placeholder="Ex.: cliente pediu 12% de desconto na linha premium para fechar o pedido..."
+                placeholder={pricingType === 'orcamento'
+                  ? "Ex.: cliente quer orçamento de 50 latas de tinta acrílica branca fosca..."
+                  : "Ex.: cliente pediu 12% de desconto na linha premium para fechar o pedido..."}
                 className="rounded-xl min-h-[100px]"
               />
             </div>
@@ -1035,7 +1064,7 @@ export default function Kanban() {
             <Button variant="outline" className="rounded-xl" onClick={() => { setPricingLead(null); setPricingNotes(""); }}>Cancelar</Button>
             <Button className="rounded-xl bg-kanban-pricing hover:opacity-90" onClick={submitPricing} disabled={submittingPricing}>
               {submittingPricing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Zap className="h-4 w-4 mr-1" />}
-              Solicitar precificação
+              {pricingType === 'orcamento' ? 'Solicitar orçamento' : 'Solicitar precificação'}
             </Button>
           </DialogFooter>
         </DialogContent>
