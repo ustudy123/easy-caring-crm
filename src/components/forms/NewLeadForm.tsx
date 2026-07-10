@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MaskedInput } from "@/components/ui/masked-input";
 import { Lead, KanbanStage } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
+import { useRole } from "@/contexts/RoleContext";
 import { isValidPhone, isValidEmail, normalizePhoneBR } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,7 @@ interface NewLeadFormProps {
 export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) {
   const { toast } = useToast();
   const sellers = useSellers();
+  const { isVendedor, sellerId } = useRole();
   const [form, setForm] = useState({
      clientName: "", clientPhone: "", clientEmail: "", value: "",
      source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "abordagem" as KanbanStage,
@@ -29,6 +31,13 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [searchingErp, setSearchingErp] = useState(false);
+
+  // Vendedor só pode vincular o lead a si mesmo ao cadastrar.
+  useEffect(() => {
+    if (open && isVendedor && sellerId) {
+      setForm((p) => ({ ...p, assignedTo: sellerId }));
+    }
+  }, [open, isVendedor, sellerId]);
 
   const buscarNoErp = async () => {
     const phone = form.clientPhone.replace(/\D/g, "");
@@ -85,7 +94,7 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
       clientEmail: form.clientEmail.trim() || undefined,
       stage: form.stage,
       value: Number(form.value) || 0,
-      assignedTo: form.assignedTo || "",
+      assignedTo: isVendedor && sellerId ? sellerId : (form.assignedTo || ""),
       source: form.source,
       tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
       notes: form.notes.trim(),
@@ -199,7 +208,7 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
             </div>
             <div className="space-y-1.5">
               <Label>Vendedor</Label>
-              <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
+              <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)} disabled={isVendedor}>
                 <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                 <SelectContent>
                   {sellers.map((s) => (
@@ -207,6 +216,7 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
                   ))}
                 </SelectContent>
               </Select>
+              {isVendedor && <p className="text-[11px] text-muted-foreground">O lead será vinculado a você.</p>}
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Tags (separadas por vírgula)</Label>

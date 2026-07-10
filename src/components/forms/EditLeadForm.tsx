@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MaskedInput } from "@/components/ui/masked-input";
 import { Lead, KanbanStage } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
+import { useRole } from "@/contexts/RoleContext";
 import { isValidPhone, isValidEmail, normalizePhoneBR } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -23,6 +24,7 @@ interface EditLeadFormProps {
 export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: EditLeadFormProps) {
   const { toast } = useToast();
   const sellers = useSellers();
+  const { isVendedor } = useRole();
   const [form, setForm] = useState({
      clientName: "", clientPhone: "", clientEmail: "", value: "",
      source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "abordagem" as KanbanStage,
@@ -183,7 +185,7 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
             </div>
             <div className="space-y-1.5">
               <Label>Vendedor</Label>
-              <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
+              <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)} disabled={isVendedor}>
                 <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                 <SelectContent>
                   {sellers.map((s) => (
@@ -191,6 +193,7 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
                   ))}
                 </SelectContent>
               </Select>
+              {isVendedor && <p className="text-[11px] text-muted-foreground">Só um gerente/admin pode alterar o vendedor.</p>}
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Tags (separadas por vírgula)</Label>
