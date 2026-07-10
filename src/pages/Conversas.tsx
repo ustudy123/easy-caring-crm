@@ -787,31 +787,32 @@ const mockContactNames: Record<string, string> = {
   }, [deepLinkParams, loading, conversations]);
 
   useEffect(() => {
-    if (selectedPhone && !useMock) {
-      const markAsRead = async () => {
-        // Usa RPC (SECURITY DEFINER) em vez de UPDATE direto: a RLS de
-        // whatsapp_messages bloqueava o update silenciosamente (0 linhas)
-        // para usuários não-admin, fazendo o contador nunca zerar.
-        const { data: affected, error } = await (supabase.rpc as any)(
-          "mark_whatsapp_read",
-          { p_phone: selectedPhone }
-        );
+    if (!selectedPhone) return;
+    // Zera o contador da conversa localmente assim que ela é aberta — inclusive
+    // em modo demo/mock e mesmo que a persistência no banco falhe.
+    setMessages(prev => prev.map(m =>
+      (m.phone === selectedPhone && !m.is_from_me) ? { ...m, is_read: true } : m
+    ));
+    if (useMock) return; // modo demo não persiste no banco
 
-        if (error) {
-          console.error("Erro ao marcar mensagens como lidas:", error);
-        } else {
-          // Desconta do contador o número REAL de linhas marcadas no banco
-          if (typeof affected === "number" && affected > 0) {
-            decrementUnreadWhatsApp(affected);
-          }
-          // Atualizar localmente as mensagens para refletir a mudança imediatamente
-          setMessages(prev => prev.map(m => 
-            (m.phone === selectedPhone && !m.is_from_me) ? { ...m, is_read: true } : m
-          ));
-        }
-      };
-      markAsRead();
-    }
+    const markAsRead = async () => {
+      // Usa RPC (SECURITY DEFINER) em vez de UPDATE direto: a RLS de
+      // whatsapp_messages bloqueava o update silenciosamente (0 linhas)
+      // para usuários não-admin, fazendo o contador nunca zerar.
+      const { data: affected, error } = await (supabase.rpc as any)(
+        "mark_whatsapp_read",
+        { p_phone: selectedPhone }
+      );
+      if (error) {
+        console.error("Erro ao marcar mensagens como lidas:", error);
+        return;
+      }
+      // Desconta do contador global o número REAL de linhas marcadas no banco
+      if (typeof affected === "number" && affected > 0) {
+        decrementUnreadWhatsApp(affected);
+      }
+    };
+    markAsRead();
   }, [selectedPhone, useMock]);
 
   useEffect(() => {
