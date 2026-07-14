@@ -99,3 +99,7 @@ export const KANBAN_STAGES: { key: KanbanStage; label: string; color: string }[]
   { key: 'fechamento', label: 'Fechamento', color: 'kanban-closing' },
   { key: 'pos_venda', label: 'Pós-Venda', color: 'kanban-postsale' },
 ];
+
+// Tipo de Cliente especial: leads "Equipe Interna" não aparecem no Kanban e
+// suas conversas ficam em uma aba separada na página de Conversas.
+export const CLIENT_TYPE_EQUIPE_INTERNA = "Equipe Interna";

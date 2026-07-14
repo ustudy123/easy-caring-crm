@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MaskedInput } from "@/components/ui/masked-input";
-import { Lead, KanbanStage } from "@/types/crm";
+import { Lead, KanbanStage, CLIENT_TYPE_EQUIPE_INTERNA } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
 import { useRole } from "@/contexts/RoleContext";
 import { isValidPhone, isValidEmail, normalizePhoneBR } from "@/lib/masks";
@@ -119,9 +119,10 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
                 <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Pintor">Pintor</SelectItem>
-                  <SelectItem value="Arquiteto/Escritório">Arquiteto/Escritório</SelectItem>
+                  <SelectItem value="Arquiteto/Construtor">Arquiteto/Construtor</SelectItem>
                   <SelectItem value="Consumidor Final">Consumidor Final</SelectItem>
                   <SelectItem value="Empresa/Obra">Empresa/Obra</SelectItem>
+                  <SelectItem value={CLIENT_TYPE_EQUIPE_INTERNA}>Equipe Interna</SelectItem>
                 </SelectContent>
               </Select>
             </div>

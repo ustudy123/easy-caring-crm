@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
  import { useCrm } from "@/contexts/CrmContext";
  import { useToast } from "@/hooks/use-toast";
-import { KANBAN_STAGES, Lead, KanbanStage } from "@/types/crm";
+import { KANBAN_STAGES, Lead, KanbanStage, CLIENT_TYPE_EQUIPE_INTERNA } from "@/types/crm";
 import { ProjectsDialog } from "@/components/ProjectsDialog";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
  import { 
@@ -387,6 +387,8 @@ export default function Kanban() {
   };
 
    const filteredLeads = leads.filter((l) => {
+     // Leads de Equipe Interna não aparecem no Kanban (ficam só nas Conversas).
+     if (l.clientType === CLIENT_TYPE_EQUIPE_INTERNA) return false;
      if (!l.clientName.toLowerCase().includes(search.toLowerCase())) return false;
      if (filterUrgency !== "all") {
        const u = getUrgencyLevel(l);

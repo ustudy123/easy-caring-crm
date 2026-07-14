@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useRole } from "@/contexts/RoleContext";
 import { useCrm } from "@/contexts/CrmContext";
-import { KANBAN_STAGES } from "@/types/crm";
+import { KANBAN_STAGES, CLIENT_TYPE_EQUIPE_INTERNA } from "@/types/crm";
 import { useSearchParams } from "react-router-dom";
 import { EmojiPicker } from "@/components/EmojiPicker";
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -85,7 +85,7 @@ interface WhatsAppMessage {
   received_on_instance_id?: string | null;
  }
  
- type TabType = 'minhas' | 'loja' | 'geral' | 'todas';
+ type TabType = 'minhas' | 'loja' | 'geral' | 'todas' | 'equipe_interna';
 
 // ── Helpers ──
 function formatMessageDate(dateStr: string) {
@@ -618,6 +618,16 @@ const mockContactNames: Record<string, string> = {
        return m;
      }, [leads]);
 
+     // Telefones de leads marcados como "Equipe Interna" — suas conversas só
+     // aparecem na aba Equipe Interna e são ocultadas das demais abas.
+     const equipeInternaPhones = useMemo(() => {
+       const s = new Set<string>();
+       (leads || []).forEach((l) => {
+         if (l.clientPhone && l.clientType === CLIENT_TYPE_EQUIPE_INTERNA) s.add(normPhone(l.clientPhone));
+       });
+       return s;
+     }, [leads]);
+
      const stageCounts = useMemo(() => {
        const c: Record<string, number> = { all: conversations.length, sem_resposta: 0, sem_lead: 0 };
        conversations.forEach((conv) => {
@@ -658,7 +668,16 @@ const mockContactNames: Record<string, string> = {
            }
          }
  
-         // Controle de acesso baseado no perfil e na aba
+         // Equipe Interna: só aparece na aba Equipe Interna; oculta nas demais.
+         const isEquipeInterna = equipeInternaPhones.has(normPhone(c.phone));
+         if (activeTab === 'equipe_interna') {
+           if (!isEquipeInterna) return false;
+         } else if (isEquipeInterna) {
+           return false;
+         }
+
+         // Controle de acesso baseado no perfil e na aba (não se aplica à aba Equipe Interna)
+         if (activeTab !== 'equipe_interna') {
          if (isVendedor) {
            if (activeTab === 'minhas') {
              if (!isMine) return false;
@@ -692,6 +711,7 @@ const mockContactNames: Record<string, string> = {
            }
            // 'todas' tab shows everything for admin
          }
+         } // fim do controle de acesso por perfil (pulado na aba Equipe Interna)
    
          // Search filtering
          const name = contactNames[c.phone] || "";
@@ -713,7 +733,7 @@ const mockContactNames: Record<string, string> = {
       
       // Default sort (Minhas): newest first
       return filtered.sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
-     }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente, instanceFilter, stageFilter, phoneStage]);
+     }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente, instanceFilter, stageFilter, phoneStage, equipeInternaPhones]);
 
   // Monitor conversations for stale messages to trigger alert popup
   useEffect(() => {
@@ -1330,6 +1350,19 @@ const mockContactNames: Record<string, string> = {
                     Todas
                   </Button>
                 )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveTab('equipe_interna')}
+                title="Equipe Interna"
+                className={cn(
+                  "flex-1 text-[11px] h-8 gap-1.5 rounded-md transition-all min-w-[64px]",
+                  activeTab === 'equipe_interna' ? "bg-brand-500/10 text-brand-500 hover:bg-brand-500/20" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <Lock className="h-3.5 w-3.5" />
+                Interna
+              </Button>
               </div>
             </div>
 
