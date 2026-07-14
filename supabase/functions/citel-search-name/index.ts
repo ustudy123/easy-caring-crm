@@ -171,6 +171,47 @@ Deno.serve(async (req) => {
     let lastStatus = 0;
     let lastBody: any = null;
 
+    // Busca por documento (CPF/CNPJ) ou código do cliente, quando o que foi
+    // digitado é numérico. O ERP só era consultado por nome, então CPF/CNPJ/código
+    // não traziam nada. Importante: o código preserva zeros à esquerda (ex.: "010").
+    const digitsOnly = name.replace(/\D/g, "");
+    const isNumericQuery = /^[\d.\-/\s]+$/.test(name) && digitsOnly.length > 0;
+    let docQueries: Array<[string, string]> | null = null;
+    if (isNumericQuery) {
+      if (digitsOnly.length === 11) {
+        docQueries = [["cpf", digitsOnly], ["cpfCnpj", digitsOnly], ["cnpjCpf", digitsOnly], ["numeroDocumento", digitsOnly], ["documento", digitsOnly]];
+      } else if (digitsOnly.length === 14) {
+        docQueries = [["cnpj", digitsOnly], ["cpfCnpj", digitsOnly], ["cnpjCpf", digitsOnly], ["numeroDocumento", digitsOnly], ["documento", digitsOnly]];
+      } else if (digitsOnly.length <= 10) {
+        // Código do cliente — usa os dígitos como digitados (zeros à esquerda mantidos).
+        docQueries = [["codigo", digitsOnly], ["codigoCliente", digitsOnly], ["cod", digitsOnly], ["codCliente", digitsOnly], ["id", digitsOnly]];
+      }
+    }
+
+    if (docQueries) {
+      const pool = new Map<string, any>();
+      const bases = [`${apiUrl}/cliente`, `${apiUrl}/cadastrosgerais/v10/cliente`];
+      // Tenta cada par (parâmetro, base) e para assim que achar resultados.
+      outer:
+      for (const [param, val] of docQueries) {
+        for (const base of bases) {
+          const r = await fetchUrl(`${base}?${emp}&${param}=${encodeURIComponent(val)}`);
+          if (r) { lastStatus = r.status; lastBody = r.data; }
+          if (r && r.status >= 200 && r.status < 300) {
+            for (const c of extractArray(r.data).map(mapErpClient).filter((c: any) => c.name)) {
+              pool.set(keyOf(c), c);
+            }
+          }
+          if (pool.size > 0) break outer;
+        }
+      }
+      const results = [...pool.values()];
+      console.log(`[citel-search-name] busca por documento/codigo="${name}" -> ${results.length} resultado(s)`);
+      return results.length
+        ? json({ found: true, total: results.length, results, query: name })
+        : json({ found: false, total: 0, results: [], query: name, lastStatus, lastBody });
+    }
+
     // Busca no ERP os candidatos para UM termo (com suas variações de grafia).
     // Reaproveita o template já descoberto (cache de módulo) entre as chamadas.
     const collectForTerm = async (term: string): Promise<Map<string, any>> => {
