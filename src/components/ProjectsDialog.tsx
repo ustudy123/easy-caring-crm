@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { KANBAN_STAGES } from "@/types/crm";
 import { useRole } from "@/contexts/RoleContext";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Pencil, FolderKanban } from "lucide-react";
+import { Loader2, Plus, Trash2, Pencil, FolderKanban, CheckCircle2, RotateCcw } from "lucide-react";
 
 interface Project {
   id: string;
@@ -20,6 +20,7 @@ interface Project {
   stage: string;
   notes: string | null;
   seller_id: string | null;
+  completed_at: string | null;
 }
 
 interface Seller { id: string; name: string; }
@@ -29,11 +30,14 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   clientPhone: string;
   clientName?: string;
+  /** Mostra também os projetos concluídos (Clientes Recorrentes). No Kanban só
+   *  aparecem os ativos. */
+  showCompleted?: boolean;
 }
 
 const stageLabel = (k: string) => KANBAN_STAGES.find((s) => s.key === k)?.label ?? k;
 
-export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName }: Props) {
+export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName, showCompleted = false }: Props) {
   const { isVendedor, sellerId: mySellerId, sellerName: mySellerName } = useRole();
   // Vendedor cria o projeto já vinculado a si mesmo; admin/gerente escolhem.
   const defaultSellerId = () => (isVendedor && mySellerId ? mySellerId : "none");
@@ -51,8 +55,12 @@ export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName }: 
 
   const load = async () => {
     setLoading(true);
+    // No Kanban só interessam os projetos ativos; em Clientes Recorrentes,
+    // mostra todos (inclusive concluídos).
+    let q = (supabase as any).from("client_projects").select("*").eq("client_phone", clientPhone);
+    if (!showCompleted) q = q.is("completed_at", null);
     const [projRes, sellRes] = await Promise.all([
-      (supabase as any).from("client_projects").select("*").eq("client_phone", clientPhone).order("created_at", { ascending: false }),
+      q.order("created_at", { ascending: false }),
       supabase.from("sellers").select("id, name").order("name"),
     ]);
     setProjects((projRes.data as Project[]) || []);
@@ -107,6 +115,24 @@ export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName }: 
     const { error } = await (supabase as any).from("client_projects").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     setProjects((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  // Conclui (ou reabre) um projeto. Projeto concluído sai do Kanban e continua
+  // visível na página de Clientes Recorrentes.
+  const toggleCompleted = async (p: Project) => {
+    const completed_at = p.completed_at ? null : new Date().toISOString();
+    const { error } = await (supabase as any)
+      .from("client_projects")
+      .update({ completed_at, updated_at: new Date().toISOString() })
+      .eq("id", p.id);
+    if (error) { toast.error("Erro ao atualizar o projeto: " + error.message); return; }
+    toast.success(completed_at ? "Projeto concluído!" : "Projeto reaberto!");
+    if (completed_at && !showCompleted) {
+      // No Kanban o projeto concluído deixa de ser listado.
+      setProjects((prev) => prev.filter((x) => x.id !== p.id));
+    } else {
+      setProjects((prev) => prev.map((x) => (x.id === p.id ? { ...x, completed_at } : x)));
+    }
   };
 
   const sellerName = (id: string | null) => sellers.find((s) => s.id === id)?.name;
@@ -180,17 +206,37 @@ export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName }: 
             ) : (
               <div className="space-y-2">
                 {projects.map((p) => (
-                  <div key={p.id} className="flex items-start gap-3 rounded-lg border border-border/60 p-3">
+                  <div key={p.id} className={`flex items-start gap-3 rounded-lg border border-border/60 p-3 ${p.completed_at ? "bg-muted/40" : ""}`}>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold">{p.name}</p>
-                        <Badge variant="secondary" className="text-[10px]">{stageLabel(p.stage)}</Badge>
+                        <p className={`text-sm font-semibold ${p.completed_at ? "text-muted-foreground" : ""}`}>{p.name}</p>
+                        {p.completed_at ? (
+                          <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600">Concluído</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-[10px]">{stageLabel(p.stage)}</Badge>
+                        )}
                         {p.seller_id && <span className="text-[11px] text-muted-foreground">• {sellerName(p.seller_id)}</span>}
                       </div>
                       {p.notes && <p className="text-[11px] text-muted-foreground mt-1">{p.notes}</p>}
+                      {p.completed_at && (
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          Concluído em {new Date(p.completed_at).toLocaleDateString("pt-BR")}
+                        </p>
+                      )}
                     </div>
                     <div className="flex gap-1 shrink-0">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(p)}><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-7 w-7 ${p.completed_at ? "text-muted-foreground" : "text-emerald-600"}`}
+                        title={p.completed_at ? "Reabrir projeto" : "Concluir projeto"}
+                        onClick={() => toggleCompleted(p)}
+                      >
+                        {p.completed_at ? <RotateCcw className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      </Button>
+                      {!p.completed_at && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(p)}><Pencil className="h-3.5 w-3.5" /></Button>
+                      )}
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => remove(p.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>
                   </div>

@@ -10,7 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-  import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2, TrendingUp, RefreshCw, Loader2, Info, Download, CreditCard } from "lucide-react";
+  import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2, TrendingUp, RefreshCw, Loader2, Info, Download, CreditCard, FolderKanban } from "lucide-react";
+import { ProjectsDialog } from "@/components/ProjectsDialog";
  import { getDisplayClientName, isGenericName } from "@/lib/clientUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
@@ -47,6 +48,7 @@ export default function Clientes() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [projectsClient, setProjectsClient] = useState<Client | null>(null);
    const [clients, setClients] = useState<Client[]>([]);
    const [isSyncing, setIsSyncing] = useState(false);
   const [showNewClient, setShowNewClient] = useState(false);
@@ -308,14 +310,24 @@ export default function Clientes() {
                       <span className="text-[11px] text-muted-foreground">
                         {(client.purchaseCount ?? 0)} compra(s)
                       </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs gap-1"
-                        onClick={(e) => { e.stopPropagation(); handleNovaCompra(client); }}
-                      >
-                        <Plus className="h-3.5 w-3.5" /> Nova compra
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1"
+                          onClick={(e) => { e.stopPropagation(); setProjectsClient(client); }}
+                        >
+                          <FolderKanban className="h-3.5 w-3.5" /> Projetos
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1"
+                          onClick={(e) => { e.stopPropagation(); handleNovaCompra(client); }}
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Nova compra
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -436,6 +448,16 @@ export default function Clientes() {
 
       <NewClientForm open={showNewClient} onOpenChange={setShowNewClient} onSubmit={addClient} />
       <EditClientForm client={editingClient} open={!!editingClient} onOpenChange={(open) => !open && setEditingClient(null)} onSubmit={updateClient} onDelete={deleteClient} />
+      {projectsClient && (
+        <ProjectsDialog
+          open={!!projectsClient}
+          onOpenChange={(o) => { if (!o) setProjectsClient(null); }}
+          clientPhone={projectsClient.phone}
+          clientName={projectsClient.name}
+          // Aqui mostra o histórico completo, inclusive projetos concluídos.
+          showCompleted
+        />
+      )}
     </AppLayout>
   );
 }
