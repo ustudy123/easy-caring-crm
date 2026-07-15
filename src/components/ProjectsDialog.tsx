@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { KANBAN_STAGES } from "@/types/crm";
+import { useRole } from "@/contexts/RoleContext";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2, Pencil, FolderKanban } from "lucide-react";
 
@@ -33,6 +34,9 @@ interface Props {
 const stageLabel = (k: string) => KANBAN_STAGES.find((s) => s.key === k)?.label ?? k;
 
 export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName }: Props) {
+  const { isVendedor, sellerId: mySellerId, sellerName: mySellerName } = useRole();
+  // Vendedor cria o projeto já vinculado a si mesmo; admin/gerente escolhem.
+  const defaultSellerId = () => (isVendedor && mySellerId ? mySellerId : "none");
   const [projects, setProjects] = useState<Project[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,8 +62,14 @@ export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName }: 
 
   useEffect(() => { if (open && clientPhone) load(); }, [open, clientPhone]);
 
+  // O perfil carrega de forma assíncrona: quando ficar disponível, vincula o
+  // projeto novo ao vendedor logado (não mexe em projeto já existente).
+  useEffect(() => {
+    if (open && isVendedor && mySellerId && !editingId) setSellerId(mySellerId);
+  }, [open, isVendedor, mySellerId, editingId]);
+
   const resetForm = () => {
-    setEditingId(null); setName(""); setStage("abordagem"); setNotes(""); setSellerId("none"); setShowForm(false);
+    setEditingId(null); setName(""); setStage("abordagem"); setNotes(""); setSellerId(defaultSellerId()); setShowForm(false);
   };
 
   const openEdit = (p: Project) => {
@@ -76,7 +86,11 @@ export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName }: 
       name: name.trim(),
       stage,
       notes: notes.trim() || null,
-      seller_id: sellerId === "none" ? null : sellerId,
+      // Na criação, vendedor sempre vincula a si mesmo. Na edição preserva o
+      // vendedor atual (o campo fica travado para ele).
+      seller_id: (!editingId && isVendedor && mySellerId)
+        ? mySellerId
+        : (sellerId === "none" ? null : sellerId),
       updated_at: new Date().toISOString(),
     };
     const { error } = editingId
@@ -133,13 +147,21 @@ export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName }: 
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold">Vendedor</Label>
-                    <Select value={sellerId} onValueChange={setSellerId}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">—</SelectItem>
-                        {sellers.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
+                    {isVendedor ? (
+                      <Input
+                        value={sellers.find((s) => s.id === sellerId)?.name || mySellerName || "Você"}
+                        disabled
+                        readOnly
+                      />
+                    ) : (
+                      <Select value={sellerId} onValueChange={setSellerId}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">—</SelectItem>
+                          {sellers.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-1.5">
