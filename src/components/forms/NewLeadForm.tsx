@@ -23,7 +23,7 @@ interface NewLeadFormProps {
 export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) {
   const { toast } = useToast();
   const sellers = useSellers();
-  const { isVendedor, sellerId, sellerName } = useRole();
+  const { isVendedor, sellerId, sellerName, storeId: userStoreId } = useRole();
   const [form, setForm] = useState({
      clientName: "", clientPhone: "", clientEmail: "", value: "",
      source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "abordagem" as KanbanStage,
@@ -104,6 +104,9 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
        companyWorkSite: form.companyWorkSite.trim(),
        interestProducts: form.interestProducts.trim(),
        storeName: form.storeName.trim(),
+       // Sem store_id o lead nasce "sem loja" e a RLS impede o próprio vendedor
+       // de atualizá-lo depois (mover etapa, reagendar...).
+       storeId: userStoreId || undefined,
     };
     onSubmit(newLead);
     toast({ title: "Lead criado!", description: `${newLead.clientName} adicionado ao Kanban.` });
