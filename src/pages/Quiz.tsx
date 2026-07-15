@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trophy, Star, RotateCcw, PaintBucket, Sparkles, ChevronLeft, Timer } from "lucide-react";
+import { Trophy, Star, RotateCcw, PaintBucket, Sparkles, ChevronLeft, ChevronRight, Timer } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { QuizLeaderboard } from "@/components/QuizLeaderboard";
@@ -193,16 +193,19 @@ export default function Quiz() {
       toast.error("Ops! Não foi dessa vez. 🖌️", { duration: 1500 });
     }
 
-    setTimeout(() => {
-      if (currentQuestionIndex + 1 < questions.length) {
-        setCurrentQuestionIndex(i => i + 1);
-        setSelectedOption(null);
-        setIsCorrect(null);
-      } else {
-        setShowResult(true);
-        saveAttempt(nextScore);
-      }
-    }, 2000);
+    // Não avança sozinho: o usuário decide quando ir para a próxima pergunta,
+    // podendo analisar a resposta certa e as opções erradas com calma.
+  };
+
+  const goToNextQuestion = () => {
+    if (currentQuestionIndex + 1 < questions.length) {
+      setCurrentQuestionIndex(i => i + 1);
+      setSelectedOption(null);
+      setIsCorrect(null);
+    } else {
+      setShowResult(true);
+      saveAttempt(score);
+    }
   };
 
   const handleOptionClick = (index: number) => lockAnswer(index);
@@ -454,6 +457,31 @@ export default function Quiz() {
                 })}
               </div>
 
+              {/* Feedback + avanço manual: o usuário analisa a resposta e decide quando seguir */}
+              {selectedOption !== null && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:p-4"
+                >
+                  <p className="text-sm sm:text-base font-bold">
+                    {isCorrect ? (
+                      <span className="text-emerald-300">✅ Resposta correta! +5 pontos</span>
+                    ) : selectedOption === -1 ? (
+                      <span className="text-amber-300">⏱️ Tempo esgotado — a correta está em verde</span>
+                    ) : (
+                      <span className="text-red-300">❌ Não foi dessa vez — a correta está em verde</span>
+                    )}
+                  </p>
+                  <Button
+                    onClick={goToNextQuestion}
+                    className="rounded-xl bg-amber-400 text-[#3a2800] hover:bg-amber-300 font-black gap-1"
+                  >
+                    {currentQuestionIndex + 1 < questions.length ? "Próxima pergunta" : "Ver resultado"}
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </motion.div>
+              )}
               {/* Barra de progresso dourada */}
               <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
                 <motion.div 
