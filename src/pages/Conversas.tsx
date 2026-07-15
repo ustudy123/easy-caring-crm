@@ -676,8 +676,14 @@ const mockContactNames: Record<string, string> = {
            return false;
          }
 
+         // Conversa aberta explicitamente pelo usuário (ex.: clique no card do
+         // Kanban ou Nova conversa) e ainda sem histórico: sempre aparece na
+         // lista. Sem isso, um cliente sem registro em `clients` não tem
+         // assigned_seller_id e o filtro de aba a escondia logo após abrir.
+         const isVirtual = virtualPhones.includes(c.phone);
+
          // Controle de acesso baseado no perfil e na aba (não se aplica à aba Equipe Interna)
-         if (activeTab !== 'equipe_interna') {
+         if (activeTab !== 'equipe_interna' && !isVirtual) {
          if (isVendedor) {
            if (activeTab === 'minhas') {
              if (!isMine) return false;
@@ -733,7 +739,7 @@ const mockContactNames: Record<string, string> = {
       
       // Default sort (Minhas): newest first
       return filtered.sort((a, b) => b.lastTimestamp.localeCompare(a.lastTimestamp));
-     }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente, instanceFilter, stageFilter, phoneStage, equipeInternaPhones]);
+     }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente, instanceFilter, stageFilter, phoneStage, equipeInternaPhones, virtualPhones]);
 
   // Monitor conversations for stale messages to trigger alert popup
   useEffect(() => {
