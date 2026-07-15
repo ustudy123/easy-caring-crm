@@ -157,6 +157,7 @@ export default function Quiz() {
     setShowResult(false);
     setSelectedOption(null);
     setIsCorrect(null);
+    setTimeLeft(SECONDS_PER_QUESTION);
     setStarted(true);
   };
 
@@ -202,6 +203,10 @@ export default function Quiz() {
       setCurrentQuestionIndex(i => i + 1);
       setSelectedOption(null);
       setIsCorrect(null);
+      // Reinicia o cronômetro no MESMO lote da troca de pergunta. Se ficasse a
+      // cargo de um efeito, o timer da pergunta anterior (já em 0) dispararia
+      // "tempo esgotado" na pergunta nova antes do reset, revelando a resposta.
+      setTimeLeft(SECONDS_PER_QUESTION);
     } else {
       setShowResult(true);
       saveAttempt(score);
@@ -210,11 +215,8 @@ export default function Quiz() {
 
   const handleOptionClick = (index: number) => lockAnswer(index);
 
-  // Reinicia o cronômetro a cada nova pergunta.
-  useEffect(() => {
-    if (!started || showResult) return;
-    setTimeLeft(SECONDS_PER_QUESTION);
-  }, [currentQuestionIndex, started, showResult]);
+  // O cronômetro é reiniciado junto com a troca de pergunta (goToNextQuestion /
+  // startRound), não por efeito — assim nunca sobra o tempo zerado da anterior.
 
   // Contagem regressiva: 15s por pergunta. Ao zerar, conta como tempo esgotado.
   useEffect(() => {
