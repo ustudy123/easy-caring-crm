@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/contexts/RoleContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppLayout } from "@/components/AppLayout";
 
@@ -24,6 +25,7 @@ const iconMap: Record<string, any> = {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isSuporte } = useRole();
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,7 +58,8 @@ export default function Dashboard() {
 
   const handleModuleClick = (moduleId: string) => {
     if (moduleId === 'crm') {
-      navigate('/kanban');
+      // O suporte não tem Kanban: entra direto na página de orçamentos dele.
+      navigate(isSuporte ? '/suporte-orcamento' : '/kanban');
     } else if (moduleId === 'quiz') {
       navigate('/quiz');
     }

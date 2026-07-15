@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CrmProvider } from "@/contexts/CrmContext";
-import { RoleProvider } from "@/contexts/RoleContext";
+import { RoleProvider, useRole } from "@/contexts/RoleContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppShell } from "@/components/AppShell";
 import AdminPanel from "./pages/AdminPanel";
@@ -27,6 +27,14 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+// O Kanban não faz parte do escopo do suporte (nem aparece no menu dele).
+// Guard para o caso de acessar a URL direto. O ProtectedRoute já garante que o
+// perfil está carregado neste ponto.
+function KanbanRoute() {
+  const { isSuporte } = useRole();
+  return isSuporte ? <Navigate to="/suporte-orcamento" replace /> : <Kanban />;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -54,7 +62,7 @@ const App = () => (
                         <Route path="/home" element={<Navigate to="/" replace />} />
                         <Route path="/crm-dashboard" element={<CrmDashboard />} />
                         <Route path="/quiz" element={<Quiz />} />
-                        <Route path="/kanban" element={<Kanban />} />
+                        <Route path="/kanban" element={<KanbanRoute />} />
                         <Route path="/clientes" element={<Clientes />} />
                         <Route path="/clientes-recorrentes" element={<Clientes />} />
                         <Route path="/agenda" element={<Agenda />} />
