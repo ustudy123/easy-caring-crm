@@ -10,7 +10,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
  import { 
     Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
     AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
-    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle, XCircle, Download, LayoutGrid, List, MessageCircle, FolderKanban
+    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle, XCircle, Download, LayoutGrid, List, MessageCircle, FolderKanban, CalendarClock
   } from "lucide-react";
  import { getDisplayClientName, isGenericName } from "@/lib/clientUtils";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { NewLeadForm } from "@/components/forms/NewLeadForm";
 import { EditLeadForm } from "@/components/forms/EditLeadForm";
 import { SwipeableCard } from "@/components/SwipeableCard";
+import { useRole } from "@/contexts/RoleContext";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { getUrgencyLevel, getUrgencyConfig, formatIdleTime } from "@/lib/leadUrgency";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -88,8 +89,16 @@ const stageHeaderGradient: Record<KanbanStage, string> = {
 
 export default function Kanban() {
   const navigate = useNavigate();
-   const { leads, setLeads, addLead, updateLead, deleteLead, loading, sellers } = useCrm();
+   const { leads, setLeads, addLead, updateLead, deleteLead, loading, sellers, addFollowUp } = useCrm();
    const { toast } = useToast();
+   const { storeId: userStoreId } = useRole();
+   // Tique de 1 min: faz o board recalcular sozinho, para que leads reagendados
+   // reapareçam quando chega a data/hora (e a urgência fique em dia) sem F5.
+   const [, setNowTick] = useState(0);
+   useEffect(() => {
+     const t = setInterval(() => setNowTick((n) => n + 1), 60_000);
+     return () => clearInterval(t);
+   }, []);
    const { byId: instancesById } = useInstances();
    const clientInstanceByPhone = useClientInstanceMap();
    const [userSeller, setUserSeller] = useState<any>(null);
@@ -165,6 +174,13 @@ export default function Kanban() {
     "Cliente não tem interesse",
   ];
   const VENDA_CONCLUIDA = "Venda concluída";
+  const REAGENDAR = "Quero reagendar";
+  // Reagendamento: data (até 30 dias) + horário comercial (08h–18h) + observação obrigatória.
+  const [reagDate, setReagDate] = useState("");
+  const [reagTime, setReagTime] = useState("");
+  const REAG_HOURS = Array.from({ length: 11 }, (_, i) => `${String(i + 8).padStart(2, "0")}:00`); // 08:00–18:00
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const maxReagStr = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
   const [transferSellerId, setTransferSellerId] = useState("");
   const [transferReason, setTransferReason] = useState("");
   const [isTransferring, setIsTransferring] = useState(false);
@@ -208,6 +224,83 @@ export default function Kanban() {
     const note = lostNote.trim();
     const closedAt = new Date().toISOString();
     const { data: { user } } = await supabase.auth.getUser();
+
+    // --- Reagendar → sai do Kanban até a data e fica na Agenda ---
+    if (reason === REAGENDAR) {
+      if (!reagDate || !reagTime) {
+        toast({ title: "Escolha data e horário", description: "Informe quando o atendimento deve voltar.", variant: "destructive" });
+        return;
+      }
+      if (!note) {
+        toast({ title: "Observação obrigatória", description: "Descreva o motivo/contexto do reagendamento.", variant: "destructive" });
+        return;
+      }
+      const when = new Date(`${reagDate}T${reagTime}:00`);
+      if (isNaN(when.getTime())) {
+        toast({ title: "Data inválida", variant: "destructive" });
+        return;
+      }
+      const limit = new Date(); limit.setDate(limit.getDate() + 30); limit.setHours(23, 59, 59, 999);
+      if (when > limit) {
+        toast({ title: "Data muito distante", description: "O reagendamento deve ser em no máximo 30 dias.", variant: "destructive" });
+        return;
+      }
+      if (when.getTime() <= Date.now()) {
+        toast({ title: "Data no passado", description: "Escolha uma data/horário futuro.", variant: "destructive" });
+        return;
+      }
+
+      const snoozedUntil = when.toISOString();
+      const { error: snoozeErr } = await supabase
+        .from("leads").update({ snoozed_until: snoozedUntil } as any).eq("id", losingLead.id);
+      if (snoozeErr) {
+        toast({ title: "Erro ao reagendar", description: snoozeErr.message, variant: "destructive" });
+        return;
+      }
+      // Atualiza o estado local: o card sai do board até a data.
+      setLeads((prev) => prev.map((l) => (l.id === losingLead.id ? { ...l, snoozedUntil } : l)));
+
+      // Entra na Agenda como follow-up agendado.
+      const fuRes = await addFollowUp({
+        id: crypto.randomUUID(),
+        leadId: losingLead.id,
+        clientName: losingLead.clientName,
+        clientPhone: losingLead.clientPhone,
+        scheduledAt: snoozedUntil,
+        description: note,
+        completed: false,
+        assignedTo: losingLead.assignedTo || "",
+        type: "call",
+        // A RLS de follow_ups exige a loja do usuário.
+        storeId: userStoreId || losingLead.storeId,
+      });
+      if (fuRes?.error) {
+        // Desfaz o adiamento para não sumir o card sem ficar na Agenda.
+        await supabase.from("leads").update({ snoozed_until: null } as any).eq("id", losingLead.id);
+        setLeads((prev) => prev.map((l) => (l.id === losingLead.id ? { ...l, snoozedUntil: undefined } : l)));
+        toast({ title: "Erro ao agendar", description: fuRes.error, variant: "destructive" });
+        return;
+      }
+
+      const { data: clientR } = await supabase
+        .from("clients").select("id").eq("phone", losingLead.clientPhone).maybeSingle();
+      if (clientR?.id) {
+        await supabase.from("interactions").insert({
+          client_id: clientR.id,
+          lead_id: losingLead.id,
+          type: "note",
+          description: `Atendimento REAGENDADO para ${when.toLocaleString("pt-BR")} — ${note}`,
+          created_by: user?.id ?? null,
+        });
+      }
+
+      toast({
+        title: "Atendimento reagendado!",
+        description: `${losingLead.clientName} volta ao Kanban em ${when.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}.`,
+      });
+      setLosingLead(null); setLostReason(""); setLostNote(""); setSaleType(""); setReagDate(""); setReagTime("");
+      return;
+    }
 
     // --- Venda concluída → pós-venda + contagem de compra do cliente ---
     if (reason === VENDA_CONCLUIDA) {
@@ -389,6 +482,8 @@ export default function Kanban() {
    const filteredLeads = leads.filter((l) => {
      // Leads de Equipe Interna não aparecem no Kanban (ficam só nas Conversas).
      if (l.clientType === CLIENT_TYPE_EQUIPE_INTERNA) return false;
+     // Reagendados: ficam fora do board até a data/hora marcada.
+     if (l.snoozedUntil && new Date(l.snoozedUntil).getTime() > Date.now()) return false;
      if (!l.clientName.toLowerCase().includes(search.toLowerCase())) return false;
      if (filterUrgency !== "all") {
        const u = getUrgencyLevel(l);
@@ -1039,10 +1134,11 @@ export default function Kanban() {
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
               <Label>Motivo do encerramento</Label>
-              <Select value={lostReason} onValueChange={(v) => { setLostReason(v); setSaleType(""); }}>
+              <Select value={lostReason} onValueChange={(v) => { setLostReason(v); setSaleType(""); setReagDate(""); setReagTime(""); }}>
                 <SelectTrigger><SelectValue placeholder="Selecione o motivo" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value={VENDA_CONCLUIDA}>✅ Venda concluída</SelectItem>
+                  <SelectItem value={REAGENDAR}>📅 Quero reagendar</SelectItem>
                   {LOST_REASONS.map((r) => (
                     <SelectItem key={r} value={r}>{r}</SelectItem>
                   ))}
@@ -1050,7 +1146,48 @@ export default function Kanban() {
               </Select>
             </div>
 
-            {lostReason === VENDA_CONCLUIDA ? (
+            {lostReason === REAGENDAR ? (
+              <>
+                <div className="rounded-xl border border-brand-500/30 bg-brand-500/5 p-3 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>Data</Label>
+                      <Input
+                        type="date"
+                        value={reagDate}
+                        min={todayStr}
+                        max={maxReagStr}
+                        onChange={(e) => setReagDate(e.target.value)}
+                        className="rounded-xl"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Horário</Label>
+                      <Select value={reagTime} onValueChange={setReagTime}>
+                        <SelectTrigger className="rounded-xl"><SelectValue placeholder="08h – 18h" /></SelectTrigger>
+                        <SelectContent>
+                          {REAG_HOURS.map((h) => (
+                            <SelectItem key={h} value={h}>{h}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Horário comercial (08h–18h), em no máximo <strong>30 dias</strong>. O card sai do Kanban, fica na <strong>Agenda</strong> e volta ao board na data marcada.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Observação <span className="text-xs font-normal text-destructive">(obrigatória)</span></Label>
+                  <Textarea
+                    placeholder="Ex.: cliente pediu para retomar depois da obra; ligar no período da tarde..."
+                    value={lostNote}
+                    onChange={(e) => setLostNote(e.target.value)}
+                    className="rounded-xl"
+                  />
+                </div>
+              </>
+            ) : lostReason === VENDA_CONCLUIDA ? (
               <div className="space-y-1.5">
                 <Label>Tipo de compra</Label>
                 <Select value={saleType} onValueChange={(v) => setSaleType(v as any)}>
@@ -1084,10 +1221,14 @@ export default function Kanban() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setLosingLead(null); setLostReason(""); setLostNote(""); setSaleType(""); }}>
+            <Button variant="outline" onClick={() => { setLosingLead(null); setLostReason(""); setLostNote(""); setSaleType(""); setReagDate(""); setReagTime(""); }}>
               Cancelar
             </Button>
-            {lostReason === VENDA_CONCLUIDA ? (
+            {lostReason === REAGENDAR ? (
+              <Button onClick={handleMarkLost} className="bg-brand-500 hover:bg-brand-600 text-white">
+                <CalendarClock className="h-4 w-4 mr-1" /> Reagendar atendimento
+              </Button>
+            ) : lostReason === VENDA_CONCLUIDA ? (
               <Button onClick={handleMarkLost} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                 Concluir venda
               </Button>

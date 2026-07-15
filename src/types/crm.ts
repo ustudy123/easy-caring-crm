@@ -22,6 +22,7 @@ export interface Lead {
    lostReason?: string;
    closedAt?: string;
    archived?: boolean;
+   snoozedUntil?: string;
    urgencyAcknowledgedAt?: string;
 }
 
@@ -64,6 +65,7 @@ export interface FollowUp {
   completed: boolean;
   assignedTo: string;
   type: 'call' | 'whatsapp' | 'visit' | 'email';
+  storeId?: string;
 }
 
 export interface Campaign {

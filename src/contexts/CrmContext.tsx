@@ -23,7 +23,7 @@ interface CrmContextType {
   deleteLead: (id: string) => void;
   followUps: FollowUp[];
   setFollowUps: React.Dispatch<React.SetStateAction<FollowUp[]>>;
-  addFollowUp: (followUp: FollowUp) => void;
+  addFollowUp: (followUp: FollowUp) => Promise<{ error?: string }>;
   updateFollowUp: (followUp: FollowUp) => void;
   deleteFollowUp: (id: string) => void;
    sellers: Seller[];
@@ -64,6 +64,7 @@ function mapLeadFromDb(row: any): Lead {
      lostReason: row.lost_reason || undefined,
      closedAt: row.closed_at || undefined,
      archived: row.archived ?? false,
+     snoozedUntil: row.snoozed_until || undefined,
      urgencyAcknowledgedAt: row.urgency_acknowledged_at || undefined,
   };
 }
@@ -79,6 +80,7 @@ function mapFollowUpFromDb(row: any): FollowUp {
     completed: row.completed,
     assignedTo: row.assigned_to || "",
     type: row.type,
+    storeId: row.store_id || undefined,
   };
 }
 
@@ -312,11 +314,16 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       completed: followUp.completed,
       assigned_to: followUp.assignedTo || null,
       type: followUp.type,
-    });
+      // A RLS de follow_ups exige store_id = loja do usuário; sem isso o insert
+      // é bloqueado silenciosamente para vendedor/gerente.
+      store_id: followUp.storeId || null,
+    } as any);
     if (error) {
       console.error("Error adding follow-up:", error);
       setFollowUps((prev) => prev.filter((f) => f.id !== followUp.id));
+      return { error: error.message };
     }
+    return {};
   }, []);
 
   const updateFollowUp = useCallback(async (followUp: FollowUp) => {
