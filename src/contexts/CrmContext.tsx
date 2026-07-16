@@ -360,10 +360,30 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteFollowUp = useCallback(async (id: string) => {
+    // Se este follow-up era o reagendamento do lead, apagá-lo cancela o
+    // adiamento: sem isso o lead sumia do Kanban E da Agenda até a data marcada.
+    const removed = followUps.find((f) => f.id === id);
+
     setFollowUps((prev) => prev.filter((f) => f.id !== id));
     const { error } = await supabase.from("follow_ups").delete().eq("id", id);
-    if (error) console.error("Error deleting follow-up:", error);
-  }, []);
+    if (error) { console.error("Error deleting follow-up:", error); return; }
+
+    if (removed?.leadId && removed.scheduledAt) {
+      // Só desfaz se o adiamento for exatamente o deste follow-up, para não
+      // "acordar" um lead por causa de outro follow-up qualquer do mesmo lead.
+      // `as any`: snoozed_until ainda não está nos tipos gerados do Supabase.
+      const { data } = await (supabase as any)
+        .from("leads")
+        .update({ snoozed_until: null })
+        .eq("id", removed.leadId)
+        .eq("snoozed_until", removed.scheduledAt)
+        .select("id");
+      if (data && data.length > 0) {
+        setLeads((prev) => prev.map((l) =>
+          l.id === removed.leadId ? { ...l, snoozedUntil: undefined } : l));
+      }
+    }
+  }, [followUps]);
 
   const newLeadsCount = leads.filter((l) => l.stage === "abordagem").length;
   const pendingFollowUpsCount = followUps.filter((f) => !f.completed).length;
