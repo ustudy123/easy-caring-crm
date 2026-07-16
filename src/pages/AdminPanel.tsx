@@ -14,12 +14,31 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSepa
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3, Phone } from "lucide-react";
+  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3, Phone, Info } from "lucide-react";
  function CitelIntegrationTab() {
   const [syncing, setSyncing] = useState(false);
   const [searching, setSearching] = useState(false);
   const [phone, setPhone] = useState("");
   const [searchData, setSearchData] = useState<any>(null);
+  // Inspeção da API: revela os endpoints/parâmetros reais de cliente do Citel.
+  const [inspecting, setInspecting] = useState(false);
+  const [apiSpec, setApiSpec] = useState<any>(null);
+
+  const runInspect = async () => {
+    setInspecting(true);
+    setApiSpec(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('citel-swagger-dump');
+      if (error) throw error;
+      setApiSpec(data);
+      if (data?.success) toast.success("Documentação da API carregada.");
+      else toast.warning(data?.note || "Não foi possível carregar a documentação.");
+    } catch (err: any) {
+      toast.error("Erro ao inspecionar a API: " + (err.message || "Verifique os logs"));
+    } finally {
+      setInspecting(false);
+    }
+  };
 
   const runSync = async () => {
     if (!confirm("Isso irá importar todos os clientes da Citel para o seu banco de dados. Deseja continuar?")) return;
@@ -80,13 +99,40 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
                 Busque clientes do ERP por telefone ou sincronize a base completa.
               </p>
             </div>
-            <Button variant="outline" onClick={runSync} disabled={syncing || searching}>
-              {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-              Sincronização Total
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={runInspect} disabled={inspecting || syncing || searching}>
+                {inspecting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Info className="h-4 w-4 mr-2" />}
+                Inspecionar API
+              </Button>
+              <Button variant="outline" onClick={runSync} disabled={syncing || searching}>
+                {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                Sincronização Total
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {apiSpec && (
+            <Card className="border-brand-500/40 bg-brand-500/5">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Info className="h-4 w-4" /> Endpoints de cliente da API Citel
+                </CardTitle>
+                <p className="text-[11px] text-muted-foreground">
+                  Copie este conteúdo e envie ao suporte técnico para ajustar a busca por código/CPF/CNPJ.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <pre className="text-[10px] bg-background/80 border border-border/60 rounded-lg p-2 max-h-72 overflow-auto whitespace-pre-wrap">
+{JSON.stringify(
+  apiSpec?.analysis?.clientEndpointsWithParams?.length
+    ? { workingUrl: apiSpec.workingUrl, clientEndpoints: apiSpec.analysis.clientEndpointsWithParams }
+    : apiSpec,
+  null, 2)}
+                </pre>
+              </CardContent>
+            </Card>
+          )}
           <div className="flex items-end gap-3 max-w-2xl">
             <div className="flex-1 space-y-1">
               <Label>Buscar cliente por telefone no ERP</Label>
