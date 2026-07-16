@@ -23,7 +23,7 @@ import { useRole } from "@/contexts/RoleContext";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { getUrgencyLevel, getUrgencyConfig, formatIdleTime } from "@/lib/leadUrgency";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, 
@@ -91,7 +91,7 @@ export default function Kanban() {
   const navigate = useNavigate();
    const { leads, setLeads, addLead, updateLead, deleteLead, loading, sellers, addFollowUp } = useCrm();
    const { toast } = useToast();
-   const { storeId: userStoreId, isGerente } = useRole();
+   const { storeId: userStoreId, isGerente, isAdmin } = useRole();
    // Tique de 1 min: faz o board recalcular sozinho, para que leads reagendados
    // reapareçam quando chega a data/hora (e a urgência fique em dia) sem F5.
    const [, setNowTick] = useState(0);
@@ -188,12 +188,33 @@ export default function Kanban() {
   const [filterUrgency, setFilterUrgency] = useState<string>("all");
   const [filterSeller, setFilterSeller] = useState<string>("all");
    const [showFilters, setShowFilters] = useState(false);
+  // Nomes das lojas: só o admin precisa, para agrupar o filtro de vendedor
+  // (ele não está preso a uma loja).
+  const [storeNames, setStoreNames] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!isAdmin) return;
+    supabase.from("stores").select("id, name").then(({ data }) => {
+      if (data) setStoreNames(Object.fromEntries(data.map((s: any) => [s.id, s.name])));
+    });
+  }, [isAdmin]);
 
-  // Gerente filtra pelos vendedores da própria loja.
+  // Vendedores do filtro: o gerente vê os da própria loja; o admin vê todos.
   const storeSellers = useMemo(
-    () => sellers.filter((s) => s.role === "vendedor" && (!userStoreId || s.store_id === userStoreId)),
-    [sellers, userStoreId],
+    () => sellers.filter((s) => s.role === "vendedor" && (isAdmin || !userStoreId || s.store_id === userStoreId)),
+    [sellers, userStoreId, isAdmin],
   );
+
+  // Para o admin, agrupa por loja (senão vira uma lista solta de nomes).
+  const sellersByStore = useMemo(() => {
+    const groups = new Map<string, { label: string; items: typeof storeSellers }>();
+    storeSellers.forEach((s) => {
+      const key = s.store_id || "sem_loja";
+      const label = s.store_id ? (storeNames[s.store_id] || "Loja") : "Sem loja";
+      if (!groups.has(key)) groups.set(key, { label, items: [] });
+      groups.get(key)!.items.push(s);
+    });
+    return [...groups.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [storeSellers, storeNames]);
 
   const hasActiveFilters = filterUrgency !== "all" || filterSeller !== "all";
 
@@ -610,7 +631,7 @@ export default function Kanban() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-64 space-y-3 rounded-xl" align="start">
-                {isGerente && (
+                {(isGerente || isAdmin) && (
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-muted-foreground">Vendedor</label>
                     <Select value={filterSeller} onValueChange={setFilterSeller}>
@@ -618,9 +639,20 @@ export default function Kanban() {
                       <SelectContent>
                         <SelectItem value="all">Todos os vendedores</SelectItem>
                         <SelectItem value="unassigned">Sem vendedor</SelectItem>
-                        {storeSellers.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
+                        {isAdmin ? (
+                          sellersByStore.map((g) => (
+                            <SelectGroup key={g.label}>
+                              <SelectLabel>{g.label}</SelectLabel>
+                              {g.items.map((s) => (
+                                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                              ))}
+                            </SelectGroup>
+                          ))
+                        ) : (
+                          storeSellers.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
