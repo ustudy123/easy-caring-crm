@@ -204,11 +204,29 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       })
       .subscribe();
 
+    const sellersChannel = supabase
+      .channel("sellers-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sellers" }, (payload) => {
+        if (payload.eventType === "INSERT") {
+          setSellers((prev) => prev.some((s) => s.id === payload.new.id)
+            ? prev
+            : [...prev, mapSellerFromDb(payload.new)].sort((a, b) => a.name.localeCompare(b.name)));
+        } else if (payload.eventType === "UPDATE") {
+          setSellers((prev) => prev
+            .map((s) => s.id === payload.new.id ? mapSellerFromDb(payload.new) : s)
+            .sort((a, b) => a.name.localeCompare(b.name)));
+        } else if (payload.eventType === "DELETE") {
+          setSellers((prev) => prev.filter((s) => s.id !== payload.old.id));
+        }
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(leadsChannel);
       supabase.removeChannel(followUpsChannel);
       supabase.removeChannel(whatsappChannel);
       supabase.removeChannel(notificationsChannel);
+      supabase.removeChannel(sellersChannel);
     };
   }, []);
 

@@ -193,9 +193,16 @@ export default function Kanban() {
   const [storeNames, setStoreNames] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!isAdmin) return;
-    supabase.from("stores").select("id, name").then(({ data }) => {
+    const load = () => supabase.from("stores").select("id, name").then(({ data }) => {
       if (data) setStoreNames(Object.fromEntries(data.map((s: any) => [s.id, s.name])));
     });
+    load();
+    // Loja criada/renomeada/removida reflete no agrupamento sem F5.
+    const channel = supabase
+      .channel("stores-kanban-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "stores" }, () => { load(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [isAdmin]);
 
   // Vendedores do filtro: o gerente vê os da própria loja; o admin vê todos.
