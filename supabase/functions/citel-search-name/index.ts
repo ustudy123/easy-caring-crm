@@ -173,37 +173,66 @@ Deno.serve(async (req) => {
 
     // Busca por documento (CPF/CNPJ) ou código do cliente, quando o que foi
     // digitado é numérico. O ERP só era consultado por nome, então CPF/CNPJ/código
-    // não traziam nada. Importante: o código preserva zeros à esquerda (ex.: "010").
+    // não traziam nada.
+    //
+    // Os nomes de parâmetro do Citel não estão documentados aqui, então tentamos
+    // um conjunto de candidatos. O formato de sub-rota (`/cliente/telefone?numero=`)
+    // é o único comprovadamente aceito (ver citel-get-client), por isso vem junto.
+    // Cada tentativa é logada com o status, para o log revelar o que o ERP aceita.
     const digitsOnly = name.replace(/\D/g, "");
     const isNumericQuery = /^[\d.\-/\s]+$/.test(name) && digitsOnly.length > 0;
-    let docQueries: Array<[string, string]> | null = null;
+
+    let urls: string[] | null = null;
     if (isNumericQuery) {
-      if (digitsOnly.length === 11) {
-        docQueries = [["cpf", digitsOnly], ["cpfCnpj", digitsOnly], ["cnpjCpf", digitsOnly], ["numeroDocumento", digitsOnly], ["documento", digitsOnly]];
-      } else if (digitsOnly.length === 14) {
-        docQueries = [["cnpj", digitsOnly], ["cpfCnpj", digitsOnly], ["cnpjCpf", digitsOnly], ["numeroDocumento", digitsOnly], ["documento", digitsOnly]];
+      const enc = encodeURIComponent(digitsOnly);
+      const bases = [`${apiUrl}/cliente`, `${apiUrl}/cadastrosgerais/v10/cliente`];
+
+      if (digitsOnly.length === 11 || digitsOnly.length === 14) {
+        // CPF (11) ou CNPJ (14)
+        const params = ["cpfCnpj", "cnpjCpf", "numeroDocumento", "documento",
+                        digitsOnly.length === 11 ? "cpf" : "cnpj"];
+        urls = [
+          // sub-rota, no formato que sabemos que o ERP usa
+          ...bases.map((b) => `${b}/cpfcnpj?${emp}&numero=${enc}`),
+          ...bases.map((b) => `${b}/documento?${emp}&numero=${enc}`),
+          // query direta
+          ...bases.flatMap((b) => params.map((p) => `${b}?${emp}&${p}=${enc}`)),
+        ];
       } else if (digitsOnly.length <= 10) {
-        // Código do cliente — usa os dígitos como digitados (zeros à esquerda mantidos).
-        docQueries = [["codigo", digitsOnly], ["codigoCliente", digitsOnly], ["cod", digitsOnly], ["codCliente", digitsOnly], ["id", digitsOnly]];
+        // Código do cliente. O usuário digita "5490"; o ERP pode guardar
+        // "00005490", então tentamos também com zeros à esquerda.
+        const noZeros = digitsOnly.replace(/^0+/, "") || digitsOnly;
+        const forms = [...new Set([digitsOnly, noZeros,
+          noZeros.padStart(6, "0"), noZeros.padStart(8, "0")])].map(encodeURIComponent);
+        const params = ["codigo", "codCliente", "codigoCliente", "cod", "id"];
+        urls = [
+          // sub-rota (padrão do /cliente/telefone)
+          ...bases.flatMap((b) => forms.map((f) => `${b}/codigo?${emp}&numero=${f}`)),
+          ...bases.flatMap((b) => forms.map((f) => `${b}/codigo?${emp}&codigo=${f}`)),
+          // query direta
+          ...bases.flatMap((b) => forms.flatMap((f) => params.map((p) => `${b}?${emp}&${p}=${f}`))),
+          // caminho direto: /cliente/5490
+          ...bases.flatMap((b) => forms.map((f) => `${b}/${f}?${emp}`)),
+        ];
       }
     }
 
-    if (docQueries) {
+    if (urls) {
       const pool = new Map<string, any>();
-      const bases = [`${apiUrl}/cliente`, `${apiUrl}/cadastrosgerais/v10/cliente`];
-      // Tenta cada par (parâmetro, base) e para assim que achar resultados.
-      outer:
-      for (const [param, val] of docQueries) {
-        for (const base of bases) {
-          const r = await fetchUrl(`${base}?${emp}&${param}=${encodeURIComponent(val)}`);
-          if (r) { lastStatus = r.status; lastBody = r.data; }
-          if (r && r.status >= 200 && r.status < 300) {
-            for (const c of extractArray(r.data).map(mapErpClient).filter((c: any) => c.name)) {
-              pool.set(keyOf(c), c);
-            }
+      for (const url of urls) {
+        const r = await fetchUrl(url);
+        const status = r?.status ?? 0;
+        if (r) { lastStatus = r.status; lastBody = r.data; }
+        let hits = 0;
+        if (r && r.status >= 200 && r.status < 300) {
+          for (const c of extractArray(r.data).map(mapErpClient).filter((c: any) => c.name)) {
+            pool.set(keyOf(c), c);
+            hits++;
           }
-          if (pool.size > 0) break outer;
         }
+        // Log de diagnóstico: mostra exatamente qual URL o ERP aceitou.
+        console.log(`[citel-search-name] tentativa status=${status} hits=${hits} url=${url.replace(/(token|key)=[^&]*/gi, "$1=***")}`);
+        if (pool.size > 0) break;
       }
       const results = [...pool.values()];
       console.log(`[citel-search-name] busca por documento/codigo="${name}" -> ${results.length} resultado(s)`);
