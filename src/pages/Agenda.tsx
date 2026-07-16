@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useCrm } from "@/contexts/CrmContext";
-import { supabase } from "@/integrations/supabase/client";
 import { FollowUp } from "@/types/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,11 +41,10 @@ export default function Agenda() {
 
   const toggleComplete = (id: string) => {
     const fu = followUps.find(f => f.id === id);
-    const newCompleted = fu ? !fu.completed : true;
-    setFollowUps((prev) => prev.map((f) => (f.id === id ? { ...f, completed: newCompleted } : f)));
-    supabase.from("follow_ups").update({ completed: newCompleted }).eq("id", id).then(({ error }) => {
-      if (error) console.error("Error toggling follow-up:", error);
-    });
+    if (!fu) return;
+    // Passa pelo updateFollowUp do contexto: concluir o follow-up de um
+    // reagendamento devolve o lead ao Kanban (regra centralizada lá).
+    updateFollowUp({ ...fu, completed: !fu.completed });
   };
 
   const filtered = followUps

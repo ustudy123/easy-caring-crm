@@ -345,6 +345,24 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     return {};
   }, []);
 
+  // Reagendamento: o lead sai do Kanban (snoozed_until) e vira follow-up na
+  // Agenda. Concluir ou excluir esse follow-up cancela o adiamento e devolve o
+  // card ao Kanban. Só desfaz quando o adiamento corresponde exatamente a este
+  // follow-up (mesmo lead e mesma data), para não acordar o lead por engano.
+  const cancelSnoozeFor = useCallback(async (leadId?: string, scheduledAt?: string) => {
+    if (!leadId || !scheduledAt) return;
+    // `as any`: snoozed_until ainda não está nos tipos gerados do Supabase.
+    const { data } = await (supabase as any)
+      .from("leads")
+      .update({ snoozed_until: null })
+      .eq("id", leadId)
+      .eq("snoozed_until", scheduledAt)
+      .select("id");
+    if (data && data.length > 0) {
+      setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, snoozedUntil: undefined } : l)));
+    }
+  }, []);
+
   const updateFollowUp = useCallback(async (followUp: FollowUp) => {
     setFollowUps((prev) => prev.map((f) => (f.id === followUp.id ? followUp : f)));
     const { error } = await supabase.from("follow_ups").update({
@@ -356,34 +374,22 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       assigned_to: followUp.assignedTo || null,
       type: followUp.type,
     }).eq("id", followUp.id);
-    if (error) console.error("Error updating follow-up:", error);
-  }, []);
+    if (error) { console.error("Error updating follow-up:", error); return; }
+    // Concluiu o follow-up do reagendamento → o card volta ao Kanban.
+    if (followUp.completed) await cancelSnoozeFor(followUp.leadId, followUp.scheduledAt);
+  }, [cancelSnoozeFor]);
 
   const deleteFollowUp = useCallback(async (id: string) => {
-    // Se este follow-up era o reagendamento do lead, apagá-lo cancela o
-    // adiamento: sem isso o lead sumia do Kanban E da Agenda até a data marcada.
+    // Excluir o follow-up do reagendamento também cancela o adiamento: sem isso
+    // o lead sumia do Kanban E da Agenda até a data marcada.
     const removed = followUps.find((f) => f.id === id);
 
     setFollowUps((prev) => prev.filter((f) => f.id !== id));
     const { error } = await supabase.from("follow_ups").delete().eq("id", id);
     if (error) { console.error("Error deleting follow-up:", error); return; }
 
-    if (removed?.leadId && removed.scheduledAt) {
-      // Só desfaz se o adiamento for exatamente o deste follow-up, para não
-      // "acordar" um lead por causa de outro follow-up qualquer do mesmo lead.
-      // `as any`: snoozed_until ainda não está nos tipos gerados do Supabase.
-      const { data } = await (supabase as any)
-        .from("leads")
-        .update({ snoozed_until: null })
-        .eq("id", removed.leadId)
-        .eq("snoozed_until", removed.scheduledAt)
-        .select("id");
-      if (data && data.length > 0) {
-        setLeads((prev) => prev.map((l) =>
-          l.id === removed.leadId ? { ...l, snoozedUntil: undefined } : l));
-      }
-    }
-  }, [followUps]);
+    await cancelSnoozeFor(removed?.leadId, removed?.scheduledAt);
+  }, [followUps, cancelSnoozeFor]);
 
   const newLeadsCount = leads.filter((l) => l.stage === "abordagem").length;
   const pendingFollowUpsCount = followUps.filter((f) => !f.completed).length;
