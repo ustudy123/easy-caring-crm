@@ -1,4 +1,4 @@
- import { useState, useEffect, useRef } from "react";
+ import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,7 +91,7 @@ export default function Kanban() {
   const navigate = useNavigate();
    const { leads, setLeads, addLead, updateLead, deleteLead, loading, sellers, addFollowUp } = useCrm();
    const { toast } = useToast();
-   const { storeId: userStoreId } = useRole();
+   const { storeId: userStoreId, isGerente } = useRole();
    // Tique de 1 min: faz o board recalcular sozinho, para que leads reagendados
    // reapareçam quando chega a data/hora (e a urgência fique em dia) sem F5.
    const [, setNowTick] = useState(0);
@@ -186,12 +186,20 @@ export default function Kanban() {
   const [isTransferring, setIsTransferring] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [filterUrgency, setFilterUrgency] = useState<string>("all");
+  const [filterSeller, setFilterSeller] = useState<string>("all");
    const [showFilters, setShowFilters] = useState(false);
 
-  const hasActiveFilters = filterUrgency !== "all";
+  // Gerente filtra pelos vendedores da própria loja.
+  const storeSellers = useMemo(
+    () => sellers.filter((s) => s.role === "vendedor" && (!userStoreId || s.store_id === userStoreId)),
+    [sellers, userStoreId],
+  );
+
+  const hasActiveFilters = filterUrgency !== "all" || filterSeller !== "all";
 
   const clearFilters = () => {
     setFilterUrgency("all");
+    setFilterSeller("all");
   };
 
   const handleExportPipeline = () => {
@@ -485,6 +493,15 @@ export default function Kanban() {
      // Reagendados: ficam fora do board até a data/hora marcada.
      if (l.snoozedUntil && new Date(l.snoozedUntil).getTime() > Date.now()) return false;
      if (!l.clientName.toLowerCase().includes(search.toLowerCase())) return false;
+     // Filtro por vendedor (gerente)
+     if (filterSeller !== "all") {
+       if (filterSeller === "unassigned") {
+         if (l.assignedTo) return false;
+       } else if (l.assignedTo !== filterSeller) {
+         return false;
+       }
+     }
+
      if (filterUrgency !== "all") {
        const u = getUrgencyLevel(l);
        if (filterUrgency === "critical" && u !== "critical") return false;
@@ -593,6 +610,21 @@ export default function Kanban() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-64 space-y-3 rounded-xl" align="start">
+                {isGerente && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Vendedor</label>
+                    <Select value={filterSeller} onValueChange={setFilterSeller}>
+                      <SelectTrigger className="h-8 text-xs rounded-lg"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os vendedores</SelectItem>
+                        <SelectItem value="unassigned">Sem vendedor</SelectItem>
+                        {storeSellers.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-muted-foreground">Urgência</label>
                   <Select value={filterUrgency} onValueChange={setFilterUrgency}>
