@@ -74,6 +74,14 @@ function extractArray(data: any): any[] {
   for (const k of ["data", "items", "results", "clientes", "customers", "content", "rows", "records"]) {
     if (Array.isArray(data[k])) return data[k];
   }
+  // A rota /cliente/{codigo} responde com UM cliente (objeto), não com lista.
+  // Sem isto o retorno 200 era descartado e a busca por código não achava nada.
+  for (const k of ["cliente", "customer", "data", "content", "record"]) {
+    if (data[k] && typeof data[k] === "object" && !Array.isArray(data[k])) return [data[k]];
+  }
+  const looksLikeClient = ["nome", "name", "razaoSocial", "nomeFantasia", "codCliente", "codigo", "cpfCnpj"]
+    .some((k) => data[k] !== undefined && data[k] !== null);
+  if (looksLikeClient) return [data];
   return [];
 }
 
@@ -199,20 +207,21 @@ Deno.serve(async (req) => {
           ...bases.flatMap((b) => params.map((p) => `${b}?${emp}&${p}=${enc}`)),
         ];
       } else if (digitsOnly.length <= 10) {
-        // Código do cliente. O usuário digita "5490"; o ERP pode guardar
-        // "00005490", então tentamos também com zeros à esquerda.
+        // Código do cliente. O log do ERP provou que a rota aceita é
+        // `/cliente/{codigo}?codigoEmpresa=N` e SÓ com o código completo de 8
+        // dígitos: /cliente/00005490 -> 200, enquanto /cliente/5490 e
+        // /cliente/005490 -> 404. Por isso o zero-padding vem primeiro e o
+        // usuário pode digitar só "5490".
         const noZeros = digitsOnly.replace(/^0+/, "") || digitsOnly;
-        const forms = [...new Set([digitsOnly, noZeros,
-          noZeros.padStart(6, "0"), noZeros.padStart(8, "0")])].map(encodeURIComponent);
+        const forms = [...new Set([noZeros.padStart(8, "0"), digitsOnly, noZeros,
+          noZeros.padStart(6, "0")])].map(encodeURIComponent);
         const params = ["codigo", "codCliente", "codigoCliente", "cod", "id"];
         urls = [
-          // sub-rota (padrão do /cliente/telefone)
+          // rota comprovada (200 no ERP)
+          ...forms.map((f) => `${apiUrl}/cliente/${f}?${emp}`),
+          // alternativas, caso o ERP mude
           ...bases.flatMap((b) => forms.map((f) => `${b}/codigo?${emp}&numero=${f}`)),
-          ...bases.flatMap((b) => forms.map((f) => `${b}/codigo?${emp}&codigo=${f}`)),
-          // query direta
           ...bases.flatMap((b) => forms.flatMap((f) => params.map((p) => `${b}?${emp}&${p}=${f}`))),
-          // caminho direto: /cliente/5490
-          ...bases.flatMap((b) => forms.map((f) => `${b}/${f}?${emp}`)),
         ];
       }
     }
@@ -232,6 +241,11 @@ Deno.serve(async (req) => {
         }
         // Log de diagnóstico: mostra exatamente qual URL o ERP aceitou.
         console.log(`[citel-search-name] tentativa status=${status} hits=${hits} url=${url.replace(/(token|key)=[^&]*/gi, "$1=***")}`);
+        // 200 sem resultado costuma ser formato de resposta inesperado: mostra
+        // um trecho do corpo para saber como o ERP devolveu o cliente.
+        if (status === 200 && hits === 0 && r?.data) {
+          console.log(`[citel-search-name] corpo (200 sem resultado): ${JSON.stringify(r.data).slice(0, 500)}`);
+        }
         if (pool.size > 0) break;
       }
       const results = [...pool.values()];
