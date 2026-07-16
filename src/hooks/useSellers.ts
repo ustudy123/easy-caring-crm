@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Seller } from "@/types/crm";
 
@@ -16,6 +16,11 @@ function mapSeller(s: any): Seller {
 
 export function useSellers() {
   const [sellers, setSellers] = useState<Seller[]>([]);
+  // Vários componentes usam este hook ao mesmo tempo (ex.: o Kanban monta o
+  // Novo Lead e o Editar Lead juntos). Um nome de canal fixo faria todos
+  // compartilharem o mesmo tópico e o segundo quebraria com
+  // "cannot add postgres_changes callbacks after subscribe()".
+  const channelId = useId();
 
   useEffect(() => {
     const fetchSellers = async () => {
@@ -26,7 +31,7 @@ export function useSellers() {
 
     // Mantém a lista viva: cadastrar/remover um vendedor reflete na hora, sem F5.
     const channel = supabase
-      .channel("sellers-hook-changes")
+      .channel(`sellers-hook-${channelId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "sellers" }, (payload) => {
         if (payload.eventType === "INSERT") {
           setSellers((prev) => prev.some((s) => s.id === payload.new.id)
@@ -43,7 +48,7 @@ export function useSellers() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [channelId]);
 
   return sellers;
 }
