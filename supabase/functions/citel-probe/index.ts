@@ -1,5 +1,9 @@
 // Diagnóstico: lista parâmetros aceitos pelos endpoints /cliente do Swagger
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+};
 
 const json = (b: unknown, s = 200) => 
   new Response(JSON.stringify(b, null, 2), { 

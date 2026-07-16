@@ -1,4 +1,10 @@
- import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+ // corsHeaders inline: o import 'npm:@supabase/supabase-js@2/cors' não existe
+ // e fazia a função quebrar ao subir.
+ const corsHeaders = {
+   "Access-Control-Allow-Origin": "*",
+   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+   "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+ };
  
  const json = (b: unknown, s = 200) => 
    new Response(JSON.stringify(b, null, 2), { 
