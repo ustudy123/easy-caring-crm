@@ -17,6 +17,7 @@ interface Question {
   correct_option_index: number;
   difficulty: string;
   subject?: string;
+  paint_types?: string[];
   code?: string;
 }
 
@@ -28,9 +29,33 @@ const LEVEL_MAX_DIFFICULTY: Record<string, number> = {
   basico: 1, intermediario: 2, avancado: 3, especialista: 4,
 };
 
-// Sorteia um lote de perguntas, respeitando a dificuldade liberada pelo nível.
-function selectRound(pool: Question[], maxDifficulty: number): Question[] {
-  let eligible = pool.filter((q) => (Number(q.difficulty) || 1) <= maxDifficulty);
+// Segmentos de tinta (paint_types). Mesma lista oferecida no Admin.
+const ALL_SEGMENTS = ["Imobiliária", "Industrial", "Automotiva"];
+
+// Dificuldade liberada para UMA pergunta: usa o nível do(s) segmento(s) dela.
+// Uma pergunta pode servir a mais de um segmento (ex.: Imobiliária + Industrial);
+// nesse caso vale o segmento em que o vendedor está mais avançado.
+function maxDifficultyForQuestion(
+  q: Question,
+  segmentLevels: Record<string, QuizLevelResult>,
+  fallback: number,
+): number {
+  const segs = (q.paint_types || []).filter((s) => segmentLevels[s]);
+  if (segs.length === 0) return fallback;
+  return Math.max(...segs.map((s) => LEVEL_MAX_DIFFICULTY[segmentLevels[s].current.key] ?? 1));
+}
+
+// Sorteia um lote de perguntas. Cada pergunta é filtrada pela dificuldade
+// liberada NO SEGMENTO DELA — assim um vendedor Avançado em Industrial e Básico
+// em Imobiliária recebe perguntas difíceis de Industrial e fáceis de Imobiliária.
+function selectRound(
+  pool: Question[],
+  maxDifficulty: number,
+  segmentLevels: Record<string, QuizLevelResult> = {},
+): Question[] {
+  let eligible = pool.filter(
+    (q) => (Number(q.difficulty) || 1) <= maxDifficultyForQuestion(q, segmentLevels, maxDifficulty),
+  );
   if (eligible.length < QUESTIONS_PER_ROUND) eligible = pool; // garante perguntas suficientes
   const shuffled = [...eligible].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, QUESTIONS_PER_ROUND);
@@ -45,39 +70,78 @@ export default function Quiz() {
   const [score, setScore] = useState(0);
   // Acertos por assunto na rodada atual (para o painel de desempenho do admin).
   const subjectStatsRef = useRef<Record<string, { answered: number; correct: number }>>({});
+  // Acertos por SEGMENTO (paint_types) na rodada atual — base do nível por segmento.
+  const segmentStatsRef = useRef<Record<string, { answered: number; correct: number }>>({});
+  // Segmentos atribuídos a este vendedor (vazio = todos).
+  const [mySegments, setMySegments] = useState<string[]>([]);
+  // Nível por segmento: { "Imobiliária": {...}, "Industrial": {...} }
+  const [segmentLevels, setSegmentLevels] = useState<Record<string, QuizLevelResult>>({});
   const [showResult, setShowResult] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [started, setStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(SECONDS_PER_QUESTION);
-  const [levelInfo, setLevelInfo] = useState<QuizLevelResult | null>(null);
   const [maxDifficulty, setMaxDifficulty] = useState(1);
 
   useEffect(() => {
-    fetchQuestions();
-  }, [user]);
-
-  useEffect(() => {
-    fetchLevel();
+  // Carrega nível e perguntas em sequência: as perguntas dependem do nível de
+  // cada segmento para filtrar a dificuldade.
+    (async () => {
+      const lv = await fetchLevel();
+      await fetchQuestions(lv);
+    })();
   }, [user]);
 
   // Calcula o nível do vendedor a partir do desempenho acumulado (automático).
-  const fetchLevel = async () => {
+  const fetchLevel = async (): Promise<{ levels: Record<string, QuizLevelResult>; globalMd: number } | undefined> => {
     if (!user) return;
-    const { data } = await supabase
+
+    // Segmentos deste vendedor (vazio/nulo = todos).
+    const { data: sellerRow } = await supabase
+      .from("sellers").select("quiz_subjects").eq("user_id", user.id).maybeSingle();
+    const assigned = ((sellerRow as { quiz_subjects?: string[] } | null)?.quiz_subjects) ?? null;
+    const segments = assigned && assigned.length > 0 ? assigned : ALL_SEGMENTS;
+    setMySegments(segments);
+
+    const { data } = await (supabase as any)
       .from("quiz_attempts")
-      .select("total_questions, correct_answers")
+      .select("total_questions, correct_answers, segment_breakdown")
       .eq("user_id", user.id);
-    const rows = (data ?? []) as { total_questions: number | null; correct_answers: number | null }[];
+    const rows = (data ?? []) as {
+      total_questions: number | null;
+      correct_answers: number | null;
+      segment_breakdown: Record<string, { answered: number; correct: number }> | null;
+    }[];
+
+    // Nível POR SEGMENTO: cada segmento evolui de forma independente, então um
+    // segmento recém-liberado começa no Básico mesmo que o vendedor já seja
+    // avançado em outro.
+    const totals: Record<string, { answered: number; correct: number }> = {};
+    for (const s of segments) totals[s] = { answered: 0, correct: 0 };
+    for (const r of rows) {
+      if (!r.segment_breakdown) continue;
+      for (const [seg, v] of Object.entries(r.segment_breakdown)) {
+        if (!totals[seg]) continue; // segmento não atribuído hoje: não exibe
+        totals[seg].answered += v?.answered || 0;
+        totals[seg].correct += v?.correct || 0;
+      }
+    }
+    const levels: Record<string, QuizLevelResult> = {};
+    for (const s of segments) levels[s] = computeQuizLevel(totals[s].answered, totals[s].correct);
+    setSegmentLevels(levels);
+
+    // Nível geral (soma de tudo) — usado como referência e como fallback para
+    // perguntas sem segmento definido.
     const answered = rows.reduce((s, r) => s + (r.total_questions || 0), 0);
     const correct = rows.reduce((s, r) => s + (r.correct_answers || 0), 0);
     const level = computeQuizLevel(answered, correct);
-    setLevelInfo(level);
-    setMaxDifficulty(LEVEL_MAX_DIFFICULTY[level.current.key] ?? 1);
+    const globalMd = LEVEL_MAX_DIFFICULTY[level.current.key] ?? 1;
+    setMaxDifficulty(globalMd);
+    return { levels, globalMd };
   };
 
-  const fetchQuestions = async () => {
+  const fetchQuestions = async (lv?: { levels: Record<string, QuizLevelResult>; globalMd: number }) => {
     setLoading(true);
 
     // Assuntos que este vendedor recebe (segmentação). Se não houver
@@ -100,16 +164,10 @@ export default function Quiz() {
     }
     const { data, error } = await query;
 
-    // Dificuldade liberada pelo nível atual do vendedor.
-    let md = 1;
-    if (user) {
-      const { data: att } = await supabase.from("quiz_attempts").select("total_questions, correct_answers").eq("user_id", user.id);
-      const ar = (att ?? []) as { total_questions: number | null; correct_answers: number | null }[];
-      const ans = ar.reduce((s, r) => s + (r.total_questions || 0), 0);
-      const cor = ar.reduce((s, r) => s + (r.correct_answers || 0), 0);
-      md = LEVEL_MAX_DIFFICULTY[computeQuizLevel(ans, cor).current.key] ?? 1;
-      setMaxDifficulty(md);
-    }
+    // Dificuldade: vem do nível DE CADA SEGMENTO, já calculado no fetchLevel
+    // (antes isto refazia o cálculo global, duplicando a regra).
+    const levels = lv?.levels ?? {};
+    const md = lv?.globalMd ?? 1;
 
     if (!error && data && data.length > 0) {
       const formatted = data.map(q => ({
@@ -117,7 +175,7 @@ export default function Quiz() {
         options: q.options as string[]
       }));
       setAllQuestions(formatted);
-      setQuestions(selectRound(formatted, md));
+      setQuestions(selectRound(formatted, md, levels));
     } else {
       const fallback = [
         {
@@ -151,7 +209,8 @@ export default function Quiz() {
   // Inicia uma nova partida sorteando 25 perguntas do pool
   const startRound = () => {
     subjectStatsRef.current = {};
-    setQuestions(selectRound(allQuestions, maxDifficulty));
+    segmentStatsRef.current = {};
+    setQuestions(selectRound(allQuestions, maxDifficulty, segmentLevels));
     setCurrentQuestionIndex(0);
     setScore(0);
     setShowResult(false);
@@ -180,6 +239,16 @@ export default function Quiz() {
     cur.answered += 1;
     if (correct) cur.correct += 1;
     subjectStatsRef.current[subj] = cur;
+
+    // Acumula por SEGMENTO (base do nível por segmento). Conta só nos segmentos
+    // atribuídos ao vendedor: assim um segmento liberado depois começa do zero,
+    // em vez de já vir pontuado por perguntas compartilhadas.
+    for (const seg of (activeQuestion.paint_types || []).filter((s) => mySegments.includes(s))) {
+      const cs = segmentStatsRef.current[seg] || { answered: 0, correct: 0 };
+      cs.answered += 1;
+      if (correct) cs.correct += 1;
+      segmentStatsRef.current[seg] = cs;
+    }
 
     // 5 pontos por resposta correta (modelo definido na reunião)
     const POINTS_PER_CORRECT = 5;
@@ -237,6 +306,7 @@ export default function Quiz() {
       total_questions: questions.length,
       correct_answers: Math.round(finalScore / 5),
       subject_breakdown: subjectStatsRef.current,
+      segment_breakdown: segmentStatsRef.current,
     } as any);
     fetchLevel();
   };
@@ -329,32 +399,43 @@ export default function Quiz() {
                 </p>
               </div>
 
-              {levelInfo && (
-                <div className="rounded-2xl bg-white/[0.06] border border-white/10 p-4 text-left max-w-sm mx-auto w-full">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Seu nível</p>
-                      <p className="text-lg font-black text-amber-300">{levelInfo.current.label}</p>
-                    </div>
-                    {levelInfo.next ? (
-                      <p className="text-xs text-white/50 text-right">
-                        Próximo<br /><span className="text-white/80 font-bold">{levelInfo.next.label}</span>
-                      </p>
-                    ) : (
-                      <p className="text-xs text-amber-300 font-bold">Nível máximo 🏆</p>
-                    )}
-                  </div>
-                  {levelInfo.next && (
-                    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-amber-300 to-amber-500"
-                        style={{ width: `${Math.round(levelInfo.progressToNext * 100)}%` }}
-                      />
-                    </div>
-                  )}
-                  <p className="text-[11px] text-white/40 mt-2">
-                    {levelInfo.answered} perguntas respondidas · {Math.round(levelInfo.accuracy * 100)}% de acerto
+              {mySegments.length > 0 && (
+                <div className="rounded-2xl bg-white/[0.06] border border-white/10 p-4 text-left max-w-sm mx-auto w-full space-y-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                    Seus níveis por assunto
                   </p>
+                  {mySegments.map((seg) => {
+                    const lv = segmentLevels[seg];
+                    if (!lv) return null;
+                    return (
+                      <div key={seg}>
+                        <div className="flex items-end justify-between mb-1.5">
+                          <div>
+                            <p className="text-[11px] font-bold text-white/60">{seg}</p>
+                            <p className="text-base font-black text-amber-300 leading-tight">{lv.current.label}</p>
+                          </div>
+                          {lv.next ? (
+                            <p className="text-[11px] text-white/50 text-right">
+                              Próximo<br /><span className="text-white/80 font-bold">{lv.next.label}</span>
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-amber-300 font-bold">Nível máximo 🏆</p>
+                          )}
+                        </div>
+                        {lv.next && (
+                          <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-amber-300 to-amber-500"
+                              style={{ width: `${Math.round(lv.progressToNext * 100)}%` }}
+                            />
+                          </div>
+                        )}
+                        <p className="text-[11px] text-white/40 mt-1.5">
+                          {lv.answered} perguntas respondidas · {Math.round(lv.accuracy * 100)}% de acerto
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
