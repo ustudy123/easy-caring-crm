@@ -753,8 +753,10 @@ export default function Kanban() {
                   {/* Cabeçalho + total: congelados no topo ao rolar o board.
                       O `bg-card` é necessário porque o gradiente do cabeçalho e o
                       fundo do total são semitransparentes — sem uma base opaca,
-                      os cards apareceriam através deles ao passar por baixo. */}
-                  <div className="sticky top-0 z-10 bg-card rounded-t-[12px]">
+                      os cards apareceriam através deles ao passar por baixo.
+                      z-20: os cards e o selo de urgência usam z-10, e com o mesmo
+                      z-index quem vem depois no DOM (os cards) ficaria por cima. */}
+                  <div className="sticky top-0 z-20 bg-card rounded-t-[12px]">
                   {/* Column header */}
                   <div className={`flex items-center justify-between rounded-t-[12px] p-3 sm:p-3.5 bg-gradient-to-b ${stageHeaderGradient[stage.key]} border-x border-t border-b border-border/40 border-b-kanban-${stage.key === 'abordagem' ? 'approach' : stage.key === 'sondagem' ? 'probing' : stage.key === 'recomendacao_tecnica' ? 'recommendation' : stage.key === 'demonstracao_valor' ? 'demonstration' : stage.key === 'contorno_objecoes' ? 'objections' : stage.key === 'cross_sell' ? 'crosssell' : stage.key === 'fechamento' ? 'closing' : 'postsale'}/20`}>
                     <div className="flex items-center gap-2.5">
