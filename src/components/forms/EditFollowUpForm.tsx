@@ -90,7 +90,7 @@ export function EditFollowUpForm({ followUp, open, onOpenChange, onSubmit, onDel
   const handleDelete = () => {
     if (!followUp) return;
     onDelete(followUp.id);
-    toast({ title: "Follow-up excluído", description: `${followUp.clientName} foi removido.`, variant: "destructive" });
+    toast({ title: "Cliente retornou ao kanban", description: "Compromisso excluído" });
     onOpenChange(false);
   };
 
