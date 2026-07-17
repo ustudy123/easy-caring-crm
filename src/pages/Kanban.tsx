@@ -550,7 +550,9 @@ export default function Kanban() {
      const max = el.scrollWidth - el.clientWidth;
      
      // Calculate how many columns are hidden on each side
-     const columns = Array.from(el.children).filter((child): child is HTMLElement => child instanceof HTMLElement && child.id.startsWith('stage-'));
+     // As colunas não são mais filhas diretas do contêiner de rolagem (há a
+     // linha interna que iguala as alturas), então busca por descendentes.
+     const columns = Array.from(el.querySelectorAll<HTMLElement>('[id^="stage-"]'));
      let countLeft = 0;
      let countRight = 0;
      
@@ -731,10 +733,17 @@ export default function Kanban() {
          {/* Board */}
          <DragDropContext onDragEnd={onDragEnd}>
            <div className="relative group/board flex-1 min-h-0 flex flex-col">
+             {/* Quem ROLA é este contêiner (altura limitada).
+                 Quem ESTICA é a linha interna: altura automática, então o
+                 `items-stretch` iguala todas as colunas à mais alta. Se o
+                 stretch ficasse no próprio contêiner de rolagem, as colunas
+                 teriam a altura da área visível e o cabeçalho das vazias
+                 sairia da tela ao rolar. */}
              <div 
                ref={boardRef}
-               className="flex items-start gap-3 sm:gap-4 flex-1 min-h-0 overflow-x-auto overflow-y-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none scroll-smooth kanban-scrollbar"
+               className="flex-1 min-h-0 overflow-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none scroll-smooth kanban-scrollbar"
              >
+             <div className="flex items-stretch gap-3 sm:gap-4 min-w-max">
             {KANBAN_STAGES.map((stage) => {
               const stageLeads = filteredLeads.filter((l) => l.stage === stage.key);
               const totalValue = stageLeads.reduce((s, l) => s + l.value, 0);
@@ -1043,6 +1052,7 @@ export default function Kanban() {
                 </div>
               );
             })}
+             </div>
              </div>
            </div>
          </DragDropContext>
