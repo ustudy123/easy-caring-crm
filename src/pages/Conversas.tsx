@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
    import { Search, ArrowLeft, Send, Phone, User, CheckCheck, Smile, Paperclip, Mic, MoreVertical, MessageCircle, Clock, Lock, ChevronUp, ChevronDown, X, Users, Store, UserCheck, AlertCircle, ShieldAlert, Forward, ListFilter, Check, Link2, Plus } from "lucide-react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Tag } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Download } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useRole } from "@/contexts/RoleContext";
 import { useCrm } from "@/contexts/CrmContext";
-import { KANBAN_STAGES, CLIENT_TYPE_EQUIPE_INTERNA } from "@/types/crm";
+import { KANBAN_STAGES, CLIENT_TYPE_EQUIPE_INTERNA, CLIENT_TYPES } from "@/types/crm";
 import { useSearchParams } from "react-router-dom";
 import { EmojiPicker } from "@/components/EmojiPicker";
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -180,7 +180,7 @@ const mockContactNames: Record<string, string> = {
 // ── Component ──
  export default function Conversas() {
      const { isAdmin, isGerente, isVendedor, isSuporte, sellerId, storeId, role } = useRole();
-    const { decrementUnreadWhatsApp, leads } = useCrm();
+    const { decrementUnreadWhatsApp, leads, updateLead } = useCrm();
     const { instances: allInstances, byId: instancesById } = useInstances();
     const [instanceFilter, setInstanceFilter] = useState<string>("all");
     const [stageFilter, setStageFilter] = useState<string>("all");
@@ -193,6 +193,10 @@ const mockContactNames: Record<string, string> = {
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   // Telefones abertos que ainda não têm mensagem no WhatsApp (conversa "vazia" para iniciar).
   const [virtualPhones, setVirtualPhones] = useState<string[]>([]);
+  // Reclassificação do tipo de cliente a partir da aba Equipe Interna.
+  const [reclassifyPhone, setReclassifyPhone] = useState<string | null>(null);
+  const [reclassifyType, setReclassifyType] = useState<string>("");
+  const [isReclassifying, setIsReclassifying] = useState(false);
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [chatSearch, setChatSearch] = useState("");
@@ -887,6 +891,37 @@ const mockContactNames: Record<string, string> = {
    };
 
   const contactName = selectedPhone ? contactNames[selectedPhone] || null : null;
+
+    // Reclassifica o tipo de cliente do lead da conversa. Saindo de "Equipe
+    // Interna", o lead volta a aparecer no Kanban e a conversa deixa a aba
+    // Interna (ambas as telas derivam do clientType, então basta gravá-lo).
+    const handleReclassify = async () => {
+      if (!reclassifyPhone || !reclassifyType) return;
+      const target = normPhone(reclassifyPhone);
+      const lead = (leads || []).find((l) => l.clientPhone && normPhone(l.clientPhone) === target);
+      if (!lead) { toast.error("Lead não encontrado para esta conversa."); return; }
+
+      setIsReclassifying(true);
+      try {
+        await updateLead({ ...lead, clientType: reclassifyType });
+        const saiuDaInterna = reclassifyType !== CLIENT_TYPE_EQUIPE_INTERNA;
+        toast.success(
+          saiuDaInterna
+            ? `Classificado como ${reclassifyType}. O lead voltou para o Kanban.`
+            : `Classificado como ${reclassifyType}.`,
+        );
+        if (saiuDaInterna && activeTab === "equipe_interna") {
+          // A conversa sai desta aba: leva o usuário para onde ela agora está.
+          setActiveTab("minhas");
+        }
+        setReclassifyPhone(null);
+        setReclassifyType("");
+      } catch (e: any) {
+        toast.error("Erro ao classificar: " + (e?.message || "tente novamente"));
+      } finally {
+        setIsReclassifying(false);
+      }
+    };
 
     const handleClaimLead = async (phoneToClaim?: string) => {
       const targetPhone = phoneToClaim || selectedPhone;
@@ -1659,6 +1694,20 @@ const mockContactNames: Record<string, string> = {
                       )}
                     </div>
                      <div className="flex items-center gap-2">
+                       {/* Conversa da Equipe Interna: permite reclassificar o lead.
+                           Ao sair de "Equipe Interna", ele volta ao Kanban e a
+                           conversa deixa esta aba, indo para as abas normais. */}
+                       {equipeInternaPhones.has(normPhone(selectedConversation.phone)) && (
+                         <Button
+                           size="sm"
+                           onClick={() => setReclassifyPhone(selectedConversation.phone)}
+                           className="bg-white text-[hsl(var(--wa-header))] hover:bg-white/90 font-semibold h-8 px-3"
+                         >
+                           <span className="flex items-center gap-1.5">
+                             <Tag className="h-4 w-4" /> Classificar cliente
+                           </span>
+                         </Button>
+                       )}
                        {(!selectedConversation.assigned_seller_id || (isSelectedStale && selectedConversation.assigned_seller_id !== sellerId)) && (
                          <Button
                            size="sm"
@@ -2270,6 +2319,38 @@ const mockContactNames: Record<string, string> = {
             <Button variant="outline" onClick={() => setNewChatOpen(false)}>Cancelar</Button>
             <Button onClick={handleStartNewChat} disabled={newChatSending} className="gap-1.5">
               <Send className="h-4 w-4" /> {newChatSending ? "Enviando..." : "Enviar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Classificar cliente (aba Equipe Interna) */}
+      <Dialog open={!!reclassifyPhone} onOpenChange={(o) => { if (!o) { setReclassifyPhone(null); setReclassifyType(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Classificar cliente</DialogTitle>
+            <DialogDescription>
+              Ao escolher um tipo diferente de "Equipe Interna", o lead volta para o
+              Kanban e a conversa sai da aba Interna.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Tipo de Cliente</Label>
+            <Select value={reclassifyType} onValueChange={setReclassifyType}>
+              <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+              <SelectContent>
+                {CLIENT_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setReclassifyPhone(null); setReclassifyType(""); }}>
+              Cancelar
+            </Button>
+            <Button onClick={handleReclassify} disabled={!reclassifyType || isReclassifying} className="gap-1.5">
+              <Tag className="h-4 w-4" /> {isReclassifying ? "Salvando..." : "Classificar"}
             </Button>
           </DialogFooter>
         </DialogContent>

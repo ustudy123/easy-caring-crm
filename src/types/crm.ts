@@ -105,3 +105,13 @@ export const KANBAN_STAGES: { key: KanbanStage; label: string; color: string }[]
 // Tipo de Cliente especial: leads "Equipe Interna" não aparecem no Kanban e
 // suas conversas ficam em uma aba separada na página de Conversas.
 export const CLIENT_TYPE_EQUIPE_INTERNA = "Equipe Interna";
+
+// Lista única de Tipos de Cliente. Estava duplicada nos formulários de lead;
+// centralizar evita que as opções divirjam entre as telas.
+export const CLIENT_TYPES = [
+  "Pintor",
+  "Arquiteto/Construtor",
+  "Consumidor Final",
+  "Empresa/Obra",
+  CLIENT_TYPE_EQUIPE_INTERNA,
+] as const;

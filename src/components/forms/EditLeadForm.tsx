@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MaskedInput } from "@/components/ui/masked-input";
-import { Lead, KanbanStage, CLIENT_TYPE_EQUIPE_INTERNA } from "@/types/crm";
+import { Lead, KanbanStage, CLIENT_TYPES } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
 import { useRole } from "@/contexts/RoleContext";
 import { isValidPhone, isValidEmail, normalizePhoneBR } from "@/lib/masks";
@@ -118,11 +118,9 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
               <Select value={form.clientType} onValueChange={(v) => update("clientType", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Pintor">Pintor</SelectItem>
-                  <SelectItem value="Arquiteto/Construtor">Arquiteto/Construtor</SelectItem>
-                  <SelectItem value="Consumidor Final">Consumidor Final</SelectItem>
-                  <SelectItem value="Empresa/Obra">Empresa/Obra</SelectItem>
-                  <SelectItem value={CLIENT_TYPE_EQUIPE_INTERNA}>Equipe Interna</SelectItem>
+                  {CLIENT_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
