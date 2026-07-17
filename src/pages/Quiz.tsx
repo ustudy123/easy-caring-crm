@@ -8,6 +8,16 @@ import { Trophy, Star, RotateCcw, PaintBucket, Sparkles, ChevronLeft, ChevronRig
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { QuizLeaderboard } from "@/components/QuizLeaderboard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { computeQuizLevel, QuizLevelResult } from "@/lib/quizLevel";
 
 interface Question {
@@ -83,6 +93,8 @@ export default function Quiz() {
   const [started, setStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(SECONDS_PER_QUESTION);
   const [maxDifficulty, setMaxDifficulty] = useState(1);
+  // Confirmação ao sair no meio da rodada (a partida é descartada).
+  const [confirmLeave, setConfirmLeave] = useState(false);
 
   useEffect(() => {
   // Carrega nível e perguntas em sequência: as perguntas dependem do nível de
@@ -360,11 +372,16 @@ export default function Quiz() {
 
         <div className="relative max-w-3xl mx-auto py-8 px-4 sm:px-6">
           {/* Na tela inicial o botão sai do quiz (Hub). Dentro da partida ele
-              volta para o menu do Show das Tintas — sair direto para o Hub fazia
-              o jogador perder a rodada sem querer. */}
+              volta para o menu do Show das Tintas, confirmando antes — a rodada
+              é descartada (os pontos só são gravados ao ver o resultado). No
+              resultado não pergunta nada: a partida já foi contabilizada. */}
           <Button
             variant="ghost"
-            onClick={() => (showLanding ? navigate("/") : backToLanding())}
+            onClick={() => {
+              if (showLanding) { navigate("/"); return; }
+              if (showResult) { backToLanding(); return; }
+              setConfirmLeave(true);
+            }}
             className="mb-2 text-white/60 hover:text-amber-300 hover:bg-white/5"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
@@ -633,6 +650,24 @@ export default function Quiz() {
         </AnimatePresence>
         </div>
       </div>
+
+      <AlertDialog open={confirmLeave} onOpenChange={setConfirmLeave}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sair da rodada?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta rodada será descartada e os pontos não serão contabilizados.
+              Os pontos só valem ao chegar no resultado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar jogando</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setConfirmLeave(false); backToLanding(); }}>
+              Sair e descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
