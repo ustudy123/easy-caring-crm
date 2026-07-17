@@ -359,13 +359,16 @@ export default function Quiz() {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0e2e]/40 to-[#070920]" />
 
         <div className="relative max-w-3xl mx-auto py-8 px-4 sm:px-6">
+          {/* Na tela inicial o botão sai do quiz (Hub). Dentro da partida ele
+              volta para o menu do Show das Tintas — sair direto para o Hub fazia
+              o jogador perder a rodada sem querer. */}
           <Button
             variant="ghost"
-            onClick={() => navigate("/")}
+            onClick={() => (showLanding ? navigate("/") : backToLanding())}
             className="mb-2 text-white/60 hover:text-amber-300 hover:bg-white/5"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
-            Voltar ao Hub
+            {showLanding ? "Voltar ao Hub" : "Voltar ao Show das Tintas"}
           </Button>
           <AnimatePresence mode="wait">
           {showLanding ? (
