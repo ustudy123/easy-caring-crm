@@ -1562,36 +1562,18 @@ const mockContactNames: Record<string, string> = {
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 truncate">
+                            {/* O nome ocupa a linha inteira: o selo do número e o
+                                botão ATENDER foram para a linha de baixo, senão
+                                espremiam o nome e ele saía truncado. */}
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
                               <span className="text-[16px] font-normal text-foreground truncate">
                                  {name}
                                </span>
-                               {conv.received_on_instance_id && instancesById[conv.received_on_instance_id] ? (
-                                 <InstanceBadge instance={instancesById[conv.received_on_instance_id]} size="xs" />
-                               ) : conv.store_id ? (
-                                 <span className="text-[10px] bg-brand-500/10 text-brand-500 px-1.5 py-0.5 rounded-full font-medium shrink-0">
-                                   {stores.find(s => s.id === conv.store_id)?.name || 'Loja'}
-                                 </span>
-                               ) : null}
                                {conv.alert_status === 'critical' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" title="ALERTA CRÍTICO - ADMIN" />}
                               {conv.alert_status === 'red' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" title="Alerta Crítico" />}
                                {conv.alert_status === 'yellow' && <div className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" title="Alerta de Demora" />}
                              </div>
                              <div className="flex items-center gap-2">
-                              {(activeTab === 'geral' || activeTab === 'loja') && (
-                                <Button 
-                                  size="sm" 
-                                  variant="secondary"
-                                  className="h-7 px-2 text-[10px] bg-green-600 hover:bg-green-700 text-white font-bold"
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    handleSelectConversation(conv.phone);
-                                    handleClaimLead(conv.phone);
-                                  }}
-                                >
-                                  ATENDER
-                                </Button>
-                              )}
                               <span className={cn(
                                 "text-[12px] shrink-0",
                                 conv.unreadCount > 0 ? "text-[hsl(var(--wa-green))]" : "text-muted-foreground"
@@ -1614,6 +1596,39 @@ const mockContactNames: Record<string, string> = {
                               </span>
                             )}
                           </div>
+
+                          {/* Selo do número/loja + ATENDER: linha própria, para não
+                              disputar espaço com o nome do cliente. */}
+                          {(() => {
+                            const badge = conv.received_on_instance_id && instancesById[conv.received_on_instance_id] ? (
+                              <InstanceBadge instance={instancesById[conv.received_on_instance_id]} size="xs" />
+                            ) : conv.store_id ? (
+                              <span className="text-[10px] bg-brand-500/10 text-brand-500 px-1.5 py-0.5 rounded-full font-medium shrink-0">
+                                {stores.find(s => s.id === conv.store_id)?.name || 'Loja'}
+                              </span>
+                            ) : null;
+                            const canClaim = activeTab === 'geral' || activeTab === 'loja';
+                            if (!badge && !canClaim) return null;
+                            return (
+                              <div className="flex items-center gap-2 mt-1.5">
+                                {badge}
+                                {canClaim && (
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    className="h-7 px-2 text-[10px] bg-green-600 hover:bg-green-700 text-white font-bold ml-auto"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      handleSelectConversation(conv.phone);
+                                      handleClaimLead(conv.phone);
+                                    }}
+                                  >
+                                    ATENDER
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </motion.button>
                     );
