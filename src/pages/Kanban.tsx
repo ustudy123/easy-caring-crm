@@ -604,7 +604,11 @@ export default function Kanban() {
 
   return (
     <AppLayout title="Kanban Comercial">
-      <div className="space-y-4">
+      {/* Altura limitada + flex: o board passa a ser o contêiner que rola na
+          vertical. Sem isso o `sticky` do cabeçalho não teria em relação a que
+          grudar — o board usa overflow-x-auto, e o CSS força overflow-y: auto
+          junto, então ele já é um contêiner de rolagem, só que sem altura. */}
+      <div className="space-y-4 h-full flex flex-col min-h-0">
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="relative flex-1 max-w-sm">
@@ -726,10 +730,10 @@ export default function Kanban() {
 
          {/* Board */}
          <DragDropContext onDragEnd={onDragEnd}>
-           <div className="relative group/board">
+           <div className="relative group/board flex-1 min-h-0 flex flex-col">
              <div 
                ref={boardRef}
-               className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none scroll-smooth kanban-scrollbar"
+               className="flex items-start gap-3 sm:gap-4 flex-1 min-h-0 overflow-x-auto overflow-y-auto pb-4 -mx-3 px-3 sm:-mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none scroll-smooth kanban-scrollbar"
              >
             {KANBAN_STAGES.map((stage) => {
               const stageLeads = filteredLeads.filter((l) => l.stage === stage.key);
@@ -746,6 +750,11 @@ export default function Kanban() {
                   id={`stage-${stage.key}`}
                   className="flex-shrink-0 w-[85vw] sm:w-[280px] lg:w-[276px] flex flex-col snap-center sm:snap-start"
                 >
+                  {/* Cabeçalho + total: congelados no topo ao rolar o board.
+                      O `bg-card` é necessário porque o gradiente do cabeçalho e o
+                      fundo do total são semitransparentes — sem uma base opaca,
+                      os cards apareceriam através deles ao passar por baixo. */}
+                  <div className="sticky top-0 z-10 bg-card rounded-t-[12px]">
                   {/* Column header */}
                   <div className={`flex items-center justify-between rounded-t-[12px] p-3 sm:p-3.5 bg-gradient-to-b ${stageHeaderGradient[stage.key]} border-x border-t border-b border-border/40 border-b-kanban-${stage.key === 'abordagem' ? 'approach' : stage.key === 'sondagem' ? 'probing' : stage.key === 'recomendacao_tecnica' ? 'recommendation' : stage.key === 'demonstracao_valor' ? 'demonstration' : stage.key === 'contorno_objecoes' ? 'objections' : stage.key === 'cross_sell' ? 'crosssell' : stage.key === 'fechamento' ? 'closing' : 'postsale'}/20`}>
                     <div className="flex items-center gap-2.5">
@@ -764,6 +773,7 @@ export default function Kanban() {
                   {/* Value summary */}
                   <div className="text-[10px] font-semibold text-muted-foreground px-3.5 py-1.5 bg-muted/40 border-x border-border/40">
                     R$ {totalValue.toLocaleString("pt-BR")}
+                  </div>
                   </div>
 
                   {/* Droppable area */}
