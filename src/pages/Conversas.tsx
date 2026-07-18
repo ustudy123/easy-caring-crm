@@ -95,6 +95,17 @@ function formatMessageDate(dateStr: string) {
   return format(date, "dd/MM/yy");
 }
 
+// Há quantos dias o cliente está esperando resposta. Retorna null quando o
+// último a falar fomos nós (ninguém está esperando) ou quando ainda não passou
+// de 1 dia — o objetivo é sinalizar só o que está realmente largado.
+function waitingDays(conv: { lastFromMe?: boolean; last_message_from_client_at?: string | null; lastTimestamp?: string }): number | null {
+  if (conv.lastFromMe) return null;
+  const ts = conv.last_message_from_client_at || conv.lastTimestamp;
+  if (!ts) return null;
+  const days = Math.floor((Date.now() - new Date(ts).getTime()) / 86_400_000);
+  return days >= 1 ? days : null;
+}
+
 function formatFullDate(dateStr: string) {
   const date = new Date(dateStr);
   if (isToday(date)) return "HOJE";
@@ -1587,10 +1598,17 @@ const mockContactNames: Record<string, string> = {
                               </span>
                             ) : null;
                             const canClaim = activeTab === 'geral' || activeTab === 'loja';
-                            if (!badge && !canClaim) return null;
+                            const waiting = waitingDays(conv);
+                            if (!badge && !canClaim && waiting === null) return null;
                             return (
                               <div className="flex items-center gap-2 mt-1.5">
                                 {badge}
+                                {waiting !== null && (
+                                  <span className="text-[10px] bg-amber-500/15 text-amber-700 px-1.5 py-0.5 rounded-full font-semibold shrink-0 flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    esperando há {waiting} {waiting === 1 ? "dia" : "dias"}
+                                  </span>
+                                )}
                                 {canClaim && (
                                   <Button
                                     size="sm"
