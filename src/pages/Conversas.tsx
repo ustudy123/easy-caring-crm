@@ -732,27 +732,8 @@ const mockContactNames: Record<string, string> = {
        });
 
       // Ordenação: mais recente primeiro em todas as abas.
-      // As abas Loja/Geral/Todas ordenavam do mais ANTIGO para o mais novo (a
-      // ordem da fila de distribuição). Quem decide a vez agora é o botão
-      // "Atender próximo", que continua pegando quem espera há mais tempo
-      // (ver nextInQueue) — a lista não precisa mais carregar essa função.
       return filtered.sort((a, b) => (b.lastTimestamp || "0").localeCompare(a.lastTimestamp || "0"));
      }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente, instanceFilter, stageFilter, phoneStage, equipeInternaPhones, virtualPhones]);
-
-  // Próximo da fila: quem tem a mensagem do CLIENTE mais antiga sem resposta.
-  // Antes era só o primeiro item da lista; com a lista invertida isso passaria a
-  // ser o cliente MAIS RECENTE, furando a fila de quem espera há mais tempo.
-  const nextInQueue = useMemo(() => {
-    if (activeTab !== 'geral' && activeTab !== 'loja') return null;
-    let best: typeof filteredConversations[number] | null = null;
-    let bestTs = "";
-    for (const c of filteredConversations) {
-      const ts = c.last_message_from_client_at || c.lastTimestamp || "";
-      if (!ts) continue;
-      if (!best || ts.localeCompare(bestTs) < 0) { best = c; bestTs = ts; }
-    }
-    return best;
-  }, [filteredConversations, activeTab]);
 
   // Monitor conversations for stale messages to trigger alert popup
   useEffect(() => {
@@ -1448,20 +1429,6 @@ const mockContactNames: Record<string, string> = {
               )}
             </div>
 
-            {(activeTab === 'geral' || activeTab === 'loja') && nextInQueue && (
-              <div className="px-2 pb-2">
-                <Button 
-                  className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-bold gap-2 shadow-lg animate-in fade-in slide-in-from-top-2"
-                  onClick={() => handleSelectConversation(nextInQueue.phone)}
-                >
-                  <UserCheck className="h-5 w-5" />
-                  ATENDER PRÓXIMO ({activeTab === 'geral' ? 'GERAL' : 'LOJA'})
-                </Button>
-                <p className="text-[10px] text-muted-foreground text-center mt-1">
-                  Abre quem está esperando há mais tempo
-                </p>
-              </div>
-            )}
             
           {/* Conversations list */}
           <div className="flex-1 overflow-y-auto divide-y divide-border/40">
