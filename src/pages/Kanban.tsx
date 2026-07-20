@@ -23,7 +23,8 @@ import { useRole } from "@/contexts/RoleContext";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { getUrgencyLevel, getUrgencyConfig, formatIdleTime } from "@/lib/leadUrgency";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SellerCombobox } from "@/components/SellerCombobox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, 
@@ -647,27 +648,16 @@ export default function Kanban() {
                 {(isGerente || isAdmin) && (
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-muted-foreground">Vendedor</label>
-                    <Select value={filterSeller} onValueChange={setFilterSeller}>
-                      <SelectTrigger className="h-8 text-xs rounded-lg"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os vendedores</SelectItem>
-                        <SelectItem value="unassigned">Sem vendedor</SelectItem>
-                        {isAdmin ? (
-                          sellersByStore.map((g) => (
-                            <SelectGroup key={g.label}>
-                              <SelectLabel>{g.label}</SelectLabel>
-                              {g.items.map((s) => (
-                                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                              ))}
-                            </SelectGroup>
-                          ))
-                        ) : (
-                          storeSellers.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <SellerCombobox
+                      value={filterSeller}
+                      onChange={setFilterSeller}
+                      presets={[
+                        { value: "all", label: "Todos os vendedores" },
+                        { value: "unassigned", label: "Sem vendedor" },
+                      ]}
+                      groups={isAdmin ? sellersByStore : undefined}
+                      sellers={isAdmin ? undefined : storeSellers}
+                    />
                   </div>
                 )}
                 <div className="space-y-1.5">
