@@ -736,9 +736,13 @@ const mockContactNames: Record<string, string> = {
    
          // Search filtering
          const name = contactNames[c.phone] || "";
-         const searchLower = search.toLowerCase();
-         return c.phone.includes(search) || 
-                c.lastMessage.toLowerCase().includes(searchLower) || 
+         const searchLower = search.toLowerCase().trim();
+         if (!searchLower) return true;
+         // Telefone: compara só dígitos, então "(22) 99..." casa com o número salvo.
+         const searchDigits = searchLower.replace(/\D/g, "");
+         const phoneHit = searchDigits.length > 0 && c.phone.replace(/\D/g, "").includes(searchDigits);
+         return phoneHit ||
+                c.lastMessage.toLowerCase().includes(searchLower) ||
                 name.toLowerCase().includes(searchLower);
        });
 

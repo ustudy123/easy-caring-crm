@@ -523,7 +523,17 @@ export default function Kanban() {
      if (l.clientType === CLIENT_TYPE_EQUIPE_INTERNA) return false;
      // Reagendados: ficam fora do board até a data/hora marcada.
      if (l.snoozedUntil && new Date(l.snoozedUntil).getTime() > Date.now()) return false;
-     if (!l.clientName.toLowerCase().includes(search.toLowerCase())) return false;
+     // Busca por nome, telefone (só dígitos) ou e-mail. Antes filtrava só pelo
+     // nome — como muitos leads aparecem como "Cliente 5522...", buscar pelo
+     // número não achava nada.
+     if (search.trim()) {
+       const q = search.toLowerCase().trim();
+       const qDigits = q.replace(/\D/g, "");
+       const nameHit = l.clientName?.toLowerCase().includes(q);
+       const phoneHit = qDigits.length > 0 && (l.clientPhone || "").replace(/\D/g, "").includes(qDigits);
+       const emailHit = l.clientEmail?.toLowerCase().includes(q);
+       if (!nameHit && !phoneHit && !emailHit) return false;
+     }
      // Filtro por vendedor (gerente)
      if (filterSeller !== "all") {
        if (filterSeller === "unassigned") {
