@@ -40,7 +40,7 @@ interface SupportRequest {
 export default function SuporteOrcamento() {
   const { sellers } = useCrm();
   const { role, isAdmin, isGerente, isSuporte, sellerId } = useRole();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [requests, setRequests] = useState<SupportRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -329,6 +329,9 @@ export default function SuporteOrcamento() {
 
   // Cliente vindo do Kanban (?cliente=...): pré-preenche a solicitação.
   const [pendingClient, setPendingClient] = useState(() => searchParams.get("cliente") || "");
+  // Ao chegar do Kanban, abre um modal central para escolher o tipo (orçamento
+  // ou negociação), em vez de deixar o nome discreto num canto da tela.
+  const [showTypeChoice, setShowTypeChoice] = useState(() => !!searchParams.get("cliente"));
 
   const openNewRequest = (type: RequestType) => {
     resetForm();
@@ -338,6 +341,9 @@ export default function SuporteOrcamento() {
       setSelectedErpClient({ name: pendingClient, erpId: "" });
       setPendingClient("");
     }
+    setShowTypeChoice(false);
+    // Remove ?cliente da URL para o modal não reabrir num F5.
+    if (searchParams.get("cliente")) setSearchParams({}, { replace: true });
     setShowForm(true);
   };
 
@@ -473,11 +479,6 @@ export default function SuporteOrcamento() {
             </Select>
           </div>
           <div className="flex flex-col gap-2 items-end">
-            {pendingClient && (
-              <p className="text-[11px] text-brand-600 bg-brand-500/10 px-2.5 py-1 rounded-md">
-                Solicitação para <strong>{pendingClient}</strong> — escolha o tipo:
-              </p>
-            )}
             <div className="flex gap-2">
               <Button
                 onClick={() => openNewRequest("orcamento")}
@@ -497,6 +498,44 @@ export default function SuporteOrcamento() {
             </div>
           </div>
         </div>
+
+        {/* Escolha do tipo ao chegar do Kanban (pop-up central) */}
+        <Dialog open={showTypeChoice} onOpenChange={(o) => {
+          setShowTypeChoice(o);
+          if (!o) {
+            setPendingClient(""); // fechou sem escolher: descarta o pré-preenchimento
+            if (searchParams.get("cliente")) setSearchParams({}, { replace: true });
+          }
+        }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>O que você quer solicitar?</DialogTitle>
+              <DialogDescription>
+                {pendingClient
+                  ? <>Para o cliente <strong>{pendingClient}</strong>. Escolha uma opção abaixo.</>
+                  : "Escolha uma opção abaixo."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
+              <button
+                onClick={() => openNewRequest("orcamento")}
+                className="flex flex-col items-center gap-2 rounded-xl border border-brand-500/40 bg-brand-500/5 p-4 text-center hover:bg-brand-500/10 transition-colors"
+              >
+                <FileText className="h-7 w-7 text-brand-500" />
+                <span className="font-bold text-sm">Solicitar Orçamento</span>
+                <span className="text-[11px] text-muted-foreground">Pedir um orçamento ao setor responsável</span>
+              </button>
+              <button
+                onClick={() => openNewRequest("precificacao_especial")}
+                className="flex flex-col items-center gap-2 rounded-xl border border-kanban-recommendation/40 bg-kanban-recommendation/5 p-4 text-center hover:bg-kanban-recommendation/10 transition-colors"
+              >
+                <DollarSign className="h-7 w-7 text-kanban-recommendation" />
+                <span className="font-bold text-sm">Negociação Especial</span>
+                <span className="text-[11px] text-muted-foreground">Pedir uma condição/preço especial</span>
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* New request form */}
         {showForm && (
