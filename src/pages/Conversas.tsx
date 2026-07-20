@@ -287,7 +287,7 @@ const mockContactNames: Record<string, string> = {
         const [msgsRes, clientsRes, sellersRes, storesRes] = await Promise.all([
            fetchAllRows((f, t) => supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }).range(f, t)),
            fetchAllRows((f, t) => supabase.from("clients").select("*, alert_status").order("created_at", { ascending: true }).range(f, t)),
-           supabase.from("sellers").select("id, name, code, store_id, is_active, user_id"),
+           supabase.from("sellers").select("id, name, code, store_id, is_active, user_id").order("name"),
            supabase.from("stores").select("id, name")
         ]);
  

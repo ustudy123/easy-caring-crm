@@ -208,7 +208,9 @@ export default function Kanban() {
 
   // Vendedores do filtro: o gerente vê os da própria loja; o admin vê todos.
   const storeSellers = useMemo(
-    () => sellers.filter((s) => s.role === "vendedor" && (isAdmin || !userStoreId || s.store_id === userStoreId)),
+    () => sellers
+      .filter((s) => s.role === "vendedor" && (isAdmin || !userStoreId || s.store_id === userStoreId))
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
     [sellers, userStoreId, isAdmin],
   );
 
