@@ -58,17 +58,32 @@ function maxDifficultyForQuestion(
 // Sorteia um lote de perguntas. Cada pergunta é filtrada pela dificuldade
 // liberada NO SEGMENTO DELA — assim um vendedor Avançado em Industrial e Básico
 // em Imobiliária recebe perguntas difíceis de Industrial e fáceis de Imobiliária.
+//
+// Repetição: prioriza as que o usuário NUNCA viu. Só quando as novas acabam é
+// que repete as ja vistas, começando pelas mais antigas (as vistas ha mais
+// tempo), para o conteúdo recente não voltar tão cedo.
 function selectRound(
   pool: Question[],
   maxDifficulty: number,
   segmentLevels: Record<string, QuizLevelResult> = {},
+  seenAt: Record<string, number> = {},
 ): Question[] {
   let eligible = pool.filter(
     (q) => (Number(q.difficulty) || 1) <= maxDifficultyForQuestion(q, segmentLevels, maxDifficulty),
   );
   if (eligible.length < QUESTIONS_PER_ROUND) eligible = pool; // garante perguntas suficientes
-  const shuffled = [...eligible].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, QUESTIONS_PER_ROUND);
+
+  const rand = () => Math.random() - 0.5;
+  const unseen = eligible.filter((q) => !(q.id in seenAt)).sort(rand);
+
+  if (unseen.length >= QUESTIONS_PER_ROUND) {
+    return unseen.slice(0, QUESTIONS_PER_ROUND);
+  }
+  // Faltou pergunta nova: completa com as vistas ha mais tempo (last_seen menor).
+  const seen = eligible
+    .filter((q) => q.id in seenAt)
+    .sort((a, b) => seenAt[a.id] - seenAt[b.id]);
+  return [...unseen, ...seen].slice(0, QUESTIONS_PER_ROUND);
 }
 
 export default function Quiz() {
@@ -92,6 +107,8 @@ export default function Quiz() {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [started, setStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(SECONDS_PER_QUESTION);
+  // Perguntas já vistas por este usuário: { questionId: last_seen_ms }.
+  const [seenAt, setSeenAt] = useState<Record<string, number>>({});
   const [maxDifficulty, setMaxDifficulty] = useState(1);
   // Confirmação ao sair no meio da rodada (a partida é descartada).
   const [confirmLeave, setConfirmLeave] = useState(false);
@@ -174,7 +191,20 @@ export default function Quiz() {
       // quiz_subjects do vendedor = tipos de tinta; pega perguntas que sirvam a algum deles.
       query = query.overlaps("paint_types", subjects);
     }
-    const { data, error } = await query;
+
+    // Histórico de perguntas já vistas por este usuário (para não repetir).
+    const [{ data, error }, seenRes] = await Promise.all([
+      query,
+      user
+        ? (supabase as any).from("quiz_seen_questions")
+            .select("question_id, last_seen_at").eq("user_id", user.id)
+        : Promise.resolve({ data: [] }),
+    ]);
+    const seenMap: Record<string, number> = {};
+    for (const r of (seenRes?.data ?? []) as { question_id: string; last_seen_at: string }[]) {
+      seenMap[r.question_id] = new Date(r.last_seen_at).getTime();
+    }
+    setSeenAt(seenMap);
 
     // Dificuldade: vem do nível DE CADA SEGMENTO, já calculado no fetchLevel
     // (antes isto refazia o cálculo global, duplicando a regra).
@@ -187,7 +217,19 @@ export default function Quiz() {
         options: q.options as string[]
       }));
       setAllQuestions(formatted);
-      setQuestions(selectRound(formatted, md, levels));
+      const firstRound = selectRound(formatted, md, levels, seenMap);
+      setQuestions(firstRound);
+      // Marca a primeira rodada como vista (usa o mapa recém-carregado).
+      if (user && firstRound.length > 0) {
+        const now = Date.now();
+        setSeenAt((prev) => {
+          const next = { ...prev };
+          for (const q of firstRound) next[q.id] = now;
+          return next;
+        });
+        (supabase as any).rpc("mark_questions_seen", { p_question_ids: firstRound.map((q) => q.id) })
+          .then(({ error }: { error: unknown }) => { if (error) console.error("mark_questions_seen", error); });
+      }
     } else {
       const fallback = [
         {
@@ -222,7 +264,9 @@ export default function Quiz() {
   const startRound = () => {
     subjectStatsRef.current = {};
     segmentStatsRef.current = {};
-    setQuestions(selectRound(allQuestions, maxDifficulty, segmentLevels));
+    const round = selectRound(allQuestions, maxDifficulty, segmentLevels, seenAt);
+    setQuestions(round);
+    markRoundSeen(round);
     setCurrentQuestionIndex(0);
     setScore(0);
     setShowResult(false);
@@ -309,6 +353,20 @@ export default function Quiz() {
     const t = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [timeLeft, started, showResult, selectedOption]);
+
+  // Marca as perguntas da rodada como vistas: no banco (persistente) e no mapa
+  // local, para que a próxima rodada nesta mesma sessão já não as repita.
+  const markRoundSeen = (round: Question[]) => {
+    if (!user || round.length === 0) return;
+    const now = Date.now();
+    setSeenAt((prev) => {
+      const next = { ...prev };
+      for (const q of round) next[q.id] = now;
+      return next;
+    });
+    (supabase as any).rpc("mark_questions_seen", { p_question_ids: round.map((q) => q.id) })
+      .then(({ error }: { error: unknown }) => { if (error) console.error("mark_questions_seen", error); });
+  };
 
   const saveAttempt = async (finalScore: number) => {
     if (!user) return;
