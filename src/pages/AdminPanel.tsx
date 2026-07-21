@@ -1037,6 +1037,7 @@ function UsersTab() {
   const [editIsAvailable, setEditIsAvailable] = useState<boolean>(true);
   const [editStatus, setEditStatus] = useState<string>("active");
   const [editSubstituteId, setEditSubstituteId] = useState<string>("");
+  const [editIsSupervisor, setEditIsSupervisor] = useState<boolean>(false);
   const [editQuizSubjects, setEditQuizSubjects] = useState<string[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -1093,6 +1094,14 @@ function UsersTab() {
     setEditIsAvailable(u.is_available ?? true);
     setEditStatus(u.status || "active");
     setEditSubstituteId(u.substitute_id || "");
+    // Carrega a flag de supervisor de suporte direto do cadastro do vendedor.
+    if (u.seller_id) {
+      const { data: sellerRow } = await supabase
+        .from("sellers").select("is_support_supervisor").eq("id", u.seller_id).maybeSingle();
+      setEditIsSupervisor(!!(sellerRow as any)?.is_support_supervisor);
+    } else {
+      setEditIsSupervisor(false);
+    }
     setEditQuizSubjects([]);
     if (u.user_id) {
       const { data } = await supabase.from("sellers").select("quiz_subjects").eq("user_id", u.user_id).maybeSingle();
@@ -1149,6 +1158,7 @@ function UsersTab() {
       _is_available: editIsAvailable,
       _status: editStatus,
       _substitute_id: editSubstituteId && editSubstituteId !== "none" ? editSubstituteId : null,
+      _is_support_supervisor: editRoles.includes("suporte") ? editIsSupervisor : false,
     });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -1330,6 +1340,16 @@ function UsersTab() {
                       </label>
                     )}
                   </div>
+                  {/* Supervisor de suporte: só faz sentido para quem é suporte. */}
+                  {editRoles.includes("suporte") && (
+                    <label className="flex items-center gap-2 cursor-pointer mt-2 pl-1">
+                      <Checkbox checked={editIsSupervisor} onCheckedChange={(v) => setEditIsSupervisor(!!v)} />
+                      <span className="text-sm">
+                        Supervisor de suporte
+                        <span className="block text-[11px] text-muted-foreground">Vê as solicitações de toda a loja e pode encaminhar</span>
+                      </span>
+                    </label>
+                  )}
                 </div>
                 {editRole !== "admin" && (
                   <div>
