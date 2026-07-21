@@ -1121,7 +1121,7 @@ function UsersTab() {
       toast.error("Selecione uma loja");
       return;
     }
-    if (editRole === "vendedor") {
+    if (editRoles.includes("vendedor")) {
       const inactive = !editIsActive || editStatus !== "active";
       if (inactive && !editSubstituteId) {
         toast.error("Selecione um vendedor substituto antes de marcar como inativo / em férias / ausente.");
@@ -1139,7 +1139,7 @@ function UsersTab() {
       _roles: editRoles as any,
       _store_id: storeIdToSave,
       _seller_name: editName || null,
-      _seller_code: editRole === "vendedor" ? (editCode.trim() || null) : null,
+      _seller_code: editRoles.includes("vendedor") ? (editCode.trim() || null) : null,
       _is_active: editIsActive,
       _is_available: editIsAvailable,
       _status: editStatus,
@@ -1322,7 +1322,7 @@ function UsersTab() {
                     </Select>
                   </div>
                 )}
-                {editRole === "vendedor" && (
+                {editRoles.includes("vendedor") && (
                   <div>
                     <Label>Código do Vendedor (Ramal)</Label>
                     <Input
@@ -1336,7 +1336,7 @@ function UsersTab() {
                     </p>
                   </div>
                 )}
-                {editRole === "vendedor" && (
+                {editRoles.includes("vendedor") && (
                   <div className="flex gap-6 py-2">
                     <div className="flex items-center space-x-2">
                       <input 
@@ -1361,7 +1361,7 @@ function UsersTab() {
                   </div>
                 )}
 
-                {editRole === "vendedor" && (
+                {editRoles.includes("vendedor") && (
                   <div className="grid grid-cols-2 gap-3 pt-2">
                     <div>
                       <Label>Status do Vendedor</Label>
