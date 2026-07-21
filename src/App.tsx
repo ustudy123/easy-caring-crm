@@ -32,8 +32,11 @@ const queryClient = new QueryClient();
 // Guard para o caso de acessar a URL direto. O ProtectedRoute já garante que o
 // perfil está carregado neste ponto.
 function KanbanRoute() {
-  const { isSuporte } = useRole();
-  return isSuporte ? <Navigate to="/suporte-orcamento" replace /> : <Kanban />;
+  const { isSuporte, isVendedor, isGerente, isAdmin } = useRole();
+  // Só o suporte "puro" é redirecionado. Quem também é vendedor/gerente/admin
+  // tem direito ao Kanban, mesmo acumulando o papel de suporte.
+  const canSeeKanban = isVendedor || isGerente || isAdmin;
+  return isSuporte && !canSeeKanban ? <Navigate to="/suporte-orcamento" replace /> : <Kanban />;
 }
 
 const App = () => (

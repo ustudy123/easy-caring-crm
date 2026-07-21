@@ -25,7 +25,7 @@ const iconMap: Record<string, any> = {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isSuporte } = useRole();
+  const { isSuporte, isVendedor, isGerente, isAdmin } = useRole();
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,8 +58,10 @@ export default function Dashboard() {
 
   const handleModuleClick = (moduleId: string) => {
     if (moduleId === 'crm') {
-      // O suporte não tem Kanban: entra direto na página de orçamentos dele.
-      navigate(isSuporte ? '/suporte-orcamento' : '/kanban');
+      // Suporte "puro" entra na página dele; quem também é vendedor/gerente/admin
+      // vai para o Kanban normalmente.
+      const canSeeKanban = isVendedor || isGerente || isAdmin;
+      navigate(isSuporte && !canSeeKanban ? '/suporte-orcamento' : '/kanban');
     } else if (moduleId === 'quiz') {
       navigate('/quiz');
     }

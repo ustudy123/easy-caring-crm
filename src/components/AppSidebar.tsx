@@ -148,20 +148,22 @@ export function AppSidebar({ className }: { className?: string }) {
     notifications,
   } = useCrm();
   const { user, signOut } = useAuth();
-  const { role } = useRole();
+  const { roles } = useRole();
+
+  // Um usuário pode ter vários papéis. O item aparece se QUALQUER papel dele
+  // estiver na lista permitida — antes usava só o papel principal, então um
+  // vendedor+suporte via só o menu do papel mais alto.
+  const canSee = (allowed?: string[]) =>
+    !allowed || roles.some((r) => allowed.includes(r));
 
   const mainNav = useMemo(
-    () =>
-      allMainNav.filter(
-        (item) => !item.roles || (role && item.roles.includes(role)),
-      ),
-    [role],
+    () => allMainNav.filter((item) => canSee(item.roles)),
+    [roles],
   );
-  const toolsNav = useMemo(() => {
-    return allToolsNav.filter(
-      (item) => !item.roles || (role && item.roles.includes(role)),
-    );
-  }, [role]);
+  const toolsNav = useMemo(
+    () => allToolsNav.filter((item) => canSee(item.roles)),
+    [roles],
+  );
 
   const STORAGE_KEY = "crm-sidebar-dismissed";
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {
