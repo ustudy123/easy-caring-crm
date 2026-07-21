@@ -16,6 +16,7 @@ export interface SellerOption {
   id: string;
   name: string;
   store_id?: string;
+  code?: string | null;
 }
 
 interface SellerGroup {
@@ -33,6 +34,8 @@ interface Props {
   presets?: { value: string; label: string }[];
   placeholder?: string;
   className?: string;
+  /** Mostra o código do vendedor ao lado do nome e permite buscar por ele. */
+  showCode?: boolean;
 }
 
 /**
@@ -41,16 +44,18 @@ interface Props {
  * obrigava a rolar entre dezenas de vendedores no perfil admin.
  */
 export function SellerCombobox({
-  value, onChange, sellers, groups, presets = [], placeholder = "Selecionar vendedor", className,
+  value, onChange, sellers, groups, presets = [], placeholder = "Selecionar vendedor", className, showCode = false,
 }: Props) {
   const [open, setOpen] = useState(false);
 
   // Rótulo do item selecionado, buscando entre presets e vendedores.
   const allSellers = groups ? groups.flatMap((g) => g.items) : (sellers ?? []);
+  const selectedSeller = allSellers.find((s) => s.id === value);
   const selectedLabel =
     presets.find((p) => p.value === value)?.label ??
-    allSellers.find((s) => s.id === value)?.name ??
-    placeholder;
+    (selectedSeller
+      ? (showCode && selectedSeller.code ? `${selectedSeller.name} [${selectedSeller.code}]` : selectedSeller.name)
+      : placeholder);
 
   const pick = (v: string) => { onChange(v); setOpen(false); };
 
@@ -95,9 +100,14 @@ export function SellerCombobox({
                   </CommandGroup>
                 ))
               : (sellers ?? []).map((s) => (
-                  <CommandItem key={s.id} value={s.name} onSelect={() => pick(s.id)} className="text-xs">
+                  <CommandItem key={s.id} value={`${s.name} ${showCode && s.code ? s.code : ""}`} onSelect={() => pick(s.id)} className="text-xs">
                     <Check className={cn("mr-2 h-3.5 w-3.5", value === s.id ? "opacity-100" : "opacity-0")} />
-                    {s.name}
+                    <span className="flex items-center gap-2">
+                      {s.name}
+                      {showCode && s.code && (
+                        <span className="text-[10px] text-muted-foreground bg-muted rounded px-1 py-0.5">{s.code}</span>
+                      )}
+                    </span>
                   </CommandItem>
                 ))}
           </CommandList>

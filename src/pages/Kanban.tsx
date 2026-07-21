@@ -1208,21 +1208,15 @@ export default function Kanban() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Vendedor de Destino</Label>
-              <Select value={transferSellerId} onValueChange={setTransferSellerId}>
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Selecione um vendedor..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {sellers.filter(s => s.id !== transferringLead?.assignedTo).map(s => (
-                    <SelectItem key={s.id} value={s.id}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{s.name}</span>
-                        <span className="text-[10px] text-muted-foreground">ID: {s.id.slice(0, 8)}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SellerCombobox
+                value={transferSellerId || "none"}
+                onChange={(v) => setTransferSellerId(v === "none" ? "" : v)}
+                placeholder="Selecione um vendedor..."
+                showCode
+                sellers={sellers
+                  .filter((s) => s.id !== transferringLead?.assignedTo)
+                  .map((s) => ({ id: s.id, name: s.name, store_id: s.store_id, code: s.code }))}
+              />
             </div>
             
             <div className="space-y-2">

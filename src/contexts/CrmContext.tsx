@@ -91,6 +91,7 @@ function mapFollowUpFromDb(row: any): FollowUp {
      avatar: row.avatar || undefined,
      role: row.role,
      store_id: row.store_id || undefined,
+     code: row.code ?? null,
      leadsCount: Number(row.leads_count || 0),
      conversions: Number(row.conversions || 0),
    };

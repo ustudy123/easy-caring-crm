@@ -87,6 +87,7 @@ export interface Seller {
   avatar?: string;
   role: 'vendedor' | 'gerente';
   store_id?: string;
+  code?: string | null;
   leadsCount: number;
   conversions: number;
 }
