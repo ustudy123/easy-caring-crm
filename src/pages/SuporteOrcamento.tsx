@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download, Pencil } from "lucide-react";
+import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download, Pencil, Forward } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
@@ -412,6 +412,33 @@ export default function SuporteOrcamento() {
     // Remove ?cliente da URL para o modal não reabrir num F5.
     if (searchParams.get("cliente")) setSearchParams({}, { replace: true });
     setShowForm(true);
+  };
+
+  // Encaminhamento: o supervisor repassa a solicitação para um trainee da loja.
+  // Muda o responsável (assigned_to) e registra no histórico.
+  const forwardRequest = async (requestId: string, toSellerId: string) => {
+    const current = requests.find((r) => r.id === requestId);
+    try {
+      const { error } = await (supabase as any)
+        .from("pricing_support_requests")
+        .update({ assigned_to: toSellerId })
+        .eq("id", requestId);
+      if (error) throw error;
+
+      await (supabase as any).from("support_request_assignments").insert({
+        request_id: requestId,
+        from_seller_id: current?.assigned_to || null,
+        to_seller_id: toSellerId,
+        assigned_by: sellerId,
+        note: "Encaminhado pelo supervisor",
+      });
+
+      setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, assigned_to: toSellerId } : r)));
+      const toName = storeSupports.find((s) => s.id === toSellerId)?.name || "suporte";
+      toast.success(`Encaminhado para ${toName}.`);
+    } catch (error: any) {
+      toast.error("Erro ao encaminhar: " + error.message);
+    }
   };
 
   const updateRequestStatus = async (id: string, status: SupportRequest["status"]) => {
@@ -872,7 +899,40 @@ export default function SuporteOrcamento() {
                       {selectedRequest.status === "pendente" ? "Pendente" : selectedRequest.status === "em_analise" ? "Em análise" : "Concluído"}
                     </Badge>
                   </div>
+                  {/* Responsável atual */}
+                  {selectedRequest.assigned_to && (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Responsável</span>
+                      <span className="font-medium text-right">
+                        {storeSupports.find((s) => s.id === selectedRequest.assigned_to)?.name || "—"}
+                      </span>
+                    </div>
+                  )}
                 </div>
+
+                {/* Encaminhar: só o supervisor de suporte pode repassar a um trainee */}
+                {mySupervisorInfo.isSupervisor && (
+                  <div className="rounded-xl border border-brand-500/20 bg-brand-500/[0.03] p-3 space-y-1.5">
+                    <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                      <Forward className="h-3.5 w-3.5" /> Encaminhar para
+                    </span>
+                    <Select
+                      value={selectedRequest.assigned_to || "none"}
+                      onValueChange={(v) => { if (v !== "none" && v !== selectedRequest.assigned_to) forwardRequest(selectedRequest.id, v); }}
+                    >
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Escolha um suporte..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" disabled>Escolha um suporte...</SelectItem>
+                        {storeSupports.filter((s) => s.id !== sellerId).map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}{s.is_support_supervisor ? " · Supervisor" : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground">Repassa a solicitação para outro suporte da loja.</p>
+                  </div>
+                )}
 
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground">Detalhes</span>
