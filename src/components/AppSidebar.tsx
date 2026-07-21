@@ -135,6 +135,19 @@ const allToolsNav: NavItem[] = [
   },
 ];
 
+// Remove itens que apontam para a mesma URL, mantendo o primeiro. Necessário
+// para o usuário multi-papel: "Suporte Orçamento" e "Orçamentos/Negociações"
+// são a mesma página com rótulos diferentes por perfil; quem tem os dois papéis
+// veria os dois itens (ambos acesos). Fica só um.
+function dedupeByUrl(items: NavItem[]): NavItem[] {
+  const seen = new Set<string>();
+  return items.filter((it) => {
+    if (seen.has(it.url)) return false;
+    seen.add(it.url);
+    return true;
+  });
+}
+
 export function AppSidebar({ className }: { className?: string }) {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -157,11 +170,11 @@ export function AppSidebar({ className }: { className?: string }) {
     !allowed || roles.some((r) => allowed.includes(r));
 
   const mainNav = useMemo(
-    () => allMainNav.filter((item) => canSee(item.roles)),
+    () => dedupeByUrl(allMainNav.filter((item) => canSee(item.roles))),
     [roles],
   );
   const toolsNav = useMemo(
-    () => allToolsNav.filter((item) => canSee(item.roles)),
+    () => dedupeByUrl(allToolsNav.filter((item) => canSee(item.roles))),
     [roles],
   );
 
