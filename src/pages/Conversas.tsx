@@ -21,6 +21,7 @@ import { EmojiPicker } from "@/components/EmojiPicker";
  import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SellerCombobox } from "@/components/SellerCombobox";
  import { Textarea } from "@/components/ui/textarea";
  import { Label } from "@/components/ui/label";
  import { InstanceBadge } from "@/components/InstanceBadge";
@@ -195,6 +196,9 @@ const mockContactNames: Record<string, string> = {
     const { instances: allInstances, byId: instancesById } = useInstances();
     const [instanceFilter, setInstanceFilter] = useState<string>("all");
     const [stageFilter, setStageFilter] = useState<string>("all");
+    // Filtros extras da aba "Todas": por vendedor e por loja.
+    const [sellerFilter, setSellerFilter] = useState<string>("all");
+    const [storeFilter, setStoreFilter] = useState<string>("all");
     const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
     const [clients, setClients] = useState<any[]>([]);
     const [stores, setStores] = useState<any[]>([]);
@@ -661,10 +665,24 @@ const mockContactNames: Record<string, string> = {
        { key: "sem_lead", label: "Sem lead" },
      ];
      const activeFilterLabel = filterOptions.find((f) => f.key === stageFilter)?.label || "Filtrar";
+     // Quando uma loja está filtrada, a lista de vendedores mostra só os dela.
+     const storeFilterActive = storeFilter !== "all";
 
      const filteredConversations = useMemo(() => {
        let filtered = conversations.filter((c) => {
          const isMine = c.assigned_seller_id === sellerId;
+
+         // Filtros da aba "Todas": por vendedor e por loja.
+         if (activeTab === 'todas') {
+           if (sellerFilter !== "all") {
+             if (sellerFilter === "unassigned") {
+               if (c.assigned_seller_id) return false;
+             } else if (c.assigned_seller_id !== sellerFilter) {
+               return false;
+             }
+           }
+           if (storeFilter !== "all" && c.store_id !== storeFilter) return false;
+         }
 
          // Multi-instance filter
          if (instanceFilter !== "all" && c.received_on_instance_id !== instanceFilter) {
@@ -748,7 +766,7 @@ const mockContactNames: Record<string, string> = {
 
       // Ordenação: mais recente primeiro em todas as abas.
       return filtered.sort((a, b) => (b.lastTimestamp || "0").localeCompare(a.lastTimestamp || "0"));
-     }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente, instanceFilter, stageFilter, phoneStage, equipeInternaPhones, virtualPhones]);
+     }, [conversations, contactNames, search, activeTab, sellerId, storeId, isAdmin, isGerente, instanceFilter, stageFilter, sellerFilter, storeFilter, phoneStage, equipeInternaPhones, virtualPhones]);
 
   // Monitor conversations for stale messages to trigger alert popup
   useEffect(() => {
@@ -1443,6 +1461,40 @@ const mockContactNames: Record<string, string> = {
                 </button>
               )}
             </div>
+
+            {/* Filtros por vendedor e loja: só na aba "Todas" */}
+            {activeTab === 'todas' && (isAdmin || isGerente) && (
+              <div className="px-2 pb-2 flex flex-col gap-2">
+                <SellerCombobox
+                  value={sellerFilter}
+                  onChange={setSellerFilter}
+                  presets={[
+                    { value: "all", label: "Todos os vendedores" },
+                    { value: "unassigned", label: "Sem vendedor" },
+                  ]}
+                  sellers={sellers.filter((s: any) => !storeFilterActive || s.store_id === storeFilter)}
+                />
+                {stores.length > 0 && (
+                  <Select value={storeFilter} onValueChange={setStoreFilter}>
+                    <SelectTrigger className="h-8 text-xs rounded-lg"><SelectValue placeholder="Todas as lojas" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as lojas</SelectItem>
+                      {stores.map((st: any) => (
+                        <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {(sellerFilter !== "all" || storeFilter !== "all") && (
+                  <button
+                    onClick={() => { setSellerFilter("all"); setStoreFilter("all"); }}
+                    className="text-xs text-muted-foreground hover:text-foreground underline self-start"
+                  >
+                    limpar filtros
+                  </button>
+                )}
+              </div>
+            )}
 
             
           {/* Conversations list */}
