@@ -49,6 +49,12 @@ const stageColorMap: Record<KanbanStage, string> = {
   perdido: "border-l-red-500",
 };
 
+const PRICING_STATUS_UI: Record<string, { label: string; cls: string }> = {
+  pendente:   { label: "Orçamento pendente",   cls: "bg-amber-500/15 text-amber-700" },
+  em_analise: { label: "Orçamento em análise", cls: "bg-brand-500/15 text-brand-600" },
+  concluido:  { label: "Orçamento concluído",  cls: "bg-emerald-500/15 text-emerald-700" },
+};
+
 const stageBgMap: Record<KanbanStage, string> = {
   abordagem: "bg-kanban-approach/8 text-kanban-approach",
   sondagem: "bg-kanban-probing/8 text-kanban-probing",
@@ -107,6 +113,30 @@ export default function Kanban() {
    const [classifyLead, setClassifyLead] = useState<Lead | null>(null);
    const [classifyCategory, setClassifyCategory] = useState("");
    const [savingClassify, setSavingClassify] = useState(false);
+
+   // Status do orçamento/negociação por lead ("pendente" | "em_analise" |
+   // "concluido"), para exibir no card. Atualiza em tempo real quando o suporte
+   // muda o status na página de Orçamentos.
+   const [pricingStatusByLead, setPricingStatusByLead] = useState<Record<string, string>>({});
+   useEffect(() => {
+     const load = async () => {
+       const { data } = await supabase
+         .from("pricing_support_requests")
+         .select("lead_id, status, created_at")
+         .not("lead_id", "is", null)
+         .order("created_at", { ascending: true });
+       const map: Record<string, string> = {};
+       // created_at ascendente: a última solicitação do lead prevalece.
+       for (const r of (data ?? []) as any[]) if (r.lead_id) map[r.lead_id] = r.status;
+       setPricingStatusByLead(map);
+     };
+     load();
+     const ch = supabase
+       .channel("kanban-pricing-status")
+       .on("postgres_changes", { event: "*", schema: "public", table: "pricing_support_requests" }, load)
+       .subscribe();
+     return () => { supabase.removeChannel(ch); };
+   }, []);
    useEffect(() => {
      const fetchUserSeller = async () => {
        const { data: { user } } = await supabase.auth.getUser();
@@ -445,9 +475,10 @@ export default function Kanban() {
 
   const handleRequestPricing = (lead: Lead) => {
     // Vai para a página de Orçamentos/Negociações com o cliente já preenchido.
-    // O vendedor escolhe lá se é orçamento ou negociação especial, usando o
-    // formulário completo (busca no ERP, descrição, anexo de PDF).
-    navigate(`/suporte-orcamento?cliente=${encodeURIComponent(lead.clientName || "")}`);
+    // Passa também o lead_id para vincular a solicitação ao card (mover o card e
+    // exibir o status do orçamento nele).
+    const params = new URLSearchParams({ cliente: lead.clientName || "", lead: lead.id });
+    navigate(`/suporte-orcamento?${params.toString()}`);
   };
 
   const moveToNextStage = (lead: Lead) => {
@@ -982,6 +1013,13 @@ export default function Kanban() {
                                              </div>
                                            )}
                                          </div>
+                                        {/* Status do orçamento/negociação (se houver) */}
+                                        {pricingStatusByLead[lead.id] && PRICING_STATUS_UI[pricingStatusByLead[lead.id]] && (
+                                          <div className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${PRICING_STATUS_UI[pricingStatusByLead[lead.id]].cls}`}>
+                                            <FileText className="h-3 w-3" />
+                                            {PRICING_STATUS_UI[pricingStatusByLead[lead.id]].label}
+                                          </div>
+                                        )}
                                         {/* Value + Source */}
                                         <div className="mt-2.5 flex items-center justify-between">
                                           <div className="flex items-center gap-1 text-xs font-bold text-foreground">

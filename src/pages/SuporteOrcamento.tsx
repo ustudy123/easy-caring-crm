@@ -303,10 +303,16 @@ export default function SuporteOrcamento() {
           // Só grava seller_id se o usuário atual for um vendedor real (evita
           // violar a FK quando o usuário é admin/suporte sem registro em sellers).
           seller_id: sellers.some((s) => s.id === sellerId) ? sellerId : null,
+          lead_id: pendingLeadId || null,
           status: "pendente"
         });
 
       if (insertError) throw insertError;
+
+      // Veio do Kanban: move o card para "Orçamento e Preço".
+      if (pendingLeadId) {
+        await supabase.from("leads").update({ stage: "precificacao_especial" }).eq("id", pendingLeadId);
+      }
 
       toast.success("Solicitação enviada com sucesso!");
       setShowForm(false);
@@ -329,6 +335,8 @@ export default function SuporteOrcamento() {
 
   // Cliente vindo do Kanban (?cliente=...): pré-preenche a solicitação.
   const [pendingClient, setPendingClient] = useState(() => searchParams.get("cliente") || "");
+  // Lead de origem (?lead=...): vincula a solicitação ao card do Kanban.
+  const [pendingLeadId] = useState(() => searchParams.get("lead") || "");
   // Ao chegar do Kanban, abre um modal central para escolher o tipo (orçamento
   // ou negociação), em vez de deixar o nome discreto num canto da tela.
   const [showTypeChoice, setShowTypeChoice] = useState(() => !!searchParams.get("cliente"));
