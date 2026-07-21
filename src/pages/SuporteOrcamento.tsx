@@ -39,7 +39,7 @@ interface SupportRequest {
 
 export default function SuporteOrcamento() {
   const { sellers } = useCrm();
-  const { role, isAdmin, isGerente, isSuporte, sellerId } = useRole();
+  const { role, isAdmin, isGerente, isSuporte, sellerId, storeId } = useRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const [requests, setRequests] = useState<SupportRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +56,9 @@ export default function SuporteOrcamento() {
   const [erpResults, setErpResults] = useState<any[]>([]);
   const [searchingErp, setSearchingErp] = useState(false);
   const [selectedErpClient, setSelectedErpClient] = useState<any | null>(null);
+  // Destino da solicitação: suportes (supervisor + trainees) da loja do vendedor.
+  const [storeSupports, setStoreSupports] = useState<{ id: string; name: string; is_support_supervisor: boolean }[]>([]);
+  const [selectedSupportId, setSelectedSupportId] = useState<string>("");
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
   const [viewingPdf, setViewingPdf] = useState<string | null>(null);
   const [pdfRawUrl, setPdfRawUrl] = useState<string | null>(null);
@@ -236,6 +239,30 @@ export default function SuporteOrcamento() {
     fetchRequests();
   }, []);
 
+  // Carrega os suportes da loja do vendedor para o campo "Direcionar para".
+  useEffect(() => {
+    const loadSupports = async () => {
+      if (!storeId) { setStoreSupports([]); return; }
+      const { data: roleRows } = await supabase
+        .from("user_roles").select("user_id").eq("role", "suporte");
+      const supportUserIds = (roleRows ?? []).map((r: any) => r.user_id);
+      if (supportUserIds.length === 0) { setStoreSupports([]); return; }
+      const { data: sellerRows } = await supabase
+        .from("sellers")
+        .select("id, name, is_support_supervisor, user_id, store_id")
+        .eq("store_id", storeId)
+        .in("user_id", supportUserIds);
+      const list = (sellerRows ?? []).map((s: any) => ({
+        id: s.id, name: s.name, is_support_supervisor: !!s.is_support_supervisor,
+      }));
+      list.sort((a, b) =>
+        (b.is_support_supervisor ? 1 : 0) - (a.is_support_supervisor ? 1 : 0)
+        || a.name.localeCompare(b.name, "pt-BR"));
+      setStoreSupports(list);
+    };
+    loadSupports();
+  }, [storeId]);
+
   // Realtime: reflete ao vivo as mudanças de status/resposta entre vendas e suporte.
   useEffect(() => {
     const channel = supabase
@@ -291,7 +318,7 @@ export default function SuporteOrcamento() {
         pdfUrl = filePath;
       }
 
-      const { error: insertError } = await supabase
+      const { data: inserted, error: insertError } = await (supabase as any)
         .from("pricing_support_requests")
         .insert({
           request_type: requestType as any,
@@ -300,14 +327,28 @@ export default function SuporteOrcamento() {
           notes: description,
           pdf_url: pdfUrl,
           pdf_name: pdfFile?.name,
-          // Só grava seller_id se o usuário atual for um vendedor real (evita
-          // violar a FK quando o usuário é admin/suporte sem registro em sellers).
           seller_id: sellers.some((s) => s.id === sellerId) ? sellerId : null,
           lead_id: pendingLeadId || null,
+          // Escopo por loja + destino escolhido pelo vendedor.
+          store_id: storeId || null,
+          assigned_to: selectedSupportId || null,
           status: "pendente"
-        });
+        })
+        .select("id")
+        .single();
 
       if (insertError) throw insertError;
+
+      // Registra o direcionamento inicial no histórico (base do SLA por pessoa).
+      if (inserted?.id && selectedSupportId) {
+        await (supabase as any).from("support_request_assignments").insert({
+          request_id: inserted.id,
+          from_seller_id: null,
+          to_seller_id: selectedSupportId,
+          assigned_by: sellers.some((s) => s.id === sellerId) ? sellerId : null,
+          note: "Direcionamento inicial",
+        });
+      }
 
       // Veio do Kanban: move o card para "Orçamento e Preço".
       if (pendingLeadId) {
@@ -629,6 +670,23 @@ export default function SuporteOrcamento() {
                   </div>
                 )}
               </div>
+              {/* Direcionar para: suportes da loja do vendedor (supervisor + trainees) */}
+              {storeSupports.length > 0 && (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Direcionar para</label>
+                  <Select value={selectedSupportId || "none"} onValueChange={(v) => setSelectedSupportId(v === "none" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="Escolha o suporte..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Sem direcionamento —</SelectItem>
+                      {storeSupports.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}{s.is_support_supervisor ? " · Supervisor" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">Descrição / Observações</label>
                 <Textarea
