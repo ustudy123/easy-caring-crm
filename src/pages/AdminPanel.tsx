@@ -229,6 +229,7 @@ interface AdminUserRow {
   display_name: string | null;
   created_at: string;
   role: string | null;
+  roles: string | null;
   seller_id: string | null;
   seller_name: string | null;
   seller_code: string | null;
@@ -1258,7 +1259,7 @@ function UsersTab() {
                 </TableCell>
                 <TableCell>
                   {u.role ? (
-                    <Badge variant="secondary">{ROLE_LABELS[u.role] || u.role}</Badge>
+                    <Badge variant="secondary">{u.roles || ROLE_LABELS[u.role] || u.role}</Badge>
                   ) : (
                     <Badge variant="outline" className="text-muted-foreground">Sem função</Badge>
                   )}
