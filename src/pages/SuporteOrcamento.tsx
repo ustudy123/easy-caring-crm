@@ -243,7 +243,20 @@ export default function SuporteOrcamento() {
     fetchRequests();
   }, []);
 
-  // Carrega os suportes da loja do vendedor para o campo "Direcionar para".
+  // Nome do admin, para exibir no campo travado da negociação especial.
+  const [adminName, setAdminName] = useState<string>("Administrador");
+  useEffect(() => {
+    const loadAdmin = async () => {
+      const { data: roleRows } = await supabase
+        .from("user_roles").select("user_id").eq("role", "admin").limit(1);
+      const adminId = (roleRows ?? [])[0]?.user_id;
+      if (!adminId) return;
+      const { data: prof } = await supabase
+        .from("profiles").select("display_name").eq("user_id", adminId).maybeSingle();
+      if ((prof as any)?.display_name) setAdminName((prof as any).display_name);
+    };
+    loadAdmin();
+  }, []);
   useEffect(() => {
     const loadSupports = async () => {
       if (!storeId) { setStoreSupports([]); return; }
@@ -349,7 +362,7 @@ export default function SuporteOrcamento() {
           lead_id: pendingLeadId || null,
           // Escopo por loja + destino escolhido pelo vendedor.
           store_id: storeId || null,
-          assigned_to: selectedSupportId || null,
+          assigned_to: requestType === "precificacao_especial" ? null : (selectedSupportId || null),
           status: "pendente"
         })
         .select("id")
@@ -358,7 +371,8 @@ export default function SuporteOrcamento() {
       if (insertError) throw insertError;
 
       // Registra o direcionamento inicial no histórico (base do SLA por pessoa).
-      if (inserted?.id && selectedSupportId) {
+      // Só para orçamento com suporte escolhido (negociação especial vai ao admin).
+      if (inserted?.id && requestType !== "precificacao_especial" && selectedSupportId) {
         await (supabase as any).from("support_request_assignments").insert({
           request_id: inserted.id,
           from_seller_id: null,
@@ -727,8 +741,17 @@ export default function SuporteOrcamento() {
                   </div>
                 )}
               </div>
-              {/* Direcionar para: suportes da loja do vendedor (supervisor + trainees) */}
-              {storeSupports.length > 0 && (
+              {/* Direcionar para: negociação especial vai travada ao admin;
+                  orçamento escolhe um suporte da loja do vendedor. */}
+              {requestType === "precificacao_especial" ? (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Direcionar para</label>
+                  <Input value={`${adminName} · Administrador`} disabled readOnly />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Negociações especiais vão direto para a alçada do administrador.
+                  </p>
+                </div>
+              ) : storeSupports.length > 0 ? (
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1 block">Direcionar para</label>
                   <Select value={selectedSupportId || "none"} onValueChange={(v) => setSelectedSupportId(v === "none" ? "" : v)}>
@@ -743,7 +766,7 @@ export default function SuporteOrcamento() {
                     </SelectContent>
                   </Select>
                 </div>
-              )}
+              ) : null}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">Descrição / Observações</label>
                 <Textarea
