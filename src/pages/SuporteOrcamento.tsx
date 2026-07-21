@@ -30,6 +30,8 @@ interface SupportRequest {
   erp_client_id?: string;
   created_by?: string;
   seller_id?: string;
+  store_id?: string | null;
+  assigned_to?: string | null;
   response_notes?: string;
   response_pdf_url?: string;
   response_pdf_name?: string;
@@ -59,6 +61,8 @@ export default function SuporteOrcamento() {
   // Destino da solicitação: suportes (supervisor + trainees) da loja do vendedor.
   const [storeSupports, setStoreSupports] = useState<{ id: string; name: string; is_support_supervisor: boolean }[]>([]);
   const [selectedSupportId, setSelectedSupportId] = useState<string>("");
+  // Dados de supervisão do usuário logado (se for suporte).
+  const [mySupervisorInfo, setMySupervisorInfo] = useState<{ isSupervisor: boolean; storeId: string | null }>({ isSupervisor: false, storeId: null });
   const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
   const [viewingPdf, setViewingPdf] = useState<string | null>(null);
   const [pdfRawUrl, setPdfRawUrl] = useState<string | null>(null);
@@ -263,6 +267,20 @@ export default function SuporteOrcamento() {
     loadSupports();
   }, [storeId]);
 
+  // Descobre se o usuário logado é supervisor de suporte e qual a loja dele.
+  useEffect(() => {
+    const loadMine = async () => {
+      if (!isSuporte || !sellerId) { setMySupervisorInfo({ isSupervisor: false, storeId: null }); return; }
+      const { data } = await supabase
+        .from("sellers").select("is_support_supervisor, store_id").eq("id", sellerId).maybeSingle();
+      setMySupervisorInfo({
+        isSupervisor: !!(data as any)?.is_support_supervisor,
+        storeId: (data as any)?.store_id ?? null,
+      });
+    };
+    loadMine();
+  }, [isSuporte, sellerId]);
+
   // Realtime: reflete ao vivo as mudanças de status/resposta entre vendas e suporte.
   useEffect(() => {
     const channel = supabase
@@ -438,11 +456,23 @@ export default function SuporteOrcamento() {
     
     const matchesType = filterType === "all" || r.request_type === filterType;
 
-    // Filter by visibility rules
+    // Regras de visibilidade
+    // - Admin: tudo.
+    // - Supervisor de suporte: todas as solicitações da SUA LOJA.
+    // - Trainee (suporte não-supervisor): só as direcionadas a ele.
+    // - Gerente: as de precificação especial (como antes).
+    // - Vendedor: as que ele criou/é dono.
     let isVisible = false;
     if (isAdmin) isVisible = true;
-    else if (isSuporte && r.request_type === "orcamento") isVisible = true;
-    else if (isGerente && r.request_type === "precificacao_especial") isVisible = true;
+    else if (isSuporte && mySupervisorInfo.isSupervisor) {
+      // Supervisor vê a loja dele; também o que criou/lhe foi atribuído (cobre
+      // solicitações antigas sem store_id).
+      isVisible = (!!mySupervisorInfo.storeId && r.store_id === mySupervisorInfo.storeId)
+        || r.assigned_to === sellerId || r.created_by === sellerId;
+    } else if (isSuporte) {
+      // trainee: só o que está atribuído a ele (ou que ele criou).
+      isVisible = r.assigned_to === sellerId || r.created_by === sellerId;
+    } else if (isGerente && r.request_type === "precificacao_especial") isVisible = true;
     else if (r.created_by === sellerId || r.seller_id === sellerId) isVisible = true;
 
     return matchesSearch && matchesType && isVisible;
