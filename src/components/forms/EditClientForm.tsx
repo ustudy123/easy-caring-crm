@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { Client } from "@/types/crm";
+import { useRole } from "@/contexts/RoleContext";
+import { useSellers } from "@/hooks/useSellers";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { isValidPhone, isValidEmail, normalizePhoneBR } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,6 +23,9 @@ interface EditClientFormProps {
 
 export function EditClientForm({ client, open, onOpenChange, onSubmit, onDelete }: EditClientFormProps) {
   const { toast } = useToast();
+  const { isVendedor } = useRole();
+  const sellers = useSellers();
+  const [assignedSellerId, setAssignedSellerId] = useState<string>("none");
   const [form, setForm] = useState({
     name: "", phone: "", email: "", address: "", city: "", tags: "", notes: "",
   });
@@ -36,9 +42,14 @@ export function EditClientForm({ client, open, onOpenChange, onSubmit, onDelete 
         tags: client.tags.join(", "),
         notes: client.notes || "",
       });
+      setAssignedSellerId(client.assignedSellerId || "none");
       setErrors({});
     }
   }, [client]);
+
+  // Vendedor não pode trocar o vendedor de um cliente que já tem um vinculado.
+  // Só admin/gerente alteram. Cliente sem vendedor pode ser assumido por qualquer um.
+  const sellerLocked = isVendedor && !!client?.assignedSellerId;
 
   const update = (field: string, value: string) => {
     setForm((p) => ({ ...p, [field]: value }));
@@ -67,6 +78,10 @@ export function EditClientForm({ client, open, onOpenChange, onSubmit, onDelete 
       city: form.city.trim() || undefined,
       tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
       notes: form.notes.trim() || undefined,
+      // Se travado (vendedor com cliente já vinculado), mantém o vendedor atual.
+      assignedSellerId: sellerLocked
+        ? client.assignedSellerId
+        : (assignedSellerId === "none" ? null : assignedSellerId),
     };
     onSubmit(updated);
     toast({ title: "Cliente atualizado!", description: `${updated.name} foi atualizado.` });
@@ -114,6 +129,28 @@ export function EditClientForm({ client, open, onOpenChange, onSubmit, onDelete 
             <div className="space-y-1.5">
               <Label>Tags (vírgula)</Label>
               <Input value={form.tags} onChange={(e) => update("tags", e.target.value)} maxLength={200} />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Vendedor</Label>
+              {sellerLocked ? (
+                <>
+                  <Input
+                    value={sellers.find((s) => s.id === client?.assignedSellerId)?.name || "Vendedor vinculado"}
+                    disabled readOnly
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Só um administrador ou gerente pode alterar o vendedor deste cliente.
+                  </p>
+                </>
+              ) : (
+                <Select value={assignedSellerId} onValueChange={setAssignedSellerId}>
+                  <SelectTrigger><SelectValue placeholder="Sem vendedor" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Sem vendedor —</SelectItem>
+                    {sellers.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Observações</Label>

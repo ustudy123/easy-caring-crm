@@ -41,6 +41,7 @@ function mapClientFromDb(row: any): Client {
     purchaseCount: Number(row.purchase_count) || 0,
     clientType: row.client_type || undefined,
     lastPurchaseAt: row.last_purchase_at || undefined,
+    assignedSellerId: row.assigned_seller_id || null,
   };
 }
 
@@ -103,6 +104,7 @@ export default function Clientes() {
       email: client.email || null, address: client.address || null,
       city: client.city || null, tags: client.tags,
       total_purchases: client.totalPurchases, notes: client.notes || null,
+      assigned_seller_id: client.assignedSellerId || null,
     });
   };
 
@@ -113,6 +115,7 @@ export default function Clientes() {
       name: client.name, phone: client.phone, email: client.email || null,
       address: client.address || null, city: client.city || null,
       tags: client.tags, notes: client.notes || null,
+      assigned_seller_id: client.assignedSellerId || null,
     }).eq("id", client.id);
   };
 

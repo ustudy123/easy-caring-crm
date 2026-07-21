@@ -6,6 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { Client } from "@/types/crm";
+import { useRole } from "@/contexts/RoleContext";
+import { useSellers } from "@/hooks/useSellers";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { isValidPhone, isValidEmail, normalizePhoneBR } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +21,10 @@ interface NewClientFormProps {
 }
 
 export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormProps) {
+  const { isVendedor, sellerId, sellerName } = useRole();
+  const sellers = useSellers();
+  // Vendedor cadastra o cliente já vinculado a si; admin/gerente escolhem.
+  const [assignedSellerId, setAssignedSellerId] = useState<string>("none");
   const { toast } = useToast();
   const [form, setForm] = useState({
     name: "", phone: "", email: "", address: "", city: "", tags: "", notes: "",
@@ -113,6 +120,10 @@ export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormPro
       totalPurchases: 0,
       createdAt: new Date().toISOString(),
       notes: form.notes.trim() || undefined,
+      // Vendedor sempre vincula a si; admin/gerente usam o escolhido.
+      assignedSellerId: isVendedor && sellerId
+        ? sellerId
+        : (assignedSellerId === "none" ? null : assignedSellerId),
     };
     onSubmit(newClient);
     toast({ title: "Cliente cadastrado!", description: `${newClient.name} adicionado com sucesso.` });
@@ -234,6 +245,20 @@ export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormPro
                 aria-describedby="client-tags-hint"
               />
               <p id="client-tags-hint" className="text-[11px] text-muted-foreground">Separe por vírgulas</p>
+            </div>
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label className="text-xs font-semibold">Vendedor</Label>
+              {isVendedor ? (
+                <Input value={sellerName || "Você"} disabled readOnly />
+              ) : (
+                <Select value={assignedSellerId} onValueChange={setAssignedSellerId}>
+                  <SelectTrigger><SelectValue placeholder="Sem vendedor" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Sem vendedor —</SelectItem>
+                    {sellers.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="sm:col-span-2 space-y-1.5">
               <Label htmlFor="client-notes" className="text-xs font-semibold">Observações</Label>

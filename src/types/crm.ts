@@ -43,6 +43,7 @@ export interface Client {
   purchaseCount?: number;
   clientType?: string;
   lastPurchaseAt?: string;
+  assignedSellerId?: string | null;
 }
 
 export interface Interaction {
