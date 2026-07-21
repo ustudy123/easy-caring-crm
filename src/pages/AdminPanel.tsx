@@ -878,6 +878,13 @@ function StoresTab() {
   const [phone, setPhone] = useState("");
   const [erpCode, setErpCode] = useState("");
   const [isExternal, setIsExternal] = useState(false);
+  // Horário de funcionamento (base do SLA).
+  const [openTime, setOpenTime] = useState("");
+  const [closeTime, setCloseTime] = useState("");
+  const [opensSaturday, setOpensSaturday] = useState(false);
+  const [satOpenTime, setSatOpenTime] = useState("");
+  const [satCloseTime, setSatCloseTime] = useState("");
+  const [opensSunday, setOpensSunday] = useState(false);
   
   const [saving, setSaving] = useState(false);
 
@@ -892,6 +899,8 @@ function StoresTab() {
   const resetForm = () => {
     setEditingId(null);
     setName(""); setAddress(""); setCity(""); setPhone(""); setErpCode(""); setIsExternal(false);
+    setOpenTime(""); setCloseTime(""); setOpensSaturday(false);
+    setSatOpenTime(""); setSatCloseTime(""); setOpensSunday(false);
   };
 
   const openNew = () => {
@@ -907,6 +916,12 @@ function StoresTab() {
     setPhone(s.phone || "");
     setErpCode((s as any).erp_company_code || "");
     setIsExternal(!!(s as any).is_external_team);
+    setOpenTime((s as any).open_time?.slice(0, 5) || "");
+    setCloseTime((s as any).close_time?.slice(0, 5) || "");
+    setOpensSaturday(!!(s as any).opens_saturday);
+    setSatOpenTime((s as any).sat_open_time?.slice(0, 5) || "");
+    setSatCloseTime((s as any).sat_close_time?.slice(0, 5) || "");
+    setOpensSunday(!!(s as any).opens_sunday);
     setOpen(true);
   };
 
@@ -920,6 +935,12 @@ function StoresTab() {
       phone: phone || null,
       erp_company_code: erpCode.trim() || null,
       is_external_team: isExternal,
+      open_time: openTime || null,
+      close_time: closeTime || null,
+      opens_saturday: opensSaturday,
+      sat_open_time: opensSaturday ? (satOpenTime || null) : null,
+      sat_close_time: opensSaturday ? (satCloseTime || null) : null,
+      opens_sunday: opensSunday,
     };
     const { error } = editingId
       ? await supabase.from("stores").update(payload as any).eq("id", editingId)
@@ -957,6 +978,41 @@ function StoresTab() {
                 <div><Label>Cidade</Label><Input value={city} onChange={e => setCity(e.target.value)} /></div>
                 <div><Label>Telefone</Label><Input value={phone} onChange={e => setPhone(e.target.value)} /></div>
                 <div><Label>Código da empresa (Autcom)</Label><Input value={erpCode} onChange={e => setErpCode(e.target.value)} placeholder="Ex: 001" /></div>
+              </div>
+
+              {/* Horário de funcionamento (base do cálculo de tempo de atendimento) */}
+              <div className="rounded-lg border border-border/60 p-3 space-y-3">
+                <span className="text-xs font-semibold text-muted-foreground">Horário de funcionamento</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Abre (seg–sex)</Label>
+                    <Input type="time" value={openTime} onChange={e => setOpenTime(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Fecha (seg–sex)</Label>
+                    <Input type="time" value={closeTime} onChange={e => setCloseTime(e.target.value)} />
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox checked={opensSaturday} onCheckedChange={(v) => setOpensSaturday(!!v)} />
+                  <span className="text-sm">Abre aos sábados</span>
+                </label>
+                {opensSaturday && (
+                  <div className="grid grid-cols-2 gap-3 pl-1">
+                    <div>
+                      <Label className="text-xs">Abre (sáb)</Label>
+                      <Input type="time" value={satOpenTime} onChange={e => setSatOpenTime(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Fecha (sáb)</Label>
+                      <Input type="time" value={satCloseTime} onChange={e => setSatCloseTime(e.target.value)} />
+                    </div>
+                  </div>
+                )}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox checked={opensSunday} onCheckedChange={(v) => setOpensSunday(!!v)} />
+                  <span className="text-sm">Abre aos domingos <span className="text-[11px] text-muted-foreground">(usa o horário de seg–sex)</span></span>
+                </label>
               </div>
               <label className="flex items-start gap-2 rounded-lg border border-border/60 p-2.5 cursor-pointer">
                 <Checkbox checked={isExternal} onCheckedChange={(v) => setIsExternal(!!v)} className="mt-0.5" />
