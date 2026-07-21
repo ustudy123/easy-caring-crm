@@ -2,7 +2,8 @@ import { createContext, useContext, ReactNode } from "react";
 import { useUserRole, AppRole } from "@/hooks/useUserRole";
 
 interface RoleContextType {
-  role: AppRole | null;
+  role: AppRole | null;      // papel principal (mais alto)
+  roles: AppRole[];          // todos os papéis do usuário
   sellerId: string | null;
   sellerName: string | null;
   storeId: string | null;
@@ -16,20 +17,24 @@ interface RoleContextType {
 const RoleContext = createContext<RoleContextType | null>(null);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
-  const { role, sellerId, sellerName, storeId, loading } = useUserRole();
+  const { role, roles, sellerId, sellerName, storeId, loading } = useUserRole();
 
   return (
     <RoleContext.Provider
       value={{
         role,
+        roles,
         sellerId,
         sellerName,
         storeId,
         loading,
-        isAdmin: role === "admin",
-        isGerente: role === "gerente",
-        isVendedor: role === "vendedor",
-        isSuporte: role === "suporte",
+        // Um usuário pode acumular papéis. Cada booleano indica se o usuário
+        // TEM aquele papel (não se é exclusivamente ele), dando acesso a tudo
+        // de cada função que possui.
+        isAdmin: roles.includes("admin"),
+        isGerente: roles.includes("gerente"),
+        isVendedor: roles.includes("vendedor"),
+        isSuporte: roles.includes("suporte"),
       }}
     >
       {children}

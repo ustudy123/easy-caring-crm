@@ -1022,6 +1022,9 @@ function UsersTab() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<AdminUserRow | null>(null);
   const [editRole, setEditRole] = useState<string>("vendedor");
+  // Múltiplos papéis por usuário. editRole vira o "principal" (mais alto) apenas
+  // para as regras de UI que ainda dependem de um único (loja, código...).
+  const [editRoles, setEditRoles] = useState<string[]>(["vendedor"]);
   const [editStoreId, setEditStoreId] = useState<string>("");
   const [editName, setEditName] = useState<string>("");
   const [editCode, setEditCode] = useState<string>("");
@@ -1048,9 +1051,35 @@ function UsersTab() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // O papel "principal" (mais alto) é derivado do conjunto selecionado. As
+  // regras de loja/código continuam olhando um único papel, e o mais alto é o
+  // que faz sentido (admin dispensa loja; gerente define seller.role, etc.).
+  useEffect(() => {
+    const primary = editRoles.includes("admin") ? "admin"
+      : editRoles.includes("gerente") ? "gerente"
+      : editRoles.includes("suporte") ? "suporte"
+      : editRoles.includes("vendedor") ? "vendedor"
+      : "vendedor";
+    setEditRole(primary);
+  }, [editRoles]);
+
+  const toggleEditRole = (r: string, on: boolean) => {
+    setEditRoles((prev) => {
+      if (on) return prev.includes(r) ? prev : [...prev, r];
+      const next = prev.filter((x) => x !== r);
+      return next.length ? next : prev; // não deixa ficar sem nenhum
+    });
+  };
+
   const openEdit = async (u: AdminUserRow) => {
     setEditing(u);
-    setEditRole(u.role || "vendedor");
+    // Carrega TODOS os papéis atuais do usuário (pode ter mais de um).
+    const { data: roleRows } = await supabase
+      .from("user_roles").select("role").eq("user_id", u.user_id);
+    const current = (roleRows ?? []).map((r: any) => r.role as string);
+    const roles = current.length ? current : (u.role ? [u.role] : ["vendedor"]);
+    setEditRoles(roles);
+    setEditRole(u.role || roles[0] || "vendedor");
     const uStore = stores.find((s) => s.id === u.store_id);
     setEditStoreId(uStore?.is_external_team ? "external" : (u.store_id || ""));
     setEditName(u.seller_name || u.display_name || "");
@@ -1105,9 +1134,9 @@ function UsersTab() {
       storeIdToSave = await ensureExternalStore();
       if (!storeIdToSave) { setSaving(false); return; }
     }
-    const { error } = await supabase.rpc("admin_assign_user_role", {
+    const { error } = await (supabase as any).rpc("admin_assign_user_roles", {
       _user_id: editing.user_id,
-      _role: editRole as any,
+      _roles: editRoles as any,
       _store_id: storeIdToSave,
       _seller_name: editName || null,
       _seller_code: editRole === "vendedor" ? (editCode.trim() || null) : null,
@@ -1251,17 +1280,29 @@ function UsersTab() {
                   <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nome do vendedor/gerente" />
                 </div>
                 <div>
-                  <Label>Função *</Label>
-                  <Select value={editRole} onValueChange={setEditRole}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="vendedor">Vendedor</SelectItem>
-                      <SelectItem value="gerente">Gerente</SelectItem>
-                      <SelectItem value="suporte">Suporte</SelectItem>
-                      {/* Admin não pode ser atribuído livremente; só aparece se o usuário já for admin */}
-                      {editRole === "admin" && <SelectItem value="admin">Admin</SelectItem>}
-                    </SelectContent>
-                  </Select>
+                  <Label>Funções * <span className="text-[11px] font-normal text-muted-foreground">(pode marcar mais de uma)</span></Label>
+                  <div className="space-y-2 mt-1.5">
+                    {[
+                      { v: "vendedor", label: "Vendedor" },
+                      { v: "gerente", label: "Gerente" },
+                      { v: "suporte", label: "Suporte" },
+                    ].map((r) => (
+                      <label key={r.v} className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={editRoles.includes(r.v)}
+                          onCheckedChange={(v) => toggleEditRole(r.v, !!v)}
+                        />
+                        <span className="text-sm">{r.label}</span>
+                      </label>
+                    ))}
+                    {/* Admin não é atribuído livremente; só aparece se já for admin */}
+                    {editRoles.includes("admin") && (
+                      <label className="flex items-center gap-2">
+                        <Checkbox checked disabled />
+                        <span className="text-sm">Admin</span>
+                      </label>
+                    )}
+                  </div>
                 </div>
                 {editRole !== "admin" && (
                   <div>

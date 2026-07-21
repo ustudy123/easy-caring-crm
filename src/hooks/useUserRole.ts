@@ -5,7 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 export type AppRole = "admin" | "gerente" | "vendedor" | "suporte";
 
 interface UserRoleInfo {
-  role: AppRole | null;
+  role: AppRole | null;      // papel principal (mais alto) — compatibilidade
+  roles: AppRole[];          // TODOS os papéis do usuário
   sellerId: string | null;
   sellerName: string | null;
   storeId: string | null;
@@ -15,6 +16,7 @@ interface UserRoleInfo {
 export function useUserRole(): UserRoleInfo {
   const { user } = useAuth();
   const [role, setRole] = useState<AppRole | null>(null);
+  const [roles, setRoles] = useState<AppRole[]>([]);
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [sellerName, setSellerName] = useState<string | null>(null);
   const [storeId, setStoreId] = useState<string | null>(null);
@@ -23,6 +25,7 @@ export function useUserRole(): UserRoleInfo {
   useEffect(() => {
     if (!user) {
       setRole(null);
+      setRoles([]);
       setSellerId(null);
       setSellerName(null);
       setStoreId(null);
@@ -38,13 +41,16 @@ export function useUserRole(): UserRoleInfo {
       ]);
 
       if (rolesRes.data && rolesRes.data.length > 0) {
-        // Priority: admin > gerente > suporte > vendedor
-        const roles = rolesRes.data.map((r: any) => r.role as AppRole);
-        if (roles.includes("admin")) setRole("admin");
-        else if (roles.includes("gerente")) setRole("gerente");
-        else if (roles.includes("suporte")) setRole("suporte");
+        // Usuário pode ter VÁRIOS papéis. Guardamos todos; o `role` principal
+        // (mais alto) fica só para telas legadas que ainda esperam um único.
+        const all = rolesRes.data.map((r: any) => r.role as AppRole);
+        setRoles(all);
+        if (all.includes("admin")) setRole("admin");
+        else if (all.includes("gerente")) setRole("gerente");
+        else if (all.includes("suporte")) setRole("suporte");
         else setRole("vendedor");
       } else {
+        setRoles([]);
         setRole(null);
       }
 
@@ -64,5 +70,5 @@ export function useUserRole(): UserRoleInfo {
     fetch();
   }, [user]);
 
-  return { role, sellerId, sellerName, storeId, loading };
+  return { role, roles, sellerId, sellerName, storeId, loading };
 }
