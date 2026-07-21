@@ -13,8 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3, Phone, Info } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3, Phone, Info, KeyRound } from "lucide-react";
  function CitelIntegrationTab() {
   const [syncing, setSyncing] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -1025,6 +1025,10 @@ function UsersTab() {
   // Múltiplos papéis por usuário. editRole vira o "principal" (mais alto) apenas
   // para as regras de UI que ainda dependem de um único (loja, código...).
   const [editRoles, setEditRoles] = useState<string[]>(["vendedor"]);
+  // Redefinição de senha pelo admin.
+  const [resetPwUser, setResetPwUser] = useState<AdminUserRow | null>(null);
+  const [resetPw, setResetPw] = useState("");
+  const [resetPwSaving, setResetPwSaving] = useState(false);
   const [editStoreId, setEditStoreId] = useState<string>("");
   const [editName, setEditName] = useState<string>("");
   const [editCode, setEditCode] = useState<string>("");
@@ -1165,6 +1169,25 @@ function UsersTab() {
     fetchData();
   };
 
+  const handleResetPassword = async () => {
+    if (!resetPwUser || resetPw.length < 6) {
+      toast.error("A senha precisa ter ao menos 6 caracteres.");
+      return;
+    }
+    setResetPwSaving(true);
+    const { data, error } = await supabase.functions.invoke("admin-reset-password", {
+      body: { user_id: resetPwUser.user_id, new_password: resetPw },
+    });
+    setResetPwSaving(false);
+    if (error || (data as any)?.error) {
+      toast.error("Erro ao redefinir senha: " + (error?.message || (data as any)?.error));
+      return;
+    }
+    toast.success(`Senha redefinida para ${resetPwUser.display_name || resetPwUser.email}.`);
+    setResetPwUser(null);
+    setResetPw("");
+  };
+
   const handleRevoke = async (userId: string) => {
     const { error } = await supabase.rpc("admin_revoke_user_role", { _user_id: userId });
     if (error) toast.error(error.message);
@@ -1245,6 +1268,9 @@ function UsersTab() {
                   <div className="flex gap-1">
                     <Button variant="outline" size="sm" onClick={() => openEdit(u)}>
                       Atribuir
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setResetPwUser(u)} title="Redefinir senha">
+                      <KeyRound className="h-4 w-4 text-muted-foreground" />
                     </Button>
                     {u.role && u.role !== "admin" && (
                       <Button variant="ghost" size="icon" onClick={() => handleRevoke(u.user_id)} title="Revogar">
@@ -1425,6 +1451,38 @@ function UsersTab() {
                 </Button>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Redefinir senha (admin) */}
+        <Dialog open={!!resetPwUser} onOpenChange={(o) => { if (!o) { setResetPwUser(null); setResetPw(""); } }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Redefinir senha</DialogTitle>
+              <DialogDescription>
+                Defina uma nova senha para <strong>{resetPwUser?.display_name || resetPwUser?.email}</strong>.
+                Informe a nova senha ao usuário; ele pode trocá-la depois.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1.5">
+              <Label>Nova senha</Label>
+              <Input
+                type="text"
+                value={resetPw}
+                onChange={(e) => setResetPw(e.target.value)}
+                placeholder="Mínimo de 6 caracteres"
+                autoComplete="new-password"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Deixei o campo visível de propósito, para você copiar e repassar a senha.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setResetPwUser(null); setResetPw(""); }}>Cancelar</Button>
+              <Button onClick={handleResetPassword} disabled={resetPw.length < 6 || resetPwSaving} className="gap-1.5">
+                <KeyRound className="h-4 w-4" /> {resetPwSaving ? "Salvando..." : "Redefinir"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </CardContent>
