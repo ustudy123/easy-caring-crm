@@ -197,12 +197,11 @@ export default function Kanban() {
 
   // Motivos padronizados de encerramento/perda (para gerar estatística).
   const LOST_REASONS = [
-    "Sem budget no momento",
-    "Lead duplicado / já atendido",
-    "Sem necessidade ou interesse (só pesquisando)",
-    "Prioriza preço absoluto",
+    "Cliente sem Recurso Financeiro",
+    "Sem Interesse (Só pesquisando)",
+    "Cliente não fechou por preço",
     "Tentativas de contato esgotadas",
-    "Cliente não tem interesse",
+    "Conversa Interna",
   ];
   const VENDA_CONCLUIDA = "Venda concluída";
   const REAGENDAR = "Quero reagendar";
@@ -293,6 +292,20 @@ export default function Kanban() {
     const note = lostNote.trim();
     const closedAt = new Date().toISOString();
     const { data: { user } } = await supabase.auth.getUser();
+
+    // --- Conversa Interna → vira Equipe Interna (sai do Kanban e vai para a aba
+    // Interna das Conversas). Não é uma "perda" real, é uma reclassificação. ---
+    if (reason === "Conversa Interna") {
+      await supabase.from("leads")
+        .update({ client_type: CLIENT_TYPE_EQUIPE_INTERNA })
+        .eq("id", losingLead.id);
+      updateLead({ ...losingLead, clientType: CLIENT_TYPE_EQUIPE_INTERNA });
+      toast({ title: "Movido para Conversa Interna", description: "O lead saiu do Kanban e está na aba Interna das Conversas." });
+      setLosingLead(null);
+      setLostReason("");
+      setLostNote("");
+      return;
+    }
 
     // --- Reagendar → sai do Kanban até a data e fica na Agenda ---
     if (reason === REAGENDAR) {
