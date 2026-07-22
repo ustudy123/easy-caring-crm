@@ -529,14 +529,21 @@ export default function SuporteOrcamento() {
     } else if (isGerente && r.request_type === "precificacao_especial") isVisible = true;
     else if (r.created_by === sellerId || r.seller_id === sellerId) isVisible = true;
 
-    // Oculta concluídos com mais de 3 dias (contados de quando foram para
-    // Concluídos). Continuam no banco; admin/gerente reexibem com "mostrar ocultos".
+    // Oculta concluídos com mais de 3 dias de CALENDÁRIO (conta a virada do dia,
+    // não 72h corridas): concluído hoje conta dia 0; some no início do 4º dia.
+    // Continuam no banco; admin/gerente reexibem com "mostrar ocultos".
     if (isVisible && r.status === "concluido") {
       const ref = r.completed_at || r.responded_at || r.created_at;
-      const ageDays = ref ? (Date.now() - new Date(ref).getTime()) / 86_400_000 : 0;
-      if (ageDays > 3) {
-        const canReveal = (isAdmin || isGerente) && showHiddenCompleted;
-        if (!canReveal) isVisible = false;
+      if (ref) {
+        const d = new Date(ref);
+        const startRef = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const now = new Date();
+        const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const daysPassed = Math.floor((startToday.getTime() - startRef.getTime()) / 86_400_000);
+        if (daysPassed > 3) {
+          const canReveal = (isAdmin || isGerente) && showHiddenCompleted;
+          if (!canReveal) isVisible = false;
+        }
       }
     }
 
