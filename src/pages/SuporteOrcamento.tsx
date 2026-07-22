@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download, Pencil, Forward, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
@@ -62,7 +62,7 @@ export default function SuporteOrcamento() {
   const [searchingErp, setSearchingErp] = useState(false);
   const [selectedErpClient, setSelectedErpClient] = useState<any | null>(null);
   // Destino da solicitação: suportes (supervisor + trainees) da loja do vendedor.
-  const [storeSupports, setStoreSupports] = useState<{ id: string; name: string; is_support_supervisor: boolean }[]>([]);
+  const [storeSupports, setStoreSupports] = useState<{ id: string; name: string; is_support_supervisor: boolean; store_id: string | null; store_name: string }[]>([]);
   const [selectedSupportId, setSelectedSupportId] = useState<string>("");
   // Dados de supervisão do usuário logado (se for suporte).
   const [mySupervisorInfo, setMySupervisorInfo] = useState<{ isSupervisor: boolean; storeId: string | null }>({ isSupervisor: false, storeId: null });
@@ -262,21 +262,25 @@ export default function SuporteOrcamento() {
   }, []);
   useEffect(() => {
     const loadSupports = async () => {
-      if (!storeId) { setStoreSupports([]); return; }
+      // Todos os suportes do sistema, agrupados por loja — o vendedor escolhe a
+      // loja e a pessoa. (Antes limitava à loja do vendedor.)
       const { data: roleRows } = await supabase
         .from("user_roles").select("user_id").eq("role", "suporte");
       const supportUserIds = (roleRows ?? []).map((r: any) => r.user_id);
       if (supportUserIds.length === 0) { setStoreSupports([]); return; }
       const { data: sellerRows } = await supabase
         .from("sellers")
-        .select("id, name, is_support_supervisor, user_id, store_id")
-        .eq("store_id", storeId)
+        .select("id, name, is_support_supervisor, user_id, store_id, stores:store_id(name)")
         .in("user_id", supportUserIds);
       const list = (sellerRows ?? []).map((s: any) => ({
         id: s.id, name: s.name, is_support_supervisor: !!s.is_support_supervisor,
+        store_id: s.store_id || null,
+        store_name: s.stores?.name || "Sem loja",
       }));
+      // Ordena por loja e, dentro dela, supervisor primeiro, depois alfabético.
       list.sort((a, b) =>
-        (b.is_support_supervisor ? 1 : 0) - (a.is_support_supervisor ? 1 : 0)
+        a.store_name.localeCompare(b.store_name, "pt-BR")
+        || (b.is_support_supervisor ? 1 : 0) - (a.is_support_supervisor ? 1 : 0)
         || a.name.localeCompare(b.name, "pt-BR"));
       setStoreSupports(list);
     };
@@ -798,13 +802,18 @@ export default function SuporteOrcamento() {
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1 block">Direcionar para</label>
                   <Select value={selectedSupportId || "none"} onValueChange={(v) => setSelectedSupportId(v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="Escolha o suporte..." /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Escolha a loja e o suporte..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">— Sem direcionamento —</SelectItem>
-                      {storeSupports.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}{s.is_support_supervisor ? " · Supervisor" : ""}
-                        </SelectItem>
+                      {Array.from(new Set(storeSupports.map((s) => s.store_name))).map((storeName) => (
+                        <SelectGroup key={storeName}>
+                          <SelectLabel>{storeName}</SelectLabel>
+                          {storeSupports.filter((s) => s.store_name === storeName).map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}{s.is_support_supervisor ? " · Supervisor" : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
                       ))}
                     </SelectContent>
                   </Select>
@@ -989,7 +998,10 @@ export default function SuporteOrcamento() {
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Escolha um suporte..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none" disabled>Escolha um suporte...</SelectItem>
-                        {storeSupports.filter((s) => s.id !== sellerId).map((s) => (
+                        {/* Supervisor encaminha só para suportes da própria loja. */}
+                        {storeSupports
+                          .filter((s) => s.id !== sellerId && s.store_id === mySupervisorInfo.storeId)
+                          .map((s) => (
                           <SelectItem key={s.id} value={s.id}>
                             {s.name}{s.is_support_supervisor ? " · Supervisor" : ""}
                           </SelectItem>
