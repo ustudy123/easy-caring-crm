@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download, Pencil, Forward } from "lucide-react";
+import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download, Pencil, Forward, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +36,7 @@ interface SupportRequest {
   response_pdf_url?: string;
   response_pdf_name?: string;
   responded_at?: string;
+  completed_at?: string | null;
   responded_by_name?: string;
 }
 
@@ -47,6 +48,8 @@ export default function SuporteOrcamento() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
+  // Ocultar concluídos com mais de 3 dias. Admin/gerente podem reexibir.
+  const [showHiddenCompleted, setShowHiddenCompleted] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [requestType, setRequestType] = useState<RequestType>("orcamento");
   const [description, setDescription] = useState("");
@@ -457,9 +460,19 @@ export default function SuporteOrcamento() {
 
   const updateRequestStatus = async (id: string, status: SupportRequest["status"]) => {
     try {
+      // Marca (ou limpa) o momento em que foi para Concluídos — base para ocultar
+      // os concluídos antigos. Só grava ao ENTRAR em concluído; preserva se já
+      // estava concluído; limpa ao sair.
+      const prev = requests.find((r) => r.id === id);
+      const patch: any = { status };
+      if (status === "concluido") {
+        patch.completed_at = prev?.completed_at || new Date().toISOString();
+      } else {
+        patch.completed_at = null;
+      }
       const { data, error } = await supabase
         .from("pricing_support_requests")
-        .update({ status })
+        .update(patch)
         .eq("id", id)
         .select("id");
 
@@ -469,7 +482,7 @@ export default function SuporteOrcamento() {
         throw new Error("Você não tem permissão para mover esta solicitação (nenhuma linha atualizada).");
       }
 
-      setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+      setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status, completed_at: patch.completed_at } : r)));
       toast.success("Status atualizado!");
     } catch (error: any) {
       toast.error("Erro ao atualizar status: " + error.message);
@@ -515,6 +528,17 @@ export default function SuporteOrcamento() {
       isVisible = r.assigned_to === sellerId || r.created_by === sellerId;
     } else if (isGerente && r.request_type === "precificacao_especial") isVisible = true;
     else if (r.created_by === sellerId || r.seller_id === sellerId) isVisible = true;
+
+    // Oculta concluídos com mais de 3 dias (contados de quando foram para
+    // Concluídos). Continuam no banco; admin/gerente reexibem com "mostrar ocultos".
+    if (isVisible && r.status === "concluido") {
+      const ref = r.completed_at || r.responded_at || r.created_at;
+      const ageDays = ref ? (Date.now() - new Date(ref).getTime()) / 86_400_000 : 0;
+      if (ageDays > 3) {
+        const canReveal = (isAdmin || isGerente) && showHiddenCompleted;
+        if (!canReveal) isVisible = false;
+      }
+    }
 
     return matchesSearch && matchesType && isVisible;
   });
@@ -597,6 +621,18 @@ export default function SuporteOrcamento() {
                 <SelectItem value="precificacao_especial">Prec. Especial</SelectItem>
               </SelectContent>
             </Select>
+            {(isAdmin || isGerente) && (
+              <Button
+                variant={showHiddenCompleted ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowHiddenCompleted((v) => !v)}
+                className="h-9 gap-1.5 text-xs"
+                title="Concluídos com mais de 3 dias ficam ocultos"
+              >
+                {showHiddenCompleted ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                {showHiddenCompleted ? "Ocultando antigos" : "Mostrar ocultos"}
+              </Button>
+            )}
           </div>
           <div className="flex flex-col gap-2 items-end">
             <div className="flex gap-2">
