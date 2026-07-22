@@ -250,32 +250,22 @@ export default function SuporteOrcamento() {
   const [adminName, setAdminName] = useState<string>("Administrador");
   useEffect(() => {
     const loadAdmin = async () => {
-      const { data: roleRows } = await supabase
-        .from("user_roles").select("user_id").eq("role", "admin").limit(1);
-      const adminId = (roleRows ?? [])[0]?.user_id;
-      if (!adminId) return;
-      const { data: prof } = await supabase
-        .from("profiles").select("display_name").eq("user_id", adminId).maybeSingle();
-      if ((prof as any)?.display_name) setAdminName((prof as any).display_name);
+      const { data, error } = await (supabase as any).rpc("get_admin_display_name");
+      if (!error && typeof data === "string" && data) setAdminName(data);
     };
     loadAdmin();
   }, []);
   useEffect(() => {
     const loadSupports = async () => {
-      // Todos os suportes do sistema, agrupados por loja — o vendedor escolhe a
-      // loja e a pessoa. (Antes limitava à loja do vendedor.)
-      const { data: roleRows } = await supabase
-        .from("user_roles").select("user_id").eq("role", "suporte");
-      const supportUserIds = (roleRows ?? []).map((r: any) => r.user_id);
-      if (supportUserIds.length === 0) { setStoreSupports([]); return; }
-      const { data: sellerRows } = await supabase
-        .from("sellers")
-        .select("id, name, is_support_supervisor, user_id, store_id, stores:store_id(name)")
-        .in("user_id", supportUserIds);
-      const list = (sellerRows ?? []).map((s: any) => ({
-        id: s.id, name: s.name, is_support_supervisor: !!s.is_support_supervisor,
+      // Usa RPC (SECURITY DEFINER): ler user_roles direto no front retorna vazio
+      // para o vendedor, pois a RLS só deixa ver o próprio papel.
+      const { data, error } = await (supabase as any).rpc("list_support_sellers");
+      if (error) { setStoreSupports([]); return; }
+      const list = ((data ?? []) as any[]).map((s) => ({
+        id: s.seller_id, name: s.name,
+        is_support_supervisor: !!s.is_support_supervisor,
         store_id: s.store_id || null,
-        store_name: s.stores?.name || "Sem loja",
+        store_name: s.store_name || "Sem loja",
       }));
       // Ordena por loja e, dentro dela, supervisor primeiro, depois alfabético.
       list.sort((a, b) =>
