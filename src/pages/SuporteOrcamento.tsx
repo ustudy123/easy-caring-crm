@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download, Pencil, Forward, Eye, EyeOff } from "lucide-react";
+import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download, Pencil, Forward, Eye, EyeOff, Coffee } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,6 +50,11 @@ export default function SuporteOrcamento() {
   const [filterType, setFilterType] = useState<string>("all");
   // Ocultar concluídos com mais de 3 dias. Admin/gerente podem reexibir.
   const [showHiddenCompleted, setShowHiddenCompleted] = useState(false);
+  // Pausa para almoço: uma por dia. myBreak = a pausa de hoje deste usuário.
+  const [myBreak, setMyBreak] = useState<{ id: string; started_at: string; ended_at: string | null } | null>(null);
+  const [breakSaving, setBreakSaving] = useState(false);
+  // Todas as pausas (para descontar do tempo de atendimento de cada suporte).
+  const [allBreaks, setAllBreaks] = useState<{ seller_id: string; started_at: string; ended_at: string | null }[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [requestType, setRequestType] = useState<RequestType>("orcamento");
   const [description, setDescription] = useState("");
@@ -452,6 +457,54 @@ export default function SuporteOrcamento() {
     }
   };
 
+  // Pausa para almoço: carrega a de hoje (deste usuário) e todas (para descontar
+  // o tempo do cálculo de atendimento).
+  const todayStr = () => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+  };
+
+  const loadBreaks = async () => {
+    const { data } = await (supabase as any)
+      .from("support_breaks").select("id, seller_id, started_at, ended_at, break_date");
+    const rows = (data ?? []) as any[];
+    setAllBreaks(rows.map((b) => ({ seller_id: b.seller_id, started_at: b.started_at, ended_at: b.ended_at })));
+    const mine = rows.find((b) => b.seller_id === sellerId && b.break_date === todayStr());
+    setMyBreak(mine ? { id: mine.id, started_at: mine.started_at, ended_at: mine.ended_at } : null);
+  };
+
+  useEffect(() => { loadBreaks(); }, [sellerId]);
+
+  // Um clique registra a saída; o próximo, a volta. Uma pausa por dia.
+  const toggleBreak = async () => {
+    if (!sellerId) { toast.error("Seu usuário não tem cadastro de suporte."); return; }
+    setBreakSaving(true);
+    try {
+      if (!myBreak) {
+        const { data, error } = await (supabase as any)
+          .from("support_breaks")
+          .insert({ seller_id: sellerId, break_date: todayStr() })
+          .select("id, started_at, ended_at")
+          .single();
+        if (error) throw error;
+        setMyBreak(data);
+        toast.success("Pausa iniciada. Bom almoço!");
+      } else if (!myBreak.ended_at) {
+        const endedAt = new Date().toISOString();
+        const { error } = await (supabase as any)
+          .from("support_breaks").update({ ended_at: endedAt }).eq("id", myBreak.id);
+        if (error) throw error;
+        setMyBreak({ ...myBreak, ended_at: endedAt });
+        toast.success("Bem-vindo de volta! Pausa encerrada.");
+      }
+      loadBreaks();
+    } catch (e: any) {
+      toast.error("Erro na pausa: " + (e?.message || "tente novamente"));
+    } finally {
+      setBreakSaving(false);
+    }
+  };
+
   const updateRequestStatus = async (id: string, status: SupportRequest["status"]) => {
     try {
       // Marca (ou limpa) o momento em que foi para Concluídos — base para ocultar
@@ -547,9 +600,32 @@ export default function SuporteOrcamento() {
   const pendingCount = filteredRequests.filter((r) => r.status === "pendente").length;
   const inAnalysisCount = filteredRequests.filter((r) => r.status === "em_analise").length;
   const completedCount = filteredRequests.filter((r) => r.status === "concluido").length;
+  // Minutos de pausa (almoço) do responsável que caem DENTRO da janela de
+  // atendimento — esse tempo não conta como demora.
+  const breakMinutesInWindow = (sellerIdOfRequest: string | null | undefined, from: Date, to: Date) => {
+    if (!sellerIdOfRequest) return 0;
+    let mins = 0;
+    for (const b of allBreaks) {
+      if (b.seller_id !== sellerIdOfRequest) continue;
+      const bStart = new Date(b.started_at);
+      // Pausa em aberto conta até agora (a pessoa ainda não voltou).
+      const bEnd = b.ended_at ? new Date(b.ended_at) : new Date();
+      const overlapStart = Math.max(bStart.getTime(), from.getTime());
+      const overlapEnd = Math.min(bEnd.getTime(), to.getTime());
+      if (overlapEnd > overlapStart) mins += (overlapEnd - overlapStart) / 60000;
+    }
+    return mins;
+  };
+
   const respondedReqs = filteredRequests.filter((r: any) => r.responded_at && r.created_at);
   const avgResponseMins = respondedReqs.length > 0
-    ? Math.round(respondedReqs.reduce((acc: number, r: any) => acc + (new Date(r.responded_at).getTime() - new Date(r.created_at).getTime()) / 60000, 0) / respondedReqs.length)
+    ? Math.round(respondedReqs.reduce((acc: number, r: any) => {
+        const from = new Date(r.created_at);
+        const to = new Date(r.responded_at);
+        const gross = (to.getTime() - from.getTime()) / 60000;
+        const paused = breakMinutesInWindow(r.assigned_to, from, to);
+        return acc + Math.max(0, gross - paused);
+      }, 0) / respondedReqs.length)
     : null;
   const avgResponseLabel = avgResponseMins == null ? "—" : avgResponseMins < 60 ? `${avgResponseMins} min` : `${(avgResponseMins / 60).toFixed(1)} h`;
 
@@ -632,6 +708,23 @@ export default function SuporteOrcamento() {
               >
                 {showHiddenCompleted ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                 {showHiddenCompleted ? "Ocultando antigos" : "Mostrar ocultos"}
+              </Button>
+            )}
+            {/* Pausa para almoço: uma por dia. Sai -> volta. O tempo parado não
+                conta como demora nas solicitações pendentes/em análise. */}
+            {isSuporte && sellerId && (
+              <Button
+                variant={myBreak && !myBreak.ended_at ? "default" : "outline"}
+                size="sm"
+                onClick={toggleBreak}
+                disabled={breakSaving || !!(myBreak && myBreak.ended_at)}
+                className="h-9 gap-1.5 text-xs"
+                title={myBreak?.ended_at ? "A pausa de hoje já foi registrada" : "Registra a saída e a volta do almoço"}
+              >
+                <Coffee className="h-3.5 w-3.5" />
+                {!myBreak ? "Sair para almoço"
+                  : !myBreak.ended_at ? "Voltar do almoço"
+                  : "Almoço registrado"}
               </Button>
             )}
           </div>
