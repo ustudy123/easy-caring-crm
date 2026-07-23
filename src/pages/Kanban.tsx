@@ -49,9 +49,12 @@ const stageColorMap: Record<KanbanStage, string> = {
   perdido: "border-l-red-500",
 };
 
+// Cores distintas por status: âmbar = esperando, azul = sendo trabalhado,
+// verde = pronto. O laranja da marca era próximo demais do âmbar e os dois
+// primeiros ficavam iguais no card.
 const PRICING_STATUS_UI: Record<string, { label: string; cls: string }> = {
   pendente:   { label: "Orçamento pendente",   cls: "bg-amber-500/15 text-amber-700" },
-  em_analise: { label: "Orçamento em análise", cls: "bg-brand-500/15 text-brand-600" },
+  em_analise: { label: "Orçamento em análise", cls: "bg-blue-500/15 text-blue-700" },
   concluido:  { label: "Orçamento concluído",  cls: "bg-emerald-500/15 text-emerald-700" },
 };
 
