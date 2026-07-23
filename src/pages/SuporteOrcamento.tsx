@@ -689,13 +689,13 @@ export default function SuporteOrcamento() {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div className="flex gap-2 flex-1 max-w-md">
-            <div className="relative flex-1">
+          <div className="flex gap-2 flex-1 flex-wrap items-center">
+            <div className="relative flex-1 min-w-[220px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar solicitação..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-40 shrink-0">
                 <Filter className="h-3.5 w-3.5 mr-1" />
                 <SelectValue />
               </SelectTrigger>
@@ -710,7 +710,7 @@ export default function SuporteOrcamento() {
                 variant={showHiddenCompleted ? "default" : "outline"}
                 size="sm"
                 onClick={() => setShowHiddenCompleted((v) => !v)}
-                className="h-9 gap-1.5 text-xs"
+                className="h-9 gap-1.5 text-xs shrink-0"
                 title="Concluídos com mais de 3 dias ficam ocultos"
               >
                 {showHiddenCompleted ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
@@ -730,7 +730,7 @@ export default function SuporteOrcamento() {
               const hora = (iso: string) =>
                 new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
               return (
-                <div className="flex flex-col items-end gap-0.5">
+                <div className="flex flex-col items-start gap-0.5 shrink-0">
                   <Button
                     variant={myBreak && !myBreak.ended_at ? "default" : "outline"}
                     size="sm"
