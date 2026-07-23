@@ -1,4 +1,5 @@
 import { Checkbox } from "@/components/ui/checkbox";
+import { ProjectsReport } from "@/components/ProjectsReport";
 import { WebhookLogsTab } from "@/components/WebhookLogsTab";
 import { WhatsAppInstancesTab } from "@/components/WhatsAppInstancesTab";
 import { AppLayout } from "@/components/AppLayout";
@@ -836,6 +837,8 @@ const ROLE_LABELS: Record<string, string> = {
           </Table>
         </CardContent>
       </Card>
+
+      <ProjectsReport />
     </div>
   );
  }
