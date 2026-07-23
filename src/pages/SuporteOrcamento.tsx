@@ -689,8 +689,8 @@ export default function SuporteOrcamento() {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div className="flex gap-2 flex-1 flex-wrap items-center">
-            <div className="relative flex-1 min-w-[220px]">
+          <div className="flex gap-2 items-center flex-wrap">
+            <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar solicitação..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
@@ -730,7 +730,7 @@ export default function SuporteOrcamento() {
               const hora = (iso: string) =>
                 new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
               return (
-                <div className="flex flex-col items-start gap-0.5 shrink-0">
+                <div className="flex flex-col items-center gap-0.5 shrink-0">
                   <Button
                     variant={myBreak && !myBreak.ended_at ? "default" : "outline"}
                     size="sm"
