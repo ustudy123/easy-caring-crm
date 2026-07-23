@@ -566,16 +566,22 @@ export default function SuporteOrcamento() {
 
     // Regras de visibilidade
     // - Admin: tudo.
-    // - Supervisor de suporte: todas as solicitações da SUA LOJA.
+    // - Supervisor de suporte: tudo que está com o time DA LOJA DELE.
     // - Trainee (suporte não-supervisor): só as direcionadas a ele.
     // - Gerente: as de precificação especial (como antes).
     // - Vendedor: as que ele criou/é dono.
     let isVisible = false;
     if (isAdmin) isVisible = true;
     else if (isSuporte && mySupervisorInfo.isSupervisor) {
-      // Supervisor vê a loja dele; também o que criou/lhe foi atribuído (cobre
-      // solicitações antigas sem store_id).
-      isVisible = (!!mySupervisorInfo.storeId && r.store_id === mySupervisorInfo.storeId)
+      // O que importa é o DESTINO: como o vendedor pode direcionar para outra
+      // loja, a loja de origem (store_id) não diz quem está atendendo.
+      const destinoDaMinhaLoja = !!r.assigned_to && storeSupports.some(
+        (s) => s.id === r.assigned_to && s.store_id === mySupervisorInfo.storeId,
+      );
+      // Sem destino definido, cai para a loja de origem (não fica órfã).
+      const semDestinoDaMinhaLoja = !r.assigned_to
+        && !!mySupervisorInfo.storeId && r.store_id === mySupervisorInfo.storeId;
+      isVisible = destinoDaMinhaLoja || semDestinoDaMinhaLoja
         || r.assigned_to === sellerId || r.created_by === sellerId;
     } else if (isSuporte) {
       // trainee: só o que está atribuído a ele (ou que ele criou).
