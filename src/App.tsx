@@ -1,3 +1,4 @@
+import { ForcePasswordChange } from "@/components/ForcePasswordChange";
 import { UrgencyAlertPopup } from "@/components/UrgencyAlertPopup";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={
                 <ProtectedRoute>
+                  <ForcePasswordChange>
                   <CrmProvider>
                     <UrgencyAlertPopup />
                     <Routes>
@@ -80,6 +82,7 @@ const App = () => (
                       </Route>
                     </Routes>
                   </CrmProvider>
+                  </ForcePasswordChange>
                 </ProtectedRoute>
               } />
             </Routes>

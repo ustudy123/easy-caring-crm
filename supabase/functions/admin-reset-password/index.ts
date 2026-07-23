@@ -54,6 +54,17 @@ Deno.serve(async (req) => {
     });
     if (updErr) return json({ error: updErr.message }, 400);
 
+    // 5) Marca que a pessoa deve escolher a própria senha no próximo acesso.
+    //    A senha definida aqui é temporária, só para ela conseguir entrar.
+    const { error: flagErr } = await admin
+      .from("profiles")
+      .update({ must_change_password: true })
+      .eq("user_id", user_id);
+    if (flagErr) {
+      // A senha já foi trocada; avisa, mas não trata como falha total.
+      return json({ success: true, warning: "Senha alterada, mas não foi possível exigir a troca no próximo login." });
+    }
+
     return json({ success: true });
   } catch (e) {
     return json({ error: String((e as Error)?.message || e) }, 500);
