@@ -53,6 +53,13 @@ export default function SuporteOrcamento() {
   // Pausa para almoço: uma por dia. myBreak = a pausa de hoje deste usuário.
   const [myBreak, setMyBreak] = useState<{ id: string; started_at: string; ended_at: string | null } | null>(null);
   const [breakSaving, setBreakSaving] = useState(false);
+  // Relógio que avança de minuto em minuto, para o tempo de pausa em aberto
+  // aparecer correndo na tela sem precisar recarregar.
+  const [nowTick, setNowTick] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
   // Todas as pausas (para descontar do tempo de atendimento de cada suporte).
   const [allBreaks, setAllBreaks] = useState<{ seller_id: string; started_at: string; ended_at: string | null }[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -712,21 +719,41 @@ export default function SuporteOrcamento() {
             )}
             {/* Pausa para almoço: uma por dia. Sai -> volta. O tempo parado não
                 conta como demora nas solicitações pendentes/em análise. */}
-            {isSuporte && sellerId && (
-              <Button
-                variant={myBreak && !myBreak.ended_at ? "default" : "outline"}
-                size="sm"
-                onClick={toggleBreak}
-                disabled={breakSaving || !!(myBreak && myBreak.ended_at)}
-                className="h-9 gap-1.5 text-xs"
-                title={myBreak?.ended_at ? "A pausa de hoje já foi registrada" : "Registra a saída e a volta do almoço"}
-              >
-                <Coffee className="h-3.5 w-3.5" />
-                {!myBreak ? "Sair para almoço"
-                  : !myBreak.ended_at ? "Voltar do almoço"
-                  : "Almoço registrado"}
-              </Button>
-            )}
+            {isSuporte && sellerId && (() => {
+              // Duração da pausa: fechada usa o fim; em aberto conta até agora.
+              const mins = myBreak
+                ? Math.max(0, Math.round(
+                    ((myBreak.ended_at ? new Date(myBreak.ended_at).getTime() : nowTick)
+                      - new Date(myBreak.started_at).getTime()) / 60000))
+                : 0;
+              const label = mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h${String(mins % 60).padStart(2, "0")}`;
+              const hora = (iso: string) =>
+                new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+              return (
+                <div className="flex flex-col items-end gap-0.5">
+                  <Button
+                    variant={myBreak && !myBreak.ended_at ? "default" : "outline"}
+                    size="sm"
+                    onClick={toggleBreak}
+                    disabled={breakSaving || !!(myBreak && myBreak.ended_at)}
+                    className="h-9 gap-1.5 text-xs"
+                    title={myBreak?.ended_at ? "A pausa de hoje já foi registrada" : "Registra a saída e a volta do almoço"}
+                  >
+                    <Coffee className="h-3.5 w-3.5" />
+                    {!myBreak ? "Sair para almoço"
+                      : !myBreak.ended_at ? "Voltar do almoço"
+                      : "Almoço registrado"}
+                  </Button>
+                  {myBreak && (
+                    <span className="text-[10px] text-muted-foreground">
+                      {myBreak.ended_at
+                        ? `${hora(myBreak.started_at)}–${hora(myBreak.ended_at)} · ${label}`
+                        : `em pausa desde ${hora(myBreak.started_at)} · ${label}`}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           <div className="flex flex-col gap-2 items-end">
             <div className="flex gap-2">
