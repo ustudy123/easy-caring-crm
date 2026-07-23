@@ -730,7 +730,7 @@ export default function SuporteOrcamento() {
               const hora = (iso: string) =>
                 new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
               return (
-                <div className="flex flex-col items-center gap-0.5 shrink-0">
+                <div className="relative flex items-center shrink-0">
                   <Button
                     variant={myBreak && !myBreak.ended_at ? "default" : "outline"}
                     size="sm"
@@ -745,7 +745,7 @@ export default function SuporteOrcamento() {
                       : "Almoço registrado"}
                   </Button>
                   {myBreak && (
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="absolute top-full left-1/2 -translate-x-1/2 mt-0.5 whitespace-nowrap text-[10px] text-muted-foreground">
                       {myBreak.ended_at
                         ? `${hora(myBreak.started_at)}–${hora(myBreak.ended_at)} · ${label}`
                         : `em pausa desde ${hora(myBreak.started_at)} · ${label}`}
