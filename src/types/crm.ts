@@ -108,6 +108,20 @@ export const KANBAN_STAGES: { key: KanbanStage; label: string; color: string }[]
 // suas conversas ficam em uma aba separada na página de Conversas.
 export const CLIENT_TYPE_EQUIPE_INTERNA = "Equipe Interna";
 
+// Motivos de encerramento. Ficam aqui para o Kanban (onde são escolhidos) e o
+// Relatório de Encerramentos (onde são filtrados) usarem a MESMA lista — antes
+// o relatório montava as opções só com o que já havia acontecido, então motivo
+// novo ou pouco usado não aparecia no filtro.
+export const VENDA_CONCLUIDA = "Venda concluída";
+export const REAGENDAR = "Quero reagendar";
+export const LOST_REASONS = [
+  "Cliente sem Recurso Financeiro",
+  "Sem Interesse (Só pesquisando)",
+  "Cliente não fechou por preço",
+  "Tentativas de contato esgotadas",
+  "Conversa Interna",
+] as const;
+
 // Lista única de Tipos de Cliente. Estava duplicada nos formulários de lead;
 // centralizar evita que as opções divirjam entre as telas.
 export const CLIENT_TYPES = [

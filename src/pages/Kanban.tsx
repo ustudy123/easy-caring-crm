@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
  import { useCrm } from "@/contexts/CrmContext";
  import { useToast } from "@/hooks/use-toast";
-import { KANBAN_STAGES, Lead, KanbanStage, CLIENT_TYPE_EQUIPE_INTERNA } from "@/types/crm";
+import { KANBAN_STAGES, Lead, KanbanStage, CLIENT_TYPE_EQUIPE_INTERNA, LOST_REASONS, VENDA_CONCLUIDA, REAGENDAR } from "@/types/crm";
 import { ProjectsDialog } from "@/components/ProjectsDialog";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
  import { 
@@ -199,15 +199,7 @@ export default function Kanban() {
   const [saleType, setSaleType] = useState<"unica" | "recorrente" | "">("");
 
   // Motivos padronizados de encerramento/perda (para gerar estatística).
-  const LOST_REASONS = [
-    "Cliente sem Recurso Financeiro",
-    "Sem Interesse (Só pesquisando)",
-    "Cliente não fechou por preço",
-    "Tentativas de contato esgotadas",
-    "Conversa Interna",
-  ];
-  const VENDA_CONCLUIDA = "Venda concluída";
-  const REAGENDAR = "Quero reagendar";
+  // Motivos centralizados em types/crm.ts (compartilhados com o relatório).
   // Reagendamento: data (até 30 dias) + horário comercial (08h–18h) + observação obrigatória.
   const [reagDate, setReagDate] = useState("");
   const [reagTime, setReagTime] = useState("");

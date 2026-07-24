@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { startOfWeek, startOfMonth } from "date-fns";
 import { Loader2, MessageCircle, ClipboardList } from "lucide-react";
 
-const VENDA_CONCLUIDA = "Venda concluída";
+import { LOST_REASONS, VENDA_CONCLUIDA } from "@/types/crm";
 const PERIODS = [
   { key: "week", label: "Semana" },
   { key: "month", label: "Mês" },
@@ -87,7 +87,13 @@ export default function RelatorioEncerramentos() {
     return () => { cancel = true; };
   }, [period]);
 
-  const motivos = useMemo(() => Array.from(new Set(rows.map((r) => r.motivo))).sort(), [rows]);
+  // Todos os motivos oficiais + os que aparecem nos dados (cobre encerramentos
+  // antigos, feitos com motivos que já foram renomeados/removidos).
+  const motivos = useMemo(() => {
+    const oficiais = [VENDA_CONCLUIDA, ...LOST_REASONS];
+    const nosDados = rows.map((r) => r.motivo);
+    return Array.from(new Set([...oficiais, ...nosDados])).sort();
+  }, [rows]);
 
   const filtered = useMemo(
     () =>
