@@ -8,11 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download, Pencil, Forward, Eye, EyeOff, Coffee } from "lucide-react";
+import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download, Pencil, Forward, Eye, EyeOff, Coffee, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
 import { useRole } from "@/contexts/RoleContext";
+import { useBackgroundAlert } from "@/hooks/useBackgroundAlert";
 import { useSearchParams } from "react-router-dom";
 
 type RequestType = "orcamento" | "precificacao_especial";
@@ -50,6 +51,8 @@ export default function SuporteOrcamento() {
   const [filterType, setFilterType] = useState<string>("all");
   // Ocultar concluídos com mais de 3 dias. Admin/gerente podem reexibir.
   const [showHiddenCompleted, setShowHiddenCompleted] = useState(false);
+  // Alerta de novas solicitações com a aba em segundo plano.
+  const { permission: notifPermission, requestPermission, notify } = useBackgroundAlert("Suporte a Orçamento");
   // Pausa para almoço: uma por dia. myBreak = a pausa de hoje deste usuário.
   const [myBreak, setMyBreak] = useState<{ id: string; started_at: string; ended_at: string | null } | null>(null);
   const [breakSaving, setBreakSaving] = useState(false);
@@ -307,12 +310,22 @@ export default function SuporteOrcamento() {
   useEffect(() => {
     const channel = supabase
       .channel("pricing-support-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "pricing_support_requests" }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "pricing_support_requests" }, (payload: any) => {
+        // Solicitação NOVA: avisa quem é do suporte mesmo com a aba em segundo plano.
+        if (payload?.eventType === "INSERT" && (isSuporte || isAdmin)) {
+          const r = payload.new || {};
+          const paraMim = r.assigned_to && r.assigned_to === sellerId;
+          const daMinhaLoja = mySupervisorInfo.isSupervisor && r.store_id === mySupervisorInfo.storeId;
+          if (paraMim || daMinhaLoja || isAdmin) {
+            const tipo = r.request_type === "precificacao_especial" ? "Negociação especial" : "Novo orçamento";
+            notify(tipo, `${r.client_name || "Cliente"} — solicitação recebida`);
+          }
+        }
         fetchRequests();
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [isSuporte, isAdmin, sellerId, mySupervisorInfo, notify]);
 
   const handleErpSearch = async () => {
     if (erpSearch.length < 2) {
@@ -721,6 +734,21 @@ export default function SuporteOrcamento() {
               >
                 {showHiddenCompleted ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                 {showHiddenCompleted ? "Ocultando antigos" : "Mostrar ocultos"}
+              </Button>
+            )}
+            {(isSuporte || isAdmin) && notifPermission !== "granted" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  const p = await requestPermission();
+                  if (p === "granted") toast.success("Alertas ativados neste computador.");
+                  else toast.error("O navegador bloqueou as notificações. Libere nas configurações do site.");
+                }}
+                className="h-9 gap-1.5 text-xs shrink-0"
+                title="Avisa no computador quando chegar uma solicitação, mesmo fora do sistema"
+              >
+                <Bell className="h-3.5 w-3.5" /> Ativar alertas
               </Button>
             )}
             {/* Pausa para almoço: uma por dia. Sai -> volta. O tempo parado não
