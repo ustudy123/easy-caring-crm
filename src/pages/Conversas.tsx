@@ -626,8 +626,30 @@ const mockContactNames: Record<string, string> = {
           });
         }
       });
+      // Leads marcados como "Equipe Interna" que ainda não têm conversa: entram
+      // como conversa vazia para aparecerem na aba Interna (a lista é montada a
+      // partir das mensagens, e um lead criado à mão nunca teve mensagem).
+      (leads || []).forEach((l) => {
+        if (l.clientType !== CLIENT_TYPE_EQUIPE_INTERNA || !l.clientPhone) return;
+        const p = l.clientPhone;
+        if (map.has(p) || Array.from(map.keys()).some((k) => strip(k) === strip(p))) return;
+        const client = clients.find((c) => strip(c.phone) === strip(p));
+        map.set(p, {
+          phone: p,
+          lastMessage: "",
+          lastTimestamp: "",
+          unreadCount: 0,
+          messages: [],
+          assigned_seller_id: client?.assigned_seller_id,
+          store_id: client?.store_id ?? l.storeId,
+          status: client?.status,
+          alert_status: client?.alert_status,
+          last_message_from_client_at: client?.last_message_from_client_at,
+          received_on_instance_id: client?.received_on_instance_id,
+        });
+      });
       return Array.from(map.values());
-    }, [messages, clients, virtualPhones]);
+    }, [messages, clients, virtualPhones, leads]);
 
      // Mapa telefone (normalizado, sem DDI) -> etapa do lead, para filtrar por etapa do Kanban
      const normPhone = (p: string) => (p || "").replace(/\D/g, "").replace(/^55/, "");
@@ -883,9 +905,16 @@ const mockContactNames: Record<string, string> = {
          if (c.profile_pic_url) photos[c.phone] = c.profile_pic_url;
        }
      });
+     // Sem cadastro em `clients` (ex.: lead interno criado à mão), usa o nome
+     // do lead — senão a linha apareceria só com o número.
+     (leads || []).forEach((l) => {
+       if (l.clientPhone && l.clientName && !names[l.clientPhone] && phones.includes(l.clientPhone)) {
+         names[l.clientPhone] = l.clientName;
+       }
+     });
      setContactNames(names);
      setContactPhotos(photos);
-  }, [useMock, conversations.length]);
+  }, [useMock, conversations.length, leads]);
 
    const chatMessages = useMemo(() => selectedConversation ? selectedConversation.messages : [], [selectedConversation]);
 
