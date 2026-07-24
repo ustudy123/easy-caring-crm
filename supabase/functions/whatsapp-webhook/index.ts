@@ -410,7 +410,32 @@ serve(async (req) => {
           const rawText = data.text?.message || msg.text || msg.content || msg.caption
             || msg.body || msg.conversation || data.wa_lastMessageTextVote || data.text
             || data.body || data.message?.conversation || "";
-          const text = (typeof rawText === "string" ? rawText : (rawText?.message || rawText?.text || "")) || "[mensagem sem texto]";
+          const text = (typeof rawText === "string" ? rawText : (rawText?.message || rawText?.text || "")) || "";
+
+          // Mídia (uazapi): os dados vêm em message.content, com o tipo em
+          // message.mediaType/messageType. Sem isso, uma foto/documento chegava
+          // como "[mensagem sem texto]" e a mídia era descartada.
+          const content = (msg.content && typeof msg.content === "object") ? msg.content : null;
+          const mediaKind = (msg.mediaType || "").toString().toLowerCase()
+            || (msg.messageType || "").toString().toLowerCase().replace("message", "");
+          const mediaMime = content?.mimetype || null;
+          const mediaFileName = content?.fileName || content?.title || null;
+          const mediaCaption = content?.caption || "";
+          // A URL do WhatsApp vem criptografada (.enc) e não abre direto; o
+          // thumbnail em base64 (quando existe) é o que dá para exibir na hora.
+          const thumbB64 = content?.JPEGThumbnail || null;
+          const mediaUrl = thumbB64
+            ? `data:image/jpeg;base64,${thumbB64}`
+            : (content?.URL || null);
+
+          const kindLabel = mediaKind.includes("image") ? "[imagem]"
+            : mediaKind.includes("video") ? "[vídeo]"
+            : mediaKind.includes("audio") || mediaKind.includes("ptt") ? "[áudio]"
+            : mediaKind.includes("document") ? "[documento]"
+            : mediaKind.includes("sticker") ? "[figurinha]"
+            : "[mensagem sem texto]";
+
+          const finalText = text || mediaCaption || mediaFileName || kindLabel;
 
           const messageId = data.messageId || data.messageid || msg.messageid || msg.id || data.id
             || data.key?.id || msg.key?.id || data.data?.key?.id
@@ -458,11 +483,13 @@ serve(async (req) => {
         const { error: msgError } = await supabase.from("whatsapp_messages").insert({
           message_id: messageId,
           phone: cleanPhone,
-          body: text,
+          body: finalText,
           is_from_me: isFromMe,
           timestamp: new Date(tsMs).toISOString(),
           raw_data: body,
           received_on_instance_id: receivedInstanceId,
+          media_url: mediaUrl,
+          media_type: mediaMime || (mediaKind || null),
         });
         if (msgError) {
           if (msgError.code === '23505') {

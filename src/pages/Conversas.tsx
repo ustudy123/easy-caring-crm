@@ -1988,14 +1988,14 @@ const mockContactNames: Record<string, string> = {
                             >
                               {msg.media_url && (
                                 <div className="mb-1 rounded-md overflow-hidden bg-black/5">
-                                  {msg.media_type === 'image' ? (
+                                  {(msg.media_type || '').startsWith('image') || msg.media_url?.startsWith('data:image') ? (
                                     <img 
                                       src={msg.media_url} 
                                       alt="Anexo" 
                                       className="max-w-full h-auto cursor-pointer"
                                       onClick={() => window.open(msg.media_url!, '_blank')}
                                     />
-                                  ) : msg.media_type === 'audio' ? (
+                                  ) : (msg.media_type || '').startsWith('audio') ? (
                                     <div className="p-2 min-w-[200px]">
                                       <audio 
                                         src={msg.media_url} 
