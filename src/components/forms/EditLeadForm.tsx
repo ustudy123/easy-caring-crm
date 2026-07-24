@@ -133,10 +133,6 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
               <Input value={form.interestProducts} onChange={(e) => update("interestProducts", e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Loja/Região Taeco</Label>
-              <Input value={form.storeName} onChange={(e) => update("storeName", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
               <Label>Telefone *</Label>
               <MaskedInput mask="phone" value={form.clientPhone} onValueChange={(_, masked) => update("clientPhone", masked)} />
               {errors.clientPhone && <p className="text-xs text-destructive">{errors.clientPhone}</p>}
