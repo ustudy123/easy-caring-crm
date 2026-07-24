@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
  import { Lead, FollowUp, Seller } from "@/types/crm";
 import { supabase } from "@/integrations/supabase/client";
@@ -293,8 +294,14 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateLead = useCallback(async (lead: Lead) => {
-    setLeads((prev) => prev.map((l) => (l.id === lead.id ? lead : l)));
-    const { error } = await supabase.from("leads").update({
+    // Guarda o estado anterior para poder reverter se o banco recusar.
+    let previous: Lead = lead;
+    setLeads((prev) => {
+      const found = prev.find((l) => l.id === lead.id);
+      if (found) previous = found;
+      return prev.map((l) => (l.id === lead.id ? lead : l));
+    });
+    const { data, error } = await supabase.from("leads").update({
       client_name: lead.clientName,
       client_phone: lead.clientPhone,
       client_email: lead.clientEmail || null,
@@ -312,8 +319,18 @@ export function CrmProvider({ children }: { children: ReactNode }) {
        store_id: lead.storeId || null,
        lost_reason: lead.lostReason || null,
        closed_at: lead.closedAt || null,
-    }).eq("id", lead.id);
-    if (error) console.error("Error updating lead:", error);
+    }).eq("id", lead.id).select("id");
+    if (error) {
+      console.error("Error updating lead:", error);
+      toast.error("Não foi possível salvar o lead: " + error.message);
+      return;
+    }
+    // Sem erro, mas 0 linhas = a RLS bloqueou a gravação. Sem isso a tela
+    // mostrava a alteração (update otimista) enquanto o banco não mudava.
+    if (!data || data.length === 0) {
+      toast.error("Você não tem permissão para alterar este lead. A alteração não foi salva.");
+      setLeads((prev) => prev.map((l) => (l.id === lead.id ? previous : l)));
+    }
   }, []);
 
   const deleteLead = useCallback(async (id: string) => {
