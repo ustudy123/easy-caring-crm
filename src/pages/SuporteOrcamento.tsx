@@ -921,9 +921,18 @@ export default function SuporteOrcamento() {
                     <SelectTrigger><SelectValue placeholder="Escolha a loja e o suporte..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">— Sem direcionamento —</SelectItem>
-                      {Array.from(new Set(storeSupports.map((s) => s.store_name))).map((storeName) => (
+                      {/* A loja do próprio vendedor vem primeiro (é a que ele
+                          mais usa); as demais em ordem alfabética. */}
+                      {(() => {
+                        const nomes = Array.from(new Set(storeSupports.map((s) => s.store_name)));
+                        const minhaLoja = storeSupports.find((s) => s.store_id === storeId)?.store_name;
+                        nomes.sort((a, b) =>
+                          (a === minhaLoja ? -1 : b === minhaLoja ? 1 : 0)
+                          || a.localeCompare(b, "pt-BR"));
+                        return nomes;
+                      })().map((storeName) => (
                         <SelectGroup key={storeName}>
-                          <SelectLabel>{storeName}</SelectLabel>
+                          <SelectLabel>{storeName}{storeName === storeSupports.find((s) => s.store_id === storeId)?.store_name ? " · sua loja" : ""}</SelectLabel>
                           {storeSupports.filter((s) => s.store_name === storeName).map((s) => (
                             <SelectItem key={s.id} value={s.id}>
                               {s.name}{s.is_support_supervisor ? " · Supervisor" : ""}
@@ -1114,14 +1123,28 @@ export default function SuporteOrcamento() {
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Escolha um suporte..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none" disabled>Escolha um suporte...</SelectItem>
-                        {/* Supervisor encaminha só para suportes da própria loja. */}
-                        {storeSupports
-                          .filter((s) => s.id !== sellerId && s.store_id === mySupervisorInfo.storeId)
-                          .map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.name}{s.is_support_supervisor ? " · Supervisor" : ""}
-                          </SelectItem>
-                        ))}
+                        {/* O supervisor pode redirecionar para outra loja (ex.:
+                            chegou na loja errada). A dele aparece primeiro. */}
+                        {(() => {
+                          const nomes = Array.from(new Set(storeSupports.map((s) => s.store_name)));
+                          const minha = storeSupports.find((s) => s.store_id === mySupervisorInfo.storeId)?.store_name;
+                          nomes.sort((a, b) =>
+                            (a === minha ? -1 : b === minha ? 1 : 0) || a.localeCompare(b, "pt-BR"));
+                          return nomes.map((storeName) => {
+                            const itens = storeSupports.filter((s) => s.store_name === storeName && s.id !== sellerId);
+                            if (itens.length === 0) return null;
+                            return (
+                              <SelectGroup key={storeName}>
+                                <SelectLabel>{storeName}{storeName === minha ? " · sua loja" : ""}</SelectLabel>
+                                {itens.map((s) => (
+                                  <SelectItem key={s.id} value={s.id}>
+                                    {s.name}{s.is_support_supervisor ? " · Supervisor" : ""}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            );
+                          });
+                        })()}
                       </SelectContent>
                     </Select>
                     <p className="text-[10px] text-muted-foreground">Repassa a solicitação para outro suporte da loja.</p>
