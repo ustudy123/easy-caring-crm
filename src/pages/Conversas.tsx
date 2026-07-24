@@ -223,6 +223,8 @@ const mockContactNames: Record<string, string> = {
   const [useMock, setUseMock] = useState(false);
   const [contactNames, setContactNames] = useState<Record<string, string>>({});
   const [contactPhotos, setContactPhotos] = useState<Record<string, string>>({});
+  // Visualizador de imagem: data: não abre em nova aba (bloqueio do navegador).
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
  const [isRecording, setIsRecording] = useState(false);
  const [recordingDuration, setRecordingDuration] = useState(0);
@@ -1993,7 +1995,7 @@ const mockContactNames: Record<string, string> = {
                                       src={msg.media_url} 
                                       alt="Anexo" 
                                       className="max-w-full h-auto cursor-pointer"
-                                      onClick={() => window.open(msg.media_url!, '_blank')}
+                                      onClick={() => setPreviewImage(msg.media_url!)}
                                     />
                                   ) : (msg.media_type || '').startsWith('audio') ? (
                                     <div className="p-2 min-w-[200px]">
@@ -2006,7 +2008,11 @@ const mockContactNames: Record<string, string> = {
                                   ) : (
                                     <div 
                                       className="flex items-center gap-2 p-2 cursor-pointer hover:bg-black/10 transition-colors"
-                                      onClick={() => window.open(msg.media_url!, '_blank')}
+                                      onClick={() => {
+                                        // data: não pode ser aberto em nova aba (bloqueio do navegador).
+                                        if (msg.media_url!.startsWith('data:')) setPreviewImage(msg.media_url!);
+                                        else window.open(msg.media_url!, '_blank');
+                                      }}
                                     >
                                       <div className="bg-brand-500/10 p-2 rounded">
                                         <Paperclip className="h-4 w-4 text-brand-500" />
@@ -2450,6 +2456,16 @@ const mockContactNames: Record<string, string> = {
               <Tag className="h-4 w-4" /> {isReclassifying ? "Salvando..." : "Classificar"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Visualizador de imagem (miniatura da mensagem) */}
+      <Dialog open={!!previewImage} onOpenChange={(o) => { if (!o) setPreviewImage(null); }}>
+        <DialogContent className="max-w-3xl p-2">
+          <DialogHeader className="sr-only"><DialogTitle>Imagem</DialogTitle></DialogHeader>
+          {previewImage && (
+            <img src={previewImage} alt="Imagem da conversa" className="w-full h-auto rounded-md" />
+          )}
         </DialogContent>
       </Dialog>
     </AppLayout>
