@@ -14,6 +14,19 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Database } from "lucide-react";
 
+// Valor guardado em reais (ex.: "1234.56"); exibido em pt-BR (R$ 1.234,56).
+// Os dígitos digitados são tratados como centavos: "12345" -> 123,45.
+function onlyDigitsToValue(masked: string): string {
+  const digits = masked.replace(/\D/g, "");
+  if (!digits) return "";
+  return (parseInt(digits, 10) / 100).toFixed(2);
+}
+function formatBRL(value: string): string {
+  const n = Number(value);
+  if (!isFinite(n) || !value) return "";
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
 interface NewLeadFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -148,10 +161,6 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
               <Input value={form.interestProducts} onChange={(e) => update("interestProducts", e.target.value)} placeholder="Ex: Resina, Massa, Premium" />
             </div>
             <div className="space-y-1.5">
-              <Label>Loja/Região Taeco</Label>
-              <Input value={form.storeName} onChange={(e) => update("storeName", e.target.value)} placeholder="Ex: Loja Matriz" />
-            </div>
-            <div className="space-y-1.5">
               <Label>Telefone *</Label>
               <MaskedInput mask="phone" value={form.clientPhone} onValueChange={(_, masked) => update("clientPhone", masked)} placeholder="(11) 99999-0000" />
               {errors.clientPhone && <p className="text-xs text-destructive">{errors.clientPhone}</p>}
@@ -174,7 +183,12 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
             </div>
             <div className="space-y-1.5">
               <Label>Valor estimado (R$)</Label>
-              <Input type="number" min="0" value={form.value} onChange={(e) => update("value", e.target.value)} placeholder="0" />
+              <Input
+                inputMode="numeric"
+                value={formatBRL(form.value)}
+                onChange={(e) => update("value", onlyDigitsToValue(e.target.value))}
+                placeholder="R$ 0,00"
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Origem</Label>
