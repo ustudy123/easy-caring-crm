@@ -1,5 +1,6 @@
 import { ForcePasswordChange } from "@/components/ForcePasswordChange";
 import { UrgencyAlertPopup } from "@/components/UrgencyAlertPopup";
+import { SupportRequestAlerts } from "@/components/SupportRequestAlerts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -56,6 +57,7 @@ const App = () => (
                   <ForcePasswordChange>
                   <CrmProvider>
                     <UrgencyAlertPopup />
+                    <SupportRequestAlerts />
                     <Routes>
                       <Route element={<AppShell />}>
                         <Route path="/" element={<Dashboard />} />

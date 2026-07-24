@@ -310,22 +310,14 @@ export default function SuporteOrcamento() {
   useEffect(() => {
     const channel = supabase
       .channel("pricing-support-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "pricing_support_requests" }, (payload: any) => {
-        // Solicitação NOVA: avisa quem é do suporte mesmo com a aba em segundo plano.
-        if (payload?.eventType === "INSERT" && (isSuporte || isAdmin)) {
-          const r = payload.new || {};
-          const paraMim = r.assigned_to && r.assigned_to === sellerId;
-          const daMinhaLoja = mySupervisorInfo.isSupervisor && r.store_id === mySupervisorInfo.storeId;
-          if (paraMim || daMinhaLoja || isAdmin) {
-            const tipo = r.request_type === "precificacao_especial" ? "Negociação especial" : "Novo orçamento";
-            notify(tipo, `${r.client_name || "Cliente"} — solicitação recebida`);
-          }
-        }
+      .on("postgres_changes", { event: "*", schema: "public", table: "pricing_support_requests" }, () => {
+        // O alerta de nova solicitação é global (SupportRequestAlerts), para
+        // funcionar em qualquer página; aqui só recarrega a lista.
         fetchRequests();
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [isSuporte, isAdmin, sellerId, mySupervisorInfo, notify]);
+  }, []);
 
   const handleErpSearch = async () => {
     if (erpSearch.length < 2) {
