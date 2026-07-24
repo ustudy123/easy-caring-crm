@@ -13,6 +13,19 @@ import { isValidPhone, isValidEmail, normalizePhoneBR } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 
+// Valor guardado em reais (ex.: "1234.56"); exibido em pt-BR (R$ 1.234,56).
+// Enquanto digita, tratamos os dígitos como centavos: "12345" -> 123,45.
+function onlyDigitsToValue(masked: string): string {
+  const digits = masked.replace(/\D/g, "");
+  if (!digits) return "";
+  return (parseInt(digits, 10) / 100).toFixed(2);
+}
+function formatBRL(value: string): string {
+  const n = Number(value);
+  if (!isFinite(n)) return "";
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
 interface EditLeadFormProps {
   lead: Lead | null;
   open: boolean;
@@ -144,7 +157,12 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
             </div>
             <div className="space-y-1.5">
               <Label>Valor estimado (R$)</Label>
-              <Input type="number" min="0" value={form.value} onChange={(e) => update("value", e.target.value)} />
+              <Input
+                inputMode="numeric"
+                value={form.value ? formatBRL(form.value) : ""}
+                onChange={(e) => update("value", onlyDigitsToValue(e.target.value))}
+                placeholder="R$ 0,00"
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Origem</Label>
