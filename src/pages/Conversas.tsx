@@ -901,18 +901,23 @@ const mockContactNames: Record<string, string> = {
     if (phones.length === 0) return;
      const names: Record<string, string> = {};
      const photos: Record<string, string> = {};
+     // Casa por dígitos (sem 55/máscara): o telefone da conversa e o do
+     // cliente/lead podem estar salvos em formatos diferentes.
+     const strip = (p: string) => (p || "").replace(/\D/g, "").replace(/^55/, "");
+     const convByDigits = new Map(conversations.map((c) => [strip(c.phone), c.phone]));
      clients.forEach(c => {
-       if (phones.includes(c.phone)) {
-         names[c.phone] = c.name;
-         if (c.profile_pic_url) photos[c.phone] = c.profile_pic_url;
+       const convPhone = convByDigits.get(strip(c.phone));
+       if (convPhone) {
+         names[convPhone] = c.name;
+         if (c.profile_pic_url) photos[convPhone] = c.profile_pic_url;
        }
      });
-     // Sem cadastro em `clients` (ex.: lead interno criado à mão), usa o nome
-     // do lead — senão a linha apareceria só com o número.
+     // Sem cadastro em `clients` (ex.: lead criado à mão), usa o nome do lead —
+     // senão a linha apareceria só com o número.
      (leads || []).forEach((l) => {
-       if (l.clientPhone && l.clientName && !names[l.clientPhone] && phones.includes(l.clientPhone)) {
-         names[l.clientPhone] = l.clientName;
-       }
+       if (!l.clientPhone || !l.clientName) return;
+       const convPhone = convByDigits.get(strip(l.clientPhone));
+       if (convPhone && !names[convPhone]) names[convPhone] = l.clientName;
      });
      setContactNames(names);
      setContactPhotos(photos);
