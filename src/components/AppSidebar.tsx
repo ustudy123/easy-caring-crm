@@ -124,7 +124,7 @@ const allToolsNav: NavItem[] = [
     url: "/feriados",
     icon: CalendarOff,
     badgeKey: null,
-    roles: ["admin", "gerente"],
+    roles: ["admin"],
   },
   {
     title: "Admin",

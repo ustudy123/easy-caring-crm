@@ -41,6 +41,13 @@ function KanbanRoute() {
   return isSuporte && !canSeeKanban ? <Navigate to="/suporte-orcamento" replace /> : <Kanban />;
 }
 
+// Rota exclusiva de admin: acesso direto pela URL por não-admin volta ao início.
+function AdminOnlyRoute({ children }: { children: JSX.Element }) {
+  const { isAdmin, loading } = useRole();
+  if (loading) return null;
+  return isAdmin ? children : <Navigate to="/" replace />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -79,7 +86,7 @@ const App = () => (
                         <Route path="/admin" element={<AdminPanel />} />
                         <Route path="/relatorio-vendas" element={<RelatorioVendasCRM />} />
                         <Route path="/relatorio-encerramentos" element={<RelatorioEncerramentos />} />
-                        <Route path="/feriados" element={<Feriados />} />
+                        <Route path="/feriados" element={<AdminOnlyRoute><Feriados /></AdminOnlyRoute>} />
                         <Route path="*" element={<NotFound />} />
                       </Route>
                     </Routes>
