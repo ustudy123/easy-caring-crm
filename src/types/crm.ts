@@ -131,3 +131,18 @@ export const CLIENT_TYPES = [
   "Empresa/Obra",
   CLIENT_TYPE_EQUIPE_INTERNA,
 ] as const;
+
+// Origens de lead (rótulo exibido + valor gravado na coluna `source`).
+// Fonte única usada em NewLeadForm e EditLeadForm. Manter em ordem alfabética
+// por rótulo — ao adicionar uma origem nova, inserir na posição correta.
+export const LEAD_SOURCES: { value: string; label: string }[] = [
+  { value: "campanha", label: "Campanha" },
+  { value: "google", label: "Google" },
+  { value: "indicacao", label: "Indicação" },
+  { value: "instagram", label: "Instagram" },
+  { value: "loja", label: "Loja" },
+  { value: "meta", label: "Meta Ads" },
+  { value: "prospeccao", label: "Prospecção" },
+  { value: "site", label: "Site" },
+  { value: "whatsapp", label: "WhatsApp" },
+];

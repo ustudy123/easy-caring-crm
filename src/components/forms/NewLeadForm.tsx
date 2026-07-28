@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MaskedInput } from "@/components/ui/masked-input";
-import { Lead, KanbanStage, CLIENT_TYPES } from "@/types/crm";
+import { Lead, KanbanStage, CLIENT_TYPES, LEAD_SOURCES } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
 import { useRole } from "@/contexts/RoleContext";
 import { isValidPhone, isValidEmail, normalizePhoneBR } from "@/lib/masks";
@@ -195,14 +195,9 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
               <Select value={form.source} onValueChange={(v) => update("source", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                   <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                   <SelectItem value="instagram">Instagram</SelectItem>
-                   <SelectItem value="meta">Meta Ads</SelectItem>
-                   <SelectItem value="google">Google</SelectItem>
-                   <SelectItem value="site">Site</SelectItem>
-                   <SelectItem value="indicacao">Indicação</SelectItem>
-                   <SelectItem value="loja">Loja</SelectItem>
-                   <SelectItem value="campanha">Campanha</SelectItem>
+                   {LEAD_SOURCES.map((s) => (
+                     <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                   ))}
                 </SelectContent>
               </Select>
             </div>
