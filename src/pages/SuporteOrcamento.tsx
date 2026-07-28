@@ -49,6 +49,9 @@ export default function SuporteOrcamento() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
+  // Filtro por suporte (assigned_to). Só o supervisor de suporte usa, no lugar do
+  // filtro por tipo. "all" = todos os suportes da loja dele.
+  const [filterSupport, setFilterSupport] = useState<string>("all");
   // Ocultar concluídos com mais de 3 dias. Admin/gerente podem reexibir.
   const [showHiddenCompleted, setShowHiddenCompleted] = useState(false);
   // Alerta de novas solicitações com a aba em segundo plano.
@@ -566,6 +569,13 @@ export default function SuporteOrcamento() {
     { id: "concluido", label: "Concluídos", color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle },
   ];
 
+  // Supervisor de suporte: usa filtro por suporte (nome) em vez de por tipo.
+  const isSupSupervisor = isSuporte && mySupervisorInfo.isSupervisor;
+  // Suportes da loja onde o supervisor está cadastrado (inclui ele mesmo).
+  const myStoreSupports = storeSupports.filter(
+    (s) => s.store_id && s.store_id === mySupervisorInfo.storeId,
+  );
+
   const filteredRequests = requests.filter((r) => {
     const searchLower = search.toLowerCase();
     const matchesSearch = !search || 
@@ -573,6 +583,8 @@ export default function SuporteOrcamento() {
       r.vendedor_name?.toLowerCase().includes(searchLower);
     
     const matchesType = filterType === "all" || r.request_type === filterType;
+    // Filtro por suporte (só o supervisor troca isso; para os demais fica "all").
+    const matchesSupport = filterSupport === "all" || r.assigned_to === filterSupport;
 
     // Regras de visibilidade
     // - Admin: tudo.
@@ -617,7 +629,7 @@ export default function SuporteOrcamento() {
       }
     }
 
-    return matchesSearch && matchesType && isVisible;
+    return matchesSearch && matchesType && matchesSupport && isVisible;
   });
 
   const pendingCount = filteredRequests.filter((r) => r.status === "pendente").length;
@@ -710,17 +722,34 @@ export default function SuporteOrcamento() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar solicitação..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-40 shrink-0">
-                <Filter className="h-3.5 w-3.5 mr-1" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="orcamento">Orçamento</SelectItem>
-                <SelectItem value="precificacao_especial">Prec. Especial</SelectItem>
-              </SelectContent>
-            </Select>
+            {isSupSupervisor ? (
+              <Select value={filterSupport} onValueChange={setFilterSupport}>
+                <SelectTrigger className="w-52 shrink-0">
+                  <Filter className="h-3.5 w-3.5 mr-1" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os suportes</SelectItem>
+                  {myStoreSupports.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.id === sellerId ? `${s.name} (você)` : s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-40 shrink-0">
+                  <Filter className="h-3.5 w-3.5 mr-1" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="orcamento">Orçamento</SelectItem>
+                  <SelectItem value="precificacao_especial">Prec. Especial</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             {(isAdmin || isGerente) && (
               <Button
                 variant={showHiddenCompleted ? "default" : "outline"}
