@@ -52,10 +52,25 @@ const stageColorMap: Record<KanbanStage, string> = {
 // Cores distintas por status: âmbar = esperando, azul = sendo trabalhado,
 // verde = pronto. O laranja da marca era próximo demais do âmbar e os dois
 // primeiros ficavam iguais no card.
-const PRICING_STATUS_UI: Record<string, { label: string; cls: string }> = {
-  pendente:   { label: "Orçamento pendente",   cls: "bg-amber-500/15 text-amber-700" },
-  em_analise: { label: "Orçamento em análise", cls: "bg-blue-500/15 text-blue-700" },
-  concluido:  { label: "Orçamento concluído",  cls: "bg-emerald-500/15 text-emerald-700" },
+const PRICING_STATUS_CLS: Record<string, string> = {
+  pendente:   "bg-amber-500/15 text-amber-700",
+  em_analise: "bg-blue-500/15 text-blue-700",
+  concluido:  "bg-emerald-500/15 text-emerald-700",
+};
+
+// Rótulo do badge por tipo de solicitação + status. O tipo "precificacao_especial"
+// é chamado de "Negociação especial" na UI. Concordância de gênero em concluído/concluída.
+const PRICING_STATUS_LABEL: Record<string, Record<string, string>> = {
+  orcamento: {
+    pendente:   "Orçamento pendente",
+    em_analise: "Orçamento em análise",
+    concluido:  "Orçamento concluído",
+  },
+  precificacao_especial: {
+    pendente:   "Negociação especial pendente",
+    em_analise: "Negociação especial em análise",
+    concluido:  "Negociação especial concluída",
+  },
 };
 
 const stageBgMap: Record<KanbanStage, string> = {
@@ -117,20 +132,21 @@ export default function Kanban() {
    const [classifyCategory, setClassifyCategory] = useState("");
    const [savingClassify, setSavingClassify] = useState(false);
 
-   // Status do orçamento/negociação por lead ("pendente" | "em_analise" |
-   // "concluido"), para exibir no card. Atualiza em tempo real quando o suporte
-   // muda o status na página de Orçamentos.
-   const [pricingStatusByLead, setPricingStatusByLead] = useState<Record<string, string>>({});
+   // Status + tipo da solicitação por lead: status ("pendente" | "em_analise" |
+   // "concluido") e type ("orcamento" | "precificacao_especial"), para o badge do
+   // card mostrar o rótulo certo (Orçamento vs Negociação especial). Atualiza em
+   // tempo real quando o suporte muda o status na página de Orçamentos.
+   const [pricingStatusByLead, setPricingStatusByLead] = useState<Record<string, { status: string; type: string }>>({});
    useEffect(() => {
      const load = async () => {
        const { data } = await supabase
          .from("pricing_support_requests")
-         .select("lead_id, status, created_at")
+         .select("lead_id, status, request_type, created_at")
          .not("lead_id", "is", null)
          .order("created_at", { ascending: true });
-       const map: Record<string, string> = {};
+       const map: Record<string, { status: string; type: string }> = {};
        // created_at ascendente: a última solicitação do lead prevalece.
-       for (const r of (data ?? []) as any[]) if (r.lead_id) map[r.lead_id] = r.status;
+       for (const r of (data ?? []) as any[]) if (r.lead_id) map[r.lead_id] = { status: r.status, type: r.request_type };
        setPricingStatusByLead(map);
      };
      load();
@@ -1012,13 +1028,20 @@ export default function Kanban() {
                                              </div>
                                            )}
                                          </div>
-                                        {/* Status do orçamento/negociação (se houver) */}
-                                        {pricingStatusByLead[lead.id] && PRICING_STATUS_UI[pricingStatusByLead[lead.id]] && (
-                                          <div className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${PRICING_STATUS_UI[pricingStatusByLead[lead.id]].cls}`}>
-                                            <FileText className="h-3 w-3" />
-                                            {PRICING_STATUS_UI[pricingStatusByLead[lead.id]].label}
-                                          </div>
-                                        )}
+                                        {/* Status do orçamento/negociação especial (se houver) */}
+                                        {(() => {
+                                          const p = pricingStatusByLead[lead.id];
+                                          if (!p) return null;
+                                          const cls = PRICING_STATUS_CLS[p.status];
+                                          const label = (PRICING_STATUS_LABEL[p.type] ?? PRICING_STATUS_LABEL.orcamento)[p.status];
+                                          if (!cls || !label) return null;
+                                          return (
+                                            <div className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
+                                              <FileText className="h-3 w-3" />
+                                              {label}
+                                            </div>
+                                          );
+                                        })()}
                                         {/* Value + Source */}
                                         <div className="mt-2.5 flex items-center justify-between">
                                           <div className="flex items-center gap-1 text-xs font-bold text-foreground">
