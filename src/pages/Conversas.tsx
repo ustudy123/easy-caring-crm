@@ -9,6 +9,7 @@ import { Trash2, Tag } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Download } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isGenericName } from "@/lib/clientUtils";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -912,12 +913,17 @@ const mockContactNames: Record<string, string> = {
          if (c.profile_pic_url) photos[convPhone] = c.profile_pic_url;
        }
      });
-     // Sem cadastro em `clients` (ex.: lead criado à mão), usa o nome do lead —
-     // senão a linha apareceria só com o número.
+     // O nome real do lead vence quando não há cadastro em `clients` OU quando
+     // o cadastro ainda está com o placeholder "Cliente <telefone>" (criado pelo
+     // webhook do WhatsApp sem pushName). Sem isso, o placeholder ocupava a linha
+     // e o nome editado no lead nunca aparecia. Só sobrepõe se o lead tiver nome
+     // real (um placeholder de lead não substitui nada).
      (leads || []).forEach((l) => {
-       if (!l.clientPhone || !l.clientName) return;
+       if (!l.clientPhone || !l.clientName || isGenericName(l.clientName)) return;
        const convPhone = convByDigits.get(strip(l.clientPhone));
-       if (convPhone && !names[convPhone]) names[convPhone] = l.clientName;
+       if (!convPhone) return;
+       const current = names[convPhone];
+       if (!current || isGenericName(current)) names[convPhone] = l.clientName;
      });
      setContactNames(names);
      setContactPhotos(photos);
