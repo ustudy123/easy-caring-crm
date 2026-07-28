@@ -93,6 +93,10 @@ export default function SuporteOrcamento() {
   const [savingReqEdit, setSavingReqEdit] = useState(false);
   const [savingResponse, setSavingResponse] = useState(false);
   const canRespond = isAdmin || isSuporte || isGerente;
+  // Quem pode mover o card entre colunas (mudar o status) é o mesmo time que
+  // processa a solicitação. O vendedor só cria e edita a PRÓPRIA solicitação
+  // (notas/anexo); ele não arrasta cards nem usa o "Mover para".
+  const canMoveCard = canRespond;
 
   // Pré-preenche a resposta ao abrir uma solicitação
   useEffect(() => {
@@ -549,6 +553,7 @@ export default function SuporteOrcamento() {
   };
 
   const onDragEnd = (result: DropResult) => {
+    if (!canMoveCard) return;
     if (!result.destination) return;
     const destStatus = result.destination.droppableId as SupportRequest["status"];
     if (result.source.droppableId === destStatus) return;
@@ -1035,7 +1040,7 @@ export default function SuporteOrcamento() {
                           className={`p-3 space-y-3 min-h-[400px] ${snapshot.isDraggingOver ? "bg-brand-500/5" : ""}`}
                         >
                           {colRequests.map((req, index) => (
-                            <Draggable key={req.id} draggableId={req.id} index={index}>
+                            <Draggable key={req.id} draggableId={req.id} index={index} isDragDisabled={!canMoveCard}>
                               {(provided, snapshot) => (
                                 <Card
                                   ref={provided.innerRef}
@@ -1285,6 +1290,7 @@ export default function SuporteOrcamento() {
                   </div>
                 )}
 
+                {canMoveCard && (
                 <div className="space-y-1.5 pt-1">
                   <span className="text-xs text-muted-foreground">Mover para</span>
                   <div className="grid grid-cols-3 gap-2">
@@ -1309,6 +1315,7 @@ export default function SuporteOrcamento() {
                     ))}
                   </div>
                 </div>
+                )}
               </div>
             )}
 
