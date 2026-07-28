@@ -4,7 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Briefcase, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { SellerCombobox } from "@/components/SellerCombobox";
+import { Briefcase, Loader2, Search } from "lucide-react";
 import { KANBAN_STAGES } from "@/types/crm";
 
 interface ProjectRow {
@@ -31,6 +33,8 @@ export function ProjectsReport() {
   const [loading, setLoading] = useState(true);
   const [sellerFilter, setSellerFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"ativos" | "concluidos" | "todos">("ativos");
+  // Busca por nome (cliente ou projeto) — filtra a lista e os resumos.
+  const [nameSearch, setNameSearch] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -51,12 +55,16 @@ export function ProjectsReport() {
   const sellerName = (id: string | null) =>
     (id && sellers.find((s) => s.id === id)?.name) || "Sem vendedor";
 
-  const filtered = useMemo(() => rows.filter((r) => {
-    if (sellerFilter !== "all" && r.seller_id !== sellerFilter) return false;
-    if (statusFilter === "ativos" && r.completed_at) return false;
-    if (statusFilter === "concluidos" && !r.completed_at) return false;
-    return true;
-  }), [rows, sellerFilter, statusFilter]);
+  const filtered = useMemo(() => {
+    const q = nameSearch.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (sellerFilter !== "all" && r.seller_id !== sellerFilter) return false;
+      if (statusFilter === "ativos" && r.completed_at) return false;
+      if (statusFilter === "concluidos" && !r.completed_at) return false;
+      if (q && !((r.client_name || "").toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }, [rows, sellerFilter, statusFilter, nameSearch]);
 
   // Quantos projetos por etapa (só os ativos fazem sentido no funil).
   const porEtapa = useMemo(() => {
@@ -102,13 +110,14 @@ export function ProjectsReport() {
       <CardContent className="space-y-4">
         {/* Filtros */}
         <div className="flex flex-wrap gap-2">
-          <Select value={sellerFilter} onValueChange={setSellerFilter}>
-            <SelectTrigger className="w-56 h-9 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os vendedores</SelectItem>
-              {sellers.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
-            </SelectContent>
-          </Select>
+          <SellerCombobox
+            value={sellerFilter}
+            onChange={setSellerFilter}
+            sellers={sellers}
+            presets={[{ value: "all", label: "Todos os vendedores" }]}
+            placeholder="Todos os vendedores"
+            className="w-56 h-9 text-xs"
+          />
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
             <SelectTrigger className="w-44 h-9 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -117,6 +126,15 @@ export function ProjectsReport() {
               <SelectItem value="todos">Todos</SelectItem>
             </SelectContent>
           </Select>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={nameSearch}
+              onChange={(e) => setNameSearch(e.target.value)}
+              placeholder="Buscar por cliente ou projeto..."
+              className="pl-8 h-9 text-xs"
+            />
+          </div>
         </div>
 
         {loading ? (
