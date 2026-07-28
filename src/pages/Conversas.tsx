@@ -193,6 +193,9 @@ const mockContactNames: Record<string, string> = {
 // ── Component ──
  export default function Conversas() {
      const { isAdmin, isGerente, isVendedor, isSuporte, sellerId, storeId, role } = useRole();
+    // Suporte "puro" (sem também ser vendedor/admin/gerente) enxerga só as abas
+    // Minhas e Interna — as filas Loja/Geral são para os vendedores captarem leads.
+    const isSuporteOnly = isSuporte && !isVendedor && !isAdmin && !isGerente;
     const { decrementUnreadWhatsApp, leads, updateLead } = useCrm();
     const { instances: allInstances, byId: instancesById } = useInstances();
     const [instanceFilter, setInstanceFilter] = useState<string>("all");
@@ -1418,6 +1421,7 @@ const mockContactNames: Record<string, string> = {
                  <UserCheck className="h-3.5 w-3.5" />
                  Minhas
                </Button>
+               {!isSuporteOnly && (
                <Button 
                  variant="ghost" 
                  size="sm" 
@@ -1430,6 +1434,8 @@ const mockContactNames: Record<string, string> = {
                  <Store className="h-3.5 w-3.5" />
                  Loja
                </Button>
+               )}
+                {!isSuporteOnly && (
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -1442,6 +1448,7 @@ const mockContactNames: Record<string, string> = {
                   <Users className="h-3.5 w-3.5" />
                   Geral
                 </Button>
+                )}
                 {(isAdmin || isGerente) && (
                   <Button 
                     variant="ghost" 
@@ -1565,7 +1572,7 @@ const mockContactNames: Record<string, string> = {
                  </div>
  
                  <div className="grid grid-cols-1 gap-2 w-full max-w-[280px]">
-                   {activeTab === 'minhas' && (
+                   {activeTab === 'minhas' && !isSuporteOnly && (
                      <>
                        <Button 
                          variant="outline" 
