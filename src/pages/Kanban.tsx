@@ -894,8 +894,8 @@ export default function Kanban() {
                                              {config.label}
                                            </div>
                                          )}
-                                          {/* Header row */}
-                                          <div className="flex items-start justify-between gap-2">
+                                          {/* Header: nome em linha própria (largura total) e ações embaixo à direita */}
+                                          <div className="flex flex-col gap-1.5">
                                             <div className="flex items-center gap-2 min-w-0">
                                               {(() => {
                                                 const displayName = getDisplayClientName({ 
@@ -917,7 +917,7 @@ export default function Kanban() {
                                                 );
                                               })()}
                                             </div>
-                                            <div className="flex items-center gap-1 shrink-0">
+                                            <div className="flex items-center justify-end flex-wrap gap-1">
                                               {!lead.assignedTo && userSeller && (
                                                 <Button
                                                   size="sm"
