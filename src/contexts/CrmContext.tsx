@@ -140,7 +140,14 @@ export function CrmProvider({ children }: { children: ReactNode }) {
           if ((payload.new as any).archived) {
             setLeads((prev) => prev.filter((l) => l.id !== payload.new.id));
           } else {
-            setLeads((prev) => prev.map((l) => l.id === payload.new.id ? mapLeadFromDb(payload.new) : l));
+            // Upsert: se o lead não está na lista (ex.: estava arquivado e foi
+            // REABERTO após o cliente voltar a mandar mensagem), adiciona; senão
+            // atualiza no lugar. Sem isso, um lead reaberto só apareceria após refresh.
+            setLeads((prev) =>
+              prev.some((l) => l.id === payload.new.id)
+                ? prev.map((l) => (l.id === payload.new.id ? mapLeadFromDb(payload.new) : l))
+                : [mapLeadFromDb(payload.new), ...prev]
+            );
           }
         } else if (payload.eventType === "DELETE") {
           setLeads((prev) => prev.filter((l) => l.id !== payload.old.id));
