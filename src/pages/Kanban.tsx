@@ -925,7 +925,7 @@ export default function Kanban() {
                                               {lead.stage === 'precificacao_especial' && (
                                                 <button
                                                   onClick={(e) => { e.stopPropagation(); handleRequestPricing(lead); }}
-                                                  className="inline-flex items-center gap-1 rounded-lg bg-kanban-pricing px-2.5 py-1 text-[11px] font-bold text-white shadow-sm hover:opacity-90 transition-opacity"
+                                                  className="inline-flex items-center gap-1 rounded-md bg-kanban-pricing px-2 py-1 text-[11px] font-bold text-white shadow-sm hover:opacity-90 transition-opacity"
                                                   title="Abrir precificação especial"
                                                 >
                                                   <Zap className="h-3 w-3" /> Precificar
@@ -938,7 +938,7 @@ export default function Kanban() {
                                               >
                                                 <MessageCircle className="h-3.5 w-3.5" />
                                               </button>
-                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                                                <div className="hidden group-hover:flex items-center gap-0.5">
                                                   {lead.stage !== 'precificacao_especial' && lead.stage !== 'fechamento' && lead.stage !== 'pos_venda' && (
                                                     <button
                                                       onClick={(e) => { e.stopPropagation(); handleRequestPricing(lead); }}
