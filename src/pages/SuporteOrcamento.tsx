@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useCrm } from "@/contexts/CrmContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download, Pencil, Forward, Eye, EyeOff, Coffee, Bell } from "lucide-react";
+import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, MessageSquare, Paperclip, Phone, Loader2, User, X, Download, Pencil, Forward, Eye, EyeOff, Coffee, Bell, Mic, Square, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,7 @@ interface SupportRequest {
   created_at: string;
   pdf_url?: string;
   pdf_name?: string;
+  audio_url?: string;
   erp_client_id?: string;
   created_by?: string;
   seller_id?: string;
@@ -72,6 +73,16 @@ export default function SuporteOrcamento() {
   const [requestType, setRequestType] = useState<RequestType>("orcamento");
   const [description, setDescription] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  // Gravação de áudio da solicitação (opcional).
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // URL assinada do áudio da solicitação aberta no detalhe (para o player).
+  const [detailAudioUrl, setDetailAudioUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // ERP Search states
@@ -346,13 +357,79 @@ export default function SuporteOrcamento() {
     }
   };
 
+  // ---- Gravação de áudio (MediaRecorder) ----
+  const fmtSeconds = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+  const startRecording = async () => {
+    if (isRecording) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        const type = mr.mimeType || "audio/webm";
+        const blob = new Blob(audioChunksRef.current, { type });
+        setAudioBlob(blob);
+        setAudioPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(blob); });
+        stream.getTracks().forEach((t) => t.stop()); // libera o microfone
+      };
+      mediaRecorderRef.current = mr;
+      mr.start();
+      setIsRecording(true);
+      setRecordSeconds(0);
+      recordTimerRef.current = setInterval(() => setRecordSeconds((s) => s + 1), 1000);
+    } catch {
+      toast.error("Não foi possível acessar o microfone. Verifique a permissão do navegador.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (recordTimerRef.current) { clearInterval(recordTimerRef.current); recordTimerRef.current = null; }
+    try { mediaRecorderRef.current?.stop(); } catch { /* já parado */ }
+    setIsRecording(false);
+  };
+
+  const clearAudio = () => {
+    setAudioBlob(null);
+    setAudioPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+    setRecordSeconds(0);
+  };
+
+  // Ao fechar o formulário, encerra qualquer gravação em andamento e limpa o áudio.
+  useEffect(() => {
+    if (!showForm) {
+      if (isRecording) stopRecording();
+      clearAudio();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showForm]);
+
+  // Busca a URL assinada do áudio da solicitação aberta no detalhe.
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setDetailAudioUrl(null);
+      const path = selectedRequest?.audio_url;
+      if (!path) return;
+      const { data } = await supabase.storage.from("pricing_attachments").createSignedUrl(path, 3600);
+      if (!cancelled && data?.signedUrl) setDetailAudioUrl(data.signedUrl);
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [selectedRequest?.id, selectedRequest?.audio_url]);
+
   const handleSubmit = async () => {
     if (!selectedErpClient) {
       toast.error("Selecione um cliente do ERP");
       return;
     }
-    if (!description.trim()) {
-      toast.error("Descreva a solicitação");
+    if (!description.trim() && !audioBlob) {
+      toast.error("Descreva a solicitação ou grave um áudio.");
+      return;
+    }
+    if (isRecording) {
+      toast.error("Pare a gravação do áudio antes de enviar.");
       return;
     }
 
@@ -370,6 +447,18 @@ export default function SuporteOrcamento() {
         pdfUrl = filePath;
       }
 
+      // Sobe o áudio gravado (se houver) no mesmo bucket.
+      let audioUrl = null;
+      if (audioBlob) {
+        const ext = audioBlob.type.includes("ogg") ? "ogg" : audioBlob.type.includes("mp4") ? "m4a" : "webm";
+        const audioPath = `audio/${crypto.randomUUID()}.${ext}`;
+        const { error: audioErr } = await supabase.storage
+          .from("pricing_attachments")
+          .upload(audioPath, audioBlob, { contentType: audioBlob.type || "audio/webm" });
+        if (audioErr) throw audioErr;
+        audioUrl = audioPath;
+      }
+
       const { data: inserted, error: insertError } = await (supabase as any)
         .from("pricing_support_requests")
         .insert({
@@ -379,6 +468,7 @@ export default function SuporteOrcamento() {
           notes: description,
           pdf_url: pdfUrl,
           pdf_name: pdfFile?.name,
+          audio_url: audioUrl,
           seller_id: sellers.some((s) => s.id === sellerId) ? sellerId : null,
           lead_id: pendingLeadId || null,
           // Escopo por loja + destino escolhido pelo vendedor.
@@ -423,6 +513,7 @@ export default function SuporteOrcamento() {
     setSelectedErpClient(null);
     setDescription("");
     setPdfFile(null);
+    clearAudio();
     setErpSearch("");
     setErpResults([]);
   };
@@ -1031,9 +1122,38 @@ export default function SuporteOrcamento() {
                   )}
                 </div>
               </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Áudio (opcional)</label>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  {!isRecording && !audioBlob && (
+                    <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={startRecording}>
+                      <Mic className="h-3.5 w-3.5" /> Gravar áudio
+                    </Button>
+                  )}
+                  {isRecording && (
+                    <Button type="button" variant="destructive" size="sm" className="h-8 gap-1.5" onClick={stopRecording}>
+                      <Square className="h-3.5 w-3.5" /> Parar
+                      <span className="ml-1 inline-flex items-center gap-1 tabular-nums">
+                        <span className="h-2 w-2 rounded-full bg-white animate-pulse" /> {fmtSeconds(recordSeconds)}
+                      </span>
+                    </Button>
+                  )}
+                  {!isRecording && audioBlob && audioPreviewUrl && (
+                    <>
+                      <audio controls src={audioPreviewUrl} className="h-9 max-w-[220px]" />
+                      <Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => { clearAudio(); startRecording(); }}>
+                        <Mic className="h-3.5 w-3.5" /> Regravar
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" className="h-8 text-destructive gap-1.5" onClick={clearAudio}>
+                        <Trash2 className="h-3.5 w-3.5" /> Remover
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
               <div className="flex gap-2 justify-end">
                 <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>Cancelar</Button>
-                <Button size="sm" onClick={handleSubmit} disabled={submitting}>
+                <Button size="sm" onClick={handleSubmit} disabled={submitting || isRecording}>
                   {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Send className="h-3.5 w-3.5 mr-1" />}
                   Enviar Solicitação
                 </Button>
@@ -1103,6 +1223,11 @@ export default function SuporteOrcamento() {
                                           <Paperclip className="h-3 w-3 mr-1" />
                                           PDF
                                         </Button>
+                                      )}
+                                      {req.audio_url && (
+                                        <span className="inline-flex items-center gap-1 h-6 px-2 rounded-md text-[9px] font-semibold bg-brand-500/10 text-brand-500" title="Tem áudio">
+                                          <Mic className="h-3 w-3" /> Áudio
+                                        </span>
                                       )}
                                     </div>
                                   </CardContent>
@@ -1209,6 +1334,17 @@ export default function SuporteOrcamento() {
                   <span className="text-xs text-muted-foreground">Detalhes</span>
                   <p className="rounded-xl border border-border/40 p-3 whitespace-pre-wrap">{selectedRequest.notes || "—"}</p>
                 </div>
+
+                {selectedRequest.audio_url && (
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1"><Mic className="h-3.5 w-3.5" /> Áudio da solicitação</span>
+                    {detailAudioUrl ? (
+                      <audio controls src={detailAudioUrl} className="w-full h-10" />
+                    ) : (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando áudio…</div>
+                    )}
+                  </div>
+                )}
 
                 {selectedRequest.pdf_url && (
                   <div className="flex gap-2">
