@@ -1033,7 +1033,11 @@ export default function Kanban() {
                                           const p = pricingStatusByLead[lead.id];
                                           if (!p) return null;
                                           const cls = PRICING_STATUS_CLS[p.status];
-                                          const label = (PRICING_STATUS_LABEL[p.type] ?? PRICING_STATUS_LABEL.orcamento)[p.status];
+                                          // Mesma regra do SuporteOrcamento (ORC vs PREC): só "orcamento" é
+                                          // orçamento; qualquer outro valor (inclusive null/variações) é
+                                          // negociação especial. Evita o badge cair em "Orçamento" por engano.
+                                          const labels = p.type === "orcamento" ? PRICING_STATUS_LABEL.orcamento : PRICING_STATUS_LABEL.precificacao_especial;
+                                          const label = labels[p.status];
                                           if (!cls || !label) return null;
                                           return (
                                             <div className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
