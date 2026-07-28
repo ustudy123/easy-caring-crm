@@ -1094,7 +1094,7 @@ export default function SuporteOrcamento() {
 
         {/* Detalhes da solicitação */}
         <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
-          <DialogContent className="rounded-2xl max-w-md">
+          <DialogContent className="rounded-2xl max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 {selectedRequest?.request_type === "orcamento"
@@ -1285,7 +1285,7 @@ export default function SuporteOrcamento() {
                       onClick={submitResponse}
                     >
                       {savingResponse ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}
-                      Salvar resposta
+                      Enviar resposta
                     </Button>
                   </div>
                 )}
