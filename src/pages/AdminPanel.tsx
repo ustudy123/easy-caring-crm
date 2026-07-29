@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SellerCombobox } from "@/components/SellerCombobox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -631,15 +632,14 @@ const ROLE_LABELS: Record<string, string> = {
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] uppercase text-muted-foreground font-medium">Vendedor</Label>
-              <Select value={filterSeller} onValueChange={setFilterSeller}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Todos os Vendedores" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Vendedores</SelectItem>
-                  {sellers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SellerCombobox
+                value={filterSeller}
+                onChange={setFilterSeller}
+                sellers={sellers}
+                presets={[{ value: "all", label: "Todos os Vendedores" }]}
+                placeholder="Todos os Vendedores"
+                className="h-8 text-xs"
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] uppercase text-muted-foreground font-medium">Tipo</Label>
