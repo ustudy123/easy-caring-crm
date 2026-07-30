@@ -305,8 +305,9 @@ const mockContactNames: Record<string, string> = {
          setMessages(msgsRes.data as WhatsAppMessage[]);
          setUseMock(false);
        } else {
-         setMessages(mockMessages);
-         setUseMock(true);
+         // Sem mensagens reais: lista vazia (sem conversas de demonstração).
+         setMessages([]);
+         setUseMock(false);
        }
  
        if (clientsRes.data) {
