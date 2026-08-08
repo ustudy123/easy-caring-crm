@@ -1,4 +1,4 @@
-// Níveis do Show das Tintas com progressão automática.
+// Níveis do HUB Taeco Tintas com progressão automática.
 // Todos começam no "Básico" e evoluem conforme o desempenho (volume de
 // perguntas respondidas + percentual de acerto). Nada é definido manualmente:
 // o nível é sempre derivado das estatísticas do vendedor.
