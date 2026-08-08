@@ -132,6 +132,9 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     // periodicamente e quando a aba volta ao foco (evita depender de F5).
     const refresh = async () => {
       if (document.visibilityState === "hidden") return;
+      // Varredura de agendamentos vencidos: devolve o card ao Kanban
+      // (limpa snoozed_until) e dispara o alerta de follow-up pendente.
+      await sweepDueFollowUps();
       const [leadsRes, followUpsRes] = await Promise.all([
         supabase.from("leads").select("*").order("created_at", { ascending: false }),
         supabase.from("follow_ups").select("*").order("scheduled_at"),
@@ -139,6 +142,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       if (leadsRes.data) setLeads(leadsRes.data.filter((r: any) => !r.archived).map(mapLeadFromDb));
       if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
     };
+    refresh();
     const refreshInterval = setInterval(refresh, 15000);
     const onFocus = () => refresh();
     window.addEventListener("focus", onFocus);
