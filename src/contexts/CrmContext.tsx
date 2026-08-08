@@ -134,6 +134,25 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const [unreadWhatsAppCount, setUnreadWhatsAppCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  // IDs já exibidos como pop-up, para não repetir o toast a cada polling.
+  const toastedNotifIds = useRef<Set<string>>(new Set());
+  const notifiedReady = useRef(false);
+
+  const pushNotifications = useCallback((rows: Notification[], showToast: boolean) => {
+    setNotifications((prev) => {
+      const map = new Map(prev.map((n) => [n.id, n]));
+      rows.forEach((n) => map.set(n.id, n));
+      return Array.from(map.values())
+        .filter((n) => !n.is_read)
+        .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    });
+    if (!showToast) return;
+    rows.forEach((n) => {
+      if (n.is_read || toastedNotifIds.current.has(n.id)) return;
+      toastedNotifIds.current.add(n.id);
+      toast(n.title, { description: n.message, duration: 8000 });
+    });
+  }, []);
 
   // Fetch initial data
   useEffect(() => {
@@ -149,7 +168,12 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
        if (sellersRes.data) setSellers(sellersRes.data.map(mapSellerFromDb));
       if (whatsappRes.count != null) setUnreadWhatsAppCount(whatsappRes.count);
-      if (notificationsRes.data) setNotifications(notificationsRes.data);
+      if (notificationsRes.data) {
+        // Primeira carga: não dispara pop-up para notificações antigas.
+        (notificationsRes.data as Notification[]).forEach((n) => toastedNotifIds.current.add(n.id));
+        setNotifications(notificationsRes.data as Notification[]);
+      }
+      notifiedReady.current = true;
       setLoading(false);
     };
     fetchData();
