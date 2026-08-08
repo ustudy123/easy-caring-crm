@@ -95,7 +95,7 @@ export default function Dashboard() {
             <Paintbrush className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-4xl font-black text-foreground tracking-tight">
-            Show das <span className="text-brand-500">Tintas</span>
+            HUB Taeco <span className="text-brand-500">Tintas</span>
           </h1>
         </div>
         <p className="text-muted-foreground text-lg max-w-md mx-auto">
