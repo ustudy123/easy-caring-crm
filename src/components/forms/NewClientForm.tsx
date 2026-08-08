@@ -235,7 +235,7 @@ export function NewClientForm({ open, onOpenChange, onSubmit }: NewClientFormPro
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="client-tags" className="text-xs font-semibold">Tags</Label>
+              <Label htmlFor="client-tags" className="text-xs font-semibold">Palavras-chave</Label>
               <Input
                 id="client-tags"
                 value={form.tags}

@@ -99,7 +99,7 @@ export const KANBAN_STAGES: { key: KanbanStage; label: string; color: string }[]
   { key: 'precificacao_especial', label: 'Orçamento e Preço', color: 'kanban-pricing' },
   { key: 'demonstracao_valor', label: 'Demonstração', color: 'kanban-demonstration' },
   { key: 'contorno_objecoes', label: 'Objeções', color: 'kanban-objections' },
-  { key: 'cross_sell', label: 'Cross-sell', color: 'kanban-crosssell' },
+  { key: 'cross_sell', label: 'Venda Adicional', color: 'kanban-crosssell' },
   { key: 'fechamento', label: 'Fechamento', color: 'kanban-closing' },
   { key: 'pos_venda', label: 'Pós-Venda', color: 'kanban-postsale' },
 ];

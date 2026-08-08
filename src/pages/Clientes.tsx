@@ -166,7 +166,7 @@ export default function Clientes() {
         { key: "city", label: "Cidade" },
         { key: "address", label: "Endereço" },
         { key: "totalPurchases", label: "Total Compras" },
-        { key: "tags", label: "Tags", format: (c) => (c.tags || []).join(", ") },
+        { key: "tags", label: "Palavras-chave", format: (c) => (c.tags || []).join(", ") },
         { key: "lastContact", label: "Último contato", format: (c) => c.lastContact ? new Date(c.lastContact).toLocaleDateString("pt-BR") : "" },
         { key: "createdAt", label: "Cliente desde", format: (c) => new Date(c.createdAt).toLocaleDateString("pt-BR") },
       ],
@@ -188,7 +188,7 @@ export default function Clientes() {
            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1 w-full sm:w-auto">
              <div className="relative w-full sm:max-w-sm">
                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-               <Input placeholder="Buscar por nome, telefone ou tag..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-card/80 backdrop-blur-sm border-border/60 focus:border-primary/40" />
+               <Input placeholder="Buscar por nome, telefone ou palavra-chave..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-card/80 backdrop-blur-sm border-border/60 focus:border-primary/40" />
              </div>
              <Button 
                size="sm" 
