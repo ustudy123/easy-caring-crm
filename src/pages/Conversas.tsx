@@ -565,6 +565,53 @@ const mockContactNames: Record<string, string> = {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // Fallback de sincronização: se o WebSocket do realtime cair/atrasar, buscamos
+  // apenas as mensagens novas (a partir da última conhecida) a cada 8s e também
+  // quando a aba volta ao foco. Isso elimina a necessidade de F5.
+  useEffect(() => {
+    let cancelled = false;
+
+    const pullNew = async () => {
+      if (cancelled || document.visibilityState === "hidden") return;
+      const since = messagesRef.current.reduce((max, m) => {
+        const t = new Date(m.timestamp || m.created_at || 0).getTime();
+        return t > max ? t : max;
+      }, 0);
+      const sinceIso = new Date(since ? since - 60_000 : Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data } = await supabase
+        .from("whatsapp_messages")
+        .select("*")
+        .gte("timestamp", sinceIso)
+        .order("timestamp", { ascending: true })
+        .limit(500);
+      if (cancelled || !data || data.length === 0) return;
+      setMessages((prev) => {
+        const byId = new Set(prev.map((m) => m.id));
+        const byMsgId = new Set(prev.map((m) => m.message_id).filter(Boolean));
+        const fresh = (data as WhatsAppMessage[]).filter(
+          (m) => !byId.has(m.id) && !(m.message_id && byMsgId.has(m.message_id))
+        );
+        // Também aplica atualizações de status (lida/entregue) das já existentes.
+        const updates = new Map((data as WhatsAppMessage[]).map((m) => [m.id, m]));
+        const merged = prev.map((m) => (updates.has(m.id) ? { ...m, ...updates.get(m.id)! } : m));
+        return fresh.length ? [...merged, ...fresh] : merged;
+      });
+    };
+
+    const interval = setInterval(pullNew, 8000);
+    const onFocus = () => { pullNew(); fetchData(true); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    pullNew();
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [fetchData]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectedPhone, messages]);
