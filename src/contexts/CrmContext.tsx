@@ -128,6 +128,22 @@ export function CrmProvider({ children }: { children: ReactNode }) {
 
   // Real-time subscriptions
   useEffect(() => {
+    // Fallback: se o realtime atrasar/cair, recarrega leads e follow-ups
+    // periodicamente e quando a aba volta ao foco (evita depender de F5).
+    const refresh = async () => {
+      if (document.visibilityState === "hidden") return;
+      const [leadsRes, followUpsRes] = await Promise.all([
+        supabase.from("leads").select("*").order("created_at", { ascending: false }),
+        supabase.from("follow_ups").select("*").order("scheduled_at"),
+      ]);
+      if (leadsRes.data) setLeads(leadsRes.data.filter((r: any) => !r.archived).map(mapLeadFromDb));
+      if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
+    };
+    const refreshInterval = setInterval(refresh, 15000);
+    const onFocus = () => refresh();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
     const leadsChannel = supabase
       .channel("leads-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, (payload) => {
@@ -231,6 +247,9 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       .subscribe();
 
     return () => {
+      clearInterval(refreshInterval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
       supabase.removeChannel(leadsChannel);
       supabase.removeChannel(followUpsChannel);
       supabase.removeChannel(whatsappChannel);

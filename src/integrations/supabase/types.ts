@@ -53,6 +53,53 @@ export type Database = {
         }
         Relationships: []
       }
+      client_projects: {
+        Row: {
+          client_name: string | null
+          client_phone: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          seller_id: string | null
+          stage: string
+          updated_at: string
+        }
+        Insert: {
+          client_name?: string | null
+          client_phone: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          seller_id?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string | null
+          client_phone?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          seller_id?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_projects_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -61,25 +108,36 @@ export type Database = {
           assigned_seller_id: string | null
           city: string | null
           claimed_at: string | null
+          client_type: string | null
+          contact_category: string | null
+          cpf_cnpj: string | null
           created_at: string
           email: string | null
           erp_id: string | null
+          holiday_notified_on: string | null
           id: string
           last_contact: string | null
           last_message_at: string | null
           last_message_from_client_at: string | null
+          last_purchase_at: string | null
           last_seller_response_at: string | null
+          linked_erp_client_id: string | null
+          linked_erp_client_name: string | null
           name: string
           notes: string | null
           pending_store_preference: string | null
           phone: string
+          profile_pic_url: string | null
+          purchase_count: number
           received_on_instance_id: string | null
           status: string | null
           store_id: string | null
           tags: string[]
           total_purchases: number
+          triage_code_attempts: number
           triage_step: string | null
           triaging: boolean | null
+          zip_code: string | null
         }
         Insert: {
           address?: string | null
@@ -88,25 +146,36 @@ export type Database = {
           assigned_seller_id?: string | null
           city?: string | null
           claimed_at?: string | null
+          client_type?: string | null
+          contact_category?: string | null
+          cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
           erp_id?: string | null
+          holiday_notified_on?: string | null
           id?: string
           last_contact?: string | null
           last_message_at?: string | null
           last_message_from_client_at?: string | null
+          last_purchase_at?: string | null
           last_seller_response_at?: string | null
+          linked_erp_client_id?: string | null
+          linked_erp_client_name?: string | null
           name: string
           notes?: string | null
           pending_store_preference?: string | null
           phone: string
+          profile_pic_url?: string | null
+          purchase_count?: number
           received_on_instance_id?: string | null
           status?: string | null
           store_id?: string | null
           tags?: string[]
           total_purchases?: number
+          triage_code_attempts?: number
           triage_step?: string | null
           triaging?: boolean | null
+          zip_code?: string | null
         }
         Update: {
           address?: string | null
@@ -115,25 +184,36 @@ export type Database = {
           assigned_seller_id?: string | null
           city?: string | null
           claimed_at?: string | null
+          client_type?: string | null
+          contact_category?: string | null
+          cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
           erp_id?: string | null
+          holiday_notified_on?: string | null
           id?: string
           last_contact?: string | null
           last_message_at?: string | null
           last_message_from_client_at?: string | null
+          last_purchase_at?: string | null
           last_seller_response_at?: string | null
+          linked_erp_client_id?: string | null
+          linked_erp_client_name?: string | null
           name?: string
           notes?: string | null
           pending_store_preference?: string | null
           phone?: string
+          profile_pic_url?: string | null
+          purchase_count?: number
           received_on_instance_id?: string | null
           status?: string | null
           store_id?: string | null
           tags?: string[]
           total_purchases?: number
+          triage_code_attempts?: number
           triage_step?: string | null
           triaging?: boolean | null
+          zip_code?: string | null
         }
         Relationships: [
           {
@@ -175,6 +255,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          last_notified_at: string | null
           lead_id: string | null
           scheduled_at: string
           store_id: string | null
@@ -188,6 +269,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          last_notified_at?: string | null
           lead_id?: string | null
           scheduled_at: string
           store_id?: string | null
@@ -201,6 +283,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          last_notified_at?: string | null
           lead_id?: string | null
           scheduled_at?: string
           store_id?: string | null
@@ -333,69 +416,78 @@ export type Database = {
       }
       leads: {
         Row: {
+          archived: boolean
           assigned_to: string | null
           client_email: string | null
           client_name: string
           client_phone: string
           client_type: string | null
+          closed_at: string | null
           company_work_site: string | null
           created_at: string
           id: string
           interest_products: string | null
-          next_follow_up: string | null
           lost_reason: string | null
-          closed_at: string | null
+          next_follow_up: string | null
           notes: string
+          snoozed_until: string | null
           source: string
           stage: Database["public"]["Enums"]["kanban_stage"]
           store_id: string | null
           store_name: string | null
           tags: string[]
           updated_at: string
+          urgency_acknowledged_at: string | null
           value: number
         }
         Insert: {
+          archived?: boolean
           assigned_to?: string | null
           client_email?: string | null
           client_name: string
           client_phone: string
           client_type?: string | null
+          closed_at?: string | null
           company_work_site?: string | null
           created_at?: string
           id?: string
           interest_products?: string | null
-          next_follow_up?: string | null
           lost_reason?: string | null
-          closed_at?: string | null
+          next_follow_up?: string | null
           notes?: string
+          snoozed_until?: string | null
           source?: string
           stage?: Database["public"]["Enums"]["kanban_stage"]
           store_id?: string | null
           store_name?: string | null
           tags?: string[]
           updated_at?: string
+          urgency_acknowledged_at?: string | null
           value?: number
         }
         Update: {
+          archived?: boolean
           assigned_to?: string | null
           client_email?: string | null
           client_name?: string
           client_phone?: string
           client_type?: string | null
+          closed_at?: string | null
           company_work_site?: string | null
           created_at?: string
           id?: string
           interest_products?: string | null
-          next_follow_up?: string | null
           lost_reason?: string | null
-          closed_at?: string | null
+          next_follow_up?: string | null
           notes?: string
+          snoozed_until?: string | null
           source?: string
           stage?: Database["public"]["Enums"]["kanban_stage"]
           store_id?: string | null
           store_name?: string | null
           tags?: string[]
           updated_at?: string
+          urgency_acknowledged_at?: string | null
           value?: number
         }
         Relationships: [
@@ -489,9 +581,82 @@ export type Database = {
           },
         ]
       }
+      pricing_request_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_url: string
+          id: string
+          request_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_url: string
+          id?: string
+          request_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          request_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_request_attachments_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_support_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_request_notes: {
+        Row: {
+          created_at: string
+          id: string
+          note: string
+          request_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note: string
+          request_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string
+          request_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_request_notes_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_support_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pricing_support_requests: {
         Row: {
+          assigned_to: string | null
+          audio_url: string | null
           client_name: string | null
+          completed_at: string | null
           created_at: string | null
           created_by: string | null
           erp_client_id: string | null
@@ -501,12 +666,21 @@ export type Database = {
           pdf_name: string | null
           pdf_url: string | null
           request_type: string | null
+          responded_at: string | null
+          responded_by_name: string | null
+          response_notes: string | null
+          response_pdf_name: string | null
+          response_pdf_url: string | null
           seller_id: string | null
           status: string | null
+          store_id: string | null
           updated_at: string | null
         }
         Insert: {
+          assigned_to?: string | null
+          audio_url?: string | null
           client_name?: string | null
+          completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
           erp_client_id?: string | null
@@ -516,12 +690,21 @@ export type Database = {
           pdf_name?: string | null
           pdf_url?: string | null
           request_type?: string | null
+          responded_at?: string | null
+          responded_by_name?: string | null
+          response_notes?: string | null
+          response_pdf_name?: string | null
+          response_pdf_url?: string | null
           seller_id?: string | null
           status?: string | null
+          store_id?: string | null
           updated_at?: string | null
         }
         Update: {
+          assigned_to?: string | null
+          audio_url?: string | null
           client_name?: string | null
+          completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
           erp_client_id?: string | null
@@ -531,11 +714,24 @@ export type Database = {
           pdf_name?: string | null
           pdf_url?: string | null
           request_type?: string | null
+          responded_at?: string | null
+          responded_by_name?: string | null
+          response_notes?: string | null
+          response_pdf_name?: string | null
+          response_pdf_url?: string | null
           seller_id?: string | null
           status?: string | null
+          store_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "pricing_support_requests_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pricing_support_requests_lead_id_fkey"
             columns: ["lead_id"]
@@ -550,6 +746,13 @@ export type Database = {
             referencedRelation: "sellers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pricing_support_requests_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -559,6 +762,7 @@ export type Database = {
           display_name: string | null
           id: string
           is_active: boolean | null
+          must_change_password: boolean
           role: string | null
           sla_target_minutes: number | null
           store_id: string | null
@@ -572,6 +776,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           is_active?: boolean | null
+          must_change_password?: boolean
           role?: string | null
           sla_target_minutes?: number | null
           store_id?: string | null
@@ -585,6 +790,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           is_active?: boolean | null
+          must_change_password?: boolean
           role?: string | null
           sla_target_minutes?: number | null
           store_id?: string | null
@@ -615,6 +821,8 @@ export type Database = {
           correct_answers: number
           id: string
           score: number
+          segment_breakdown: Json | null
+          subject_breakdown: Json | null
           total_questions: number
           user_id: string
         }
@@ -623,6 +831,8 @@ export type Database = {
           correct_answers: number
           id?: string
           score?: number
+          segment_breakdown?: Json | null
+          subject_breakdown?: Json | null
           total_questions: number
           user_id: string
         }
@@ -631,6 +841,8 @@ export type Database = {
           correct_answers?: number
           id?: string
           score?: number
+          segment_breakdown?: Json | null
+          subject_breakdown?: Json | null
           total_questions?: number
           user_id?: string
         }
@@ -644,6 +856,7 @@ export type Database = {
           difficulty: string | null
           id: string
           options: Json
+          paint_types: string[] | null
           question: string
           subject: string | null
         }
@@ -654,6 +867,7 @@ export type Database = {
           difficulty?: string | null
           id?: string
           options: Json
+          paint_types?: string[] | null
           question: string
           subject?: string | null
         }
@@ -664,10 +878,40 @@ export type Database = {
           difficulty?: string | null
           id?: string
           options?: Json
+          paint_types?: string[] | null
           question?: string
           subject?: string | null
         }
         Relationships: []
+      }
+      quiz_seen_questions: {
+        Row: {
+          last_seen_at: string
+          question_id: string
+          seen_count: number
+          user_id: string
+        }
+        Insert: {
+          last_seen_at?: string
+          question_id: string
+          seen_count?: number
+          user_id: string
+        }
+        Update: {
+          last_seen_at?: string
+          question_id?: string
+          seen_count?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_seen_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       redirection_history: {
         Row: {
@@ -751,9 +995,11 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_available: boolean | null
+          is_support_supervisor: boolean
           last_assigned_at: string | null
           leads_count: number
           name: string
+          quiz_subjects: string[] | null
           role: Database["public"]["Enums"]["seller_role"]
           sla_target_minutes: number | null
           status: string | null
@@ -770,9 +1016,11 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_available?: boolean | null
+          is_support_supervisor?: boolean
           last_assigned_at?: string | null
           leads_count?: number
           name: string
+          quiz_subjects?: string[] | null
           role?: Database["public"]["Enums"]["seller_role"]
           sla_target_minutes?: number | null
           status?: string | null
@@ -789,9 +1037,11 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_available?: boolean | null
+          is_support_supervisor?: boolean
           last_assigned_at?: string | null
           leads_count?: number
           name?: string
+          quiz_subjects?: string[] | null
           role?: Database["public"]["Enums"]["seller_role"]
           sla_target_minutes?: number | null
           status?: string | null
@@ -962,13 +1212,57 @@ export type Database = {
           },
         ]
       }
+      store_holidays: {
+        Row: {
+          created_at: string
+          holiday_date: string
+          id: string
+          message: string | null
+          redirect_store_id: string | null
+          store_id: string
+        }
+        Insert: {
+          created_at?: string
+          holiday_date: string
+          id?: string
+          message?: string | null
+          redirect_store_id?: string | null
+          store_id: string
+        }
+        Update: {
+          created_at?: string
+          holiday_date?: string
+          id?: string
+          message?: string | null
+          redirect_store_id?: string | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_holidays_redirect_store_id_fkey"
+            columns: ["redirect_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_holidays_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           address: string | null
           city: string | null
           created_at: string
           employee_count: number
+          erp_company_code: string | null
           id: string
+          is_external_team: boolean
           name: string
           phone: string | null
         }
@@ -977,7 +1271,9 @@ export type Database = {
           city?: string | null
           created_at?: string
           employee_count?: number
+          erp_company_code?: string | null
           id?: string
+          is_external_team?: boolean
           name: string
           phone?: string | null
         }
@@ -986,11 +1282,107 @@ export type Database = {
           city?: string | null
           created_at?: string
           employee_count?: number
+          erp_company_code?: string | null
           id?: string
+          is_external_team?: boolean
           name?: string
           phone?: string | null
         }
         Relationships: []
+      }
+      support_breaks: {
+        Row: {
+          break_date: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          seller_id: string
+          started_at: string
+        }
+        Insert: {
+          break_date?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          seller_id: string
+          started_at?: string
+        }
+        Update: {
+          break_date?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          seller_id?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_breaks_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_request_assignments: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          from_seller_id: string | null
+          id: string
+          note: string | null
+          request_id: string
+          to_seller_id: string | null
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          from_seller_id?: string | null
+          id?: string
+          note?: string | null
+          request_id: string
+          to_seller_id?: string | null
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          from_seller_id?: string | null
+          id?: string
+          note?: string | null
+          request_id?: string
+          to_seller_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_request_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_request_assignments_from_seller_id_fkey"
+            columns: ["from_seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_request_assignments_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_support_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_request_assignments_to_seller_id_fkey"
+            columns: ["to_seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_modules: {
         Row: {
@@ -1181,6 +1573,37 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_assign_user_roles:
+        | {
+            Args: {
+              _is_active?: boolean
+              _is_available?: boolean
+              _roles: Database["public"]["Enums"]["app_role"][]
+              _seller_code?: string
+              _seller_name?: string
+              _status?: string
+              _store_id?: string
+              _substitute_id?: string
+              _user_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _is_active?: boolean
+              _is_available?: boolean
+              _is_support_supervisor?: boolean
+              _roles: Database["public"]["Enums"]["app_role"][]
+              _seller_code?: string
+              _seller_name?: string
+              _status?: string
+              _store_id?: string
+              _substitute_id?: string
+              _user_id: string
+            }
+            Returns: undefined
+          }
+      admin_delete_user: { Args: { _user_id: string }; Returns: undefined }
       admin_list_users: {
         Args: never
         Returns: {
@@ -1190,6 +1613,7 @@ export type Database = {
           is_active: boolean
           is_available: boolean
           role: Database["public"]["Enums"]["app_role"]
+          roles: string
           seller_code: string
           seller_id: string
           seller_name: string
@@ -1214,6 +1638,10 @@ export type Database = {
         Args: { _phone: string; _seller_id: string }
         Returns: Json
       }
+      bump_triage_code_attempts: {
+        Args: { p_client_id: string }
+        Returns: number
+      }
       claim_whatsapp_client: {
         Args: { _fallback_name?: string; _phone: string }
         Returns: {
@@ -1222,6 +1650,7 @@ export type Database = {
           store_id: string
         }[]
       }
+      get_admin_display_name: { Args: never; Returns: string }
       get_next_seller_for_distribution: {
         Args: { _store_id: string }
         Returns: {
@@ -1233,9 +1662,11 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_available: boolean | null
+          is_support_supervisor: boolean
           last_assigned_at: string | null
           leads_count: number
           name: string
+          quiz_subjects: string[] | null
           role: Database["public"]["Enums"]["seller_role"]
           sla_target_minutes: number | null
           status: string | null
@@ -1250,6 +1681,16 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_quiz_leaderboard: {
+        Args: { limit_count?: number; p_since?: string }
+        Returns: {
+          attempts: number
+          avatar_url: string
+          best_score: number
+          display_name: string
+          user_id: string
+        }[]
+      }
       get_random_seller_by_city: {
         Args: { _city: string }
         Returns: {
@@ -1261,9 +1702,11 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_available: boolean | null
+          is_support_supervisor: boolean
           last_assigned_at: string | null
           leads_count: number
           name: string
+          quiz_subjects: string[] | null
           role: Database["public"]["Enums"]["seller_role"]
           sla_target_minutes: number | null
           status: string | null
@@ -1287,7 +1730,23 @@ export type Database = {
         }
         Returns: boolean
       }
+      list_support_sellers: {
+        Args: never
+        Returns: {
+          is_support_supervisor: boolean
+          name: string
+          seller_id: string
+          store_id: string
+          store_name: string
+        }[]
+      }
+      mark_questions_seen: {
+        Args: { p_question_ids: string[] }
+        Returns: undefined
+      }
       mark_seller_assigned: { Args: { _seller_id: string }; Returns: undefined }
+      mark_whatsapp_read: { Args: { p_phone: string }; Returns: number }
+      notify_quiz_reminder: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "gerente" | "vendedor" | "suporte"
@@ -1467,6 +1926,7 @@ export const Constants = {
         "cross_sell",
         "fechamento",
         "pos_venda",
+        "perdido",
       ],
       seller_role: ["vendedor", "gerente"],
       whatsapp_instance_status: [
