@@ -13,6 +13,7 @@ import { CalendarIcon } from "lucide-react";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { FollowUp } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
+import { useUserRole } from "@/hooks/useUserRole";
 import { isValidPhone } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
