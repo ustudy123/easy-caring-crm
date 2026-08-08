@@ -127,7 +127,7 @@ export function EditClientForm({ client, open, onOpenChange, onSubmit, onDelete 
               <Input value={form.city} onChange={(e) => update("city", e.target.value)} maxLength={100} />
             </div>
             <div className="space-y-1.5">
-              <Label>Tags (vírgula)</Label>
+              <Label>Palavras-chave (vírgula)</Label>
               <Input value={form.tags} onChange={(e) => update("tags", e.target.value)} maxLength={200} />
             </div>
             <div className="col-span-2 space-y-1.5">

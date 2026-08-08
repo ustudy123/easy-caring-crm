@@ -211,7 +211,7 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
                   <SelectItem value="recomendacao_tecnica">Recomendação</SelectItem>
                   <SelectItem value="demonstracao_valor">Demonstração</SelectItem>
                   <SelectItem value="contorno_objecoes">Objeções</SelectItem>
-                  <SelectItem value="cross_sell">Cross-sell</SelectItem>
+                  <SelectItem value="cross_sell">Venda Adicional</SelectItem>
                   <SelectItem value="fechamento">Fechamento</SelectItem>
                   <SelectItem value="pos_venda">Pós-Venda</SelectItem>
                 </SelectContent>
@@ -236,7 +236,7 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
               )}
             </div>
             <div className="col-span-2 space-y-1.5">
-              <Label>Tags (separadas por vírgula)</Label>
+              <Label>Palavras-chave (separadas por vírgula)</Label>
               <Input value={form.tags} onChange={(e) => update("tags", e.target.value)} placeholder="residencial, apartamento" maxLength={200} />
             </div>
             <div className="col-span-2 space-y-1.5">

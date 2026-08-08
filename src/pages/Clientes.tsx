@@ -166,7 +166,7 @@ export default function Clientes() {
         { key: "city", label: "Cidade" },
         { key: "address", label: "Endereço" },
         { key: "totalPurchases", label: "Total Compras" },
-        { key: "tags", label: "Tags", format: (c) => (c.tags || []).join(", ") },
+        { key: "tags", label: "Palavras-chave", format: (c) => (c.tags || []).join(", ") },
         { key: "lastContact", label: "Último contato", format: (c) => c.lastContact ? new Date(c.lastContact).toLocaleDateString("pt-BR") : "" },
         { key: "createdAt", label: "Cliente desde", format: (c) => new Date(c.createdAt).toLocaleDateString("pt-BR") },
       ],
