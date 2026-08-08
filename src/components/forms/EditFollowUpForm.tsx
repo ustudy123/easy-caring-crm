@@ -82,7 +82,7 @@ export function EditFollowUpForm({ followUp, open, onOpenChange, onSubmit, onDel
       clientPhone: form.clientPhone.trim(),
       scheduledAt: scheduledDate.toISOString(),
       description: form.description.trim(),
-      assignedTo: form.assignedTo || "",
+      assignedTo: (isSellerOnly && sellerId ? sellerId : form.assignedTo) || "",
       type: form.type,
     };
     onSubmit(updated);
