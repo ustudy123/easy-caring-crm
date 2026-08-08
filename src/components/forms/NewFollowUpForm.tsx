@@ -27,9 +27,11 @@ interface NewFollowUpFormProps {
 export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFormProps) {
   const { toast } = useToast();
   const sellers = useSellers();
+  const { role, sellerId } = useUserRole();
+  const isSellerOnly = role === "vendedor";
   const [form, setForm] = useState({
     clientName: "", clientPhone: "", description: "",
-    type: "whatsapp" as FollowUp["type"], assignedTo: "", time: "10:00",
+    type: "whatsapp" as FollowUp["type"], assignedTo: isSellerOnly && sellerId ? sellerId : "", time: "10:00",
   });
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [errors, setErrors] = useState<Record<string, string>>({});
