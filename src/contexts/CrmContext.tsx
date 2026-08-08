@@ -97,6 +97,35 @@ function mapFollowUpFromDb(row: any): FollowUp {
      conversions: Number(row.conversions || 0),
    };
  }
+
+// Agendamentos vencidos: acorda o lead adiado (volta ao Kanban) e marca
+// last_notified_at, o que dispara o trigger que cria o alerta de follow-up.
+async function sweepDueFollowUps() {
+  const nowIso = new Date().toISOString();
+  const { data: due } = await (supabase as any)
+    .from("follow_ups")
+    .select("id, lead_id, last_notified_at")
+    .eq("completed", false)
+    .lte("scheduled_at", nowIso);
+  if (!due || due.length === 0) return;
+
+  const leadIds = due.map((f: any) => f.lead_id).filter(Boolean);
+  if (leadIds.length > 0) {
+    await (supabase as any)
+      .from("leads")
+      .update({ snoozed_until: null })
+      .in("id", leadIds)
+      .not("snoozed_until", "is", null);
+  }
+
+  const toNotify = due.filter((f: any) => !f.last_notified_at).map((f: any) => f.id);
+  if (toNotify.length > 0) {
+    await (supabase as any)
+      .from("follow_ups")
+      .update({ last_notified_at: nowIso })
+      .in("id", toNotify);
+  }
+}
  
 export function CrmProvider({ children }: { children: ReactNode }) {
   const [leads, setLeads] = useState<Lead[]>([]);
