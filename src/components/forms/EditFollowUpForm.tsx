@@ -13,6 +13,7 @@ import { CalendarIcon } from "lucide-react";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { FollowUp } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
+import { useUserRole } from "@/hooks/useUserRole";
 import { isValidPhone } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -28,6 +29,8 @@ interface EditFollowUpFormProps {
 export function EditFollowUpForm({ followUp, open, onOpenChange, onSubmit, onDelete }: EditFollowUpFormProps) {
   const { toast } = useToast();
   const sellers = useSellers();
+  const { role, sellerId } = useUserRole();
+  const isSellerOnly = role === "vendedor";
   const [form, setForm] = useState({
     clientName: "", clientPhone: "", description: "",
     type: "whatsapp" as FollowUp["type"], assignedTo: "", time: "10:00",
@@ -79,7 +82,7 @@ export function EditFollowUpForm({ followUp, open, onOpenChange, onSubmit, onDel
       clientPhone: form.clientPhone.trim(),
       scheduledAt: scheduledDate.toISOString(),
       description: form.description.trim(),
-      assignedTo: form.assignedTo || "",
+      assignedTo: (isSellerOnly && sellerId ? sellerId : form.assignedTo) || "",
       type: form.type,
     };
     onSubmit(updated);
@@ -143,17 +146,19 @@ export function EditFollowUpForm({ followUp, open, onOpenChange, onSubmit, onDel
               <Label>Horário</Label>
               <Input type="time" value={form.time} onChange={(e) => update("time", e.target.value)} />
             </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>Vendedor</Label>
-              <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
-                <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                <SelectContent>
-                  {sellers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!isSellerOnly && (
+              <div className="col-span-2 space-y-1.5">
+                <Label>Vendedor</Label>
+                <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                  <SelectContent>
+                    {sellers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="col-span-2 space-y-1.5">
               <Label>Descrição</Label>
               <Textarea value={form.description} onChange={(e) => update("description", e.target.value)} maxLength={500} rows={3} />

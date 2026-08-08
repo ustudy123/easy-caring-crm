@@ -13,6 +13,7 @@ import { CalendarIcon, Search, Loader2 } from "lucide-react";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { FollowUp } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
+import { useUserRole } from "@/hooks/useUserRole";
 import { isValidPhone, maskPhone } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,9 +27,11 @@ interface NewFollowUpFormProps {
 export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFormProps) {
   const { toast } = useToast();
   const sellers = useSellers();
+  const { role, sellerId } = useUserRole();
+  const isSellerOnly = role === "vendedor";
   const [form, setForm] = useState({
     clientName: "", clientPhone: "", description: "",
-    type: "whatsapp" as FollowUp["type"], assignedTo: "", time: "10:00",
+    type: "whatsapp" as FollowUp["type"], assignedTo: isSellerOnly && sellerId ? sellerId : "", time: "10:00",
   });
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -94,7 +97,7 @@ export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFor
       scheduledAt: scheduledDate.toISOString(),
       description: form.description.trim(),
       completed: false,
-      assignedTo: form.assignedTo || "",
+      assignedTo: (isSellerOnly && sellerId ? sellerId : form.assignedTo) || "",
       type: form.type,
     };
     onSubmit(newFollowUp);
@@ -183,17 +186,19 @@ export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFor
               <Label>Horário</Label>
               <Input type="time" value={form.time} onChange={(e) => update("time", e.target.value)} />
             </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>Vendedor</Label>
-              <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
-                <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                <SelectContent>
-                  {sellers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!isSellerOnly && (
+              <div className="col-span-2 space-y-1.5">
+                <Label>Vendedor</Label>
+                <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                  <SelectContent>
+                    {sellers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="col-span-2 space-y-1.5">
               <Label>Descrição</Label>
               <Textarea value={form.description} onChange={(e) => update("description", e.target.value)} placeholder="O que precisa ser feito..." maxLength={500} rows={3} />
