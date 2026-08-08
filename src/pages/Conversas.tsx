@@ -618,6 +618,10 @@ const mockContactNames: Record<string, string> = {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectedPhone, messages]);
 
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
    useEffect(() => {
      const channel = supabase
        .channel("clients-realtime")
