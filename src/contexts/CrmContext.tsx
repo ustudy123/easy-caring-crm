@@ -188,12 +188,16 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       // Varredura de agendamentos vencidos: devolve o card ao Kanban
       // (limpa snoozed_until) e dispara o alerta de follow-up pendente.
       await sweepDueFollowUps();
-      const [leadsRes, followUpsRes] = await Promise.all([
+      const [leadsRes, followUpsRes, notifsRes] = await Promise.all([
         supabase.from("leads").select("*").order("created_at", { ascending: false }),
         supabase.from("follow_ups").select("*").order("scheduled_at"),
+        supabase.from("notifications").select("*").eq("is_read", false).order("created_at", { ascending: false }),
       ]);
       if (leadsRes.data) setLeads(leadsRes.data.filter((r: any) => !r.archived).map(mapLeadFromDb));
       if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
+      // Fallback do realtime (essencial no mobile): traz notificações novas e
+      // exibe o pop-up de "cliente retornou / follow-up pendente".
+      if (notifsRes.data) pushNotifications(notifsRes.data as Notification[], notifiedReady.current);
     };
     refresh();
     const refreshInterval = setInterval(refresh, 15000);
@@ -268,10 +272,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
         if (payload.eventType === "INSERT") {
           const newNotif = payload.new as Notification;
           if (!newNotif.is_read) {
-            setNotifications((prev) => {
-              if (prev.some(n => n.id === newNotif.id)) return prev;
-              return [newNotif, ...prev];
-            });
+            pushNotifications([newNotif], true);
           }
         } else if (payload.eventType === "UPDATE") {
           const updatedNotif = payload.new as Notification;
