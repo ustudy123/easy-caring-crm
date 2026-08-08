@@ -186,17 +186,19 @@ export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFor
               <Label>Horário</Label>
               <Input type="time" value={form.time} onChange={(e) => update("time", e.target.value)} />
             </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>Vendedor</Label>
-              <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
-                <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                <SelectContent>
-                  {sellers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!isSellerOnly && (
+              <div className="col-span-2 space-y-1.5">
+                <Label>Vendedor</Label>
+                <Select value={form.assignedTo} onValueChange={(v) => update("assignedTo", v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                  <SelectContent>
+                    {sellers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="col-span-2 space-y-1.5">
               <Label>Descrição</Label>
               <Textarea value={form.description} onChange={(e) => update("description", e.target.value)} placeholder="O que precisa ser feito..." maxLength={500} rows={3} />
