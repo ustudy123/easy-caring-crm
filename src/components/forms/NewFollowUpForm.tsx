@@ -13,6 +13,7 @@ import { CalendarIcon, Search, Loader2 } from "lucide-react";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { FollowUp } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
+import { useUserRole } from "@/hooks/useUserRole";
 import { isValidPhone, maskPhone } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
