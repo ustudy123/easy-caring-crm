@@ -421,7 +421,7 @@ export default function Quiz() {
   const showLanding = !started && !showResult;
 
   return (
-    <AppLayout title="Show das Tintas">
+    <AppLayout title="HUB Taeco Tintas">
       <div className="relative -m-4 sm:-m-6 min-h-[calc(100vh-4rem)] overflow-hidden bg-[#0a0e2e]">
         {/* Spotlights do estúdio */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(245,184,46,0.18),transparent_55%)]" />
@@ -430,7 +430,7 @@ export default function Quiz() {
 
         <div className="relative max-w-3xl mx-auto py-8 px-4 sm:px-6">
           {/* Na tela inicial o botão sai do quiz (Hub). Dentro da partida ele
-              volta para o menu do Show das Tintas, confirmando antes — a rodada
+              volta para o menu do HUB Taeco Tintas, confirmando antes — a rodada
               é descartada (os pontos só são gravados ao ver o resultado). No
               resultado não pergunta nada: a partida já foi contabilizada. */}
           <Button
@@ -443,7 +443,7 @@ export default function Quiz() {
             className="mb-2 text-white/60 hover:text-amber-300 hover:bg-white/5"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
-            {showLanding ? "Voltar ao Hub" : "Voltar ao Show das Tintas"}
+            {showLanding ? "Voltar ao Hub" : "Voltar ao HUB Taeco Tintas"}
           </Button>
           <AnimatePresence mode="wait">
           {showLanding ? (

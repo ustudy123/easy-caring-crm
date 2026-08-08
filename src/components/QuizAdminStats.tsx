@@ -173,7 +173,7 @@ export function QuizAdminStats() {
             <Paintbrush className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-brand-500">Show das Tintas</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-brand-500">HUB Taeco Tintas</p>
             <h3 className="text-lg font-black text-foreground">Desempenho da equipe</h3>
           </div>
         </div>

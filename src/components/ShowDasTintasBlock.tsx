@@ -2,7 +2,7 @@ import { QuizLeaderboard } from "@/components/QuizLeaderboard";
 import { useAuth } from "@/contexts/AuthContext";
 import { Paintbrush } from "lucide-react";
 
-// Bloco do Show das Tintas (ranking/pontos) para exibir no fim dos dashboards.
+// Bloco do HUB Taeco Tintas (ranking/pontos) para exibir no fim dos dashboards.
 // Reaproveita o QuizLeaderboard (tema escuro) dentro de um card do game-show.
 export function ShowDasTintasBlock() {
   const { user } = useAuth();
@@ -14,7 +14,7 @@ export function ShowDasTintasBlock() {
         </div>
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400">Gamificação</p>
-          <h3 className="text-lg font-black text-white">Show das Tintas</h3>
+          <h3 className="text-lg font-black text-white">HUB Taeco Tintas</h3>
         </div>
       </div>
       <div className="p-5 pt-2">
