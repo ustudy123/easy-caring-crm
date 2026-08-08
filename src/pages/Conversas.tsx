@@ -224,6 +224,8 @@ const mockContactNames: Record<string, string> = {
   const searchResultsRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Espelho do estado para o poll de fallback não precisar re-registrar o timer.
+  const messagesRef = useRef<WhatsAppMessage[]>([]);
   const [useMock, setUseMock] = useState(false);
   const [contactNames, setContactNames] = useState<Record<string, string>>({});
   const [contactPhotos, setContactPhotos] = useState<Record<string, string>>({});
