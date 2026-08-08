@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
  import { Lead, FollowUp, Seller } from "@/types/crm";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -134,6 +134,25 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const [unreadWhatsAppCount, setUnreadWhatsAppCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  // IDs já exibidos como pop-up, para não repetir o toast a cada polling.
+  const toastedNotifIds = useRef<Set<string>>(new Set());
+  const notifiedReady = useRef(false);
+
+  const pushNotifications = useCallback((rows: Notification[], showToast: boolean) => {
+    setNotifications((prev) => {
+      const map = new Map(prev.map((n) => [n.id, n]));
+      rows.forEach((n) => map.set(n.id, n));
+      return Array.from(map.values())
+        .filter((n) => !n.is_read)
+        .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    });
+    if (!showToast) return;
+    rows.forEach((n) => {
+      if (n.is_read || toastedNotifIds.current.has(n.id)) return;
+      toastedNotifIds.current.add(n.id);
+      toast(n.title, { description: n.message, duration: 8000 });
+    });
+  }, []);
 
   // Fetch initial data
   useEffect(() => {
@@ -149,7 +168,12 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
        if (sellersRes.data) setSellers(sellersRes.data.map(mapSellerFromDb));
       if (whatsappRes.count != null) setUnreadWhatsAppCount(whatsappRes.count);
-      if (notificationsRes.data) setNotifications(notificationsRes.data);
+      if (notificationsRes.data) {
+        // Primeira carga: não dispara pop-up para notificações antigas.
+        (notificationsRes.data as Notification[]).forEach((n) => toastedNotifIds.current.add(n.id));
+        setNotifications(notificationsRes.data as Notification[]);
+      }
+      notifiedReady.current = true;
       setLoading(false);
     };
     fetchData();
@@ -164,12 +188,16 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       // Varredura de agendamentos vencidos: devolve o card ao Kanban
       // (limpa snoozed_until) e dispara o alerta de follow-up pendente.
       await sweepDueFollowUps();
-      const [leadsRes, followUpsRes] = await Promise.all([
+      const [leadsRes, followUpsRes, notifsRes] = await Promise.all([
         supabase.from("leads").select("*").order("created_at", { ascending: false }),
         supabase.from("follow_ups").select("*").order("scheduled_at"),
+        supabase.from("notifications").select("*").eq("is_read", false).order("created_at", { ascending: false }),
       ]);
       if (leadsRes.data) setLeads(leadsRes.data.filter((r: any) => !r.archived).map(mapLeadFromDb));
       if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
+      // Fallback do realtime (essencial no mobile): traz notificações novas e
+      // exibe o pop-up de "cliente retornou / follow-up pendente".
+      if (notifsRes.data) pushNotifications(notifsRes.data as Notification[], notifiedReady.current);
     };
     refresh();
     const refreshInterval = setInterval(refresh, 15000);
@@ -244,10 +272,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
         if (payload.eventType === "INSERT") {
           const newNotif = payload.new as Notification;
           if (!newNotif.is_read) {
-            setNotifications((prev) => {
-              if (prev.some(n => n.id === newNotif.id)) return prev;
-              return [newNotif, ...prev];
-            });
+            pushNotifications([newNotif], true);
           }
         } else if (payload.eventType === "UPDATE") {
           const updatedNotif = payload.new as Notification;
