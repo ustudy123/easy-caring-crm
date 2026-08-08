@@ -97,7 +97,7 @@ export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFor
       scheduledAt: scheduledDate.toISOString(),
       description: form.description.trim(),
       completed: false,
-      assignedTo: form.assignedTo || "",
+      assignedTo: (isSellerOnly && sellerId ? sellerId : form.assignedTo) || "",
       type: form.type,
     };
     onSubmit(newFollowUp);
