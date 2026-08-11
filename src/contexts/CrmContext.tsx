@@ -183,26 +183,43 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     fetchData();
   }, []);
 
+  // Varredura de agendamentos vencidos: devolve o card ao Kanban
+  // (limpa snoozed_until) e dispara o alerta de follow-up pendente. Extraída
+  // para ser reusada pelo fallback de 15s e pelo timer preciso (segundo exato).
+  const refreshDue = useCallback(async () => {
+    if (document.visibilityState === "hidden") return;
+    await sweepDueFollowUps();
+    const [leadsRes, followUpsRes, notifsRes] = await Promise.all([
+      supabase.from("leads").select("*").order("created_at", { ascending: false }),
+      supabase.from("follow_ups").select("*").order("scheduled_at"),
+      supabase.from("notifications").select("*").eq("is_read", false).order("created_at", { ascending: false }),
+    ]);
+    if (leadsRes.data) setLeads(leadsRes.data.filter((r: any) => !r.archived).map(mapLeadFromDb));
+    if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
+    if (notifsRes.data) pushNotifications(notifsRes.data as Notification[], notifiedReady.current);
+  }, [pushNotifications]);
+
+  // Timer preciso (segundo exato): agenda o "acordar" do próximo lead adiado
+  // exatamente no horário do snoozed_until, enquanto a aba estiver visível.
+  // A varredura de 15s (abaixo) continua como fallback para aba fechada/mobile.
+  useEffect(() => {
+    const now = Date.now();
+    const futureTimes = leads
+      .map((l) => (l.snoozedUntil ? new Date(l.snoozedUntil).getTime() : NaN))
+      .filter((t) => !Number.isNaN(t) && t > now);
+    if (futureTimes.length === 0) return;
+    const next = Math.min(...futureTimes);
+    // setTimeout satura em ~24.8 dias; limita para não estourar o máximo.
+    const delay = Math.min(next - now, 2_147_483_000);
+    const timer = setTimeout(() => { refreshDue(); }, delay);
+    return () => clearTimeout(timer);
+  }, [leads, refreshDue]);
+
   // Real-time subscriptions
   useEffect(() => {
     // Fallback: se o realtime atrasar/cair, recarrega leads e follow-ups
     // periodicamente e quando a aba volta ao foco (evita depender de F5).
-    const refresh = async () => {
-      if (document.visibilityState === "hidden") return;
-      // Varredura de agendamentos vencidos: devolve o card ao Kanban
-      // (limpa snoozed_until) e dispara o alerta de follow-up pendente.
-      await sweepDueFollowUps();
-      const [leadsRes, followUpsRes, notifsRes] = await Promise.all([
-        supabase.from("leads").select("*").order("created_at", { ascending: false }),
-        supabase.from("follow_ups").select("*").order("scheduled_at"),
-        supabase.from("notifications").select("*").eq("is_read", false).order("created_at", { ascending: false }),
-      ]);
-      if (leadsRes.data) setLeads(leadsRes.data.filter((r: any) => !r.archived).map(mapLeadFromDb));
-      if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
-      // Fallback do realtime (essencial no mobile): traz notificações novas e
-      // exibe o pop-up de "cliente retornou / follow-up pendente".
-      if (notifsRes.data) pushNotifications(notifsRes.data as Notification[], notifiedReady.current);
-    };
+    const refresh = () => { refreshDue(); };
     refresh();
     const refreshInterval = setInterval(refresh, 15000);
     const onFocus = () => refresh();
