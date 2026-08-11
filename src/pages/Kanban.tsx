@@ -578,16 +578,21 @@ export default function Kanban() {
      if (l.clientType === CLIENT_TYPE_EQUIPE_INTERNA) return false;
      // Reagendados: ficam fora do board até a data/hora marcada.
      if (l.snoozedUntil && new Date(l.snoozedUntil).getTime() > Date.now()) return false;
-     // Busca por nome, telefone (só dígitos) ou e-mail. Antes filtrava só pelo
-     // nome — como muitos leads aparecem como "Cliente 5522...", buscar pelo
-     // número não achava nada.
+     // Busca geral: nome, telefone (só dígitos), e-mail, palavras-chave (tags),
+     // empresa/obra, produto/interesse e observações. Antes só pegava nome/
+     // telefone/e-mail, então buscar por tag ou empresa não achava nada.
      if (search.trim()) {
        const q = search.toLowerCase().trim();
        const qDigits = q.replace(/\D/g, "");
-       const nameHit = l.clientName?.toLowerCase().includes(q);
+       const inText = (v?: string) => (v || "").toLowerCase().includes(q);
+       const nameHit = inText(l.clientName);
        const phoneHit = qDigits.length > 0 && (l.clientPhone || "").replace(/\D/g, "").includes(qDigits);
-       const emailHit = l.clientEmail?.toLowerCase().includes(q);
-       if (!nameHit && !phoneHit && !emailHit) return false;
+       const emailHit = inText(l.clientEmail);
+       const tagHit = (l.tags || []).some((t) => (t || "").toLowerCase().includes(q));
+       const companyHit = inText(l.companyWorkSite);
+       const productHit = inText(l.interestProducts);
+       const notesHit = inText(l.notes);
+       if (!nameHit && !phoneHit && !emailHit && !tagHit && !companyHit && !productHit && !notesHit) return false;
      }
      // Filtro por vendedor (gerente)
      if (filterSeller !== "all") {
@@ -683,7 +688,7 @@ export default function Kanban() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar lead..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 rounded-xl border-border/60 bg-card shadow-sm" />
+            <Input placeholder="Busca geral (nome, palavra-chave, empresa)..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 rounded-xl border-border/60 bg-card shadow-sm" />
           </div>
           <div className="flex gap-2 flex-wrap items-center">
             {loading && <span className="text-[10px] text-muted-foreground animate-pulse mr-2">Carregando...</span>}
