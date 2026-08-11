@@ -465,14 +465,17 @@ serve(async (req) => {
          }
  
         // Ignora remetentes que não são um telefone BR válido: identificadores
-        // de privacidade @lid do WhatsApp, ids de grupo/broadcast ou números
-        // truncados pelo gateway. Um número BR válido tem 10–13 dígitos (com ou
-        // sem DDI 55). Sem esse guard, o webhook criava leads/conversas com
-        // números aleatórios como "88216712" (os 8 últimos dígitos de um celular).
+        // de privacidade @lid do WhatsApp, ids de grupo/broadcast, status ou
+        // números não-BR/truncados. Mesma regra do app (isValidPhone em
+        // lib/masks): 10–11 dígitos (local) OU 12–13 começando com 55 (DDI).
+        // Sem isso, números como "333009662623" (12 díg. sem o 55) viravam
+        // conversa mesmo sendo inválidos.
         const isLid = (rawPhone || "").toString().includes("@lid");
-        const validPhoneLen = cleanPhone.length >= 10 && cleanPhone.length <= 13;
-        if (isLid || !validPhoneLen) {
-          console.warn(`Skipping: remetente não é telefone BR válido (raw="${rawPhone}", clean="${cleanPhone}", lid=${isLid}, len=${cleanPhone.length})`);
+        const d = (cleanPhone || "").replace(/\D/g, "");
+        const validBrPhone = (d.length === 10 || d.length === 11)
+          || ((d.length === 12 || d.length === 13) && d.startsWith("55"));
+        if (isLid || !validBrPhone) {
+          console.warn(`Skipping: remetente não é telefone BR válido (raw="${rawPhone}", clean="${cleanPhone}", lid=${isLid}, len=${d.length})`);
           return new Response(JSON.stringify({ success: true, action: "skipped_invalid_phone" }), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
