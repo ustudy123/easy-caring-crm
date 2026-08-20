@@ -113,12 +113,16 @@ export function WhatsAppInstancesTab() {
     }
 
     setSaving(true);
-    const sellerStoreId = type === "seller" ? sellers.find(s => s.id === sellerId)?.store_id ?? null : null;
+    // Tipo vendedor: usa a loja escolhida no campo (pré-preenchida com a do
+    // vendedor); se ficar vazia, cai na loja cadastrada do próprio vendedor.
+    const resolvedStoreId = type === "seller"
+      ? (storeId || sellers.find(s => s.id === sellerId)?.store_id || null)
+      : (storeId || null);
     const { error } = await supabase.from("whatsapp_instances").insert({
       name: name.trim(),
       phone_number: cleanPhone,
       instance_type: type,
-      store_id: type === "store" ? storeId : sellerStoreId,
+      store_id: resolvedStoreId,
       seller_id: type === "seller" ? sellerId : null,
       provider,
       api_url: apiUrl.trim() || null,
@@ -215,21 +219,15 @@ export function WhatsAppInstancesTab() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {type === "store" && (
-                    <div>
-                      <Label>Loja</Label>
-                      <Select value={storeId} onValueChange={setStoreId}>
-                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                        <SelectContent>
-                          {stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
                   {type === "seller" && (
                     <div>
                       <Label>Vendedor</Label>
-                      <Select value={sellerId} onValueChange={setSellerId}>
+                      <Select value={sellerId} onValueChange={(v) => {
+                        setSellerId(v);
+                        // Pré-preenche a loja com a do vendedor (editável abaixo).
+                        const s = sellers.find(x => x.id === v);
+                        if (s?.store_id) setStoreId(s.store_id);
+                      }}>
                         <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                         <SelectContent>
                           {sellers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -237,6 +235,21 @@ export function WhatsAppInstancesTab() {
                       </Select>
                     </div>
                   )}
+                  {/* Loja aparece nos dois tipos: obrigatória na central da loja e,
+                      no tipo vendedor, serve para vincular o vendedor a uma loja
+                      (pré-preenchida com a loja dele, mas pode ser trocada). */}
+                  <div>
+                    <Label>
+                      Loja
+                      {type === "seller" && <span className="ml-1 text-xs font-normal text-muted-foreground">(vínculo do vendedor)</span>}
+                    </Label>
+                    <Select value={storeId} onValueChange={setStoreId}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        {stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div>
                     <Label>Provedor</Label>
                     <Select value={provider} onValueChange={(v: Provider) => setProvider(v)}>
