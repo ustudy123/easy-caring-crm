@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCrm } from "@/contexts/CrmContext";
+import { useRole } from "@/contexts/RoleContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ interface SellerRow {
   role: string | null;
   sla_target_minutes: number | null;
   is_active: boolean | null;
+  store_id: string | null;
 }
 
 interface ClientResp {
@@ -37,6 +39,7 @@ interface PerfRow {
 
 export function SellerPerformance() {
   const { leads } = useCrm();
+  const { isAdmin, isGerente, storeId } = useRole();
   const [sellers, setSellers] = useState<SellerRow[]>([]);
   const [clients, setClients] = useState<ClientResp[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +48,7 @@ export function SellerPerformance() {
     (async () => {
       setLoading(true);
       const [sellersRes, clientsRes] = await Promise.all([
-        supabase.from("sellers").select("id, name, role, sla_target_minutes, is_active").order("name"),
+        supabase.from("sellers").select("id, name, role, sla_target_minutes, is_active, store_id").order("name"),
         supabase.from("clients").select("assigned_seller_id, last_message_from_client_at, last_seller_response_at"),
       ]);
       if (sellersRes.data) setSellers(sellersRes.data as SellerRow[]);
@@ -55,8 +58,11 @@ export function SellerPerformance() {
   }, []);
 
   const rows = useMemo<PerfRow[]>(() => {
+    // Gerente vê apenas a equipe da própria loja; admin vê todos.
+    const restrictToStore = isGerente && !isAdmin && !!storeId;
     return sellers
       .filter((s) => s.is_active !== false)
+      .filter((s) => !restrictToStore || s.store_id === storeId)
       .map((s) => {
         const sellerLeads = leads.filter((l) => l.assignedTo === s.id);
         const won = sellerLeads.filter((l) => l.stage === "fechamento" || l.stage === "pos_venda").length;
@@ -104,7 +110,7 @@ export function SellerPerformance() {
         };
       })
       .sort((a, b) => b.valueWon - a.valueWon || b.won - a.won);
-  }, [sellers, leads, clients]);
+  }, [sellers, leads, clients, isAdmin, isGerente, storeId]);
 
   const handleExport = () => {
     exportToCsv(
