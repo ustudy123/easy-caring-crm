@@ -15,10 +15,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle, Clock } from "lucide-react";
+import { AlertTriangle, Clock, User } from "lucide-react";
 
 export function UrgencyAlertPopup() {
-  const { leads } = useCrm();
+  const { leads, sellers } = useCrm();
   const { role, sellerId, isAdmin, isGerente, isVendedor } = useRole();
   const { user } = useAuth();
   const storageKey = user ? `urgency_dismissed_${user.id}` : null;
@@ -101,7 +101,8 @@ export function UrgencyAlertPopup() {
 
   const idleTime = formatIdleTime(activeAlert);
   const urgency = getUrgencyLevel(activeAlert);
-  
+  const responsavel = sellers.find((s) => s.id === activeAlert.assignedTo)?.name || null;
+
   let levelLabel = "30 minutos";
   if (urgency === "warning") levelLabel = "1 hora";
   if (urgency === "critical") levelLabel = "1 hora e 30 minutos";
@@ -128,7 +129,11 @@ export function UrgencyAlertPopup() {
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-muted-foreground py-4">
               O cliente <span className="font-semibold text-foreground">{activeAlert.clientName}</span> está há mais de <span className="font-semibold text-foreground">{levelLabel}</span> sem atendimento!
-              <div className="mt-4">
+              <div className="mt-4 flex flex-col items-start gap-2">
+                <div className="rounded-full bg-muted px-3 py-1 text-xs font-medium inline-flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Vendedor responsável: <strong className="text-foreground">{responsavel || "sem vendedor designado"}</strong></span>
+                </div>
                 <div className="rounded-full bg-muted px-3 py-1 text-xs font-medium inline-flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>Tempo parado total: <strong className="text-foreground">{idleTime}</strong></span>

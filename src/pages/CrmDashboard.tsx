@@ -15,6 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { subDays, subMonths, startOfDay, isAfter, format, startOfWeek, startOfMonth } from "date-fns";
 import { SellerPerformance } from "@/components/SellerPerformance";
+import { IdleClientsReport } from "@/components/IdleClientsReport";
 import { AdminConsolidatedDashboard } from "@/components/AdminConsolidatedDashboard";
 import { QuizAdminStats } from "@/components/QuizAdminStats";
 import { ClientOriginReport } from "@/components/ClientOriginReport";
@@ -270,6 +271,10 @@ export default function CrmDashboard() {
               )}
             </CardContent>
           </Card>
+        </motion.div>
+
+        <motion.div variants={item} initial="hidden" animate="show">
+          <IdleClientsReport />
         </motion.div>
 
         <motion.div variants={item} initial="hidden" animate="show">
