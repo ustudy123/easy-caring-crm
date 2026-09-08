@@ -5,9 +5,12 @@ import { getUrgencyLevel, formatIdleTime, getIdleHours, UrgencyLevel } from "@/l
 import { KANBAN_STAGES } from "@/types/crm";
 import { maskPhone } from "@/lib/masks";
 import { exportToCsv } from "@/lib/exportCsv";
-import { AlertTriangle, Download, Clock } from "lucide-react";
+import { SellerCombobox } from "@/components/SellerCombobox";
+import { AlertTriangle, Download, Clock, Search } from "lucide-react";
 
 const STAGE_LABEL: Record<string, string> = Object.fromEntries(KANBAN_STAGES.map((s) => [s.key, s.label]));
+// Etapas que podem estar sem atendimento (fechamento/pós-venda nunca ficam ociosos).
+const STAGE_OPTIONS = KANBAN_STAGES.filter((s) => s.key !== "fechamento" && s.key !== "pos_venda");
 
 const LEVEL_META: Record<UrgencyLevel, { label: string; cls: string }> = {
   ok: { label: "OK", cls: "" },
@@ -21,6 +24,10 @@ export function IdleClientsReport() {
   const [tick, setTick] = useState(0);
   const [storeNames, setStoreNames] = useState<Record<string, string>>({});
   const [levelFilter, setLevelFilter] = useState<"all" | UrgencyLevel>("all");
+  const [search, setSearch] = useState("");
+  const [sellerFilter, setSellerFilter] = useState("all");
+  const [storeFilter, setStoreFilter] = useState("all");
+  const [stageFilter, setStageFilter] = useState("all");
 
   // Recalcula os tempos ociosos periodicamente para o relatório ficar "vivo".
   useEffect(() => {
@@ -39,12 +46,27 @@ export function IdleClientsReport() {
 
   const rows = useMemo(() => {
     void tick; // força recálculo dos tempos
+    const q = search.trim().toLowerCase();
+    const qDigits = q.replace(/\D/g, "");
     return leads
       .map((l) => ({ lead: l, level: getUrgencyLevel(l), idleH: getIdleHours(l) }))
       .filter((r) => r.level !== "ok")
       .filter((r) => levelFilter === "all" || r.level === levelFilter)
+      .filter((r) => sellerFilter === "all" || r.lead.assignedTo === sellerFilter)
+      .filter((r) => storeFilter === "all" || r.lead.storeId === storeFilter)
+      .filter((r) => stageFilter === "all" || r.lead.stage === stageFilter)
+      .filter((r) => {
+        if (!q) return true;
+        const nameHit = (r.lead.clientName || "").toLowerCase().includes(q);
+        const phoneHit = qDigits.length > 0 && (r.lead.clientPhone || "").replace(/\D/g, "").includes(qDigits);
+        return nameHit || phoneHit;
+      })
       .sort((a, b) => b.idleH - a.idleH);
-  }, [leads, tick, levelFilter]);
+  }, [leads, tick, levelFilter, search, sellerFilter, storeFilter, stageFilter]);
+
+  const storeOptions = Object.entries(storeNames).sort((a, b) => a[1].localeCompare(b[1]));
+  const hasFilter = levelFilter !== "all" || sellerFilter !== "all" || storeFilter !== "all" || stageFilter !== "all" || search.trim() !== "";
+  const clearFilters = () => { setLevelFilter("all"); setSellerFilter("all"); setStoreFilter("all"); setStageFilter("all"); setSearch(""); };
 
   const counts = useMemo(() => {
     void tick;
@@ -105,17 +127,43 @@ export function IdleClientsReport() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-muted-foreground">Filtrar por nível:</span>
-          <select
-            value={levelFilter}
-            onChange={(e) => setLevelFilter(e.target.value as any)}
-            className="h-8 rounded-lg border border-border/60 bg-card px-2 text-xs"
-          >
-            <option value="all">Todos</option>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar cliente ou telefone..."
+              className="h-8 w-56 rounded-lg border border-border/60 bg-card pl-8 pr-2 text-xs"
+            />
+          </div>
+          <SellerCombobox
+            value={sellerFilter}
+            onChange={setSellerFilter}
+            sellers={sellers}
+            presets={[{ value: "all", label: "Todos os vendedores" }]}
+            placeholder="Todos os vendedores"
+            className="h-8 w-52 text-xs"
+          />
+          <select value={storeFilter} onChange={(e) => setStoreFilter(e.target.value)}
+            className="h-8 rounded-lg border border-border/60 bg-card px-2 text-xs">
+            <option value="all">Todas as lojas</option>
+            {storeOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
+          <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value)}
+            className="h-8 rounded-lg border border-border/60 bg-card px-2 text-xs">
+            <option value="all">Todas as etapas</option>
+            {STAGE_OPTIONS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+          <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value as any)}
+            className="h-8 rounded-lg border border-border/60 bg-card px-2 text-xs">
+            <option value="all">Todos os níveis</option>
             <option value="critical">Grave (+1h30)</option>
             <option value="warning">Atenção (+1h)</option>
             <option value="attention">Inicial (+30m)</option>
           </select>
+          {hasFilter && (
+            <button onClick={clearFilters} className="h-8 px-2 text-xs font-semibold text-brand-500 hover:underline">Limpar</button>
+          )}
           <span className="ml-auto text-xs text-muted-foreground tabular-nums">{rows.length} cliente(s)</span>
         </div>
 
