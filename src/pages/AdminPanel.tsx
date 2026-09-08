@@ -1098,6 +1098,7 @@ function UsersTab() {
   const [editSubstituteId, setEditSubstituteId] = useState<string>("");
   const [editIsSupervisor, setEditIsSupervisor] = useState<boolean>(false);
   const [editQuizSubjects, setEditQuizSubjects] = useState<string[]>([]);
+  const [editQuizGoal, setEditQuizGoal] = useState<string>("");
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -1162,9 +1163,11 @@ function UsersTab() {
       setEditIsSupervisor(false);
     }
     setEditQuizSubjects([]);
+    setEditQuizGoal("");
     if (u.user_id) {
-      const { data } = await supabase.from("sellers").select("quiz_subjects").eq("user_id", u.user_id).maybeSingle();
+      const { data } = await supabase.from("sellers").select("quiz_subjects, quiz_monthly_goal").eq("user_id", u.user_id).maybeSingle();
       setEditQuizSubjects(((data as any)?.quiz_subjects as string[] | null) || []);
+      setEditQuizGoal((data as any)?.quiz_monthly_goal != null ? String((data as any).quiz_monthly_goal) : "");
     }
   };
 
@@ -1225,7 +1228,10 @@ function UsersTab() {
     if (["vendedor", "gerente", "suporte"].includes(editRole)) {
       const { error: subjErr } = await supabase
         .from("sellers")
-        .update({ quiz_subjects: editQuizSubjects.length ? editQuizSubjects : null } as any)
+        .update({
+          quiz_subjects: editQuizSubjects.length ? editQuizSubjects : null,
+          quiz_monthly_goal: editQuizGoal.trim() ? Number(editQuizGoal) : null,
+        } as any)
         .eq("user_id", editing.user_id);
       if (subjErr) {
         toast.error(`Função salva, mas os assuntos do quiz não: ${subjErr.message}`);
@@ -1524,6 +1530,11 @@ function UsersTab() {
                         })}
                       </div>
                     )}
+                    <div className="mt-3">
+                      <Label>Meta de perguntas por mês</Label>
+                      <p className="text-xs text-muted-foreground mb-1">Quantas perguntas este usuário deve responder por mês (usada no relatório de metas). Vazio = sem meta.</p>
+                      <Input type="number" min={0} value={editQuizGoal} onChange={(e) => setEditQuizGoal(e.target.value.replace(/\D/g, ""))} placeholder="Ex: 100" className="w-40" />
+                    </div>
                   </div>
                 )}
                 <Button onClick={handleSave} disabled={saving} className="w-full">

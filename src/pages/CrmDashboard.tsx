@@ -18,6 +18,7 @@ import { SellerPerformance } from "@/components/SellerPerformance";
 import { IdleClientsReport } from "@/components/IdleClientsReport";
 import { AdminConsolidatedDashboard } from "@/components/AdminConsolidatedDashboard";
 import { QuizAdminStats } from "@/components/QuizAdminStats";
+import { QuizGoalsReport } from "@/components/QuizGoalsReport";
 import { ClientOriginReport } from "@/components/ClientOriginReport";
 import { useRole } from "@/contexts/RoleContext";
 
@@ -293,6 +294,10 @@ export default function CrmDashboard() {
 
         <motion.div variants={item} initial="hidden" animate="show">
           <QuizAdminStats />
+        </motion.div>
+
+        <motion.div variants={item} initial="hidden" animate="show">
+          <QuizGoalsReport />
         </motion.div>
       </motion.div>
     </AppLayout>
