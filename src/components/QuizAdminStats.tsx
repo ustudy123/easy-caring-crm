@@ -72,6 +72,10 @@ function barColor(acc: number): string {
 
 export function QuizAdminStats() {
   const [period, setPeriod] = useState("week");
+  // Filtros da lista de vendedores (aplicados só à tabela, não aos cards de resumo).
+  const [levelFilter, setLevelFilter] = useState("all");        // all | basico | intermediario | avancado | especialista
+  const [pointsFilter, setPointsFilter] = useState(0);          // pontos mínimos (0 = qualquer)
+  const [accuracyFilter, setAccuracyFilter] = useState(0);      // precisão mínima em % (0 = qualquer)
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<SellerStat[]>([]);
   const [summary, setSummary] = useState({ participants: 0, totalActive: 0, avgAccuracy: 0, totalQuestions: 0, totalPenalties: 0 });
@@ -181,6 +185,16 @@ export function QuizAdminStats() {
     return () => { cancel = true; };
   }, [period]);
 
+  // Lista filtrada por nível / pontos mínimos / precisão mínima.
+  const filteredRows = rows.filter((s) => {
+    if (levelFilter !== "all" && s.levelKey !== levelFilter) return false;
+    if (pointsFilter > 0 && s.points < pointsFilter) return false;
+    // Precisão só faz sentido para quem jogou no período.
+    if (accuracyFilter > 0 && (s.plays === 0 || s.accuracy * 100 < accuracyFilter)) return false;
+    return true;
+  });
+  const hasActiveFilter = levelFilter !== "all" || pointsFilter > 0 || accuracyFilter > 0;
+
   return (
     <div className="rounded-3xl overflow-hidden bg-card border border-border/60 shadow-sm">
       <div className="flex items-center justify-between gap-3 px-5 pt-5 flex-wrap">
@@ -220,6 +234,39 @@ export function QuizAdminStats() {
               <SummaryCard icon={<AlertTriangle className="h-4 w-4" />} label="Faltas" value={String(summary.totalPenalties)} hint="dias de quiz pulados" warn={summary.totalPenalties > 0} />
             </div>
 
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-muted-foreground">Filtrar:</span>
+              <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}
+                className="h-8 rounded-lg border border-border/60 bg-card px-2 text-xs">
+                <option value="all">Todos os níveis</option>
+                <option value="basico">Básico</option>
+                <option value="intermediario">Intermediário</option>
+                <option value="avancado">Avançado</option>
+                <option value="especialista">Especialista</option>
+              </select>
+              <select value={String(pointsFilter)} onChange={(e) => setPointsFilter(Number(e.target.value))}
+                className="h-8 rounded-lg border border-border/60 bg-card px-2 text-xs">
+                <option value="0">Qualquer pontuação</option>
+                <option value="100">Acima de 100 pts</option>
+                <option value="300">Acima de 300 pts</option>
+                <option value="500">Acima de 500 pts</option>
+              </select>
+              <select value={String(accuracyFilter)} onChange={(e) => setAccuracyFilter(Number(e.target.value))}
+                className="h-8 rounded-lg border border-border/60 bg-card px-2 text-xs">
+                <option value="0">Qualquer precisão</option>
+                <option value="70">Acima de 70%</option>
+                <option value="85">Acima de 85%</option>
+                <option value="95">Acima de 95%</option>
+              </select>
+              {hasActiveFilter && (
+                <button onClick={() => { setLevelFilter("all"); setPointsFilter(0); setAccuracyFilter(0); }}
+                  className="h-8 px-2 text-xs font-semibold text-brand-500 hover:underline">
+                  Limpar filtros
+                </button>
+              )}
+              <span className="ml-auto text-xs text-muted-foreground tabular-nums">{filteredRows.length} de {rows.length}</span>
+            </div>
+
             <div className="overflow-x-auto -mx-1 px-1">
               <table className="w-full text-sm min-w-[640px]">
                 <thead>
@@ -234,10 +281,10 @@ export function QuizAdminStats() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.length === 0 && (
-                    <tr><td colSpan={7} className="py-6 text-center text-muted-foreground">Nenhum vendedor ativo encontrado.</td></tr>
+                  {filteredRows.length === 0 && (
+                    <tr><td colSpan={7} className="py-6 text-center text-muted-foreground">{hasActiveFilter ? "Nenhum vendedor bate com os filtros." : "Nenhum vendedor ativo encontrado."}</td></tr>
                   )}
-                  {rows.map((s) => {
+                  {filteredRows.map((s) => {
                     const didntPlay = s.plays === 0;
                     return (
                       <tr key={s.userId} className={`border-b border-border/30 ${didntPlay ? "opacity-50" : ""}`}>
