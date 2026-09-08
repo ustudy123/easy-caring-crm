@@ -1532,7 +1532,7 @@ function UsersTab() {
                     )}
                     <div className="mt-3">
                       <Label>Meta de perguntas por mês</Label>
-                      <p className="text-xs text-muted-foreground mb-1">Quantas perguntas este usuário deve responder por mês (usada no relatório de metas). Vazio = sem meta.</p>
+                      <p className="text-xs text-muted-foreground mb-1">Quantas perguntas este usuário deve responder por mês (usada no relatório de metas). Vazio = usa a meta geral padrão (50).</p>
                       <Input type="number" min={0} value={editQuizGoal} onChange={(e) => setEditQuizGoal(e.target.value.replace(/\D/g, ""))} placeholder="Ex: 100" className="w-40" />
                     </div>
                   </div>

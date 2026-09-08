@@ -27,6 +27,10 @@ const LEVEL_BADGE: Record<string, string> = {
   especialista: "bg-amber-100 text-amber-700",
 };
 
+// Meta geral padrão (perguntas respondidas por mês) para quem não tem meta
+// individual configurada no cadastro. Conta respondidas, independe de acerto.
+const DEFAULT_GOAL = 50;
+
 const fmtDate = (iso: string | null) => {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -80,11 +84,13 @@ export function QuizGoalsReport() {
         const answeredMonth = monthReal.reduce((t, a) => t + (a.total_questions || 0), 0);
         const lastPlayed = real.reduce<string | null>((m, a) => (a.completed_at && (!m || a.completed_at > m) ? a.completed_at : m), null);
 
-        const goal = s.quiz_monthly_goal ?? null;
-        const pctGoal = goal && goal > 0 ? Math.round((answeredMonth / goal) * 100) : null;
-        const status: GoalRow["status"] = !goal || goal <= 0 ? "sem_meta" : (answeredMonth >= goal ? "atingiu" : "andamento");
+        const rawGoal = s.quiz_monthly_goal;
+        const goal = rawGoal ?? DEFAULT_GOAL;      // meta geral padrão quando não configurada
+        const isDefaultGoal = rawGoal == null;
+        const pctGoal = goal > 0 ? Math.round((answeredMonth / goal) * 100) : null;
+        const status: GoalRow["status"] = goal <= 0 ? "sem_meta" : (answeredMonth >= goal ? "atingiu" : "andamento");
 
-        return { name: s.name, levelLabel: level.current.label, levelKey: level.current.key, notaAcumulada, answeredTotal, goal, answeredMonth, pctGoal, status, lastPlayed } as any;
+        return { name: s.name, levelLabel: level.current.label, levelKey: level.current.key, notaAcumulada, answeredTotal, goal, isDefaultGoal, answeredMonth, pctGoal, status, lastPlayed } as any;
       })
       .sort((a, b) => (b.pctGoal ?? -1) - (a.pctGoal ?? -1) || b.answeredMonth - a.answeredMonth);
   }, [sellers, attempts, restrictToStore, storeId]);
@@ -98,7 +104,7 @@ export function QuizGoalsReport() {
         { key: "nivel", label: "Nível", format: (r) => r.levelLabel },
         { key: "nota", label: "Nota acumulada (% acerto)", format: (r) => (r.notaAcumulada != null ? `${r.notaAcumulada}%` : "—") },
         { key: "resp_total", label: "Respondidas (total)", format: (r) => String(r.answeredTotal) },
-        { key: "meta", label: "Meta/mês", format: (r) => (r.goal != null ? String(r.goal) : "sem meta") },
+        { key: "meta", label: "Meta/mês", format: (r) => (r.goal > 0 ? `${r.goal}${r.isDefaultGoal ? " (padrão)" : ""}` : "sem meta") },
         { key: "resp_mes", label: "Respondidas no mês", format: (r) => String(r.answeredMonth) },
         { key: "pct_meta", label: "% Meta atingida", format: (r) => (r.pctGoal != null ? `${r.pctGoal}%` : "—") },
         { key: "status", label: "Status", format: (r) => (r.status === "atingiu" ? "Atingiu" : r.status === "andamento" ? "Em andamento" : "Sem meta") },
@@ -155,7 +161,11 @@ export function QuizGoalsReport() {
                     <td className="py-2.5 font-medium text-foreground">{r.name}</td>
                     <td className="py-2.5"><span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${LEVEL_BADGE[r.levelKey] || LEVEL_BADGE.basico}`}>{r.levelLabel}</span></td>
                     <td className="py-2.5 text-right tabular-nums font-semibold">{r.notaAcumulada != null ? `${r.notaAcumulada}%` : "—"}</td>
-                    <td className="py-2.5 text-right tabular-nums">{r.goal != null ? r.goal : <span className="text-muted-foreground italic text-xs">sem meta</span>}</td>
+                    <td className="py-2.5 text-right tabular-nums">
+                      {r.goal > 0
+                        ? (<>{r.goal}{r.isDefaultGoal && <span className="ml-1 text-[10px] text-muted-foreground">(padrão)</span>}</>)
+                        : <span className="text-muted-foreground italic text-xs">sem meta</span>}
+                    </td>
                     <td className="py-2.5 text-right tabular-nums">{r.answeredMonth}</td>
                     <td className="py-2.5 text-right tabular-nums font-semibold">
                       {r.pctGoal != null ? (
