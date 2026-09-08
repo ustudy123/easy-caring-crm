@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useCrm } from "@/contexts/CrmContext";
+import { useRole } from "@/contexts/RoleContext";
+import { SellerCombobox } from "@/components/SellerCombobox";
 import { FollowUp } from "@/types/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,7 +27,11 @@ const item = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } };
 const fadeIn = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { duration: 0.4 } } };
 
 export default function Agenda() {
-  const { followUps, setFollowUps, addFollowUp, updateFollowUp, deleteFollowUp } = useCrm();
+  const { followUps, setFollowUps, addFollowUp, updateFollowUp, deleteFollowUp, sellers } = useCrm();
+  const { isAdmin, isGerente, storeId } = useRole();
+  const restrictToStore = isGerente && !isAdmin && !!storeId;
+  const canFilterBySeller = isAdmin || isGerente; // quem enxerga a agenda de vários vendedores
+  const [sellerFilter, setSellerFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<"all" | "pending" | "completed">("all");
   const [showNewFollowUp, setShowNewFollowUp] = useState(false);
@@ -47,7 +53,14 @@ export default function Agenda() {
     updateFollowUp({ ...fu, completed: !fu.completed });
   };
 
-  const filtered = followUps
+  // Escopo do gerente (só a própria loja) + filtro pelo vendedor escolhido.
+  const visibleSellers = restrictToStore ? sellers.filter((s) => s.store_id === storeId) : sellers;
+  const myStoreSellerIds = new Set(visibleSellers.map((s) => s.id));
+  const scoped = followUps
+    .filter((f) => !restrictToStore || (f.assignedTo && myStoreSellerIds.has(f.assignedTo)))
+    .filter((f) => sellerFilter === "all" || f.assignedTo === sellerFilter);
+
+  const filtered = scoped
     .filter((f) => {
       if (view === "pending" && f.completed) return false;
       if (view === "completed" && !f.completed) return false;
@@ -59,17 +72,17 @@ export default function Agenda() {
     })
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
 
-  const todayCount = followUps.filter((f) => {
+  const todayCount = scoped.filter((f) => {
     const d = new Date(f.scheduledAt);
     const today = new Date();
     return d.toDateString() === today.toDateString() && !f.completed;
   }).length;
 
-  const overdueCount = followUps.filter((f) => {
+  const overdueCount = scoped.filter((f) => {
     return new Date(f.scheduledAt) < new Date() && !f.completed;
   }).length;
 
-  const pendingCount = followUps.filter((f) => !f.completed).length;
+  const pendingCount = scoped.filter((f) => !f.completed).length;
 
   const kpis = [
     { label: "Total Agendados", value: pendingCount, icon: CalendarDays, gradient: "from-[hsl(224,76%,48%)] to-[hsl(262,60%,55%)]" },
@@ -78,7 +91,7 @@ export default function Agenda() {
   ];
 
   // Dates that have follow-ups for calendar dot indicators
-  const followUpDates = followUps.reduce<Record<string, number>>((acc, f) => {
+  const followUpDates = scoped.reduce<Record<string, number>>((acc, f) => {
     const key = new Date(f.scheduledAt).toDateString();
     acc[key] = (acc[key] || 0) + 1;
     return acc;
@@ -171,6 +184,16 @@ export default function Agenda() {
                     {v === "all" ? "Todos" : v === "pending" ? "Pendentes" : "Concluídos"}
                   </Button>
                 ))}
+                {canFilterBySeller && (
+                  <SellerCombobox
+                    value={sellerFilter}
+                    onChange={setSellerFilter}
+                    sellers={visibleSellers}
+                    presets={[{ value: "all", label: "Todos os vendedores" }]}
+                    placeholder="Todos os vendedores"
+                    className="h-9 w-52 text-xs"
+                  />
+                )}
               </div>
               <Button size="sm" className="bg-brand-500 hover:opacity-90 text-primary-foreground shadow-none" onClick={() => setShowNewFollowUp(true)}>
                 <Plus className="h-3.5 w-3.5 mr-1" /> Novo Follow-up
