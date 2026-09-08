@@ -86,11 +86,25 @@ export function QuizAdminStats() {
         const since = sinceISO(period);
         let q = supabase.from("quiz_attempts").select("user_id, score, total_questions, correct_answers, completed_at, is_penalty, skipped_inactive, subject_breakdown");
         if (since) q = q.gte("completed_at", since);
-        const [sellersRes, attemptsRes] = await Promise.all([
+        // O NÍVEL é acumulado (all-time) e NÃO muda com o filtro de período; por isso
+        // uma busca separada, sem filtro de data. As métricas do período (pontos,
+        // precisão, rodadas, participação) seguem vindo da query filtrada acima.
+        const lifetimeQ = supabase.from("quiz_attempts").select("user_id, total_questions, correct_answers, is_penalty, skipped_inactive");
+        const [sellersRes, attemptsRes, lifetimeRes] = await Promise.all([
           supabase.from("sellers").select("name, user_id, is_active"),
           q,
+          lifetimeQ,
         ]);
         if (cancel) return;
+        // Respondidas/acertos de TODO o histórico por usuário → base do nível.
+        const lifeByUser = new Map<string, { answered: number; correct: number }>();
+        for (const a of ((lifetimeRes.data as any[]) || [])) {
+          if (!a.user_id || a.is_penalty || a.skipped_inactive) continue;
+          const cur = lifeByUser.get(a.user_id) || { answered: 0, correct: 0 };
+          cur.answered += a.total_questions || 0;
+          cur.correct += a.correct_answers || 0;
+          lifeByUser.set(a.user_id, cur);
+        }
 
         const sellers = (sellersRes.data || []).filter((s: any) => s.user_id && s.is_active !== false);
         const attempts: Attempt[] = (attemptsRes.data as any) || [];
@@ -109,7 +123,9 @@ export function QuizAdminStats() {
           const correct = real.reduce((t, a) => t + (a.correct_answers || 0), 0);
           const points = list.reduce((t, a) => t + (a.score || 0), 0);
           const penalties = list.filter((a) => a.is_penalty).length;
-          const lvl = computeQuizLevel(answered, correct);
+          // Nível sempre pelo acumulado (all-time), independente do período filtrado.
+          const life = lifeByUser.get(s.user_id) || { answered: 0, correct: 0 };
+          const lvl = computeQuizLevel(life.answered, life.correct);
           const lastPlayed = real.length
             ? real.reduce((m, a) => (a.completed_at > m ? a.completed_at : m), real[0].completed_at)
             : null;
