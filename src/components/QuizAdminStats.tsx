@@ -286,17 +286,20 @@ export function QuizAdminStats() {
                   )}
                   {filteredRows.map((s) => {
                     const didntPlay = s.plays === 0;
+                    // Só as métricas do período ficam apagadas para quem não jogou;
+                    // nome e NÍVEL (que é acumulado) seguem sempre nítidos.
+                    const dim = didntPlay ? "opacity-40" : "";
                     return (
-                      <tr key={s.userId} className={`border-b border-border/30 ${didntPlay ? "opacity-50" : ""}`}>
+                      <tr key={s.userId} className="border-b border-border/30">
                         <td className="py-2.5 font-medium text-foreground">{s.name}</td>
                         <td className="py-2.5">
                           <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${LEVEL_BADGE[s.levelKey] || LEVEL_BADGE.basico}`}>{s.levelLabel}</span>
                         </td>
-                        <td className="py-2.5 text-right font-black tabular-nums">{s.points.toLocaleString("pt-BR")}</td>
-                        <td className="py-2.5 text-right tabular-nums">{didntPlay ? "—" : `${Math.round(s.accuracy * 100)}%`}</td>
-                        <td className="py-2.5 text-right tabular-nums">{didntPlay ? <span className="text-xs">não jogou</span> : s.plays}</td>
-                        <td className={`py-2.5 text-right tabular-nums ${s.penalties > 0 ? "text-red-600 font-semibold" : ""}`}>{s.penalties || "—"}</td>
-                        <td className="py-2.5 text-right text-muted-foreground tabular-nums">{fmtDate(s.lastPlayed)}</td>
+                        <td className={`py-2.5 text-right font-black tabular-nums ${dim}`}>{s.points.toLocaleString("pt-BR")}</td>
+                        <td className={`py-2.5 text-right tabular-nums ${dim}`}>{didntPlay ? "—" : `${Math.round(s.accuracy * 100)}%`}</td>
+                        <td className={`py-2.5 text-right tabular-nums ${dim}`}>{didntPlay ? <span className="text-xs">não jogou</span> : s.plays}</td>
+                        <td className={`py-2.5 text-right tabular-nums ${s.penalties > 0 ? "text-red-600 font-semibold" : dim}`}>{s.penalties || "—"}</td>
+                        <td className={`py-2.5 text-right text-muted-foreground tabular-nums ${dim}`}>{fmtDate(s.lastPlayed)}</td>
                       </tr>
                     );
                   })}
