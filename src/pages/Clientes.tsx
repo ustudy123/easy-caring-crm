@@ -51,6 +51,9 @@ export default function Clientes() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [projectsClient, setProjectsClient] = useState<Client | null>(null);
    const [clients, setClients] = useState<Client[]>([]);
+   // Telefone -> nome real do lead (quando existe). O cadastro do cliente vindo
+   // do WhatsApp costuma ser "Cliente <telefone>"; o nome real fica no lead.
+   const [leadNames, setLeadNames] = useState<Record<string, string>>({});
    const [isSyncing, setIsSyncing] = useState(false);
   const [showNewClient, setShowNewClient] = useState(false);
   const location = useLocation();
@@ -58,8 +61,19 @@ export default function Clientes() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
    const fetchClients = async () => {
-     const { data } = await supabase.from("clients").select("*").order("created_at", { ascending: false });
-     if (data) setClients(data.map(mapClientFromDb));
+     const [clientsRes, leadsRes] = await Promise.all([
+       supabase.from("clients").select("*").order("created_at", { ascending: false }),
+       supabase.from("leads").select("client_phone, client_name"),
+     ]);
+     if (clientsRes.data) setClients(clientsRes.data.map(mapClientFromDb));
+     const norm = (p: string) => (p || "").replace(/\D/g, "").replace(/^55/, "");
+     const map: Record<string, string> = {};
+     for (const l of ((leadsRes.data as any[]) || [])) {
+       if (!l.client_phone || !l.client_name || isGenericName(l.client_name)) continue;
+       const k = norm(l.client_phone);
+       if (k && !map[k]) map[k] = l.client_name; // primeiro nome real encontrado
+     }
+     setLeadNames(map);
    };
 
    useEffect(() => {
@@ -143,10 +157,18 @@ export default function Clientes() {
   };
 
   const isRecurring = (c: Client) => (c.purchaseCount ?? 0) >= 2 || c.clientType === "recorrente";
+  // Nome a exibir: se o cadastro estiver com placeholder ("Cliente <telefone>"),
+  // usa o nome real do lead (por telefone); senão, o próprio nome do cliente.
+  const normPhone = (p: string) => (p || "").replace(/\D/g, "").replace(/^55/, "");
+  const resolveName = (c: Client) => {
+    if (!isGenericName(c.name)) return c.name;
+    return leadNames[normPhone(c.phone)] || getDisplayClientName(c);
+  };
   const filtered = clients.filter(
     (c) =>
       (recurringPage ? isRecurring(c) : true) &&
-      (c.name.toLowerCase().includes(search.toLowerCase()) ||
+      (resolveName(c).toLowerCase().includes(search.toLowerCase()) ||
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
         c.phone.includes(search) ||
         c.tags.some((t) => t.toLowerCase().includes(search.toLowerCase())))
   );
@@ -246,8 +268,8 @@ export default function Clientes() {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       {(() => {
-                        const displayName = getDisplayClientName(client);
-                        const isGeneric = isGenericName(client.name);
+                        const displayName = resolveName(client);
+                        const isGeneric = isGenericName(displayName);
                         return (
                           <>
                             <div className={`flex h-11 w-11 items-center justify-center rounded-[14px] bg-gradient-to-br ${isGeneric ? 'from-muted-foreground/20 to-muted-foreground/40 text-muted-foreground' : 'from-brand-500 to-brand-400 text-primary-foreground'} text-sm font-bold shadow-none`}>
