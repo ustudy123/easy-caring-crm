@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCrm } from "@/contexts/CrmContext";
+import { useRole } from "@/contexts/RoleContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Users, DollarSign, Target, FileText, MessageCircle, UserPlus, Repeat, AlertTriangle, Clock, TrendingUp, Trophy, BarChart3 } from "lucide-react";
 import { startOfDay, startOfWeek, startOfMonth, startOfYear } from "date-fns";
@@ -36,6 +37,8 @@ interface OrcamentoRow { id: string; status: string | null; created_at: string |
 
 export function AdminConsolidatedDashboard({ embedded = false }: { embedded?: boolean }) {
   const { leads } = useCrm();
+  const { isAdmin, isGerente, storeId } = useRole();
+  const restrictToStore = isGerente && !isAdmin && !!storeId;
   const [period, setPeriod] = useState<Period>("month");
   const [sellers, setSellers] = useState<SellerRow[]>([]);
   const [stores, setStores] = useState<StoreRow[]>([]);
@@ -50,7 +53,7 @@ export function AdminConsolidatedDashboard({ embedded = false }: { embedded?: bo
         supabase.from("sellers").select("id, name, store_id"),
         supabase.from("stores").select("id, name"),
         supabase.from("clients").select("id, created_at, total_purchases, last_message_at, tags, store_id"),
-        supabase.from("pricing_support_requests").select("id, status, created_at, seller_id"),
+        supabase.from("pricing_support_requests").select("id, status, created_at, seller_id, store_id"),
       ]);
       if (sRes.data) setSellers(sRes.data as SellerRow[]);
       if (stRes.data) setStores(stRes.data as StoreRow[]);
@@ -64,7 +67,12 @@ export function AdminConsolidatedDashboard({ embedded = false }: { embedded?: bo
   const inPeriod = (iso?: string | null) => !since || (iso ? new Date(iso) >= since : false);
 
   const m = useMemo(() => {
-    const pLeads = leads.filter((l) => inPeriod(l.createdAt));
+    // Gerente: escopa tudo à própria loja; admin vê tudo.
+    const sLeads = restrictToStore ? leads.filter((l) => l.storeId === storeId) : leads;
+    const sClients = restrictToStore ? clients.filter((c) => c.store_id === storeId) : clients;
+    const sOrc = restrictToStore ? orcamentos.filter((o) => o.store_id === storeId) : orcamentos;
+    const sStores = restrictToStore ? stores.filter((st) => st.id === storeId) : stores;
+    const pLeads = sLeads.filter((l) => inPeriod(l.createdAt));
     const isWon = (s: string) => s === "fechamento" || s === "pos_venda";
     const won = pLeads.filter((l) => isWon(l.stage));
     const lost = pLeads.filter((l) => l.stage === "perdido");
@@ -78,11 +86,11 @@ export function AdminConsolidatedDashboard({ embedded = false }: { embedded?: bo
     const valorAprovado = won.reduce((s, l) => s + (l.value || 0), 0);
     const ticketMedio = won.length > 0 ? valorAprovado / won.length : 0;
 
-    const pClients = clients.filter((c) => inPeriod(c.created_at));
-    const recorrentes = clients.filter((c) => (c.total_purchases || 0) > 0 || (c.tags || []).includes("fidelizado")).length;
-    const conversasWpp = clients.filter((c) => c.last_message_at).length;
+    const pClients = sClients.filter((c) => inPeriod(c.created_at));
+    const recorrentes = sClients.filter((c) => (c.total_purchases || 0) > 0 || (c.tags || []).includes("fidelizado")).length;
+    const conversasWpp = sClients.filter((c) => c.last_message_at).length;
 
-    const pOrc = orcamentos.filter((o) => inPeriod(o.created_at));
+    const pOrc = sOrc.filter((o) => inPeriod(o.created_at));
     const orcPend = pOrc.filter((o) => o.status === "pendente").length;
     const orcAnalise = pOrc.filter((o) => o.status === "em_analise").length;
     const orcConcl = pOrc.filter((o) => o.status === "concluido").length;
@@ -100,7 +108,7 @@ export function AdminConsolidatedDashboard({ embedded = false }: { embedded?: bo
     });
 
     // Por loja
-    const storeMap = stores.map((store) => {
+    const storeMap = sStores.map((store) => {
       const arr = pLeads.filter((l) => l.storeId === store.id);
       const w = arr.filter((l) => isWon(l.stage));
       return { id: store.id, name: store.name, leads: arr.length, won: w.length, valor: w.reduce((s, l) => s + (l.value || 0), 0) };
@@ -114,7 +122,7 @@ export function AdminConsolidatedDashboard({ embedded = false }: { embedded?: bo
       orcTotal: pOrc.length, orcPend, orcAnalise, orcConcl,
       avgDaysToClose, funnel, storeMap,
     };
-  }, [leads, clients, orcamentos, stores, since, period]);
+  }, [leads, clients, orcamentos, stores, since, period, restrictToStore, storeId]);
 
   if (loading) {
     return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;

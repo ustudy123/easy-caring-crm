@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { SellerCombobox } from "@/components/SellerCombobox";
+import { useRole } from "@/contexts/RoleContext";
 import { Briefcase, Loader2, Search } from "lucide-react";
 import { KANBAN_STAGES } from "@/types/crm";
 
@@ -28,8 +29,10 @@ const stageLabel = (key: string) =>
  * projeto está e quais clientes concentram mais de um projeto.
  */
 export function ProjectsReport() {
+  const { isAdmin, isGerente, storeId } = useRole();
+  const restrictToStore = isGerente && !isAdmin && !!storeId;
   const [rows, setRows] = useState<ProjectRow[]>([]);
-  const [sellers, setSellers] = useState<{ id: string; name: string }[]>([]);
+  const [sellers, setSellers] = useState<{ id: string; name: string; store_id?: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [sellerFilter, setSellerFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"ativos" | "concluidos" | "todos">("ativos");
@@ -43,10 +46,10 @@ export function ProjectsReport() {
         (supabase as any).from("client_projects")
           .select("id, name, stage, client_name, client_phone, seller_id, completed_at, created_at")
           .order("created_at", { ascending: false }),
-        supabase.from("sellers").select("id, name").order("name"),
+        supabase.from("sellers").select("id, name, store_id").order("name"),
       ]);
       setRows((projRes.data ?? []) as ProjectRow[]);
-      setSellers((sellRes.data ?? []) as { id: string; name: string }[]);
+      setSellers((sellRes.data ?? []) as { id: string; name: string; store_id?: string | null }[]);
       setLoading(false);
     };
     load();
@@ -55,16 +58,21 @@ export function ProjectsReport() {
   const sellerName = (id: string | null) =>
     (id && sellers.find((s) => s.id === id)?.name) || "Sem vendedor";
 
+  // Vendedores visíveis (gerente: só os da própria loja).
+  const visibleSellers = restrictToStore ? sellers.filter((s) => s.store_id === storeId) : sellers;
+
   const filtered = useMemo(() => {
     const q = nameSearch.trim().toLowerCase();
+    const myIds = restrictToStore ? new Set(sellers.filter((s) => s.store_id === storeId).map((s) => s.id)) : null;
     return rows.filter((r) => {
+      if (myIds && !(r.seller_id && myIds.has(r.seller_id))) return false;
       if (sellerFilter !== "all" && r.seller_id !== sellerFilter) return false;
       if (statusFilter === "ativos" && r.completed_at) return false;
       if (statusFilter === "concluidos" && !r.completed_at) return false;
       if (q && !((r.client_name || "").toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q))) return false;
       return true;
     });
-  }, [rows, sellerFilter, statusFilter, nameSearch]);
+  }, [rows, sellerFilter, statusFilter, nameSearch, restrictToStore, storeId, sellers]);
 
   // Quantos projetos por etapa (só os ativos fazem sentido no funil).
   const porEtapa = useMemo(() => {
@@ -113,7 +121,7 @@ export function ProjectsReport() {
           <SellerCombobox
             value={sellerFilter}
             onChange={setSellerFilter}
-            sellers={sellers}
+            sellers={visibleSellers}
             presets={[{ value: "all", label: "Todos os vendedores" }]}
             placeholder="Todos os vendedores"
             className="w-56 h-9 text-xs"

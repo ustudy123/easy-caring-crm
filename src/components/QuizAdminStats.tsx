@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRole } from "@/contexts/RoleContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { computeQuizLevel } from "@/lib/quizLevel";
 import { startOfWeek, startOfMonth } from "date-fns";
@@ -72,6 +73,9 @@ function barColor(acc: number): string {
 
 export function QuizAdminStats() {
   const [period, setPeriod] = useState("week");
+  const { isAdmin, isGerente, storeId } = useRole();
+  // Gerente vê só a equipe da própria loja; admin vê todos.
+  const restrictToStore = isGerente && !isAdmin && !!storeId;
   // Filtros da lista de vendedores (aplicados só à tabela, não aos cards de resumo).
   const [levelFilter, setLevelFilter] = useState("all");        // all | basico | intermediario | avancado | especialista
   const [pointsFilter, setPointsFilter] = useState(0);          // pontos mínimos (0 = qualquer)
@@ -95,7 +99,7 @@ export function QuizAdminStats() {
         // precisão, rodadas, participação) seguem vindo da query filtrada acima.
         const lifetimeQ = supabase.from("quiz_attempts").select("user_id, total_questions, correct_answers, is_penalty, skipped_inactive");
         const [sellersRes, attemptsRes, lifetimeRes] = await Promise.all([
-          supabase.from("sellers").select("name, user_id, is_active"),
+          supabase.from("sellers").select("name, user_id, is_active, store_id"),
           q,
           lifetimeQ,
         ]);
@@ -110,8 +114,12 @@ export function QuizAdminStats() {
           lifeByUser.set(a.user_id, cur);
         }
 
-        const sellers = (sellersRes.data || []).filter((s: any) => s.user_id && s.is_active !== false);
-        const attempts: Attempt[] = (attemptsRes.data as any) || [];
+        const sellers = (sellersRes.data || [])
+          .filter((s: any) => s.user_id && s.is_active !== false)
+          .filter((s: any) => !restrictToStore || s.store_id === storeId);
+        const allowedIds = new Set(sellers.map((s: any) => s.user_id));
+        const attempts: Attempt[] = ((attemptsRes.data as any) || [])
+          .filter((a: any) => !restrictToStore || allowedIds.has(a.user_id));
         const byUser = new Map<string, Attempt[]>();
         for (const a of attempts) {
           if (!a.user_id) continue;
@@ -183,7 +191,7 @@ export function QuizAdminStats() {
       }
     })();
     return () => { cancel = true; };
-  }, [period]);
+  }, [period, restrictToStore, storeId]);
 
   // Lista filtrada por nível / pontos mínimos / precisão mínima.
   const filteredRows = rows.filter((s) => {

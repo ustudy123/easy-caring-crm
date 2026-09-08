@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCrm } from "@/contexts/CrmContext";
+import { useRole } from "@/contexts/RoleContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getUrgencyLevel, formatIdleTime, getIdleHours, UrgencyLevel } from "@/lib/leadUrgency";
 import { KANBAN_STAGES } from "@/types/crm";
@@ -21,6 +22,8 @@ const LEVEL_META: Record<UrgencyLevel, { label: string; cls: string }> = {
 
 export function IdleClientsReport() {
   const { leads, sellers } = useCrm();
+  const { isAdmin, isGerente, storeId } = useRole();
+  const restrictToStore = isGerente && !isAdmin && !!storeId;
   const [tick, setTick] = useState(0);
   const [storeNames, setStoreNames] = useState<Record<string, string>>({});
   const [levelFilter, setLevelFilter] = useState<"all" | UrgencyLevel>("all");
@@ -51,6 +54,7 @@ export function IdleClientsReport() {
     return leads
       .map((l) => ({ lead: l, level: getUrgencyLevel(l), idleH: getIdleHours(l) }))
       .filter((r) => r.level !== "ok")
+      .filter((r) => !restrictToStore || r.lead.storeId === storeId)
       .filter((r) => levelFilter === "all" || r.level === levelFilter)
       .filter((r) => sellerFilter === "all" || r.lead.assignedTo === sellerFilter)
       .filter((r) => storeFilter === "all" || r.lead.storeId === storeFilter)
@@ -62,22 +66,27 @@ export function IdleClientsReport() {
         return nameHit || phoneHit;
       })
       .sort((a, b) => b.idleH - a.idleH);
-  }, [leads, tick, levelFilter, search, sellerFilter, storeFilter, stageFilter]);
+  }, [leads, tick, levelFilter, search, sellerFilter, storeFilter, stageFilter, restrictToStore, storeId]);
 
-  const storeOptions = Object.entries(storeNames).sort((a, b) => a[1].localeCompare(b[1]));
+  const visibleSellers = restrictToStore ? sellers.filter((s) => s.store_id === storeId) : sellers;
+  const storeOptions = Object.entries(storeNames)
+    .filter(([id]) => !restrictToStore || id === storeId)
+    .sort((a, b) => a[1].localeCompare(b[1]));
   const hasFilter = levelFilter !== "all" || sellerFilter !== "all" || storeFilter !== "all" || stageFilter !== "all" || search.trim() !== "";
   const clearFilters = () => { setLevelFilter("all"); setSellerFilter("all"); setStoreFilter("all"); setStageFilter("all"); setSearch(""); };
 
   const counts = useMemo(() => {
     void tick;
-    const levels = leads.map((l) => getUrgencyLevel(l)).filter((x) => x !== "ok");
+    const levels = leads
+      .filter((l) => !restrictToStore || l.storeId === storeId)
+      .map((l) => getUrgencyLevel(l)).filter((x) => x !== "ok");
     return {
       total: levels.length,
       critical: levels.filter((x) => x === "critical").length,
       warning: levels.filter((x) => x === "warning").length,
       attention: levels.filter((x) => x === "attention").length,
     };
-  }, [leads, tick]);
+  }, [leads, tick, restrictToStore, storeId]);
 
   const handleExport = () => {
     if (rows.length === 0) return;
@@ -139,7 +148,7 @@ export function IdleClientsReport() {
           <SellerCombobox
             value={sellerFilter}
             onChange={setSellerFilter}
-            sellers={sellers}
+            sellers={visibleSellers}
             presets={[{ value: "all", label: "Todos os vendedores" }]}
             placeholder="Todos os vendedores"
             className="h-8 w-52 text-xs"
