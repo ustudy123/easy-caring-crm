@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { useRole } from "@/contexts/RoleContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,6 +31,7 @@ interface Row {
   clientName: string;
   clientPhone: string;
   sellerName: string;
+  sellerId: string | null;
   motivo: string;
   isWin: boolean;
   value: number;
@@ -38,12 +40,14 @@ interface Row {
 
 export default function RelatorioEncerramentos() {
   const navigate = useNavigate();
+  const { isAdmin, isGerente, storeId } = useRole();
+  const restrictToStore = isGerente && !isAdmin && !!storeId;
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("month");
   const [motivoFilter, setMotivoFilter] = useState("todos");
   const [sellerFilter, setSellerFilter] = useState("todos");
   const [rows, setRows] = useState<Row[]>([]);
-  const [sellers, setSellers] = useState<{ id: string; name: string }[]>([]);
+  const [sellers, setSellers] = useState<{ id: string; name: string; store_id?: string | null }[]>([]);
 
   useEffect(() => {
     let cancel = false;
@@ -58,13 +62,13 @@ export default function RelatorioEncerramentos() {
         if (since) q = q.gte("closed_at", since);
         const [leadsRes, sellersRes] = await Promise.all([
           q.order("closed_at", { ascending: false }),
-          supabase.from("sellers").select("id, name"),
+          supabase.from("sellers").select("id, name, store_id"),
         ]);
         if (cancel) return;
 
         const sellerById = new Map<string, string>();
         for (const s of sellersRes.data || []) sellerById.set(s.id, s.name);
-        setSellers((sellersRes.data || []).map((s: any) => ({ id: s.id, name: s.name })));
+        setSellers((sellersRes.data || []).map((s: any) => ({ id: s.id, name: s.name, store_id: s.store_id })));
 
         const mapped: Row[] = (leadsRes.data || []).map((l: any) => {
           const isWin = l.stage === "pos_venda";
@@ -73,6 +77,7 @@ export default function RelatorioEncerramentos() {
             clientName: l.client_name || l.client_phone || "—",
             clientPhone: l.client_phone || "",
             sellerName: sellerById.get(l.assigned_to) || "Sem vendedor",
+            sellerId: l.assigned_to || null,
             motivo: isWin ? VENDA_CONCLUIDA : (l.lost_reason || "Sem motivo informado"),
             isWin,
             value: Number(l.value) || 0,
@@ -95,15 +100,17 @@ export default function RelatorioEncerramentos() {
     return Array.from(new Set([...oficiais, ...nosDados])).sort();
   }, [rows]);
 
-  const filtered = useMemo(
-    () =>
-      rows.filter(
-        (r) =>
-          (motivoFilter === "todos" || r.motivo === motivoFilter) &&
-          (sellerFilter === "todos" || r.sellerName === sellerFilter)
-      ),
-    [rows, motivoFilter, sellerFilter]
-  );
+  const visibleSellers = restrictToStore ? sellers.filter((s) => s.store_id === storeId) : sellers;
+
+  const filtered = useMemo(() => {
+    const myIds = restrictToStore ? new Set(sellers.filter((s) => s.store_id === storeId).map((s) => s.id)) : null;
+    return rows.filter(
+      (r) =>
+        (myIds ? (r.sellerId != null && myIds.has(r.sellerId)) : true) &&
+        (motivoFilter === "todos" || r.motivo === motivoFilter) &&
+        (sellerFilter === "todos" || r.sellerName === sellerFilter)
+    );
+  }, [rows, motivoFilter, sellerFilter, restrictToStore, storeId, sellers]);
 
   const byMotivo = useMemo(() => {
     const m = new Map<string, number>();
@@ -150,7 +157,7 @@ export default function RelatorioEncerramentos() {
                   <SelectTrigger className="h-9 w-48"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos os vendedores</SelectItem>
-                    {sellers.map((s) => (<SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>))}
+                    {visibleSellers.map((s) => (<SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
