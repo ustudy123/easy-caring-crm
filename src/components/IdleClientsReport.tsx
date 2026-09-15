@@ -197,7 +197,7 @@ export function IdleClientsReport() {
                 const resp = sellerName(lead.assignedTo);
                 return (
                   <tr key={lead.id} className="border-b border-border/30">
-                    <td className="py-2.5 font-medium text-foreground">{lead.clientName}</td>
+                    <td className="py-2.5 font-medium text-foreground uppercase">{lead.clientName}</td>
                     <td className="py-2.5 text-muted-foreground tabular-nums">{maskPhone(lead.clientPhone)}</td>
                     <td className={`py-2.5 ${resp ? "text-foreground" : "text-muted-foreground italic"}`}>{resp || "sem vendedor designado"}</td>
                     <td className="py-2.5 text-muted-foreground">{lead.storeId ? storeNames[lead.storeId] || "—" : "—"}</td>

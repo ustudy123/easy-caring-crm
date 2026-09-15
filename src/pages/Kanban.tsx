@@ -915,7 +915,7 @@ export default function Kanban() {
                                                     <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isGeneric ? 'bg-muted text-muted-foreground' : stageBgMap[stage.key]} text-[10px] font-extrabold`}>
                                                       {isGeneric ? <UserCircle className="h-4 w-4" /> : lead.clientName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
                                                     </div>
-                                                    <p className={`text-[13px] font-bold leading-tight truncate ${isGeneric ? 'text-foreground/70 italic' : 'text-foreground'}`}>
+                                                    <p className={`text-[13px] font-bold leading-tight truncate uppercase ${isGeneric ? 'text-foreground/70 italic' : 'text-foreground'}`}>
                                                       {displayName}
                                                     </p>
                                                   </>
@@ -1166,7 +1166,7 @@ export default function Kanban() {
                                <div className="flex items-center gap-2">
                                  <span className={`h-2 w-2 rounded-full shrink-0 ${dotClass}`} />
                                  <div className="min-w-0">
-                                   <p className="font-medium text-foreground truncate">{lead.clientName}</p>
+                                   <p className="font-medium text-foreground truncate uppercase">{lead.clientName}</p>
                                    <p className="text-[11px] text-muted-foreground truncate">{lead.clientPhone}</p>
                                  </div>
                                </div>

@@ -1715,7 +1715,7 @@ const mockContactNames: Record<string, string> = {
                                 botão ATENDER foram para a linha de baixo, senão
                                 espremiam o nome e ele saía truncado. */}
                             <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                              <span className="text-[16px] font-normal text-foreground truncate">
+                              <span className="text-[16px] font-normal text-foreground truncate uppercase">
                                  {name}
                                </span>
                                {conv.alert_status === 'critical' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" title="ALERTA CRÍTICO - ADMIN" />}
@@ -1855,7 +1855,7 @@ const mockContactNames: Record<string, string> = {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[16px] font-normal text-white truncate">
+                      <p className="text-[16px] font-normal text-white truncate uppercase">
                         {contactName || formatPhone(selectedConversation.phone)}
                       </p>
                       {contactName && (

@@ -276,7 +276,7 @@ export default function Clientes() {
                               {displayName.split(" ").filter(n => !n.includes('(')).map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              <p className={`font-bold leading-tight ${isGeneric ? 'text-foreground/70 italic' : 'text-foreground'}`}>
+                              <p className={`font-bold leading-tight uppercase ${isGeneric ? 'text-foreground/70 italic' : 'text-foreground'}`}>
                                 {displayName}
                               </p>
                               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
