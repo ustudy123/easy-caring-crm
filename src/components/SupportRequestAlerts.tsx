@@ -17,9 +17,10 @@ import { BellOff } from "lucide-react";
  * desligadas, com botão para ativar — para não ficar no escuro sobre o porquê.
  */
 export function SupportRequestAlerts() {
-  const { isSuporte, isAdmin, sellerId, storeId } = useRole();
+  const { isSuporte, sellerId } = useRole();
   const { permission, requestPermission, notify } = useBackgroundAlert("CRM Taeco");
-  const enabled = isSuporte || isAdmin;
+  // Só o suporte vinculado (assigned_to) é avisado — precisa ter sellerId.
+  const enabled = isSuporte && !!sellerId;
 
   useEffect(() => {
     if (!enabled) return;
@@ -31,9 +32,8 @@ export function SupportRequestAlerts() {
         { event: "INSERT", schema: "public", table: "pricing_support_requests" },
         (payload: any) => {
           const r = payload?.new || {};
-          const paraMim = !!sellerId && r.assigned_to === sellerId;
-          const daMinhaLoja = !!storeId && r.store_id === storeId;
-          if (!(isAdmin || paraMim || daMinhaLoja)) return;
+          // Apenas o suporte vinculado à solicitação recebe a notificação.
+          if (!r.assigned_to || r.assigned_to !== sellerId) return;
 
           const tipo = r.request_type === "precificacao_especial"
             ? "Negociação especial"
@@ -49,7 +49,7 @@ export function SupportRequestAlerts() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [enabled, isAdmin, sellerId, storeId, notify]);
+  }, [enabled, sellerId, notify]);
 
   // Indicador de permissão: só aparece para suporte/admin quando as notificações
   // do navegador NÃO estão liberadas. Some assim que forem ativadas.
