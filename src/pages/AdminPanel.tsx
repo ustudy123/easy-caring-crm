@@ -1198,9 +1198,12 @@ function UsersTab() {
       return;
     }
     if (editRoles.includes("vendedor")) {
-      const inactive = !editIsActive || editStatus !== "active";
-      if (inactive && !editSubstituteId) {
-        toast.error("Selecione um vendedor substituto antes de marcar como inativo / em férias / ausente.");
+      // Substituto só é obrigatório para saída TEMPORÁRIA (férias/ausente), quando
+      // os leads precisam de alguém segurando. Inativar (desligar) não exige — o
+      // sistema redistribui os leads do vendedor para a fila da loja.
+      const needsSubstitute = editStatus === "vacation" || editStatus === "away";
+      if (needsSubstitute && (!editSubstituteId || editSubstituteId === "none")) {
+        toast.error("Selecione um vendedor substituto antes de marcar como em férias / ausente.");
         return;
       }
     }
