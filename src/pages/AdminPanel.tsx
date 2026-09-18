@@ -1304,7 +1304,7 @@ function UsersTab() {
           <TableBody>
             {users.map(u => (
               <TableRow key={u.user_id}>
-                <TableCell className="font-medium">{u.seller_name || u.display_name || "—"}</TableCell>
+                <TableCell className="font-medium uppercase">{u.seller_name || u.display_name || "—"}</TableCell>
                 <TableCell>
                   <Badge 
                     variant={u.status === 'active' ? "success" : "secondary" as any} 
