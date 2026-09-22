@@ -442,8 +442,13 @@ serve(async (req) => {
             || (cleanPhone && (msg.messageTimestamp || data.momment) ? `${cleanPhone}-${msg.messageTimestamp || data.momment}` : null)
             || crypto.randomUUID();
           const isFromMe = data.fromMe || msg.fromMe || false;
-           const isGroup = data.isGroup || msg.isGroup || msg.isgroup
-             || (rawPhone || "").toString().includes("@g.us") || (rawPhone || "").toString().includes("-") || false;
+           // Grupo: além das flags, olha TODOS os ids de chat — em mensagem de grupo o
+           // `data.phone` pode vir com o participante, escondendo o "@g.us" do grupo.
+           const chatIds = [data.phone, msg.chatid, data.chatid, data.wa_chatid, msg.sender, data.sender,
+             data.from, data.chat?.id, data.data?.key?.remoteJid, msg.key?.remoteJid]
+             .filter(Boolean).map((v: any) => v.toString());
+           const isGroup = !!(data.isGroup || msg.isGroup || msg.isgroup)
+             || chatIds.some((v) => v.includes("@g.us") || v.includes("-"));
 
           // Timestamp: uazapi usa messageTimestamp (segundos); Z-API ISO/ms
            const rawTs = msg.messageTimestamp || data.waitingMessage || data.momment || Date.now();
@@ -472,11 +477,15 @@ serve(async (req) => {
         // conversa mesmo sendo inválidos.
         const isLid = (rawPhone || "").toString().includes("@lid");
         const d = (cleanPhone || "").replace(/\D/g, "");
-        const validBrPhone = (d.length === 10 || d.length === 11)
-          || ((d.length === 12 || d.length === 13) && d.startsWith("55"));
-        if (isLid || !validBrPhone) {
-          console.warn(`Skipping: remetente não é telefone BR válido (raw="${rawPhone}", clean="${cleanPhone}", lid=${isLid}, len=${d.length})`);
-          return new Response(JSON.stringify({ success: true, action: "skipped_invalid_phone" }), {
+        // Telefone BR válido: 10–11 dígitos (local) ou 12–13 com DDI 55; e o dígito
+        // logo após o DDD deve ser 2–9 (número BR nunca começa com 0/1 após o DDD —
+        // isso barra ids "sintéticos" de grupo que por acaso têm 10/11 dígitos).
+        const local = (d.length === 12 || d.length === 13) && d.startsWith("55") ? d.slice(2) : d;
+        const validBrPhone = (local.length === 10 || local.length === 11) && /^[2-9]/.test(local.slice(2));
+        // Mensagem de GRUPO nunca vira conversa/lead: descarta antes de gravar.
+        if (isLid || isGroup || !validBrPhone) {
+          console.warn(`Skipping: remetente inválido (raw="${rawPhone}", clean="${cleanPhone}", lid=${isLid}, group=${isGroup}, len=${d.length})`);
+          return new Response(JSON.stringify({ success: true, action: isGroup ? "skipped_group" : "skipped_invalid_phone" }), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
