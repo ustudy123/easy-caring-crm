@@ -524,6 +524,24 @@ serve(async (req) => {
           console.error("Error inserting whatsapp_messages:", msgError);
         }
  
+        // Resposta do VENDEDOR (por celular ou fora do CRM): zera o relógio de
+        // "não resposta" e registra o horário da resposta. Sem isso, responder
+        // pelo WhatsApp do celular não contava e o alerta continuava disparando.
+        if (isFromMe && cleanPhone && !isGroup) {
+          const nowIso = new Date().toISOString();
+          const dg = cleanPhone.replace(/\D/g, "");
+          const noCc = dg.replace(/^55/, "");
+          const variants = Array.from(new Set([cleanPhone, dg, noCc, "55" + noCc]));
+          // Zera o idle do(s) lead(s) deste telefone (o alerta usa leads.updated_at).
+          await supabase.from("leads").update({ updated_at: nowIso }).in("client_phone", variants);
+          // Registra a resposta do vendedor no cliente e limpa o alerta.
+          await supabase.from("clients").update({
+            last_seller_response_at: nowIso,
+            last_message_at: nowIso,
+            alert_status: 'none',
+          }).in("phone", variants);
+        }
+
         // If incoming message (not from me, not group), handle lead distribution logic
         if (!isFromMe && cleanPhone && !isGroup) {
           // ── FERIADO (checado ANTES de multi-instância, código de vendedor e triagem):
