@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-  import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, Pencil, Trash2, TrendingUp, RefreshCw, Loader2, Info, Download, CreditCard, FolderKanban } from "lucide-react";
+  import { Search, Plus, Phone, Mail, MapPin, DollarSign, Tag, ChevronRight, Users, User, Pencil, Trash2, TrendingUp, RefreshCw, Loader2, Info, Download, CreditCard, FolderKanban } from "lucide-react";
 import { ProjectsDialog } from "@/components/ProjectsDialog";
  import { getDisplayClientName, isGenericName } from "@/lib/clientUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,6 +18,8 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { ClientTimeline } from "@/components/ClientTimeline";
 import { exportToCsv } from "@/lib/exportCsv";
+import { useRole } from "@/contexts/RoleContext";
+import { SellerCombobox } from "@/components/SellerCombobox";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 16, scale: 0.97 }, show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring" as const, stiffness: 300, damping: 24 } } };
@@ -59,13 +61,19 @@ export default function Clientes() {
   const location = useLocation();
   const recurringPage = location.pathname.includes("recorrentes");
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const { isAdmin, isGerente } = useRole();
+  const canSeeSeller = isAdmin || isGerente; // gerente/gestor vê o vendedor do cliente
+  const [sellers, setSellers] = useState<{ id: string; name: string }[]>([]);
+  const [sellerFilter, setSellerFilter] = useState("all");
 
    const fetchClients = async () => {
-     const [clientsRes, leadsRes] = await Promise.all([
+     const [clientsRes, leadsRes, sellersRes] = await Promise.all([
        supabase.from("clients").select("*").order("created_at", { ascending: false }),
        supabase.from("leads").select("client_phone, client_name"),
+       supabase.from("sellers").select("id, name").order("name"),
      ]);
      if (clientsRes.data) setClients((clientsRes.data as any[]).filter((c) => !c.hidden_at).map(mapClientFromDb));
+     setSellers((sellersRes.data as any[]) || []);
      const norm = (p: string) => (p || "").replace(/\D/g, "").replace(/^55/, "");
      const map: Record<string, string> = {};
      for (const l of ((leadsRes.data as any[]) || [])) {
@@ -164,9 +172,11 @@ export default function Clientes() {
     if (!isGenericName(c.name)) return c.name;
     return leadNames[normPhone(c.phone)] || getDisplayClientName(c);
   };
+  const sellerName = (id: string | null | undefined) => (id && sellers.find((sv) => sv.id === id)?.name) || "";
   const filtered = clients.filter(
     (c) =>
       (recurringPage ? isRecurring(c) : true) &&
+      (sellerFilter === "all" || (c as any).assignedSellerId === sellerFilter) &&
       (resolveName(c).toLowerCase().includes(search.toLowerCase()) ||
         c.name.toLowerCase().includes(search.toLowerCase()) ||
         c.phone.includes(search) ||
@@ -212,6 +222,16 @@ export default function Clientes() {
                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                <Input placeholder="Buscar por nome, telefone ou palavra-chave..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-card/80 backdrop-blur-sm border-border/60 focus:border-primary/40" />
              </div>
+             {canSeeSeller && (
+               <SellerCombobox
+                 value={sellerFilter}
+                 onChange={setSellerFilter}
+                 sellers={sellers}
+                 presets={[{ value: "all", label: "Todos os vendedores" }]}
+                 placeholder="Todos os vendedores"
+                 className="w-full sm:w-52"
+               />
+             )}
              <Button 
                size="sm" 
                variant="outline"
@@ -304,6 +324,11 @@ export default function Clientes() {
                     {client.city && (
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <MapPin className="h-3 w-3 shrink-0" /> {client.city}
+                      </div>
+                    )}
+                    {canSeeSeller && sellerName((client as any).assignedSellerId) && (
+                      <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+                        <User className="h-3 w-3 shrink-0 text-muted-foreground" /> Vendedor: {sellerName((client as any).assignedSellerId)}
                       </div>
                     )}
                   </div>
