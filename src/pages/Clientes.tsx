@@ -65,7 +65,7 @@ export default function Clientes() {
        supabase.from("clients").select("*").order("created_at", { ascending: false }),
        supabase.from("leads").select("client_phone, client_name"),
      ]);
-     if (clientsRes.data) setClients(clientsRes.data.map(mapClientFromDb));
+     if (clientsRes.data) setClients((clientsRes.data as any[]).filter((c) => !c.hidden_at).map(mapClientFromDb));
      const norm = (p: string) => (p || "").replace(/\D/g, "").replace(/^55/, "");
      const map: Record<string, string> = {};
      for (const l of ((leadsRes.data as any[]) || [])) {

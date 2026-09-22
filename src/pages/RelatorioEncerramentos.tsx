@@ -70,7 +70,7 @@ export default function RelatorioEncerramentos() {
         for (const s of sellersRes.data || []) sellerById.set(s.id, s.name);
         setSellers((sellersRes.data || []).map((s: any) => ({ id: s.id, name: s.name, store_id: s.store_id })));
 
-        const mapped: Row[] = (leadsRes.data || []).map((l: any) => {
+        const mapped: Row[] = (leadsRes.data || []).filter((l: any) => !l.hidden_at).map((l: any) => {
           const isWin = l.stage === "pos_venda";
           return {
             id: l.id,

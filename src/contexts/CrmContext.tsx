@@ -168,7 +168,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
          supabase.from("sellers").select("*").order("name"),
          supabase.from("notifications").select("*").eq("is_read", false).order("created_at", { ascending: false }),
       ]);
-      if (leadsRes.data) setLeads(leadsRes.data.filter((r: any) => !r.archived).map(mapLeadFromDb));
+      if (leadsRes.data) setLeads(leadsRes.data.filter((r: any) => !r.archived && !r.hidden_at).map(mapLeadFromDb));
       if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
        if (sellersRes.data) setSellers(sellersRes.data.map(mapSellerFromDb));
       if (whatsappRes.count != null) setUnreadWhatsAppCount(whatsappRes.count);
@@ -194,7 +194,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       supabase.from("follow_ups").select("*").order("scheduled_at"),
       supabase.from("notifications").select("*").eq("is_read", false).order("created_at", { ascending: false }),
     ]);
-    if (leadsRes.data) setLeads(leadsRes.data.filter((r: any) => !r.archived).map(mapLeadFromDb));
+    if (leadsRes.data) setLeads(leadsRes.data.filter((r: any) => !r.archived && !r.hidden_at).map(mapLeadFromDb));
     if (followUpsRes.data) setFollowUps(followUpsRes.data.map(mapFollowUpFromDb));
     if (notifsRes.data) pushNotifications(notifsRes.data as Notification[], notifiedReady.current);
   }, [pushNotifications]);
@@ -230,12 +230,12 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       .channel("leads-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, (payload) => {
         if (payload.eventType === "INSERT") {
-          if ((payload.new as any).archived) return;
+          if ((payload.new as any).archived || (payload.new as any).hidden_at) return;
           // Evita duplicação: o addLead já adiciona o lead de forma otimista,
           // então só insere via realtime se ainda não estiver na lista.
           setLeads((prev) => prev.some((l) => l.id === payload.new.id) ? prev : [mapLeadFromDb(payload.new), ...prev]);
         } else if (payload.eventType === "UPDATE") {
-          if ((payload.new as any).archived) {
+          if ((payload.new as any).archived || (payload.new as any).hidden_at) {
             setLeads((prev) => prev.filter((l) => l.id !== payload.new.id));
           } else {
             // Upsert: se o lead não está na lista (ex.: estava arquivado e foi
