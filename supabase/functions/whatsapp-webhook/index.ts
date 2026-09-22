@@ -391,15 +391,21 @@ serve(async (req) => {
         console.log("Resolved instance:", JSON.stringify({ connectedPhoneClean, instanceHint, receivedInstanceId, type: receivedInstance?.instance_type }));
 
         // Z-API uses "ReceivedMessage" for incoming messages
-        const isMessageEvent = event === "ReceivedMessage" || event === "ReceivedCallback" || event === "messages.upsert" || event === "messages" || event === "message" || event === "chats";
+        // "chats" é evento de SINCRONIZAÇÃO de chat (não uma mensagem recebida) — não
+        // processa como mensagem, senão gera "cliente fantasma"/[mensagem sem texto].
+        const isMessageEvent = event === "ReceivedMessage" || event === "ReceivedCallback" || event === "messages.upsert" || event === "messages" || event === "message";
 
        if (isMessageEvent) {
           // uazapi aninha os dados em `message`; Z-API usa o nível de cima.
           const msg = data.message || data.data || {};
 
-          const rawPhone = data.phone || msg.chatid || msg.sender || data.wa_chatid
-            || data.sender || data.chatid || data.from || data.chat?.id
-            || data.data?.key?.remoteJid || msg.key?.remoteJid || "";
+          // Telefone real primeiro: wa_chatid / remoteJid vêm como "55...@s.whatsapp.net".
+          // O chat.id pode ser um id INTERNO com letras (ex.: "r772c4ea88a2403") — fica
+          // por último e é barrado logo abaixo se contiver letras.
+          const rawPhone = data.chat?.wa_chatid || msg.chatid || data.wa_chatid
+            || data.data?.key?.remoteJid || msg.key?.remoteJid
+            || data.phone || msg.sender || data.sender || data.chatid || data.from
+            || data.chat?.id || "";
          const cleanPhone = rawPhone.toString()
            .replace("@s.whatsapp.net", "")
            .replace("@c.us", "")
@@ -476,6 +482,10 @@ serve(async (req) => {
         // Sem isso, números como "333009662623" (12 díg. sem o 55) viravam
         // conversa mesmo sendo inválidos.
         const isLid = (rawPhone || "").toString().includes("@lid");
+        // Se o remetente tem letras fora do sufixo (@s.whatsapp.net etc.), é um id
+        // INTERNO do gateway, não um telefone. Ex.: "r772c4ea88a2403" → descarta.
+        const phoneCore = (rawPhone || "").toString().replace(/@.*/, "");
+        const isInternalId = /[a-zA-Z]/.test(phoneCore);
         const d = (cleanPhone || "").replace(/\D/g, "");
         // Telefone BR válido: 10–11 dígitos (local) ou 12–13 com DDI 55; e o dígito
         // logo após o DDD deve ser 2–9 (número BR nunca começa com 0/1 após o DDD —
@@ -483,7 +493,7 @@ serve(async (req) => {
         const local = (d.length === 12 || d.length === 13) && d.startsWith("55") ? d.slice(2) : d;
         const validBrPhone = (local.length === 10 || local.length === 11) && /^[2-9]/.test(local.slice(2));
         // Mensagem de GRUPO nunca vira conversa/lead: descarta antes de gravar.
-        if (isLid || isGroup || !validBrPhone) {
+        if (isLid || isGroup || isInternalId || !validBrPhone) {
           console.warn(`Skipping: remetente inválido (raw="${rawPhone}", clean="${cleanPhone}", lid=${isLid}, group=${isGroup}, len=${d.length})`);
           return new Response(JSON.stringify({ success: true, action: isGroup ? "skipped_group" : "skipped_invalid_phone" }), {
             status: 200,
