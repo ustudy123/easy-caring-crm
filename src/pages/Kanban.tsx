@@ -505,6 +505,12 @@ export default function Kanban() {
     navigate(`/suporte-orcamento?${params.toString()}`);
   };
 
+  // Envio de pedido — só disponível quando o card está na coluna Fechamento.
+  const handleSendOrder = (lead: Lead) => {
+    const params = new URLSearchParams({ cliente: lead.clientName || "", lead: lead.id });
+    navigate(`/envio-pedido?${params.toString()}`);
+  };
+
   const moveToNextStage = (lead: Lead) => {
     const stageKeys = KANBAN_STAGES.map(s => s.key);
     const idx = stageKeys.indexOf(lead.stage);
@@ -958,6 +964,15 @@ export default function Kanban() {
                                                       title="Precificação especial ou orçamento"
                                                     >
                                                       <Zap className="h-3 w-3" />
+                                                    </button>
+                                                  )}
+                                                  {lead.stage === 'fechamento' && (
+                                                    <button
+                                                      onClick={(e) => { e.stopPropagation(); handleSendOrder(lead); }}
+                                                      className="p-1 rounded-lg hover:bg-emerald-100 text-emerald-600"
+                                                      title="Enviar pedido"
+                                                    >
+                                                      <Package className="h-3 w-3" />
                                                     </button>
                                                   )}
                                                   <button

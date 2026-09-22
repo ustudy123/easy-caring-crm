@@ -98,10 +98,24 @@ const allToolsNav: NavItem[] = [
     roles: ["admin", "suporte"],
   },
   {
+    title: "Envio de Pedido",
+    url: "/envio-pedido",
+    icon: ClipboardList,
+    badgeKey: null,
+    roles: ["admin", "suporte"],
+  },
+  {
     // Mesma página, rótulo amigável para o vendedor (ele vê só as próprias solicitações).
     title: "Orçamentos/Negociações",
     url: "/suporte-orcamento",
     icon: FileText,
+    badgeKey: null,
+    roles: ["vendedor"],
+  },
+  {
+    title: "Envio de Pedido",
+    url: "/envio-pedido",
+    icon: ClipboardList,
     badgeKey: null,
     roles: ["vendedor"],
   },

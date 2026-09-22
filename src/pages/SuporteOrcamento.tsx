@@ -16,7 +16,32 @@ import { useRole } from "@/contexts/RoleContext";
 import { useBackgroundAlert } from "@/hooks/useBackgroundAlert";
 import { useSearchParams } from "react-router-dom";
 
-type RequestType = "orcamento" | "precificacao_especial";
+type RequestType = "orcamento" | "precificacao_especial" | "distribuicao" | "representacao";
+type PageMode = "orcamento" | "pedido";
+const MODE_CFG: Record<PageMode, {
+  title: string; category: string; defaultType: RequestType;
+  type1: { key: RequestType; label: string; desc: string };
+  type2: { key: RequestType; label: string; desc: string };
+  dialogTitle: (t: RequestType) => string; dialogSubtitle: (t: RequestType) => string;
+  badge: (t: string) => string;
+}> = {
+  orcamento: {
+    title: "Suporte a Orçamento", category: "orcamento", defaultType: "orcamento",
+    type1: { key: "orcamento", label: "Solicitar Orçamento", desc: "Pedir um orçamento ao setor responsável" },
+    type2: { key: "precificacao_especial", label: "Negociação Especial", desc: "Pedir uma condição/preço especial" },
+    dialogTitle: (t) => t === "orcamento" ? "Nova Solicitação de Orçamento" : "Solicitação de Negociação Especial",
+    dialogSubtitle: (t) => t === "orcamento" ? "Busque o cliente no ERP e solicite a elaboração de um orçamento." : "Busque o cliente no ERP e solicite análise de precificação especial.",
+    badge: (t) => t === "orcamento" ? "ORC" : "PREC",
+  },
+  pedido: {
+    title: "Envio de Pedido", category: "pedido", defaultType: "distribuicao",
+    type1: { key: "distribuicao", label: "Distribuição", desc: "Enviar pedido de distribuição ao suporte" },
+    type2: { key: "representacao", label: "Representação", desc: "Enviar pedido de representação ao suporte" },
+    dialogTitle: (t) => t === "distribuicao" ? "Novo Pedido — Distribuição" : "Novo Pedido — Representação",
+    dialogSubtitle: () => "Busque o cliente e envie o pedido para o suporte.",
+    badge: (t) => t === "distribuicao" ? "DIST" : "REP",
+  },
+};
 
 interface SupportRequest {
   id: string;
@@ -42,7 +67,8 @@ interface SupportRequest {
   responded_by_name?: string;
 }
 
-export default function SuporteOrcamento() {
+export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMode }) {
+  const cfg = MODE_CFG[mode];
   const { sellers } = useCrm();
   const { role, isAdmin, isGerente, isSuporte, sellerId, storeId } = useRole();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -56,7 +82,7 @@ export default function SuporteOrcamento() {
   // Ocultar concluídos com mais de 3 dias. Admin/gerente podem reexibir.
   const [showHiddenCompleted, setShowHiddenCompleted] = useState(false);
   // Alerta de novas solicitações com a aba em segundo plano.
-  const { permission: notifPermission, requestPermission, notify } = useBackgroundAlert("Suporte a Orçamento");
+  const { permission: notifPermission, requestPermission, notify } = useBackgroundAlert(cfg.title);
   // Pausa para almoço: uma por dia. myBreak = a pausa de hoje deste usuário.
   const [myBreak, setMyBreak] = useState<{ id: string; started_at: string; ended_at: string | null } | null>(null);
   const [breakSaving, setBreakSaving] = useState(false);
@@ -70,7 +96,7 @@ export default function SuporteOrcamento() {
   // Todas as pausas (para descontar do tempo de atendimento de cada suporte).
   const [allBreaks, setAllBreaks] = useState<{ seller_id: string; started_at: string; ended_at: string | null }[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [requestType, setRequestType] = useState<RequestType>("orcamento");
+  const [requestType, setRequestType] = useState<RequestType>(cfg.defaultType);
   const [description, setDescription] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   // Gravação de áudio da solicitação (opcional).
@@ -256,6 +282,7 @@ export default function SuporteOrcamento() {
           *,
           sellers:seller_id (name)
         `)
+        .eq("category", cfg.category)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -463,6 +490,7 @@ export default function SuporteOrcamento() {
         .from("pricing_support_requests")
         .insert({
           request_type: requestType as any,
+          category: cfg.category,
           client_name: selectedErpClient.name,
           erp_client_id: selectedErpClient.erpId || null,
           notes: description,
@@ -493,8 +521,9 @@ export default function SuporteOrcamento() {
         });
       }
 
-      // Veio do Kanban: move o card para "Orçamento e Preço".
-      if (pendingLeadId) {
+      // Veio do Kanban: no modo orçamento, move o card para "Orçamento e Preço".
+      // No modo pedido, o card está em Fechamento e não deve ser movido.
+      if (pendingLeadId && mode === "orcamento") {
         await supabase.from("leads").update({ stage: "precificacao_especial" }).eq("id", pendingLeadId);
       }
 
@@ -756,7 +785,7 @@ export default function SuporteOrcamento() {
   const avgResponseLabel = avgResponseMins == null ? "—" : avgResponseMins < 60 ? `${avgResponseMins} min` : `${(avgResponseMins / 60).toFixed(1)} h`;
 
   return (
-    <AppLayout title="Suporte a Orçamento">
+    <AppLayout title={cfg.title}>
       <div className="space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -909,19 +938,19 @@ export default function SuporteOrcamento() {
           <div className="flex flex-col gap-2 items-end">
             <div className="flex gap-2">
               <Button
-                onClick={() => openNewRequest("orcamento")}
+                onClick={() => openNewRequest(cfg.type1.key)}
                 className="bg-brand-500"
                 size="sm"
               >
-                <FileText className="h-3.5 w-3.5 mr-1" /> Solicitar Orçamento
+                <FileText className="h-3.5 w-3.5 mr-1" /> {cfg.type1.label}
               </Button>
               <Button
-                onClick={() => openNewRequest("precificacao_especial")}
+                onClick={() => openNewRequest(cfg.type2.key)}
                 variant="outline"
                 size="sm"
                 className="border-kanban-recommendation text-kanban-recommendation hover:bg-kanban-recommendation/10"
               >
-                <DollarSign className="h-3.5 w-3.5 mr-1" /> Negociação Especial
+                <DollarSign className="h-3.5 w-3.5 mr-1" /> {cfg.type2.label}
               </Button>
             </div>
           </div>
@@ -946,20 +975,20 @@ export default function SuporteOrcamento() {
             </DialogHeader>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
               <button
-                onClick={() => openNewRequest("orcamento")}
+                onClick={() => openNewRequest(cfg.type1.key)}
                 className="flex flex-col items-center gap-2 rounded-xl border border-brand-500/40 bg-brand-500/5 p-4 text-center hover:bg-brand-500/10 transition-colors"
               >
                 <FileText className="h-7 w-7 text-brand-500" />
-                <span className="font-bold text-sm">Solicitar Orçamento</span>
-                <span className="text-[11px] text-muted-foreground">Pedir um orçamento ao setor responsável</span>
+                <span className="font-bold text-sm">{cfg.type1.label}</span>
+                <span className="text-[11px] text-muted-foreground">{cfg.type1.desc}</span>
               </button>
               <button
-                onClick={() => openNewRequest("precificacao_especial")}
+                onClick={() => openNewRequest(cfg.type2.key)}
                 className="flex flex-col items-center gap-2 rounded-xl border border-kanban-recommendation/40 bg-kanban-recommendation/5 p-4 text-center hover:bg-kanban-recommendation/10 transition-colors"
               >
                 <DollarSign className="h-7 w-7 text-kanban-recommendation" />
-                <span className="font-bold text-sm">Negociação Especial</span>
-                <span className="text-[11px] text-muted-foreground">Pedir uma condição/preço especial</span>
+                <span className="font-bold text-sm">{cfg.type2.label}</span>
+                <span className="text-[11px] text-muted-foreground">{cfg.type2.desc}</span>
               </button>
             </div>
           </DialogContent>
@@ -970,12 +999,10 @@ export default function SuporteOrcamento() {
           <Card className="border-primary/30">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">
-                {requestType === "orcamento" ? "Nova Solicitação de Orçamento" : "Solicitação de Negociação Especial"}
+                {cfg.dialogTitle(requestType)}
               </CardTitle>
               <CardDescription>
-                {requestType === "orcamento"
-                  ? "Busque o cliente no ERP e solicite a elaboração de um orçamento."
-                  : "Busque o cliente no ERP e solicite análise de precificação especial."}
+                {cfg.dialogSubtitle(requestType)}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1202,7 +1229,7 @@ export default function SuporteOrcamento() {
                                     <div className="flex justify-between items-start gap-2">
                                       <span className="text-xs font-bold truncate flex-1">{req.client_name}</span>
                                       <Badge variant="outline" className="text-[9px] uppercase">
-                                        {req.request_type === "orcamento" ? "ORC" : "PREC"}
+                                        {cfg.badge(req.request_type)}
                                       </Badge>
                                     </div>
                                     <p className="text-[10px] text-muted-foreground line-clamp-2 italic">"{req.notes}"</p>

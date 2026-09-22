@@ -35,9 +35,11 @@ export function SupportRequestAlerts() {
           // Apenas o suporte vinculado à solicitação recebe a notificação.
           if (!r.assigned_to || r.assigned_to !== sellerId) return;
 
-          const tipo = r.request_type === "precificacao_especial"
-            ? "Negociação especial"
-            : "Novo orçamento";
+          const tipo =
+            r.request_type === "precificacao_especial" ? "Negociação especial" :
+            r.request_type === "distribuicao" ? "Pedido — Distribuição" :
+            r.request_type === "representacao" ? "Pedido — Representação" :
+            "Novo orçamento";
           const desc = `${r.client_name || "Cliente"} — solicitação recebida`;
 
           // 1) Notificação do sistema operacional (só se o navegador autorizou).
