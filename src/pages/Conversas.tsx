@@ -2078,22 +2078,23 @@ const mockContactNames: Record<string, string> = {
                                       />
                                     </div>
                                   ) : (
-                                    <div 
-                                      className="flex items-center gap-2 p-2 cursor-pointer hover:bg-black/10 transition-colors"
-                                      onClick={() => {
-                                        // data: não pode ser aberto em nova aba (bloqueio do navegador).
-                                        if (msg.media_url!.startsWith('data:')) setPreviewImage(msg.media_url!);
-                                        else window.open(msg.media_url!, '_blank');
-                                      }}
+                                    <a
+                                      href={msg.media_url!}
+                                      target={msg.media_url!.startsWith('data:') ? undefined : "_blank"}
+                                      rel="noopener noreferrer"
+                                      download={msg.media_url!.startsWith('data:') ? 'arquivo' : undefined}
+                                      className="flex items-center gap-2 p-2 cursor-pointer hover:bg-black/10 transition-colors no-underline text-inherit"
                                     >
                                       <div className="bg-brand-500/10 p-2 rounded">
                                         <Paperclip className="h-4 w-4 text-brand-500" />
                                       </div>
                                       <span className="text-xs truncate max-w-[200px]">
-                                        {msg.media_url.split('/').pop()?.slice(-20) || 'Arquivo'}
+                                        {msg.media_url!.startsWith('data:')
+                                          ? 'Documento'
+                                          : (decodeURIComponent((msg.media_url.split('/').pop() || '').split('?')[0]).slice(-24) || 'Arquivo')}
                                       </span>
                                       <Download className="h-4 w-4 text-muted-foreground ml-auto" />
-                                    </div>
+                                    </a>
                                   )}
                                 </div>
                               )}
