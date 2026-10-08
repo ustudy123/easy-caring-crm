@@ -77,7 +77,7 @@ export function WhatsAppInstancesTab() {
   const load = async () => {
     setLoading(true);
     const [instRes, storesRes, sellersRes] = await Promise.all([
-      supabase.from("whatsapp_instances").select("id, name, phone_number, instance_type, store_id, seller_id, provider, status, qr_code, last_connected_at, created_at, updated_at, stores(name), sellers(name)").order("created_at", { ascending: false }),
+      supabase.from("whatsapp_instances").select("id, name, phone_number, instance_type, store_id, seller_id, provider, status, qr_code, last_connected_at, silence_alert_hours, created_at, updated_at, stores(name), sellers(name)").order("created_at", { ascending: false }),
       supabase.from("stores").select("id, name").order("name"),
       supabase.from("sellers").select("id, name, store_id").order("name"),
     ]);
@@ -335,6 +335,7 @@ export function WhatsAppInstancesTab() {
                   <TableHead>Tipo</TableHead>
                   <TableHead>Vínculo</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead title="Avisar o admin se ficar esse tempo sem receber mensagens (0 = desligado)">Aviso após (h)</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -360,6 +361,20 @@ export function WhatsAppInstancesTab() {
                         {inst.status === "connected" ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
                         {STATUS_LABEL[inst.status]}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number" min={0} max={168}
+                        aria-label="Horas sem mensagens para avisar"
+                        className="h-8 w-20"
+                        defaultValue={(inst as any).silence_alert_hours ?? 4}
+                        onBlur={async (e) => {
+                          const v = Math.max(0, Math.min(168, Number(e.target.value) || 0));
+                          const { error } = await supabase.from("whatsapp_instances").update({ silence_alert_hours: v } as any).eq("id", inst.id);
+                          if (error) toast.error("Erro ao salvar: " + error.message);
+                          else toast.success(v === 0 ? "Aviso desligado para este número" : `Aviso após ${v}h sem mensagens`);
+                        }}
+                      />
                     </TableCell>
                     <TableCell className="text-right">
                       <Button size="icon" variant="ghost" title="Verificar conexão" onClick={() => checkStatus(inst.id)} disabled={checkingId === inst.id}>

@@ -1477,6 +1477,8 @@ export type Database = {
           provider: Database["public"]["Enums"]["whatsapp_provider"]
           qr_code: string | null
           seller_id: string | null
+          silence_alert_hours: number
+          silence_alerted_at: string | null
           status: Database["public"]["Enums"]["whatsapp_instance_status"]
           store_id: string | null
           updated_at: string
@@ -1493,6 +1495,8 @@ export type Database = {
           provider?: Database["public"]["Enums"]["whatsapp_provider"]
           qr_code?: string | null
           seller_id?: string | null
+          silence_alert_hours?: number
+          silence_alerted_at?: string | null
           status?: Database["public"]["Enums"]["whatsapp_instance_status"]
           store_id?: string | null
           updated_at?: string
@@ -1509,6 +1513,8 @@ export type Database = {
           provider?: Database["public"]["Enums"]["whatsapp_provider"]
           qr_code?: string | null
           seller_id?: string | null
+          silence_alert_hours?: number
+          silence_alerted_at?: string | null
           status?: Database["public"]["Enums"]["whatsapp_instance_status"]
           store_id?: string | null
           updated_at?: string
@@ -1684,6 +1690,7 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: number
       }
+      check_whatsapp_silence: { Args: never; Returns: number }
       claim_whatsapp_client: {
         Args: { _fallback_name?: string; _phone: string }
         Returns: {
