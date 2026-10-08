@@ -1262,6 +1262,18 @@ export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMo
                                           <Mic className="h-3 w-3" /> Áudio
                                         </span>
                                       )}
+                                      {canMoveCard && nextCol && (
+                                        <Button
+                                          variant="outline"
+                                          className="h-6 px-2 text-[9px] font-semibold ml-auto"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            updateRequestStatus(req.id, nextCol.id);
+                                          }}
+                                        >
+                                          {nextCol.label} →
+                                        </Button>
+                                      )}
                                     </div>
                                   </CardContent>
                                 </Card>
