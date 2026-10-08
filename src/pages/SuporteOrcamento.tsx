@@ -1195,11 +1195,17 @@ export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMo
           </div>
         ) : (
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex gap-4 overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+            {/* As 3 colunas cabem SEMPRE na largura da tela (grid), sem rolagem
+                lateral. Antes era uma faixa com rolagem horizontal dentro da página
+                (rolagem aninhada): a coluna "Concluídos" ficava fora da tela e o
+                arraste não rolava até ela — o suporte não conseguia mover os cards. */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-6">
               {columns.map((col) => {
                 const colRequests = filteredRequests.filter((r) => r.status === col.id);
+                const colIdx = columns.findIndex((c) => c.id === col.id);
+                const nextCol = columns[colIdx + 1];
                 return (
-                  <div key={col.id} className="flex-shrink-0 w-[300px] flex flex-col bg-muted/30 rounded-[14px] border border-border/40 min-h-[500px]">
+                  <div key={col.id} className="min-w-0 flex flex-col bg-muted/30 rounded-[14px] border border-border/40 min-h-[300px] md:min-h-[500px]">
                     <div className={`p-3 border-b border-border/40 rounded-t-xl flex items-center justify-between ${col.color}`}>
                       <div className="flex items-center gap-2">
                         <col.icon className="h-4 w-4" />
