@@ -10,6 +10,7 @@ interface AttemptRow { user_id: string; total_questions: number | null; correct_
 
 interface GoalRow {
   name: string;
+  isDefaultGoal?: boolean;
   levelLabel: string;
   notaAcumulada: number | null; // % de acerto acumulado (all-time)
   answeredTotal: number;
