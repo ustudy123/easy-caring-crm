@@ -1799,6 +1799,15 @@ export type Database = {
       mark_seller_assigned: { Args: { _seller_id: string }; Returns: undefined }
       mark_whatsapp_read: { Args: { p_phone: string }; Returns: number }
       notify_quiz_reminder: { Args: never; Returns: undefined }
+      transfer_attendance: {
+        Args: {
+          p_client_id?: string
+          p_lead_id?: string
+          p_reason?: string
+          p_seller_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "gerente" | "vendedor" | "suporte"
