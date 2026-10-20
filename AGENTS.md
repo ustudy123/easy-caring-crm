@@ -1,0 +1,2 @@
+# Architecture rules
+- Manual transfers use one authenticated database transaction shared by Kanban and Conversations; this keeps client, lead and audit assignments consistent without broadening direct table permissions.
