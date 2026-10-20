@@ -27,5 +27,5 @@ export async function transferAttendance(input: TransferAttendanceInput): Promis
     || (data.store_id !== null && typeof data.store_id !== "string")) {
     throw new Error("Não foi possível confirmar a transferência. Atualize a tela antes de tentar novamente.");
   }
-  return { seller_id: data.seller_id, store_id: data.store_id, lead_ids: data.lead_ids as string[] };
+  return { seller_id: data.seller_id, store_id: typeof data.store_id === "string" ? data.store_id : null, lead_ids: data.lead_ids as string[] };
 }
