@@ -1,6 +1,7 @@
  import { useState, useEffect, useRef, useMemo, memo, useCallback } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { transferAttendance } from "@/lib/transferAttendance";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -196,7 +197,7 @@ const mockContactNames: Record<string, string> = {
     // Suporte "puro" (sem também ser vendedor/admin/gerente) enxerga só as abas
     // Minhas e Interna — as filas Loja/Geral são para os vendedores captarem leads.
     const isSuporteOnly = isSuporte && !isVendedor && !isAdmin && !isGerente;
-    const { decrementUnreadWhatsApp, leads, updateLead } = useCrm();
+    const { decrementUnreadWhatsApp, leads, setLeads, updateLead } = useCrm();
     const { instances: allInstances, byId: instancesById } = useInstances();
     const [instanceFilter, setInstanceFilter] = useState<string>("all");
     const [stageFilter, setStageFilter] = useState<string>("all");
@@ -334,60 +335,11 @@ const mockContactNames: Record<string, string> = {
      try {
        const targetSeller = sellers.find(s => s.id === selectedTransferSeller);
        const currentClient = clients.find(c => c.phone === selectedPhone);
-       const { data: { user } } = await supabase.auth.getUser();
-       
-       if (!user) throw new Error("Usuário não autenticado");
-
-       // Get profile ID for the current user
-       const { data: profile } = await supabase
-         .from("profiles")
-         .select("id")
-         .eq("user_id", user.id)
-         .single();
-
-       if (!profile) throw new Error("Perfil não encontrado");
-
-       // 1. Update the client's assigned seller
-       const { error: updateError } = await supabase
-         .from("clients")
-         .update({ 
-           assigned_seller_id: selectedTransferSeller,
-           store_id: targetSeller?.store_id || null,
-           status: 'em_atendimento',
-           claimed_at: new Date().toISOString()
-         })
-         .eq("phone", selectedPhone);
-
-       if (updateError) throw updateError;
-
-        // 2. Record the transfer history (legacy)
-       const { error: historyError } = await supabase
-         .from("service_transfers")
-         .insert({
-           client_id: currentClient?.id,
-           from_seller_id: currentClient?.assigned_seller_id,
-           to_seller_id: selectedTransferSeller,
-           reason: transferReason,
-           performed_by: profile.id
-         });
-
-       if (historyError) {
-         console.error("Erro ao registrar histórico de transferência:", historyError);
-         // We don't fail the whole operation if history record fails, but we log it
-       }
-
-        // 3. Record in unified redirection history
-        await supabase
-          .from("redirection_history")
-          .insert({
-            client_id: currentClient?.id,
-            from_seller_id: currentClient?.assigned_seller_id,
-            to_seller_id: selectedTransferSeller,
-            redirection_type: 'manual_transfer',
-            reason: transferReason || 'Transferência manual',
-            performed_by: profile.id,
-            store_id: targetSeller?.store_id || null
-          });
+       if (!currentClient?.id) throw new Error("Cliente não encontrado. Atualize a conversa e tente novamente.");
+       const result = await transferAttendance({ clientId: currentClient.id, sellerId: selectedTransferSeller, reason: transferReason });
+       setLeads((prev) => prev.map((lead) => result.lead_ids.includes(lead.id)
+         ? { ...lead, assignedTo: result.seller_id, storeId: result.store_id ?? undefined }
+         : lead));
 
        toast.success(`Conversa transferida para ${targetSeller?.name || 'o vendedor'}`);
        setIsTransferModalOpen(false);
@@ -396,7 +348,7 @@ const mockContactNames: Record<string, string> = {
        fetchData();
      } catch (err) {
        console.error("Erro ao transferir conversa:", err);
-       toast.error("Erro ao transferir a conversa.");
+       toast.error(err instanceof Error ? err.message : "Erro ao transferir a conversa.");
      } finally {
        setIsTransferring(false);
      }

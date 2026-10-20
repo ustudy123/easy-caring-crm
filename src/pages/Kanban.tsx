@@ -35,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { InstanceBadge } from "@/components/InstanceBadge";
 import { useInstances, useClientInstanceMap } from "@/hooks/useInstances";
 import { exportToCsv } from "@/lib/exportCsv";
+import { transferAttendance } from "@/lib/transferAttendance";
 
 const stageColorMap: Record<KanbanStage, string> = {
   abordagem: "border-l-kanban-approach",
@@ -454,47 +455,21 @@ export default function Kanban() {
 
   const handleTransferLead = async (sellerId: string, reason: string) => {
     if (!transferringLead) return;
-    
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!profile) return;
-
-    const targetSeller = sellers.find(s => s.id === sellerId);
-
-    const { error: updateError } = await supabase
-      .from("leads")
-      .update({ assigned_to: sellerId, store_id: targetSeller?.store_id || transferringLead.storeId })
-      .eq("id", transferringLead.id);
-
-    if (updateError) {
-      toast({ title: "Erro ao transferir", description: updateError.message, variant: "destructive" });
-      return;
+    setIsTransferring(true);
+    try {
+      const result = await transferAttendance({ leadId: transferringLead.id, sellerId, reason });
+      setLeads((prev) => prev.map((lead) => result.lead_ids.includes(lead.id)
+        ? { ...lead, assignedTo: result.seller_id, storeId: result.store_id ?? undefined }
+        : lead));
+      toast({ title: "Lead transferido", description: `Transferido para ${sellers.find(s => s.id === sellerId)?.name || "o vendedor"}` });
+      setTransferringLead(null);
+      setTransferSellerId("");
+      setTransferReason("");
+    } catch (error) {
+      toast({ title: "Erro ao transferir", description: error instanceof Error ? error.message : "Não foi possível transferir o atendimento.", variant: "destructive" });
+    } finally {
+      setIsTransferring(false);
     }
-
-    // Record in redirection history
-    const { data: clientData } = await supabase.from("clients").select("id").eq("phone", transferringLead.clientPhone).maybeSingle();
-    
-    await supabase.from("redirection_history").insert({
-      client_id: clientData?.id,
-      from_seller_id: transferringLead.assignedTo,
-      to_seller_id: sellerId,
-      redirection_type: 'manual_transfer',
-      reason: reason || 'Transferência manual via Kanban',
-      performed_by: profile.id,
-      store_id: targetSeller?.store_id || null
-    });
-
-    toast({ title: "Lead transferido", description: `Transferido para ${targetSeller?.name}` });
-    setTransferringLead(null);
-    // Force context refresh by updating lead in state
-    updateLead({ ...transferringLead, assignedTo: sellerId, storeId: targetSeller?.store_id || transferringLead.storeId });
   };
 
   const handleRequestPricing = (lead: Lead) => {
@@ -1268,13 +1243,7 @@ export default function Kanban() {
             <Button 
               className="rounded-xl gap-2" 
               disabled={!transferSellerId || isTransferring}
-              onClick={async () => {
-                setIsTransferring(true);
-                await handleTransferLead(transferSellerId, transferReason);
-                setIsTransferring(false);
-                setTransferSellerId("");
-                setTransferReason("");
-              }}
+              onClick={() => handleTransferLead(transferSellerId, transferReason)}
             >
               {isTransferring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Forward className="h-4 w-4" />}
               Transferir Agora
