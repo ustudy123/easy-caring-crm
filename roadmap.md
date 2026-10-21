@@ -1,5 +1,6 @@
 # Transferência de atendimento
 # Ajustes do feedback de 21/10
+- [ ] Corrigir etapa em branco na edição do lead, incluindo Orçamento e Preço; testar preservação ao salvar.
 - [x] Usar confirmação própria para Conversa Interna.
 - [x] Herdar o vendedor do card principal no Kanban e em Clientes; testes de gravação com vendedor diferente e sem vendedor passaram.
 - [ ] Confirmar criação e leitura pela tela com conta real: sessão de teste indisponível no Supabase externo; depende de teste da equipe após publicação.
