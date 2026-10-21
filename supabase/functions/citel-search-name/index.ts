@@ -1,5 +1,6 @@
 // Edge Function: citel-search-name
 // Busca clientes no ERP CITEL por parte do nome via /cliente?nome=...
+import { createErpFetcher, ErpSearchError } from "./erpFetch.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -51,8 +52,8 @@ function mapErpClient(raw: Record<string, any>) {
     pickStr(raw, "bairro", "neighborhood"),
   ].filter(Boolean);
   return {
-    erpId: pickStr(raw, "id", "codigo", "code", "cod", "codCliente", "cod_cliente", "idCliente"),
-    name: pickStr(raw, "nome", "name", "razaoSocial", "razao_social", "fantasia") || "Cliente ERP",
+    erpId: pickStr(raw, "codigoCliente", "codigo_cliente", "id", "codigo", "code", "cod", "codCliente", "cod_cliente", "idCliente", "autoIncrem"),
+    name: pickStr(raw, "nome", "name", "razaoSocial", "razao_social", "fantasia", "nomeFantasia", "nome_fantasia") || "Cliente ERP",
     document: pickStr(raw, "cpf", "cnpj", "cpfCnpj", "numeroDocumento", "documento"),
     email: pickStr(raw, "email", "e_mail", "eMail")
       || pickFromNested(raw, "clienteCompradorPrincipal", "emailCompraPrincipal", "email"),
@@ -142,7 +143,10 @@ Deno.serve(async (req) => {
     if (name.length < 2) return json({ error: "Informe ao menos 2 caracteres do nome" }, 400);
 
     const apiUrl = cleanApiBase(Deno.env.get("CITEL_API_URL") ?? "");
-    const auth = btoa(`${Deno.env.get("CITEL_USER")}:${Deno.env.get("CITEL_PASSWORD")}`);
+    const erpUser = Deno.env.get("CITEL_USER") ?? "";
+    const erpPassword = Deno.env.get("CITEL_PASSWORD") ?? "";
+    if (!apiUrl || !erpUser || !erpPassword) return json({ error: "Integração CITEL não configurada" }, 503);
+    const auth = btoa(`${erpUser}:${erpPassword}`);
     const companyCode = Deno.env.get("CITEL_EMPRESA") || "1";
     const headers = { Authorization: `Basic ${auth}`, Accept: "application/json" };
     const emp = `codigoEmpresa=${encodeURIComponent(companyCode)}`;
@@ -158,21 +162,14 @@ Deno.serve(async (req) => {
       `${apiUrl}/cadastrosgerais/v10/cliente?${emp}&nome=${nm}`,
     ];
 
-    const fetchUrl = async (url: string): Promise<{ status: number; data: any } | null> => {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 15_000);
-      try {
-        const res = await fetch(url, { headers, signal: ctrl.signal });
-        const text = await res.text();
-        let data: any = null;
-        try { data = text ? JSON.parse(text) : null; } catch { data = text; }
-        return { status: res.status, data };
-      } catch (e: any) {
-        console.error(`[citel-search-name] fetch error: ${e.message}`);
-        return null;
-      } finally {
-        clearTimeout(timer);
+    const fetchUrl = createErpFetcher(headers);
+    let successfulRequests = 0;
+    const emptyResult = () => {
+      if (successfulRequests === 0) {
+        throw new ErpSearchError("Não foi possível consultar o ERP. Tente novamente em instantes.", 502,
+          `No supported search endpoint. Last ERP status: ${lastStatus}`);
       }
+      return json({ found: false, total: 0, results: [], query: name });
     };
 
     const keyOf = (c: any) => String(c.erpId || c.document || c.name).toLowerCase();
@@ -234,6 +231,7 @@ Deno.serve(async (req) => {
         if (r) { lastStatus = r.status; lastBody = r.data; }
         let hits = 0;
         if (r && r.status >= 200 && r.status < 300) {
+          successfulRequests++;
           for (const c of extractArray(r.data).map(mapErpClient).filter((c: any) => c.name)) {
             pool.set(keyOf(c), c);
             hits++;
@@ -252,7 +250,7 @@ Deno.serve(async (req) => {
       console.log(`[citel-search-name] busca por documento/codigo="${name}" -> ${results.length} resultado(s)`);
       return results.length
         ? json({ found: true, total: results.length, results, query: name })
-        : json({ found: false, total: 0, results: [], query: name, lastStatus, lastBody });
+        : emptyResult();
     }
 
     // Busca no ERP os candidatos para UM termo (com suas variações de grafia).
@@ -279,12 +277,13 @@ Deno.serve(async (req) => {
             const r = await fetchUrl(tpls[i]);
             if (!r) continue;
             lastStatus = r.status; lastBody = r.data;
-            if (r.status >= 200 && r.status < 300) { cachedWorkingTemplate = i; ingest(r.data); break; }
+            if (r.status >= 200 && r.status < 300) { successfulRequests++; cachedWorkingTemplate = i; ingest(r.data); break; }
           }
         } else {
           const r = await fetchUrl(templates(enc)[cachedWorkingTemplate]);
           if (r) { lastStatus = r.status; lastBody = r.data; }
-          if (r && r.status >= 200 && r.status < 300) ingest(r.data);
+          if (r && r.status >= 200 && r.status < 300) { successfulRequests++; ingest(r.data); }
+          else cachedWorkingTemplate = -1;
         }
         if (out.size > 0) break; // achou → não precisa tentar mais variações
       }
@@ -303,7 +302,7 @@ Deno.serve(async (req) => {
       const results = rankByName([...pool.values()], name);
       return results.length
         ? json({ found: true, total: results.length, results, query: name })
-        : json({ found: false, total: 0, results: [], query: name, lastStatus, lastBody });
+        : emptyResult();
     }
 
     // Vários termos: monta o conjunto consultando os 2 termos mais distintivos
@@ -325,8 +324,12 @@ Deno.serve(async (req) => {
 
     return results.length
       ? json({ found: true, total: results.length, results, query: name })
-      : json({ found: false, total: 0, results: [], query: name, lastStatus, lastBody });
+      : emptyResult();
   } catch (e: any) {
+    if (e instanceof ErpSearchError) {
+      console.error(`[citel-search-name] ERP failure [${e.status}]: ${e.details}`);
+      return json({ error: e.message, status: e.status, details: e.details }, e.status);
+    }
     console.error("[citel-search-name] fatal", e);
     return json({ error: e.message }, 500);
   }
