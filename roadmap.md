@@ -1,4 +1,9 @@
 # Transferência de atendimento
+# Ajustes do feedback de 21/10
+- [x] Usar confirmação própria para Conversa Interna.
+- [x] Herdar o vendedor do card principal no Kanban e em Clientes; testes de gravação com vendedor diferente e sem vendedor passaram.
+- [ ] Confirmar criação e leitura pela tela com conta real: sessão de teste indisponível no Supabase externo; depende de teste da equipe após publicação.
+
 - [x] Corrigir bloqueio de transferência sem abrir acesso geral aos registros.
 - [x] Unificar transferência de cliente, lead e histórico nas duas telas.
 - [x] Validar Raquel → Andinho e rejeição de transferência por outro vendedor em teste reversível no banco; três testes da chamada passaram.

@@ -504,6 +504,7 @@ export default function Clientes() {
           onOpenChange={(o) => { if (!o) setProjectsClient(null); }}
           clientPhone={projectsClient.phone}
           clientName={projectsClient.name}
+          parentSellerId={projectsClient.assignedSellerId || null}
           // Aqui mostra o histórico completo, inclusive projetos concluídos.
           showCompleted
         />

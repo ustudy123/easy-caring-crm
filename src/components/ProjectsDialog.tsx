@@ -30,6 +30,7 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   clientPhone: string;
   clientName?: string;
+  parentSellerId: string | null;
   /** Mostra também os projetos concluídos (Clientes Recorrentes). No Kanban só
    *  aparecem os ativos. */
   showCompleted?: boolean;
@@ -37,10 +38,8 @@ interface Props {
 
 const stageLabel = (k: string) => KANBAN_STAGES.find((s) => s.key === k)?.label ?? k;
 
-export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName, showCompleted = false }: Props) {
-  const { isVendedor, sellerId: mySellerId, sellerName: mySellerName } = useRole();
-  // Vendedor cria o projeto já vinculado a si mesmo; admin/gerente escolhem.
-  const defaultSellerId = () => (isVendedor && mySellerId ? mySellerId : "none");
+export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName, parentSellerId, showCompleted = false }: Props) {
+  const { isVendedor } = useRole();
   const [projects, setProjects] = useState<Project[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +56,7 @@ export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName, sh
     setLoading(true);
     // No Kanban só interessam os projetos ativos; em Clientes Recorrentes,
     // mostra todos (inclusive concluídos).
-    let q = (supabase as any).from("client_projects").select("*").eq("client_phone", clientPhone);
+    let q = supabase.from("client_projects").select("*").eq("client_phone", clientPhone);
     if (!showCompleted) q = q.is("completed_at", null);
     const [projRes, sellRes] = await Promise.all([
       q.order("created_at", { ascending: false }),
@@ -70,14 +69,8 @@ export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName, sh
 
   useEffect(() => { if (open && clientPhone) load(); }, [open, clientPhone]);
 
-  // O perfil carrega de forma assíncrona: quando ficar disponível, vincula o
-  // projeto novo ao vendedor logado (não mexe em projeto já existente).
-  useEffect(() => {
-    if (open && isVendedor && mySellerId && !editingId) setSellerId(mySellerId);
-  }, [open, isVendedor, mySellerId, editingId]);
-
   const resetForm = () => {
-    setEditingId(null); setName(""); setStage("abordagem"); setNotes(""); setSellerId(defaultSellerId()); setShowForm(false);
+    setEditingId(null); setName(""); setStage("abordagem"); setNotes(""); setSellerId(parentSellerId || "none"); setShowForm(false);
   };
 
   const openEdit = (p: Project) => {
@@ -94,16 +87,13 @@ export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName, sh
       name: name.trim(),
       stage,
       notes: notes.trim() || null,
-      // Na criação, vendedor sempre vincula a si mesmo. Na edição preserva o
-      // vendedor atual (o campo fica travado para ele).
-      seller_id: (!editingId && isVendedor && mySellerId)
-        ? mySellerId
-        : (sellerId === "none" ? null : sellerId),
+      // Novos projetos herdam o card; editar não muda automaticamente o responsável.
+      seller_id: editingId ? (sellerId === "none" ? null : sellerId) : (parentSellerId || null),
       updated_at: new Date().toISOString(),
     };
     const { error } = editingId
-      ? await (supabase as any).from("client_projects").update(payload).eq("id", editingId)
-      : await (supabase as any).from("client_projects").insert(payload);
+      ? await supabase.from("client_projects").update(payload).eq("id", editingId)
+      : await supabase.from("client_projects").insert(payload);
     setSaving(false);
     if (error) { toast.error("Erro ao salvar: " + error.message); return; }
     toast.success(editingId ? "Projeto atualizado!" : "Projeto criado!");
@@ -112,7 +102,7 @@ export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName, sh
   };
 
   const remove = async (id: string) => {
-    const { error } = await (supabase as any).from("client_projects").delete().eq("id", id);
+    const { error } = await supabase.from("client_projects").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     setProjects((prev) => prev.filter((p) => p.id !== id));
   };
@@ -121,7 +111,7 @@ export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName, sh
   // visível na página de Clientes Recorrentes.
   const toggleCompleted = async (p: Project) => {
     const completed_at = p.completed_at ? null : new Date().toISOString();
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("client_projects")
       .update({ completed_at, updated_at: new Date().toISOString() })
       .eq("id", p.id);
@@ -173,9 +163,9 @@ export function ProjectsDialog({ open, onOpenChange, clientPhone, clientName, sh
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold">Vendedor</Label>
-                    {isVendedor ? (
+                    {!editingId || isVendedor ? (
                       <Input
-                        value={sellers.find((s) => s.id === sellerId)?.name || mySellerName || "Você"}
+                        value={sellerName(editingId ? (sellerId === "none" ? null : sellerId) : parentSellerId) || (parentSellerId ? "Vendedor indisponível" : "Sem vendedor")}
                         disabled
                         readOnly
                       />
