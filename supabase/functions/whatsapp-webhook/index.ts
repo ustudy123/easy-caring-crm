@@ -768,7 +768,7 @@ serve(async (req) => {
 
             if (!client) {
               // 1. First message from a new client: Try to identify them via ERP Citel first
-              const erpClient = await withTimeout(searchCitelClient(cleanPhone, supabase), 12000, null);
+              const erpClient: any = await withTimeout(searchCitelClient(cleanPhone, supabase), 12000, null);
 
               const clientData = {
                 name: erpClient?.nome || erpClient?.razao_social || senderName,
@@ -1073,7 +1073,12 @@ serve(async (req) => {
                  }
                } else if (seller && isInactive && !seller.substitute_id) {
                  console.log(`Seller ${client.assigned_seller_id} is inactive with NO substitute. Re-distributing lead.`);
-                 await distributeLead(client.store_id);
+                 const { data: nextSeller } = await supabase.rpc("get_next_seller_for_distribution", { _store_id: client.store_id });
+                 const picked = Array.isArray(nextSeller) ? nextSeller[0] : null;
+                 if (picked) {
+                   await supabase.rpc("assign_client_with_redirection", { _phone: cleanPhone, _seller_id: picked.id });
+                   await supabase.rpc("mark_seller_assigned", { _seller_id: picked.id });
+                 }
                }
              }
 
