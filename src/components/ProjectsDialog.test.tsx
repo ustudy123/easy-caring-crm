@@ -24,7 +24,7 @@ describe("new project seller assignment", () => {
     render(<ProjectsDialog open onOpenChange={() => {}} clientPhone="21999999999" parentSellerId="main-seller" />);
     fireEvent.click(await screen.findByRole("button", { name: "Novo projeto" }));
     fireEvent.change(screen.getByPlaceholderText("Ex.: Pintura galpão A"), { target: { value: "MAQUINA GRACO" } });
-    fireEvent.click(screen.getByRole("button", { name: "Criar", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: /^Criar$/ }));
     await waitFor(() => expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ seller_id: "main-seller", name: "MAQUINA GRACO" })));
   });
 
@@ -32,7 +32,7 @@ describe("new project seller assignment", () => {
     render(<ProjectsDialog open onOpenChange={() => {}} clientPhone="21999999999" parentSellerId={null} />);
     fireEvent.click(await screen.findByRole("button", { name: "Novo projeto" }));
     fireEvent.change(screen.getByPlaceholderText("Ex.: Pintura galpão A"), { target: { value: "Projeto sem vendedor" } });
-    fireEvent.click(screen.getByRole("button", { name: "Criar", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: /^Criar$/ }));
     await waitFor(() => expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ seller_id: null })));
   });
 });
