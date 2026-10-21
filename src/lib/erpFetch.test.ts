@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createErpFetcher, ErpSearchError } from "../../supabase/functions/citel-search-name/erpFetch";
+import { createErpFetcher, ERP_REQUEST_TIMEOUT_MS, ERP_SEARCH_DEADLINE_MS, ErpSearchError } from "../../supabase/functions/citel-search-name/erpFetch";
 
 afterEach(() => vi.useRealTimers());
 
@@ -21,14 +21,16 @@ describe("ERP search failures", () => {
       .rejects.toMatchObject({ status: 503, details: "Connection refused" });
   });
 
-  it("stops a hanging ERP request after eight seconds", async () => {
+  it("stops a hanging ERP request after the per-request timeout", async () => {
     vi.useFakeTimers();
     const fetcher = vi.fn<typeof fetch>().mockImplementation((_url, options) => new Promise((_resolve, reject) => {
       options?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
     }));
     const request = createErpFetcher({}, fetcher)("https://erp.test/cliente");
     const assertion = expect(request).rejects.toMatchObject({ status: 504 });
-    await vi.advanceTimersByTimeAsync(8_000);
+    await vi.advanceTimersByTimeAsync(ERP_REQUEST_TIMEOUT_MS - 1);
+    expect(fetcher.mock.calls[0][1]?.signal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
     await assertion;
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
@@ -37,7 +39,7 @@ describe("ERP search failures", () => {
     vi.useFakeTimers();
     const fetcher = vi.fn<typeof fetch>();
     const request = createErpFetcher({}, fetcher);
-    await vi.advanceTimersByTimeAsync(20_000);
+    await vi.advanceTimersByTimeAsync(ERP_SEARCH_DEADLINE_MS);
     await expect(request("https://erp.test/cliente")).rejects.toBeInstanceOf(ErpSearchError);
     expect(fetcher).not.toHaveBeenCalled();
   });
