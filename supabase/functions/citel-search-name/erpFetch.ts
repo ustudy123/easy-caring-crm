@@ -5,15 +5,20 @@ export class ErpSearchError extends Error {
   }
 }
 
+// A busca por pedaço do nome é a consulta mais pesada do Citel e pode passar de
+// 8s mesmo com o ERP no ar; esperar pouco fazia o CRM acusar "ERP indisponível".
+export const ERP_REQUEST_TIMEOUT_MS = 25_000;
+export const ERP_SEARCH_DEADLINE_MS = 60_000;
+
 export function createErpFetcher(headers: Record<string, string>, fetcher: typeof fetch = fetch) {
-  const deadline = Date.now() + 20_000;
+  const deadline = Date.now() + ERP_SEARCH_DEADLINE_MS;
   return async (url: string): Promise<{ status: number; data: unknown }> => {
     const remaining = deadline - Date.now();
     if (remaining <= 0) {
       throw new ErpSearchError("O ERP não respondeu a tempo. Tente novamente em instantes.", 504, "Search deadline exceeded");
     }
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), Math.min(8_000, remaining));
+    const timer = setTimeout(() => controller.abort(), Math.min(ERP_REQUEST_TIMEOUT_MS, remaining));
     try {
       const response = await fetcher(url, { headers, signal: controller.signal });
       const text = await response.text();

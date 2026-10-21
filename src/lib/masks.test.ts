@@ -65,6 +65,22 @@ describe("isValidPhone", () => {
     expect(isValidPhone("123456789012")).toBe(false);
     expect(isValidPhone("")).toBe(false);
   });
+
+  it("accepts numbers with DDI 55", () => {
+    expect(isValidPhone("5521983160797")).toBe(true);
+    expect(isValidPhone("559381234567")).toBe(true);
+  });
+
+  it("rejects 11-digit numbers without the mobile 9 (WhatsApp internal ids)", () => {
+    expect(isValidPhone("93405308818")).toBe(false);
+    expect(isValidPhone("5593405308818")).toBe(false);
+  });
+
+  it("rejects unknown DDDs and numbers starting with 0/1 after the DDD", () => {
+    expect(isValidPhone("20999990000")).toBe(false);
+    expect(isValidPhone("1112345678")).toBe(false);
+    expect(isValidPhone("333009662623")).toBe(false);
+  });
 });
 
 describe("isValidEmail", () => {

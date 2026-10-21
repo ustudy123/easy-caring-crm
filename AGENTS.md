@@ -3,3 +3,4 @@
 - Project dialogs require the parent record's seller ID from each caller and use it for new inserts; this prevents session roles from overriding the responsible seller.
 - Lead editing stage options derive from KANBAN_STAGES and preserve the existing lost state when applicable; this prevents valid board stages from rendering blank or being erased during unrelated edits.
 - ERP client searches use a bounded request budget and propagate transport/provider failures separately from successful empty results; this avoids reporting an unavailable ERP as a missing client.
+- ERP name search caches only a query template that returned clients, and the quote form falls back to CRM clients and leads when the ERP finds nothing or fails; this keeps one empty-but-accepted template from hiding clients and lets sellers proceed while the ERP is down.

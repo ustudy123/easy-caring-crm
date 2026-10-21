@@ -268,22 +268,40 @@ Deno.serve(async (req) => {
       // resultados. Sequencial (não paralelo) de propósito: o ERP engasga com
       // muitas requisições simultâneas, ficando mais lento. No caso comum, o
       // nome bate na 1ª variação e é só 1 chamada.
-      for (const v of vars) {
-        const enc = encodeURIComponent(v);
-        if (cachedWorkingTemplate < 0) {
-          // Descobre o template (primeiro HTTP 200) na primeira vez.
-          const tpls = templates(enc);
-          for (let i = 0; i < tpls.length; i++) {
-            const r = await fetchUrl(tpls[i]);
-            if (!r) continue;
-            lastStatus = r.status; lastBody = r.data;
-            if (r.status >= 200 && r.status < 300) { successfulRequests++; cachedWorkingTemplate = i; ingest(r.data); break; }
+      //
+      // Só memoriza o template que TROUXE cliente: antes valia o primeiro HTTP 200,
+      // e um template que o ERP aceita mas que não acha pelo pedaço do nome (ex.:
+      // "SERC" cadastrado só em razão social/fantasia) prendia todas as buscas nele.
+      // Na grafia original, se o memorizado vier vazio, tenta os demais; nas outras
+      // grafias, só o memorizado — o orçamento de tempo do erpFetch limita o total.
+      for (const [vi, v] of vars.entries()) {
+        const tpls = templates(encodeURIComponent(v));
+        const order = vi === 0
+          ? [cachedWorkingTemplate, ...tpls.keys()].filter((i, k, a) => i >= 0 && a.indexOf(i) === k)
+          : (cachedWorkingTemplate >= 0 ? [cachedWorkingTemplate] : []);
+        for (const i of order) {
+          let r: { status: number; data: unknown };
+          try {
+            r = await fetchUrl(tpls[i]);
+          } catch (e) {
+            // O ERP já respondeu antes (vazio): acabar o tempo nas tentativas extras
+            // é "não encontrado", não "ERP fora do ar".
+            if (e instanceof ErpSearchError && successfulRequests > 0) {
+              console.warn(`[citel-search-name] tentativas extras interrompidas [${e.status}]: ${e.details}`);
+              return out;
+            }
+            throw e;
           }
-        } else {
-          const r = await fetchUrl(templates(enc)[cachedWorkingTemplate]);
-          if (r) { lastStatus = r.status; lastBody = r.data; }
-          if (r && r.status >= 200 && r.status < 300) { successfulRequests++; ingest(r.data); }
-          else cachedWorkingTemplate = -1;
+          lastStatus = r.status; lastBody = r.data;
+          let hits = 0;
+          if (r.status >= 200 && r.status < 300) {
+            successfulRequests++;
+            const before = out.size;
+            ingest(r.data);
+            hits = out.size - before;
+          }
+          console.log(`[citel-search-name] termo="${v}" template=${i} status=${r.status} hits=${hits}`);
+          if (out.size > 0) { cachedWorkingTemplate = i; break; }
         }
         if (out.size > 0) break; // achou → não precisa tentar mais variações
       }

@@ -481,17 +481,30 @@ serve(async (req) => {
         // lib/masks): 10–11 dígitos (local) OU 12–13 começando com 55 (DDI).
         // Sem isso, números como "333009662623" (12 díg. sem o 55) viravam
         // conversa mesmo sendo inválidos.
-        const isLid = (rawPhone || "").toString().includes("@lid");
+        // @lid em QUALQUER id do chat (não só no escolhido como telefone): o gateway
+        // às vezes entrega o id de privacidade sem sufixo num campo e com sufixo em outro.
+        const isLid = (rawPhone || "").toString().includes("@lid")
+          || chatIds.some((v) => v.includes("@lid"));
         // Se o remetente tem letras fora do sufixo (@s.whatsapp.net etc.), é um id
         // INTERNO do gateway, não um telefone. Ex.: "r772c4ea88a2403" → descarta.
         const phoneCore = (rawPhone || "").toString().replace(/@.*/, "");
         const isInternalId = /[a-zA-Z]/.test(phoneCore);
         const d = (cleanPhone || "").replace(/\D/g, "");
-        // Telefone BR válido: 10–11 dígitos (local) ou 12–13 com DDI 55; e o dígito
-        // logo após o DDD deve ser 2–9 (número BR nunca começa com 0/1 após o DDD —
-        // isso barra ids "sintéticos" de grupo que por acaso têm 10/11 dígitos).
+        // Telefone BR válido (mesma regra de isValidPhone em src/lib/masks.ts):
+        // 10–11 dígitos (local) ou 12–13 com DDI 55; DDD existente; com 11 dígitos é
+        // celular e começa com 9 após o DDD; com 10, começa com 2–9 (fixo ou celular
+        // antigo sem o 9). Barra ids internos com "cara" de telefone, ex.: 93405308818.
+        const BR_DDDS = new Set([
+          11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 24, 27, 28,
+          31, 32, 33, 34, 35, 37, 38, 41, 42, 43, 44, 45, 46, 47, 48, 49,
+          51, 53, 54, 55, 61, 62, 63, 64, 65, 66, 67, 68, 69,
+          71, 73, 74, 75, 77, 79, 81, 82, 83, 84, 85, 86, 87, 88, 89,
+          91, 92, 93, 94, 95, 96, 97, 98, 99,
+        ]);
         const local = (d.length === 12 || d.length === 13) && d.startsWith("55") ? d.slice(2) : d;
-        const validBrPhone = (local.length === 10 || local.length === 11) && /^[2-9]/.test(local.slice(2));
+        const validBrPhone = BR_DDDS.has(Number(local.slice(0, 2)))
+          && ((local.length === 11 && local[2] === "9")
+            || (local.length === 10 && /[2-9]/.test(local[2] || "")));
         // Mensagem de GRUPO nunca vira conversa/lead: descarta antes de gravar.
         if (isLid || isGroup || isInternalId || !validBrPhone) {
           console.warn(`Skipping: remetente inválido (raw="${rawPhone}", clean="${cleanPhone}", lid=${isLid}, group=${isGroup}, len=${d.length})`);
