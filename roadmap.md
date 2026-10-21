@@ -1,4 +1,6 @@
 # Transferência de atendimento
+# Busca de clientes ERP — Andinho
+- [ ] Diagnosticar e corrigir busca por nome na solicitação de orçamento; validar termo SERC e erros do ERP.
 # Ajustes do feedback de 21/10
 - [x] Corrigir etapa em branco na edição do lead, incluindo Orçamento e Preço; dez testes validaram seleção e preservação ao salvar.
 - [ ] Validar edição na conta real da equipe: acesso autenticado de teste indisponível no Supabase externo.
