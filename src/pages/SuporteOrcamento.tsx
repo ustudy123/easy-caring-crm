@@ -12,6 +12,7 @@ import { FileText, DollarSign, Clock, CheckCircle, Send, Search, Filter, Message
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useRole } from "@/contexts/RoleContext";
 import { useBackgroundAlert } from "@/hooks/useBackgroundAlert";
 import { useSearchParams } from "react-router-dom";
@@ -115,6 +116,7 @@ export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMo
   const [erpSearch, setErpSearch] = useState("");
   const [erpResults, setErpResults] = useState<any[]>([]);
   const [searchingErp, setSearchingErp] = useState(false);
+  const [erpSearchError, setErpSearchError] = useState("");
   const [selectedErpClient, setSelectedErpClient] = useState<any | null>(null);
   // Destino da solicitação: suportes (supervisor + trainees) da loja do vendedor.
   const [storeSupports, setStoreSupports] = useState<{ id: string; name: string; is_support_supervisor: boolean; store_id: string | null; store_name: string }[]>([]);
@@ -365,20 +367,40 @@ export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMo
   }, []);
 
   const handleErpSearch = async () => {
-    if (erpSearch.length < 2) {
+    if (searchingErp) return;
+    const query = erpSearch.trim();
+    if (query.length < 2) {
       toast.error("Digite pelo menos 2 caracteres para buscar");
       return;
     }
     setSearchingErp(true);
+    setErpSearchError("");
+    setErpResults([]);
     try {
       const { data, error } = await supabase.functions.invoke("citel-search-name", {
-        body: { name: erpSearch }
+        body: { name: query }
       });
-      if (error) throw error;
+      if (error instanceof FunctionsHttpError) {
+        const details = await error.context.text();
+        console.error("citel-search-name failed:", details);
+        let message = "Não foi possível consultar o ERP. Tente novamente em instantes.";
+        try {
+          const failure = JSON.parse(details) as { error?: string };
+          if (typeof failure.error === "string") message = failure.error;
+        } catch { /* Preserve a readable message for non-JSON errors. */ }
+        throw new Error(message);
+      }
+      if (error) throw new Error("Não foi possível conectar ao ERP. Tente novamente em instantes.");
+      if (data?.error) throw new Error(data.error);
+      if (!data || !Array.isArray(data.results) || typeof data.found !== "boolean") {
+        throw new Error("O ERP retornou uma resposta inválida para a busca.");
+      }
       setErpResults(data.results || []);
       if (!data.found) toast.info("Nenhum cliente encontrado no ERP");
-    } catch (error: any) {
-      toast.error("Erro na busca ERP: " + error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Não foi possível consultar o ERP.";
+      setErpSearchError(message);
+      toast.error(message);
     } finally {
       setSearchingErp(false);
     }
@@ -545,6 +567,7 @@ export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMo
     clearAudio();
     setErpSearch("");
     setErpResults([]);
+    setErpSearchError("");
   };
 
   // Cliente vindo do Kanban (?cliente=...): pré-preenche a solicitação.
@@ -1017,7 +1040,12 @@ export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMo
                           placeholder="Buscar por nome no ERP..." 
                           value={erpSearch}
                           onChange={(e) => setErpSearch(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleErpSearch()}
+                          onKeyDown={(e) => {
+                            if (e.key !== "Enter") return;
+                            e.preventDefault();
+                            void handleErpSearch();
+                          }}
+                          disabled={searchingErp}
                           className="pl-9"
                         />
                       </div>
@@ -1025,6 +1053,7 @@ export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMo
                         {searchingErp ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar"}
                       </Button>
                     </div>
+                    {erpSearchError && <p role="alert" className="text-sm text-destructive">{erpSearchError}</p>}
                     {erpResults.length > 0 && (
                       <div className="max-h-60 overflow-y-auto border rounded-md divide-y bg-background shadow-sm animate-in fade-in slide-in-from-top-1">
                         {erpResults.map((client) => (
