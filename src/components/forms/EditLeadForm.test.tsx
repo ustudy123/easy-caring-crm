@@ -7,6 +7,8 @@ vi.mock("@/hooks/useSellers", () => ({ useSellers: () => [] }));
 vi.mock("@/contexts/RoleContext", () => ({ useRole: () => ({ isVendedor: true, sellerId: "", sellerName: "" }) }));
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: vi.fn() }) }));
 
+Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: vi.fn() });
+
 const lead: Lead = {
   id: "lead-test", clientName: "DONE NATALIA", clientPhone: "5521983160797",
   stage: "precificacao_especial", value: 0, assignedTo: "", source: "whatsapp",
