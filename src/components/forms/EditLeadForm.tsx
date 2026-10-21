@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MaskedInput } from "@/components/ui/masked-input";
-import { Lead, KanbanStage, CLIENT_TYPES, LEAD_SOURCES } from "@/types/crm";
+import { Lead, KanbanStage, KANBAN_STAGES, CLIENT_TYPES, LEAD_SOURCES } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
 import { useRole } from "@/contexts/RoleContext";
 import { isValidPhone, isValidEmail, normalizePhoneBR } from "@/lib/masks";
@@ -176,18 +176,14 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Etapa</Label>
+              <Label htmlFor="edit-lead-stage">Etapa</Label>
               <Select value={form.stage} onValueChange={(v) => update("stage", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="edit-lead-stage"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="abordagem">Abordagem</SelectItem>
-                  <SelectItem value="sondagem">Sondagem</SelectItem>
-                  <SelectItem value="recomendacao_tecnica">Recomendação</SelectItem>
-                  <SelectItem value="demonstracao_valor">Demonstração</SelectItem>
-                  <SelectItem value="contorno_objecoes">Objeções</SelectItem>
-                  <SelectItem value="cross_sell">Venda Adicional</SelectItem>
-                  <SelectItem value="fechamento">Fechamento</SelectItem>
-                  <SelectItem value="pos_venda">Pós-Venda</SelectItem>
+                  {KANBAN_STAGES.map((stage) => (
+                    <SelectItem key={stage.key} value={stage.key}>{stage.label}</SelectItem>
+                  ))}
+                  {lead?.stage === "perdido" && <SelectItem value="perdido">Perdido</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
