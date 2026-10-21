@@ -1,6 +1,8 @@
 # Transferência de atendimento
 # Busca de clientes ERP — Andinho
-- [ ] Diagnosticar e corrigir busca por nome na solicitação de orçamento; validar termo SERC e erros do ERP.
+- [x] Diagnosticar busca por nome; corrigir espera excessiva e falso “cliente não encontrado”; seis testes passaram e consulta real SERC confirmou indisponibilidade do ERP (504).
+- [ ] Confirmar resultados para SERC após o responsável pelo ERP restabelecer a conexão; ERP não responde atualmente.
+- [ ] Validar busca e seleção pela tela na conta real; sessão de teste indisponível no Supabase externo.
 # Ajustes do feedback de 21/10
 - [x] Corrigir etapa em branco na edição do lead, incluindo Orçamento e Preço; dez testes validaram seleção e preservação ao salvar.
 - [ ] Validar edição na conta real da equipe: acesso autenticado de teste indisponível no Supabase externo.
