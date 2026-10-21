@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { supabase } from "@/integrations/supabase/client";
 import { FunctionsHttpError } from "@supabase/supabase-js";
+import { searchCrmClients } from "@/lib/crmClientSearch";
 import { useRole } from "@/contexts/RoleContext";
 import { useBackgroundAlert } from "@/hooks/useBackgroundAlert";
 import { useSearchParams } from "react-router-dom";
@@ -395,11 +396,21 @@ export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMo
       if (!data || !Array.isArray(data.results) || typeof data.found !== "boolean") {
         throw new Error("O ERP retornou uma resposta inválida para a busca.");
       }
-      setErpResults(data.results || []);
-      if (!data.found) toast.info("Nenhum cliente encontrado no ERP");
+      if (data.found) {
+        setErpResults(data.results || []);
+        return;
+      }
+      // ERP não achou: procura nos clientes/leads do CRM antes de desistir.
+      const crmMatches = await searchCrmClients(query);
+      setErpResults(crmMatches);
+      if (crmMatches.length) toast.info("Não encontrado no ERP; mostrando clientes do CRM");
+      else toast.info("Nenhum cliente encontrado no ERP nem no CRM");
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Não foi possível consultar o ERP.";
-      setErpSearchError(message);
+      // ERP fora do ar: ainda oferece os clientes do CRM, mas mantém o aviso do erro.
+      const crmMatches = await searchCrmClients(query).catch(() => []);
+      setErpResults(crmMatches);
+      setErpSearchError(crmMatches.length ? `${message} Mostrando clientes do CRM.` : message);
       toast.error(message);
     } finally {
       setSearchingErp(false);
@@ -1058,7 +1069,7 @@ export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMo
                       <div className="max-h-60 overflow-y-auto border rounded-md divide-y bg-background shadow-sm animate-in fade-in slide-in-from-top-1">
                         {erpResults.map((client) => (
                           <div 
-                            key={client.erpId} 
+                            key={`${client.source || "erp"}-${client.erpId}-${client.name}-${client.phone || ""}`}
                             className="p-3 hover:bg-muted/50 cursor-pointer transition-colors group"
                             onClick={() => setSelectedErpClient(client)}
                           >
@@ -1066,7 +1077,8 @@ export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMo
                               <div className="space-y-0.5">
                                 <p className="text-sm font-semibold group-hover:text-brand-500 transition-colors">{client.name}</p>
                                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
-                                  <span className="bg-muted px-1.5 py-0.5 rounded">COD: {client.erpId}</span>
+                                  {client.source === "crm" && <span className="bg-muted px-1.5 py-0.5 rounded">CRM</span>}
+                                  {client.erpId && <span className="bg-muted px-1.5 py-0.5 rounded">COD: {client.erpId}</span>}
                                   {client.document && <span>{client.document}</span>}
                                   {client.phone && <span>• {client.phone}</span>}
                                 </div>
