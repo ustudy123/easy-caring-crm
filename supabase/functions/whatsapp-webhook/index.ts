@@ -481,10 +481,10 @@ serve(async (req) => {
         // lib/masks): 10–11 dígitos (local) OU 12–13 começando com 55 (DDI).
         // Sem isso, números como "333009662623" (12 díg. sem o 55) viravam
         // conversa mesmo sendo inválidos.
-        // @lid em QUALQUER id do chat (não só no escolhido como telefone): o gateway
-        // às vezes entrega o id de privacidade sem sufixo num campo e com sufixo em outro.
-        const isLid = (rawPhone || "").toString().includes("@lid")
-          || chatIds.some((v) => v.includes("@lid"));
+        // @lid só no id escolhido como telefone (o do CHAT). Não olhar `sender`: com o
+        // endereçamento LID do WhatsApp, conversa 1:1 normal traz sender "...@lid" e o
+        // chat em "...@s.whatsapp.net" — barrar por isso descartava TODAS as mensagens.
+        const isLid = (rawPhone || "").toString().includes("@lid");
         // Se o remetente tem letras fora do sufixo (@s.whatsapp.net etc.), é um id
         // INTERNO do gateway, não um telefone. Ex.: "r772c4ea88a2403" → descarta.
         const phoneCore = (rawPhone || "").toString().replace(/@.*/, "");
