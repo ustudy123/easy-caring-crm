@@ -1,4 +1,8 @@
 # Transferência de atendimento
+
+# Publicações
+- [x] Publicar a função whatsapp-webhook no Supabase; logs confirmaram recebimento de eventos imediatamente após a publicação.
+
 # Busca de clientes ERP — Andinho
 - [x] Diagnosticar busca por nome; corrigir espera excessiva e falso “cliente não encontrado”; seis testes passaram e consulta real SERC confirmou indisponibilidade do ERP (504).
 - [ ] Confirmar resultados para SERC após o responsável pelo ERP restabelecer a conexão; ERP não responde atualmente.
