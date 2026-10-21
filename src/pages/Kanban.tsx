@@ -1259,6 +1259,7 @@ export default function Kanban() {
           onOpenChange={(o) => { if (!o) setProjectsLead(null); }}
           clientPhone={projectsLead.clientPhone}
           clientName={projectsLead.clientName}
+          parentSellerId={projectsLead.assignedTo || null}
         />
       )}
 
@@ -1373,6 +1374,10 @@ export default function Kanban() {
             ) : lostReason === VENDA_CONCLUIDA ? (
               <Button onClick={handleMarkLost} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                 Concluir venda
+              </Button>
+            ) : lostReason === "Conversa Interna" ? (
+              <Button onClick={handleMarkLost}>
+                <MessageCircle className="h-4 w-4 mr-1" /> Confirmar Assunto Interno
               </Button>
             ) : (
               <Button variant="destructive" onClick={handleMarkLost}>
