@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
     }
 
     // Tenta obter params do probe localmente se poss\u00edvel (opcional)
-    let clientParams = [];
+    let clientParams: { path: string; params: any[] }[] = [];
     if (swaggerDoc) {
       clientParams = allPaths
         .filter(p => p.path.toLowerCase().includes("client"))
