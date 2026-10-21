@@ -21,10 +21,10 @@ describe("lead stage editing", () => {
   it.each(KANBAN_STAGES)("allows selecting and saving $key", async ({ key, label }) => {
     const onSubmit = vi.fn();
     render(<EditLeadForm lead={lead} open onOpenChange={() => {}} onSubmit={onSubmit} onDelete={() => {}} />);
-    const stageSelect = screen.getAllByRole("combobox")[2];
+    const stageSelect = screen.getByRole("combobox", { name: "Etapa" });
     fireEvent.keyDown(stageSelect, { key: "ArrowDown", code: "ArrowDown" });
-    fireEvent.click(await screen.findByRole("option", { name: label, exact: true }));
-    fireEvent.click(screen.getByRole("button", { name: "Salvar", exact: true }));
+    fireEvent.click(await screen.findByRole("option", { name: label }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ stage: key })));
   });
 
@@ -33,7 +33,7 @@ describe("lead stage editing", () => {
     const { rerender } = render(<EditLeadForm lead={{ ...lead, stage: "abordagem" }} open onOpenChange={() => {}} onSubmit={onSubmit} onDelete={() => {}} />);
     rerender(<EditLeadForm lead={lead} open onOpenChange={() => {}} onSubmit={onSubmit} onDelete={() => {}} />);
     fireEvent.change(screen.getAllByRole("textbox")[0], { target: { value: "DONE NATALIA atualizado" } });
-    fireEvent.click(screen.getByRole("button", { name: "Salvar", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ stage: "precificacao_especial", clientName: "DONE NATALIA atualizado" })));
   });
 });
