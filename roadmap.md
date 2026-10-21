@@ -1,5 +1,8 @@
 # Transferência de atendimento
 
+# Acesso administrador aos números WhatsApp
+- [ ] Corrigir e testar a listagem que retorna permissão negada para o administrador global.
+
 # Publicações
 - [x] Publicar a função whatsapp-webhook no Supabase; logs confirmaram recebimento de eventos imediatamente após a publicação.
 
