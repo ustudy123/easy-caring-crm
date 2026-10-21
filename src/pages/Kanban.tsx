@@ -931,7 +931,7 @@ export default function Kanban() {
                                               >
                                                 <MessageCircle className="h-3.5 w-3.5" />
                                               </button>
-                                                <div className="hidden group-hover:flex items-center gap-0.5">
+                                                <div className="flex md:hidden md:group-hover:flex items-center gap-0.5">
                                                   {lead.stage !== 'fechamento' && lead.stage !== 'pos_venda' && (
                                                     <button
                                                       onClick={(e) => { e.stopPropagation(); handleRequestPricing(lead); }}
