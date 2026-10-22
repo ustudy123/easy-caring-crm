@@ -152,14 +152,14 @@ Deno.serve(async (req) => {
     const emp = `codigoEmpresa=${encodeURIComponent(companyCode)}`;
 
     // Monta os caminhos/parâmetros possíveis do ERP para um termo já codificado.
+    // Só parâmetros documentados no Swagger do Citel (/doc/v2/api-docs): GET /cliente
+    // aceita codigoEmpresa, nome, numeroDocumento, numeroPagina, quantidadeRegistro.
+    // Parâmetro desconhecido (razaoSocial, pesquisa...) é IGNORADO pelo ERP, que
+    // devolve a lista inteira sem filtro — virava "resultado" com clientes aleatórios.
+    // A versão paginada vem primeiro: busca por pedaço do nome sem limite é a mais pesada.
     const templates = (nm: string) => [
-      `${apiUrl}/cliente?${emp}&nome=${nm}`,
-      `${apiUrl}/cliente?${emp}&nome=${nm}&paginacao=50`,
-      `${apiUrl}/cliente?${emp}&razaoSocial=${nm}`,
-      `${apiUrl}/cliente?${emp}&nomeFantasia=${nm}`,
-      `${apiUrl}/cliente?${emp}&pesquisa=${nm}`,
       `${apiUrl}/cliente?${emp}&nome=${nm}&quantidadeRegistro=50&numeroPagina=1`,
-      `${apiUrl}/cadastrosgerais/v10/cliente?${emp}&nome=${nm}`,
+      `${apiUrl}/cliente?${emp}&nome=${nm}`,
     ];
 
     const fetchUrl = createErpFetcher(headers);
@@ -180,9 +180,7 @@ Deno.serve(async (req) => {
     // digitado é numérico. O ERP só era consultado por nome, então CPF/CNPJ/código
     // não traziam nada.
     //
-    // Os nomes de parâmetro do Citel não estão documentados aqui, então tentamos
-    // um conjunto de candidatos. O formato de sub-rota (`/cliente/telefone?numero=`)
-    // é o único comprovadamente aceito (ver citel-get-client), por isso vem junto.
+    // Rotas e parâmetros conforme o Swagger do Citel (Admin → API Citel → Inspecionar API).
     // Cada tentativa é logada com o status, para o log revelar o que o ERP aceita.
     const digitsOnly = name.replace(/\D/g, "");
     const isNumericQuery = /^[\d.\-/\s]+$/.test(name) && digitsOnly.length > 0;
@@ -190,18 +188,11 @@ Deno.serve(async (req) => {
     let urls: string[] | null = null;
     if (isNumericQuery) {
       const enc = encodeURIComponent(digitsOnly);
-      const bases = [`${apiUrl}/cliente`, `${apiUrl}/cadastrosgerais/v10/cliente`];
-
       if (digitsOnly.length === 11 || digitsOnly.length === 14) {
-        // CPF (11) ou CNPJ (14)
-        const params = ["cpfCnpj", "cnpjCpf", "numeroDocumento", "documento",
-                        digitsOnly.length === 11 ? "cpf" : "cnpj"];
+        // CPF (11) ou CNPJ (14): rotas documentadas no Swagger do Citel.
         urls = [
-          // sub-rota, no formato que sabemos que o ERP usa
-          ...bases.map((b) => `${b}/cpfcnpj?${emp}&numero=${enc}`),
-          ...bases.map((b) => `${b}/documento?${emp}&numero=${enc}`),
-          // query direta
-          ...bases.flatMap((b) => params.map((p) => `${b}?${emp}&${p}=${enc}`)),
+          `${apiUrl}/cliente?${emp}&numeroDocumento=${enc}&quantidadeRegistro=50&numeroPagina=1`,
+          `${apiUrl}/clientes/${enc}?${emp}`,
         ];
       } else if (digitsOnly.length <= 10) {
         // Código do cliente. O log do ERP provou que a rota aceita é
@@ -212,14 +203,9 @@ Deno.serve(async (req) => {
         const noZeros = digitsOnly.replace(/^0+/, "") || digitsOnly;
         const forms = [...new Set([noZeros.padStart(8, "0"), digitsOnly, noZeros,
           noZeros.padStart(6, "0")])].map(encodeURIComponent);
-        const params = ["codigo", "codCliente", "codigoCliente", "cod", "id"];
-        urls = [
-          // rota comprovada (200 no ERP)
-          ...forms.map((f) => `${apiUrl}/cliente/${f}?${emp}`),
-          // alternativas, caso o ERP mude
-          ...bases.flatMap((b) => forms.map((f) => `${b}/codigo?${emp}&numero=${f}`)),
-          ...bases.flatMap((b) => forms.flatMap((f) => params.map((p) => `${b}?${emp}&${p}=${f}`))),
-        ];
+        // Só a rota documentada: as "alternativas" com ?codigo= etc. eram ignoradas
+        // pelo ERP e devolviam a lista inteira de clientes quando o código não existia.
+        urls = forms.map((f) => `${apiUrl}/cliente/${f}?${emp}`);
       }
     }
 
