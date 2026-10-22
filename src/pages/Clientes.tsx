@@ -1,5 +1,5 @@
 import { maskPhone } from "@/lib/masks";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +51,8 @@ export default function Clientes() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [startingPurchase, setStartingPurchase] = useState<Set<string>>(new Set());
+  const startingPurchaseRef = useRef<Set<string>>(new Set());
   const [projectsClient, setProjectsClient] = useState<Client | null>(null);
    const [clients, setClients] = useState<Client[]>([]);
    // Telefone -> nome real do lead (quando existe). O cadastro do cliente vindo
@@ -148,6 +150,36 @@ export default function Clientes() {
   };
 
   const handleNovaCompra = async (client: Client) => {
+    // Clique duplo criava dois cards: trava síncrona (ref) enquanto o primeiro clique processa;
+    // o estado só desabilita o botão na tela.
+    if (startingPurchaseRef.current.has(client.id)) return;
+    startingPurchaseRef.current.add(client.id);
+    setStartingPurchase((prev) => new Set(prev).add(client.id));
+    try {
+      await startNovaCompra(client);
+    } finally {
+      startingPurchaseRef.current.delete(client.id);
+      setStartingPurchase((prev) => { const next = new Set(prev); next.delete(client.id); return next; });
+    }
+  };
+
+  const startNovaCompra = async (client: Client) => {
+    // Só cria card se o cliente não tiver um atendimento em aberto no Kanban
+    // (mesmo telefone com ou sem o 55, fora de Pós-Venda/Perdido e não arquivado).
+    const digits = (client.phone || "").replace(/\D/g, "");
+    const local = digits.replace(/^55(?=\d{10,11}$)/, "");
+    const phones = [...new Set([client.phone, digits, local, `55${local}`].filter(Boolean))];
+    const { data: openLeads, error: checkError } = await supabase.from("leads")
+      .select("id").in("client_phone", phones).eq("archived", false)
+      .not("stage", "in", "(pos_venda,perdido)").limit(1);
+    if (checkError) {
+      toast({ title: "Erro ao verificar o Kanban", description: checkError.message, variant: "destructive" });
+      return;
+    }
+    if (openLeads && openLeads.length > 0) {
+      toast({ title: "Cliente já está no Kanban", description: `${client.name} já tem um atendimento em aberto. Continue por ele.` });
+      return;
+    }
     const firstStage = KANBAN_STAGES[0]?.key || "abordagem";
     const { error } = await supabase.from("leads").insert({
       client_name: client.name,
@@ -377,6 +409,7 @@ export default function Clientes() {
                           variant="outline"
                           className="h-7 text-xs gap-1"
                           onClick={(e) => { e.stopPropagation(); handleNovaCompra(client); }}
+                          disabled={startingPurchase.has(client.id)}
                         >
                           <Plus className="h-3.5 w-3.5" /> Nova compra
                         </Button>
