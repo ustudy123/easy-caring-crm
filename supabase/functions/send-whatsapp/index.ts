@@ -87,33 +87,29 @@ serve(async (req) => {
     // Nova conversa: sem instanceId e sem received_on_instance_id, resolve uma
     // instância padrão — senão o envio cai no env global (normalmente não
     // configurado no setup multi-instância) e retorna erro.
+    // O status cadastrado pode estar desatualizado, então ele só desempata (prefere
+    // "connected") e nunca exclui. E nunca usa o número de OUTRO vendedor: com todos
+    // marcados "disconnected", a conversa da Raquel saiu pelo WhatsApp do Alexandre.
+    const pickInstance = (rows: { id: string; status: string | null }[] | null) =>
+      (rows || []).find((r) => r.status === "connected")?.id || rows?.[0]?.id || null;
     if (!resolvedInstanceId) {
-      // 1) instância conectada do próprio vendedor
+      // 1) instância do próprio vendedor
       if (sellerRow?.id) {
         const { data } = await supabase.from("whatsapp_instances")
-          .select("id").eq("instance_type", "seller").eq("seller_id", sellerRow.id)
-          .eq("status", "connected").limit(1).maybeSingle();
-        if (data?.id) resolvedInstanceId = data.id;
+          .select("id, status").eq("instance_type", "seller").eq("seller_id", sellerRow.id);
+        resolvedInstanceId = pickInstance(data);
       }
-      // 2) instância conectada da loja do vendedor
+      // 2) instância da loja do vendedor
       if (!resolvedInstanceId && sellerRow?.store_id) {
         const { data } = await supabase.from("whatsapp_instances")
-          .select("id").eq("instance_type", "store").eq("store_id", sellerRow.store_id)
-          .eq("status", "connected").limit(1).maybeSingle();
-        if (data?.id) resolvedInstanceId = data.id;
+          .select("id, status").eq("instance_type", "store").eq("store_id", sellerRow.store_id);
+        resolvedInstanceId = pickInstance(data);
       }
-      // 3) qualquer instância conectada (prefere 'store')
+      // 3) último recurso: alguma central de loja (nunca o número de outro vendedor)
       if (!resolvedInstanceId) {
         const { data } = await supabase.from("whatsapp_instances")
-          .select("id").eq("status", "connected")
-          .order("instance_type", { ascending: false }).limit(1).maybeSingle();
-        if (data?.id) resolvedInstanceId = data.id;
-      }
-      // 4) último recurso: qualquer instância (o status pode estar desatualizado)
-      if (!resolvedInstanceId) {
-        const { data } = await supabase.from("whatsapp_instances")
-          .select("id").order("instance_type", { ascending: false }).limit(1).maybeSingle();
-        if (data?.id) resolvedInstanceId = data.id;
+          .select("id, status").eq("instance_type", "store");
+        resolvedInstanceId = pickInstance(data);
       }
     }
 

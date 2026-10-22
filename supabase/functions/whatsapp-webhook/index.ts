@@ -396,6 +396,15 @@ serve(async (req) => {
         const isMessageEvent = event === "ReceivedMessage" || event === "ReceivedCallback" || event === "messages.upsert" || event === "messages" || event === "message";
 
        if (isMessageEvent) {
+          // Chegou mensagem pelo número → ele está conectado. Corrige sozinho o status
+          // cadastrado (só grava quando estava diferente), que o envio usa para
+          // escolher por qual número sair.
+          if (receivedInstanceId) {
+            await supabase.from("whatsapp_instances")
+              .update({ status: "connected", last_connected_at: new Date().toISOString() })
+              .eq("id", receivedInstanceId).neq("status", "connected");
+          }
+
           // uazapi aninha os dados em `message`; Z-API usa o nível de cima.
           const msg = data.message || data.data || {};
 
