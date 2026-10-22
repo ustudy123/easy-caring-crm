@@ -412,10 +412,13 @@ export default function Kanban() {
         updateLead({ ...losingLead, stage: 'pos_venda', closedAt });
       }
       const { data: client } = await (supabase
-        .from("clients").select("id, purchase_count").eq("phone", losingLead.clientPhone).maybeSingle() as any);
+        .from("clients").select("id, purchase_count, total_purchases").eq("phone", losingLead.clientPhone).maybeSingle() as any);
       if (client?.id) {
         await supabase.from("clients").update({
           purchase_count: ((client as any).purchase_count || 0) + 1,
+          // Soma o valor do card ao volume do cliente (antes nada preenchia o total e o
+          // "Volume Total" de Clientes/Recorrentes ficava sempre em R$ 0).
+          total_purchases: (Number((client as any).total_purchases) || 0) + (Number(losingLead.value) || 0),
           client_type: saleType,
           last_purchase_at: closedAt,
         } as any).eq("id", client.id);
