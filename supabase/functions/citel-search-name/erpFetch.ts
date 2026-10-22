@@ -25,6 +25,9 @@ export function createErpFetcher(headers: Record<string, string>, fetcher: typeo
       if (!response.ok) {
         // Only an unsupported path/parameter may advance to another candidate.
         if ([400, 404, 405, 422].includes(response.status)) return { status: response.status, data: text };
+        if (response.status === 401 || response.status === 403) {
+          throw new ErpSearchError("O ERP recusou o usuário/senha da integração. Avise o administrador.", response.status, text || "ERP credentials rejected");
+        }
         throw new ErpSearchError("Não foi possível consultar o ERP. Tente novamente em instantes.", response.status, text);
       }
       if (!text && response.status === 204) return { status: response.status, data: [] };

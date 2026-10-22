@@ -15,6 +15,12 @@ describe("ERP search failures", () => {
       .rejects.toMatchObject({ status: 503, details: "ERP maintenance" });
   });
 
+  it("reports rejected ERP credentials (401) distinctly", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response("", { status: 401 }));
+    await expect(createErpFetcher({}, fetcher)("https://erp.test/cliente"))
+      .rejects.toMatchObject({ status: 401, details: "ERP credentials rejected" });
+  });
+
   it("rejects connection failures instead of returning an empty result", async () => {
     const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("Connection refused"));
     await expect(createErpFetcher({}, fetcher)("https://erp.test/cliente"))
