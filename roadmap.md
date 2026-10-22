@@ -1,5 +1,8 @@
 # Transferência de atendimento
 
+# Acesso administrador aos números WhatsApp
+- [x] Corrigir leitura das configurações de aviso sem liberar credenciais; testes de permissões passaram e conta indicada visualizou seis números sem erro.
+
 # Publicações
 - [x] Publicar a função whatsapp-webhook no Supabase; logs confirmaram recebimento de eventos imediatamente após a publicação.
 

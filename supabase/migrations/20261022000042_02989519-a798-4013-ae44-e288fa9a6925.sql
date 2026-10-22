@@ -1,0 +1,1 @@
+GRANT SELECT (silence_alert_hours, silence_alerted_at) ON public.whatsapp_instances TO authenticated;
