@@ -27,10 +27,15 @@ export function InstanceBadge({
   instance,
   size = "sm",
   className,
+  prefix,
+  title,
 }: {
   instance?: InstanceInfo | null;
   size?: "xs" | "sm";
   className?: string;
+  /** Texto antes do nome (ex.: "via"), para não confundir o número com o vendedor responsável. */
+  prefix?: string;
+  title?: string;
 }) {
   if (!instance) return null;
   const Icon = instance.instance_type === "store" ? StoreIcon : Smartphone;
@@ -43,10 +48,10 @@ export function InstanceBadge({
         palette,
         className
       )}
-      title={`${instance.instance_type === "store" ? "Loja" : "Vendedor"} · ${instance.name}`}
+      title={title ?? `${instance.instance_type === "store" ? "Loja" : "Vendedor"} · ${instance.name}`}
     >
       <Icon className={size === "xs" ? "h-2.5 w-2.5" : "h-3 w-3"} />
-      <span className="truncate max-w-[120px]">{instance.name}</span>
+      <span className="truncate max-w-[120px]">{prefix ? `${prefix} ${instance.name}` : instance.name}</span>
     </span>
   );
 }
