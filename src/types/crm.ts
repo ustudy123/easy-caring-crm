@@ -129,6 +129,7 @@ export const CLIENT_TYPES = [
   "Arquiteto/Construtor",
   "Consumidor Final",
   "Empresa/Obra",
+  "Revenda",
   CLIENT_TYPE_EQUIPE_INTERNA,
 ] as const;
 
