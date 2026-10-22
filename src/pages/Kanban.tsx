@@ -1016,6 +1016,17 @@ export default function Kanban() {
                                              </div>
                                            )}
 
+                                           {(() => {
+                                             const responsible = sellers.find((s) => s.id === lead.assignedTo)?.name;
+                                             if (!responsible) return null;
+                                             return (
+                                               <div className="flex items-center gap-2 text-[11px] text-muted-foreground" title="Vendedor responsável">
+                                                 <UserCircle className="h-3 w-3 shrink-0 text-primary/60" />
+                                                 <span className="font-semibold text-foreground/80">{responsible}</span>
+                                               </div>
+                                             );
+                                           })()}
+
                                            {lead.interestProducts && (
                                              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                                                <Package className="h-3 w-3 shrink-0 text-primary/60" />
@@ -1048,10 +1059,17 @@ export default function Kanban() {
                                             R$ {lead.value.toLocaleString("pt-BR")}
                                           </div>
                                           <div className="flex items-center gap-1.5">
-                                            <InstanceBadge
-                                              instance={instancesById[clientInstanceByPhone[lead.clientPhone]]}
-                                              size="xs"
-                                            />
+                                            {(() => {
+                                              const inst = instancesById[clientInstanceByPhone[lead.clientPhone]];
+                                              return (
+                                                <InstanceBadge
+                                                  instance={inst}
+                                                  size="xs"
+                                                  prefix="via"
+                                                  title={inst ? `Número de WhatsApp em que o cliente escreveu: ${inst.name}. O vendedor responsável aparece acima.` : undefined}
+                                                />
+                                              );
+                                            })()}
                                             <span className="text-[10px] font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">{lead.source}</span>
                                           </div>
                                         </div>

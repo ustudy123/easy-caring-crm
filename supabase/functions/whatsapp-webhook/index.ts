@@ -642,10 +642,26 @@ serve(async (req) => {
             const directSellerId = receivedInstance.seller_id;
             const directStoreId = receivedInstance.store_id || null;
 
+            // Cliente já atribuído a OUTRO vendedor ativo (ex.: transferência manual para a
+            // Raquel) continua com ele: antes, toda mensagem no número do Leonardo devolvia o
+            // cliente ao Leonardo e a transferência valia só até a próxima mensagem.
+            let targetSellerId = directSellerId;
+            const { data: currentClient } = await supabase.from("clients")
+              .select("assigned_seller_id").eq("phone", cleanPhone)
+              .order("created_at", { ascending: false }).limit(1).maybeSingle();
+            const currentSellerId = currentClient?.assigned_seller_id;
+            if (currentSellerId && currentSellerId !== directSellerId) {
+              const { data: currentSeller } = await supabase.from("sellers")
+                .select("status, is_active").eq("id", currentSellerId).maybeSingle();
+              if (currentSeller && currentSeller.is_active !== false && currentSeller.status !== "inactive") {
+                targetSellerId = currentSellerId;
+              }
+            }
+
             // Use assign_client_with_redirection to honor substitute logic when seller is inactive
             const { data: assignResult } = await supabase.rpc("assign_client_with_redirection", {
               _phone: cleanPhone,
-              _seller_id: directSellerId,
+              _seller_id: targetSellerId,
             });
 
             // Always tag the client with the instance the message came from (for reply routing + thread separation)
