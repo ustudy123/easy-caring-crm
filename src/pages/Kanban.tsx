@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
  import { useCrm } from "@/contexts/CrmContext";
  import { useToast } from "@/hooks/use-toast";
 import { KANBAN_STAGES, Lead, KanbanStage, CLIENT_TYPE_EQUIPE_INTERNA, LOST_REASONS, VENDA_CONCLUIDA, REAGENDAR } from "@/types/crm";
+import { onlyDigitsToValue, formatBRL } from "@/lib/masks";
 import { ProjectsDialog } from "@/components/ProjectsDialog";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
  import { 
@@ -214,6 +215,8 @@ export default function Kanban() {
   const [lostReason, setLostReason] = useState("");
   const [lostNote, setLostNote] = useState("");
   const [saleType, setSaleType] = useState<"unica" | "recorrente" | "">("");
+  // Valor da venda (em reais, ex.: "1234.56"), obrigatório ao encerrar como Venda concluída.
+  const [saleValue, setSaleValue] = useState("");
 
   // Motivos padronizados de encerramento/perda (para gerar estatística).
   // Motivos centralizados em types/crm.ts (compartilhados com o relatório).
@@ -402,14 +405,19 @@ export default function Kanban() {
         toast({ title: "Marque o tipo de compra", description: "Informe se o cliente é de compra única ou recorrente.", variant: "destructive" });
         return;
       }
+      const saleAmount = Number(saleValue) || 0;
+      if (saleAmount <= 0) {
+        toast({ title: "Informe o valor da venda", description: "O valor entra no volume de compras do cliente.", variant: "destructive" });
+        return;
+      }
       const isRecorrente = saleType === "recorrente";
       if (isRecorrente) {
         // Recorrente: arquiva o card (sai do Kanban) e o cliente vai pra guia Recorrentes.
-        await supabase.from("leads").update({ stage: 'pos_venda', archived: true, closed_at: closedAt } as any).eq("id", losingLead.id);
+        await supabase.from("leads").update({ stage: 'pos_venda', archived: true, closed_at: closedAt, value: saleAmount } as any).eq("id", losingLead.id);
         setLeads((prev) => prev.filter((l) => l.id !== losingLead.id));
       } else {
         // Compra única: vai pro Pós-Venda e permanece no board.
-        updateLead({ ...losingLead, stage: 'pos_venda', closedAt });
+        updateLead({ ...losingLead, stage: 'pos_venda', closedAt, value: saleAmount });
       }
       const { data: client } = await (supabase
         .from("clients").select("id, purchase_count, total_purchases").eq("phone", losingLead.clientPhone).maybeSingle() as any);
@@ -418,7 +426,7 @@ export default function Kanban() {
           purchase_count: ((client as any).purchase_count || 0) + 1,
           // Soma o valor do card ao volume do cliente (antes nada preenchia o total e o
           // "Volume Total" de Clientes/Recorrentes ficava sempre em R$ 0).
-          total_purchases: (Number((client as any).total_purchases) || 0) + (Number(losingLead.value) || 0),
+          total_purchases: (Number((client as any).total_purchases) || 0) + saleAmount,
           client_type: saleType,
           last_purchase_at: closedAt,
         } as any).eq("id", client.id);
@@ -426,7 +434,7 @@ export default function Kanban() {
           client_id: client.id,
           lead_id: losingLead.id,
           type: "note",
-          description: `VENDA CONCLUÍDA — cliente ${saleType === "recorrente" ? "recorrente" : "de compra única"}${losingLead.value ? ` (R$ ${losingLead.value})` : ""}`,
+          description: `VENDA CONCLUÍDA — cliente ${saleType === "recorrente" ? "recorrente" : "de compra única"} (R$ ${saleAmount})`,
           created_by: user?.id ?? null,
         });
       }
@@ -1298,7 +1306,11 @@ export default function Kanban() {
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
               <Label>Motivo do encerramento</Label>
-              <Select value={lostReason} onValueChange={(v) => { setLostReason(v); setSaleType(""); setReagDate(""); setReagTime(""); }}>
+              <Select value={lostReason} onValueChange={(v) => {
+                setLostReason(v); setSaleType(""); setReagDate(""); setReagTime("");
+                // Pré-preenche com o valor do card; o vendedor confirma ou corrige.
+                setSaleValue(v === VENDA_CONCLUIDA && losingLead?.value ? Number(losingLead.value).toFixed(2) : "");
+              }}>
                 <SelectTrigger><SelectValue placeholder="Selecione o motivo" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value={VENDA_CONCLUIDA}>✅ Venda concluída</SelectItem>
@@ -1353,7 +1365,15 @@ export default function Kanban() {
               </>
             ) : lostReason === VENDA_CONCLUIDA ? (
               <div className="space-y-1.5">
-                <Label>Tipo de compra</Label>
+                <Label>Valor da venda <span className="text-xs font-normal text-destructive">(obrigatório)</span></Label>
+                <Input
+                  inputMode="numeric"
+                  placeholder="R$ 0,00"
+                  value={saleValue ? formatBRL(saleValue) : ""}
+                  onChange={(e) => setSaleValue(onlyDigitsToValue(e.target.value))}
+                  className="rounded-xl"
+                />
+                <Label className="pt-1.5 block">Tipo de compra</Label>
                 <Select value={saleType} onValueChange={(v) => setSaleType(v as any)}>
                   <SelectTrigger><SelectValue placeholder="Compra única ou recorrente?" /></SelectTrigger>
                   <SelectContent>

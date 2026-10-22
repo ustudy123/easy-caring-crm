@@ -70,3 +70,17 @@ export function isValidEmail(value: string): boolean {
   if (!value) return true; // opcional
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
+
+// Valor guardado em reais (ex.: "1234.56"); exibido em pt-BR (R$ 1.234,56).
+// Enquanto digita, tratamos os dígitos como centavos: "12345" -> 123,45.
+export function onlyDigitsToValue(masked: string): string {
+  const digits = masked.replace(/\D/g, "");
+  if (!digits) return "";
+  return (parseInt(digits, 10) / 100).toFixed(2);
+}
+
+export function formatBRL(value: string): string {
+  const n = Number(value);
+  if (!isFinite(n)) return "";
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}

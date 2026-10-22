@@ -9,22 +9,9 @@ import { MaskedInput } from "@/components/ui/masked-input";
 import { Lead, KanbanStage, KANBAN_STAGES, CLIENT_TYPES, LEAD_SOURCES } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
 import { useRole } from "@/contexts/RoleContext";
-import { isValidPhone, isValidEmail, normalizePhoneBR } from "@/lib/masks";
+import { isValidPhone, isValidEmail, normalizePhoneBR, onlyDigitsToValue, formatBRL } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-
-// Valor guardado em reais (ex.: "1234.56"); exibido em pt-BR (R$ 1.234,56).
-// Enquanto digita, tratamos os dígitos como centavos: "12345" -> 123,45.
-function onlyDigitsToValue(masked: string): string {
-  const digits = masked.replace(/\D/g, "");
-  if (!digits) return "";
-  return (parseInt(digits, 10) / 100).toFixed(2);
-}
-function formatBRL(value: string): string {
-  const n = Number(value);
-  if (!isFinite(n)) return "";
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 interface EditLeadFormProps {
   lead: Lead | null;
