@@ -183,7 +183,10 @@ export default function Clientes() {
         c.tags.some((t) => t.toLowerCase().includes(search.toLowerCase())))
   );
 
-  const baseClients = recurringPage ? clients.filter(isRecurring) : clients;
+  // Indicadores seguem o filtro de vendedor (a busca por texto não, para não oscilar a cada letra).
+  const baseClients = clients.filter(
+    (c) => (recurringPage ? isRecurring(c) : true) && (sellerFilter === "all" || c.assignedSellerId === sellerFilter),
+  );
   const totalVolume = baseClients.reduce((s, c) => s + c.totalPurchases, 0);
   const fidelizados = baseClients.filter((c) => c.tags.includes("fidelizado")).length;
 
