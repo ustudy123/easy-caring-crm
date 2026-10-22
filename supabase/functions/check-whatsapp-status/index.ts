@@ -104,12 +104,18 @@ serve(async (req) => {
         console.log(`API status for ${inst.name} (${config.provider}) @ ${statusEndpoint}:`, JSON.stringify(data));
 
         // Detecção robusta (uazapi/z-api/whatsapi): checa vários formatos de resposta.
+        // uazapiGO responde `instance.status: "connected"` e `status` como OBJETO
+        // ({ connected, loggedIn, ... }). Ler `data.status` como texto dava
+        // "[object object]" e marcava todo número como desconectado.
         const nested = data?.instance || {};
-        const st = String(data?.status ?? data?.state ?? nested?.status ?? nested?.state ?? "").toLowerCase();
+        const statusObj = data?.status && typeof data.status === "object" ? data.status : {};
+        const states = [nested?.status, nested?.state, typeof data?.status === "string" ? data.status : "", data?.state]
+          .map((v) => String(v ?? "").toLowerCase());
         const isConnected =
           data?.connected === true || data?.smartphoneConnected === true ||
           data?.loggedIn === true || nested?.loggedIn === true ||
-          st === "connected" || st === "open";
+          statusObj?.connected === true || statusObj?.loggedIn === true ||
+          states.some((s) => s === "connected" || s === "open");
 
         if (isConnected) {
           newStatus = "connected";
