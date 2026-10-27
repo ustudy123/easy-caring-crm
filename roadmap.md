@@ -5,6 +5,7 @@
 
 # Publicações
 - [x] Publicar a função whatsapp-webhook no Supabase; logs confirmaram recebimento de eventos imediatamente após a publicação.
+- [x] Publicar citel-get-client e citel-search-name a partir do main (commit 3de7151), sem alterar código; logs confirmaram execução do código publicado nas duas.
 
 # Busca de clientes ERP — Andinho
 - [x] Diagnosticar busca por nome; corrigir espera excessiva e falso “cliente não encontrado”; seis testes passaram e consulta real SERC confirmou indisponibilidade do ERP (504).
