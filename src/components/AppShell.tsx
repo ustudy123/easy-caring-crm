@@ -82,7 +82,7 @@ export function AppShell() {
 
   return (
     <PageTitleContext.Provider value={{ title, setTitle }}>
-      <SidebarProvider className="h-screen w-full overflow-hidden">
+      <SidebarProvider className="h-screen supports-[height:100dvh]:h-dvh w-full overflow-hidden">
         {!hideSidebar && (
           <AppSidebar className="shadow-[4px_0_24px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_32px_rgba(0,0,0,0.3)] z-40" />
         )}

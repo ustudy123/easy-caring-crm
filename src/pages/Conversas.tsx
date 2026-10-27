@@ -1352,7 +1352,7 @@ const mockContactNames: Record<string, string> = {
 
   return (
     <AppLayout title="Conversas">
-      <div className="flex h-[calc(100vh-5rem)] overflow-hidden bg-background">
+      <div className="flex h-[calc(100vh-5rem)] supports-[height:100dvh]:h-[calc(100dvh-5rem)] overflow-hidden bg-background">
         {/* ── Left panel - Contact list ── */}
         <div className={cn(
           "w-full md:w-[420px] lg:w-[380px] flex flex-col shrink-0 border-r border-border/60 shadow-[1px_0_0_rgba(0,0,0,0.04)]",

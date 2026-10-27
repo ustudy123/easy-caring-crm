@@ -450,7 +450,7 @@ export default function Clientes() {
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedClient} onOpenChange={(open) => !open && setSelectedClient(null)}>
-        <DialogContent className="max-w-lg mx-3 sm:mx-auto max-h-[90vh] overflow-y-auto border-border/40 bg-card/95 backdrop-blur-xl">
+        <DialogContent className="max-w-lg border-border/40 bg-card/95 backdrop-blur-xl">
           {selectedClient && (
             <>
               <DialogHeader>
