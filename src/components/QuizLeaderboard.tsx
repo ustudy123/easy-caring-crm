@@ -172,7 +172,7 @@ export function QuizLeaderboard({ currentUserId, limit = 100 }: { currentUserId?
       )}
 
       <Dialog open={showFull} onOpenChange={setShowFull}>
-        <DialogContent className="max-w-md mx-3 sm:mx-auto max-h-[85vh] overflow-y-auto rounded-3xl bg-[#0a0e2e] border-white/10">
+        <DialogContent className="max-w-md rounded-3xl bg-[#0a0e2e] border-white/10">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-white">
               <Trophy className="h-5 w-5 text-amber-400" /> Ranking completo

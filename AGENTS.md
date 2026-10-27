@@ -5,3 +5,4 @@
 - Lead editing stage options derive from KANBAN_STAGES and preserve the existing lost state when applicable; this prevents valid board stages from rendering blank or being erased during unrelated edits.
 - ERP client searches use a bounded request budget and propagate transport/provider failures separately from successful empty results; this avoids reporting an unavailable ERP as a missing client.
 - ERP name search caches only a query template that returned clients, and the quote form falls back to CRM clients and leads when the ERP finds nothing or fails; this keeps one empty-but-accepted template from hiding clients and lets sellers proceed while the ERP is down.
+- Dialog and AlertDialog bases cap their height to the dynamic viewport (dvh, with a vh fallback) and scroll internally, and the app shell uses dvh; this keeps long modals and page bottoms reachable on mobile browsers whose toolbars shrink the visible area.
