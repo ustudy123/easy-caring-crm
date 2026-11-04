@@ -15,13 +15,13 @@ const STAGE_OPTIONS = KANBAN_STAGES.filter((s) => s.key !== "fechamento" && s.ke
 
 const LEVEL_META: Record<UrgencyLevel, { label: string; cls: string }> = {
   ok: { label: "OK", cls: "" },
-  attention: { label: "Inicial (+30m)", cls: "bg-yellow-100 text-yellow-700" },
-  warning: { label: "Atenção (+1h)", cls: "bg-orange-100 text-orange-700" },
-  critical: { label: "Grave (+1h30)", cls: "bg-red-100 text-red-700" },
+  attention: { label: "Inicial", cls: "bg-yellow-100 text-yellow-700" },
+  warning: { label: "Atenção", cls: "bg-orange-100 text-orange-700" },
+  critical: { label: "Grave", cls: "bg-red-100 text-red-700" },
 };
 
 export function IdleClientsReport() {
-  const { leads, sellers } = useCrm();
+  const { leads, sellers, alertTimesFor } = useCrm();
   const { isAdmin, isGerente, storeId } = useRole();
   const restrictToStore = isGerente && !isAdmin && !!storeId;
   const [tick, setTick] = useState(0);
@@ -52,7 +52,7 @@ export function IdleClientsReport() {
     const q = search.trim().toLowerCase();
     const qDigits = q.replace(/\D/g, "");
     return leads
-      .map((l) => ({ lead: l, level: getUrgencyLevel(l), idleH: getIdleHours(l) }))
+      .map((l) => ({ lead: l, level: getUrgencyLevel(l, alertTimesFor(l)), idleH: getIdleHours(l) }))
       .filter((r) => r.level !== "ok")
       .filter((r) => !restrictToStore || r.lead.storeId === storeId)
       .filter((r) => levelFilter === "all" || r.level === levelFilter)
@@ -66,7 +66,7 @@ export function IdleClientsReport() {
         return nameHit || phoneHit;
       })
       .sort((a, b) => b.idleH - a.idleH);
-  }, [leads, tick, levelFilter, search, sellerFilter, storeFilter, stageFilter, restrictToStore, storeId]);
+  }, [leads, tick, levelFilter, search, sellerFilter, storeFilter, stageFilter, restrictToStore, storeId, alertTimesFor]);
 
   const visibleSellers = restrictToStore ? sellers.filter((s) => s.store_id === storeId) : sellers;
   const storeOptions = Object.entries(storeNames)
@@ -79,14 +79,14 @@ export function IdleClientsReport() {
     void tick;
     const levels = leads
       .filter((l) => !restrictToStore || l.storeId === storeId)
-      .map((l) => getUrgencyLevel(l)).filter((x) => x !== "ok");
+      .map((l) => getUrgencyLevel(l, alertTimesFor(l))).filter((x) => x !== "ok");
     return {
       total: levels.length,
       critical: levels.filter((x) => x === "critical").length,
       warning: levels.filter((x) => x === "warning").length,
       attention: levels.filter((x) => x === "attention").length,
     };
-  }, [leads, tick, restrictToStore, storeId]);
+  }, [leads, tick, restrictToStore, storeId, alertTimesFor]);
 
   const handleExport = () => {
     if (rows.length === 0) return;
@@ -130,9 +130,9 @@ export function IdleClientsReport() {
       <div className="p-5 space-y-4">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <MiniCard label="Sem atendimento" value={counts.total} tone="muted" />
-          <MiniCard label="Grave (+1h30)" value={counts.critical} tone="red" />
-          <MiniCard label="Atenção (+1h)" value={counts.warning} tone="orange" />
-          <MiniCard label="Inicial (+30m)" value={counts.attention} tone="yellow" />
+          <MiniCard label="Grave" value={counts.critical} tone="red" />
+          <MiniCard label="Atenção" value={counts.warning} tone="orange" />
+          <MiniCard label="Inicial" value={counts.attention} tone="yellow" />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -166,9 +166,9 @@ export function IdleClientsReport() {
           <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value as any)}
             className="h-8 rounded-lg border border-border/60 bg-card px-2 text-xs">
             <option value="all">Todos os níveis</option>
-            <option value="critical">Grave (+1h30)</option>
-            <option value="warning">Atenção (+1h)</option>
-            <option value="attention">Inicial (+30m)</option>
+            <option value="critical">Grave</option>
+            <option value="warning">Atenção</option>
+            <option value="attention">Inicial</option>
           </select>
           {hasFilter && (
             <button onClick={clearFilters} className="h-8 px-2 text-xs font-semibold text-brand-500 hover:underline">Limpar</button>

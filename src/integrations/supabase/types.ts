@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_time_settings: {
+        Row: {
+          admin_minutes: number
+          id: string
+          manager_minutes: number
+          seller_id: string | null
+          seller_minutes: number
+          store_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          admin_minutes: number
+          id?: string
+          manager_minutes: number
+          seller_id?: string | null
+          seller_minutes: number
+          store_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          admin_minutes?: number
+          id?: string
+          manager_minutes?: number
+          seller_id?: string | null
+          seller_minutes?: number
+          store_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_time_settings_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alert_time_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           budget: number

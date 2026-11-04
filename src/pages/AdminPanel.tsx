@@ -2,6 +2,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ProjectsReport } from "@/components/ProjectsReport";
 import { WebhookLogsTab } from "@/components/WebhookLogsTab";
 import { WhatsAppInstancesTab } from "@/components/WhatsAppInstancesTab";
+import { AlertTimesTab } from "@/components/AlertTimesTab";
 import { AppLayout } from "@/components/AppLayout";
 import { useRole } from "@/contexts/RoleContext";
 import { Navigate } from "react-router-dom";
@@ -16,7 +17,7 @@ import { SellerCombobox } from "@/components/SellerCombobox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3, Phone, Info, KeyRound } from "lucide-react";
+  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3, Phone, Info, KeyRound, BellRing } from "lucide-react";
  function CitelIntegrationTab() {
   const [syncing, setSyncing] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -575,7 +576,7 @@ const ROLE_LABELS: Record<string, string> = {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-600">Alertas Graves (+1h30)</p>
+                <p className="text-sm font-medium text-red-600">Alertas Graves</p>
                 <h3 className="text-2xl font-medium text-red-700">{stats.criticalAlerts}</h3>
               </div>
               <AlertCircle className="h-8 w-8 text-red-200" />
@@ -856,6 +857,7 @@ export default function AdminPanel() {
           <TabsTrigger value="reports" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Relatórios</TabsTrigger>
           <TabsTrigger value="citel" className="gap-1.5"><Database className="h-3.5 w-3.5" /> API Citel</TabsTrigger>
           <TabsTrigger value="whatsapp" className="gap-1.5"><Phone className="h-3.5 w-3.5" /> Números WhatsApp</TabsTrigger>
+          <TabsTrigger value="alerts" className="gap-1.5"><BellRing className="h-3.5 w-3.5" /> Alertas</TabsTrigger>
           <TabsTrigger value="logs" className="gap-1.5"><Terminal className="h-3.5 w-3.5" /> Webhook Logs</TabsTrigger>
         </TabsList>
 
@@ -864,6 +866,7 @@ export default function AdminPanel() {
         <TabsContent value="reports"><ReportsTab /></TabsContent>
         <TabsContent value="citel"><CitelIntegrationTab /></TabsContent>
         <TabsContent value="whatsapp"><WhatsAppInstancesTab /></TabsContent>
+        <TabsContent value="alerts"><AlertTimesTab /></TabsContent>
         <TabsContent value="logs"><WebhookLogsTab /></TabsContent>
       </Tabs>
     </AppLayout>

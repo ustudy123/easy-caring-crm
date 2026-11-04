@@ -116,7 +116,7 @@ const stageHeaderGradient: Record<KanbanStage, string> = {
 
 export default function Kanban() {
   const navigate = useNavigate();
-   const { leads, setLeads, addLead, updateLead, deleteLead, loading, sellers, addFollowUp } = useCrm();
+   const { leads, setLeads, addLead, updateLead, deleteLead, loading, sellers, addFollowUp, alertTimesFor } = useCrm();
    const { toast } = useToast();
    const { storeId: userStoreId, isGerente, isAdmin } = useRole();
    // Tique de 1 min: faz o board recalcular sozinho, para que leads reagendados
@@ -596,7 +596,7 @@ export default function Kanban() {
      }
 
      if (filterUrgency !== "all") {
-       const u = getUrgencyLevel(l);
+       const u = getUrgencyLevel(l, alertTimesFor(l));
        if (filterUrgency === "critical" && u !== "critical") return false;
        if (filterUrgency === "warning" && u !== "warning") return false;
        if (filterUrgency === "ok" && u !== "ok") return false;
@@ -803,7 +803,7 @@ export default function Kanban() {
               const totalValue = stageLeads.reduce((s, l) => s + l.value, 0);
 
               const alertCount = stageLeads.filter(l => {
-                const u = getUrgencyLevel(l);
+                const u = getUrgencyLevel(l, alertTimesFor(l));
                 return u === "critical" || u === "warning";
               }).length;
 
@@ -862,8 +862,9 @@ export default function Kanban() {
                                 {...provided.dragHandleProps}
                               >
                                 {(() => {
-                                  const urgency = getUrgencyLevel(lead);
-                                  const config = getUrgencyConfig(urgency);
+                                  const times = alertTimesFor(lead);
+                                  const urgency = getUrgencyLevel(lead, times);
+                                  const config = getUrgencyConfig(urgency, times);
                                   const idleTime = formatIdleTime(lead);
                                   return (
                                     <SwipeableCard
@@ -1173,7 +1174,7 @@ export default function Kanban() {
                        .map((lead) => {
                          const stage = KANBAN_STAGES.find((s) => s.key === lead.stage);
                          const seller = sellers.find((s) => s.id === lead.assignedTo);
-                         const urgency = getUrgencyLevel(lead);
+                         const urgency = getUrgencyLevel(lead, alertTimesFor(lead));
                          const dotClass = urgency === "critical" ? "bg-red-500" : urgency === "warning" ? "bg-yellow-500" : "bg-emerald-500";
                          return (
                            <tr

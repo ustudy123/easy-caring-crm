@@ -2,6 +2,7 @@ import { toast } from "sonner";
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
  import { Lead, FollowUp, Seller } from "@/types/crm";
 import { supabase } from "@/integrations/supabase/client";
+import { AlertTimes, AlertTimeSetting, mapAlertTimeSetting, resolveAlertTimes } from "@/lib/alertTimes";
 
  export interface Notification {
    id: string;
@@ -38,6 +39,10 @@ interface CrmContextType {
    notifications: Notification[];
   loading: boolean;
    markNotificationRead: (id: string) => Promise<void>;
+  /** Tempos de alerta configurados (Admin → Alertas). */
+  alertSettings: AlertTimeSetting[];
+  /** Tempos que valem para o lead: exceção do vendedor > loja > padrão. */
+  alertTimesFor: (lead: Pick<Lead, "assignedTo" | "storeId">) => AlertTimes;
 }
 
 const CrmContext = createContext<CrmContextType | null>(null);
@@ -139,6 +144,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const [unreadWhatsAppCount, setUnreadWhatsAppCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [alertSettings, setAlertSettings] = useState<AlertTimeSetting[]>([]);
   // IDs já exibidos como pop-up, para não repetir o toast a cada polling.
   const toastedNotifIds = useRef<Set<string>>(new Set());
   const notifiedReady = useRef(false);
@@ -158,6 +164,28 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       toast(n.title, { description: n.message, duration: 8000 });
     });
   }, []);
+
+  // Tempos de alerta: carga própria + realtime, para a mudança do gestor valer na hora.
+  useEffect(() => {
+    const loadAlertSettings = async () => {
+      const { data, error } = await supabase.from("alert_time_settings").select("*");
+      if (error) { console.error("Erro ao carregar tempos de alerta:", error); return; }
+      setAlertSettings((data || []).map(mapAlertTimeSetting));
+    };
+    loadAlertSettings();
+    const channel = supabase
+      .channel("alert-time-settings")
+      .on("postgres_changes", { event: "*", schema: "public", table: "alert_time_settings" }, () => { loadAlertSettings(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  const alertTimesFor = useCallback((lead: Pick<Lead, "assignedTo" | "storeId">) => {
+    const seller = lead.assignedTo ? sellers.find((s) => s.id === lead.assignedTo) : undefined;
+    // Loja do vendedor responsável; sem vendedor, a loja do lead (fila da loja).
+    const storeId = seller?.store_id || lead.storeId || null;
+    return resolveAlertTimes(alertSettings, { sellerId: lead.assignedTo || null, storeId }).times;
+  }, [alertSettings, sellers]);
 
   // Fetch initial data
   useEffect(() => {
@@ -593,7 +621,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
         followUps, setFollowUps, addFollowUp, updateFollowUp, deleteFollowUp,
         sellers, notifications: filteredNotifications, slaAlertsCount,
         newLeadsCount, pendingFollowUpsCount, negotiationCount, unreadWhatsAppCount, decrementUnreadWhatsApp, loading,
-        markNotificationRead, markAllWhatsAppRead
+        markNotificationRead, markAllWhatsAppRead, alertSettings, alertTimesFor
       }}
     >
       {children}
