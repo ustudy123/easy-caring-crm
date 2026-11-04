@@ -72,6 +72,24 @@ function mapLeadFromDb(row: any): Lead {
      archived: row.archived ?? false,
      snoozedUntil: row.snoozed_until || undefined,
      urgencyAcknowledgedAt: row.urgency_acknowledged_at || undefined,
+     city: row.city || undefined,
+     segment: row.segment || undefined,
+     lastContactAt: row.last_contact_at || undefined,
+     nextAction: row.next_action || undefined,
+     nextActionAt: row.next_action_at || undefined,
+     nextActionFollowUpId: row.next_action_follow_up_id || undefined,
+  };
+}
+
+// Campos do card da equipe externa. O vínculo com a Agenda
+// (next_action_follow_up_id) é gravado só pelo banco, ao criar o compromisso.
+function leadCardFieldsToDb(lead: Lead) {
+  return {
+    city: lead.city || null,
+    segment: lead.segment || null,
+    last_contact_at: lead.lastContactAt || null,
+    next_action: lead.nextAction || null,
+    next_action_at: lead.nextActionAt || null,
   };
 }
 
@@ -420,6 +438,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
        interest_products: lead.interestProducts || null,
        store_name: lead.storeName || null,
        store_id: lead.storeId || null,
+       ...leadCardFieldsToDb(lead),
     });
     if (error) {
       console.error("Error adding lead:", error);
@@ -453,6 +472,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
        store_id: lead.storeId || null,
        lost_reason: lead.lostReason || null,
        closed_at: lead.closedAt || null,
+       ...leadCardFieldsToDb(lead),
     }).eq("id", lead.id).select("id");
     if (error) {
       console.error("Error updating lead:", error);

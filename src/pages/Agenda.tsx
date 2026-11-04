@@ -10,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { Phone, MessageCircle, Mail, MapPin, CheckCircle2, Clock, Plus, CalendarDays, Pencil, ListChecks, AlertTriangle } from "lucide-react";
+import { Phone, MessageCircle, Mail, MapPin, CheckCircle2, Clock, Plus, CalendarDays, Pencil, ListChecks, AlertTriangle, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { NewFollowUpForm } from "@/components/forms/NewFollowUpForm";
 import { EditFollowUpForm } from "@/components/forms/EditFollowUpForm";
@@ -20,6 +20,7 @@ const typeConfig: Record<FollowUp["type"], { icon: typeof Phone; label: string; 
   whatsapp: { icon: MessageCircle, label: "WhatsApp", gradient: "from-[hsl(152,60%,42%)] to-[hsl(174,62%,38%)]", bg: "bg-[hsl(152,60%,42%)]/10 text-[hsl(152,60%,42%)]" },
   email: { icon: Mail, label: "E-mail", gradient: "from-[hsl(28,86%,52%)] to-[hsl(338,76%,52%)]", bg: "bg-[hsl(28,86%,52%)]/10 text-[hsl(28,86%,52%)]" },
   visit: { icon: MapPin, label: "Visita", gradient: "from-[hsl(262,60%,55%)] to-[hsl(224,76%,48%)]", bg: "bg-[hsl(262,60%,55%)]/10 text-[hsl(262,60%,55%)]" },
+  quote: { icon: FileText, label: "Orçamentação", gradient: "from-[hsl(38,92%,50%)] to-[hsl(28,86%,52%)]", bg: "bg-[hsl(38,92%,50%)]/10 text-[hsl(38,92%,40%)]" },
 };
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };

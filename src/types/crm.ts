@@ -24,7 +24,26 @@ export interface Lead {
    archived?: boolean;
    snoozedUntil?: string;
    urgencyAcknowledgedAt?: string;
+  // Campos do card do cliente da equipe externa (Qualificação — Etapa 1).
+  city?: string;
+  segment?: LeadSegment;
+  /** Última mensagem enviada ao cliente (automático) ou data informada à mão. */
+  lastContactAt?: string;
+  nextAction?: NextAction;
+  nextActionAt?: string;
+  /** Compromisso da Agenda criado pela próxima ação (gerado no banco). */
+  nextActionFollowUpId?: string;
 }
+
+export const LEAD_SEGMENTS = ["Naval", "Onshore", "Offshore"] as const;
+export type LeadSegment = (typeof LEAD_SEGMENTS)[number];
+
+export const NEXT_ACTIONS = [
+  { value: "ligacao", label: "Ligação" },
+  { value: "visita", label: "Visita presencial" },
+  { value: "orcamentacao", label: "Orçamentação" },
+] as const;
+export type NextAction = (typeof NEXT_ACTIONS)[number]["value"];
 
 export interface Client {
   id: string;
@@ -65,7 +84,7 @@ export interface FollowUp {
   description: string;
   completed: boolean;
   assignedTo: string;
-  type: 'call' | 'whatsapp' | 'visit' | 'email';
+  type: 'call' | 'whatsapp' | 'visit' | 'email' | 'quote';
   storeId?: string;
 }
 

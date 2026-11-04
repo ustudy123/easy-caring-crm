@@ -491,6 +491,12 @@ export type Database = {
           updated_at: string
           urgency_acknowledged_at: string | null
           value: number
+          city: string | null
+          last_contact_at: string | null
+          next_action: string | null
+          next_action_at: string | null
+          next_action_follow_up_id: string | null
+          segment: string | null
         }
         Insert: {
           archived?: boolean
@@ -517,6 +523,12 @@ export type Database = {
           updated_at?: string
           urgency_acknowledged_at?: string | null
           value?: number
+          city?: string | null
+          last_contact_at?: string | null
+          next_action?: string | null
+          next_action_at?: string | null
+          next_action_follow_up_id?: string | null
+          segment?: string | null
         }
         Update: {
           archived?: boolean
@@ -543,6 +555,12 @@ export type Database = {
           updated_at?: string
           urgency_acknowledged_at?: string | null
           value?: number
+          city?: string | null
+          last_contact_at?: string | null
+          next_action?: string | null
+          next_action_at?: string | null
+          next_action_follow_up_id?: string | null
+          segment?: string | null
         }
         Relationships: [
           {
@@ -1866,7 +1884,7 @@ export type Database = {
         | "google"
         | "indicacao"
       campaign_status: "active" | "paused" | "completed"
-      follow_up_type: "call" | "whatsapp" | "visit" | "email"
+      follow_up_type: "call" | "whatsapp" | "visit" | "email" | "quote"
       interaction_type: "whatsapp" | "phone" | "email" | "visit" | "note"
       kanban_stage:
         | "abordagem"
@@ -2023,7 +2041,7 @@ export const Constants = {
         "indicacao",
       ],
       campaign_status: ["active", "paused", "completed"],
-      follow_up_type: ["call", "whatsapp", "visit", "email"],
+      follow_up_type: ["call", "whatsapp", "visit", "email", "quote"],
       interaction_type: ["whatsapp", "phone", "email", "visit", "note"],
       kanban_stage: [
         "abordagem",

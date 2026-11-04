@@ -164,6 +164,7 @@ export function NewFollowUpForm({ open, onOpenChange, onSubmit }: NewFollowUpFor
                   <SelectItem value="call">Ligação</SelectItem>
                   <SelectItem value="email">E-mail</SelectItem>
                   <SelectItem value="visit">Visita</SelectItem>
+                  <SelectItem value="quote">Orçamentação</SelectItem>
                 </SelectContent>
               </Select>
             </div>

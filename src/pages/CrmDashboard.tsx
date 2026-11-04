@@ -5,7 +5,7 @@ import { useSellers } from "@/hooks/useSellers";
 import { KANBAN_STAGES } from "@/types/crm";
 import {
    TrendingUp, Users, Clock, Target,
-   Phone, CalendarDays, AlertTriangle, Timer, UserCheck, LayoutGrid, PieChart, Paintbrush, Trophy,
+   Phone, CalendarDays, AlertTriangle, Timer, UserCheck, LayoutGrid, PieChart, Paintbrush, Trophy, CalendarClock,
   } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
@@ -24,6 +24,7 @@ import { ClientOriginReport } from "@/components/ClientOriginReport";
 import { useRole } from "@/contexts/RoleContext";
 import { DashboardPanels, type DashboardPanel } from "@/components/DashboardPanels";
 import { getUrgencyLevel } from "@/lib/leadUrgency";
+import { NextActionReport, useNextActionGaps } from "@/components/NextActionReport";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
@@ -189,6 +190,8 @@ export default function CrmDashboard() {
     return counts;
   }, [leads, alertTimesFor, isAdmin, isGerente, storeId]);
 
+  const nextActionGaps = useNextActionGaps();
+
   const panels: DashboardPanel[] = [
     {
       key: "sem-atendimento",
@@ -205,6 +208,20 @@ export default function CrmDashboard() {
       ),
       content: () => <IdleClientsReport />,
     },
+    ...(nextActionGaps.hasExternalTeam ? [{
+      key: "sem-proxima-acao",
+      title: "Oportunidades sem próxima ação",
+      description: "Equipe externa: oportunidades abertas sem próxima ação ou com a data vencida.",
+      icon: CalendarClock,
+      alert: nextActionGaps.missing + nextActionGaps.overdue > 0,
+      summary: (
+        <span className="flex flex-wrap gap-1.5">
+          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 rounded-full">{nextActionGaps.missing} sem próxima ação</Badge>
+          <Badge className="bg-red-100 text-red-700 hover:bg-red-100 rounded-full">{nextActionGaps.overdue} atrasadas</Badge>
+        </span>
+      ),
+      content: () => <NextActionReport />,
+    }] : []),
     {
       key: "atraso-resposta",
       title: "Atraso de resposta por vendedor",

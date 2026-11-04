@@ -26,6 +26,9 @@ import { getUrgencyLevel, getUrgencyConfig, formatIdleTime } from "@/lib/leadUrg
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SellerCombobox } from "@/components/SellerCombobox";
+import { LeadCardSummary } from "@/components/LeadCardSummary";
+import { useExternalStores } from "@/hooks/useExternalStores";
+import { isExternalLead } from "@/lib/externalTeam";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, 
@@ -117,6 +120,7 @@ const stageHeaderGradient: Record<KanbanStage, string> = {
 export default function Kanban() {
   const navigate = useNavigate();
    const { leads, setLeads, addLead, updateLead, deleteLead, loading, sellers, addFollowUp, alertTimesFor } = useCrm();
+  const externalStores = useExternalStores();
    const { toast } = useToast();
    const { storeId: userStoreId, isGerente, isAdmin } = useRole();
    // Tique de 1 min: faz o board recalcular sozinho, para que leads reagendados
@@ -1098,6 +1102,9 @@ export default function Kanban() {
                                         )}
 
                                          <div className="flex flex-col gap-2 mt-2.5">
+                                           {/* Card do cliente da equipe externa: último contato e próxima ação */}
+                                           {isExternalLead(lead, sellers, externalStores) && <LeadCardSummary lead={lead} />}
+
                                            {/* Follow-up reminder */}
                                            {lead.nextFollowUp && (
                                              <div className="rounded-lg bg-warning/8 border border-warning/15 px-2.5 py-1.5 text-[10px] font-semibold text-warning flex items-center gap-1.5">

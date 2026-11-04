@@ -9,6 +9,9 @@ import { MaskedInput } from "@/components/ui/masked-input";
 import { Lead, KanbanStage, CLIENT_TYPES, LEAD_SOURCES } from "@/types/crm";
 import { useSellers } from "@/hooks/useSellers";
 import { useRole } from "@/contexts/RoleContext";
+import { useExternalStores } from "@/hooks/useExternalStores";
+import { isExternalLead } from "@/lib/externalTeam";
+import { LeadCardFields, validateLeadCardFields, type LeadCardFieldsValue } from "./LeadCardFields";
 import { isValidPhone, isValidEmail, normalizePhoneBR } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +47,14 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [searchingErp, setSearchingErp] = useState(false);
+  const [cardFields, setCardFields] = useState<LeadCardFieldsValue>({});
+  const externalStores = useExternalStores();
+  // Campos do card só para a equipe externa (vendedor escolhido ou o próprio usuário numa loja externa).
+  const isExternal = isExternalLead(
+    { assignedTo: isVendedor && sellerId ? sellerId : form.assignedTo, storeId: userStoreId || undefined },
+    sellers,
+    externalStores,
+  );
 
   // Vendedor só pode vincular o lead a si mesmo ao cadastrar.
   useEffect(() => {
@@ -92,6 +103,7 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
     if (!form.clientPhone.trim()) e.clientPhone = "Telefone é obrigatório";
     else if (!isValidPhone(form.clientPhone)) e.clientPhone = "Telefone inválido (10 ou 11 dígitos)";
     if (form.clientEmail && !isValidEmail(form.clientEmail)) e.clientEmail = "E-mail inválido";
+    if (isExternal) Object.assign(e, validateLeadCardFields(cardFields));
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -120,10 +132,12 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
        // Sem store_id o lead nasce "sem loja" e a RLS impede o próprio vendedor
        // de atualizá-lo depois (mover etapa, reagendar...).
        storeId: userStoreId || undefined,
+       ...(isExternal ? cardFields : {}),
     };
     onSubmit(newLead);
     toast({ title: "Lead criado!", description: `${newLead.clientName} adicionado ao Kanban.` });
      setForm({ clientName: "", clientPhone: "", clientEmail: "", value: "", source: "whatsapp", assignedTo: "", tags: "", notes: "", stage: "abordagem", clientType: "", companyWorkSite: "", interestProducts: "", storeName: "" });
+    setCardFields({});
     setErrors({});
     onOpenChange(false);
   };
@@ -235,6 +249,16 @@ export function NewLeadForm({ open, onOpenChange, onSubmit }: NewLeadFormProps) 
                 </Select>
               )}
             </div>
+            {isExternal && (
+              <LeadCardFields
+                value={cardFields}
+                onChange={(patch) => {
+                  setCardFields((p) => ({ ...p, ...patch }));
+                  setErrors((p) => ({ ...p, nextAction: "", nextActionAt: "" }));
+                }}
+                errors={errors}
+              />
+            )}
             <div className="col-span-2 space-y-1.5">
               <Label>Palavras-chave (separadas por vírgula)</Label>
               <Input value={form.tags} onChange={(e) => update("tags", e.target.value)} placeholder="residencial, apartamento" maxLength={200} />
