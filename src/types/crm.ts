@@ -1,3 +1,5 @@
+import type { LeadQualification } from "@/lib/qualification";
+
 export type KanbanStage = 'abordagem' | 'sondagem' | 'recomendacao_tecnica' | 'demonstracao_valor' | 'contorno_objecoes' | 'cross_sell' | 'precificacao_especial' | 'fechamento' | 'pos_venda' | 'perdido';
 
 export interface Lead {
@@ -33,6 +35,8 @@ export interface Lead {
   nextActionAt?: string;
   /** Compromisso da Agenda criado pela próxima ação (gerado no banco). */
   nextActionFollowUpId?: string;
+  /** Respostas da qualificação por etapa (equipe externa), ver lib/qualification. */
+  qualification?: LeadQualification;
 }
 
 export const LEAD_SEGMENTS = ["Naval", "Onshore", "Offshore"] as const;

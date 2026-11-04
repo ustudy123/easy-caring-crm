@@ -497,6 +497,7 @@ export type Database = {
           next_action_at: string | null
           next_action_follow_up_id: string | null
           segment: string | null
+          qualification: Json
         }
         Insert: {
           archived?: boolean
@@ -529,6 +530,7 @@ export type Database = {
           next_action_at?: string | null
           next_action_follow_up_id?: string | null
           segment?: string | null
+          qualification?: Json
         }
         Update: {
           archived?: boolean
@@ -561,6 +563,7 @@ export type Database = {
           next_action_at?: string | null
           next_action_follow_up_id?: string | null
           segment?: string | null
+          qualification?: Json
         }
         Relationships: [
           {

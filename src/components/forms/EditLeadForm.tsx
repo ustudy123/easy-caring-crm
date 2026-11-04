@@ -15,6 +15,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { useExternalStores } from "@/hooks/useExternalStores";
 import { isExternalLead } from "@/lib/externalTeam";
 import { LeadCardFields, validateLeadCardFields, type LeadCardFieldsValue } from "./LeadCardFields";
+import { missingForStage, stageLabel } from "@/lib/qualification";
 
 interface EditLeadFormProps {
   lead: Lead | null;
@@ -101,6 +102,18 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
        storeName: form.storeName.trim(),
        ...(isExternal ? cardFields : {}),
     };
+    // Equipe externa: o funil anda etapa a etapa (mesma regra do Kanban).
+    if (isExternal && form.stage !== lead.stage) {
+      const missing = missingForStage({ ...updatedLead, stage: lead.stage }, form.stage);
+      if (missing.length > 0) {
+        setErrors((p) => ({
+          ...p,
+          stage: `Para ir para ${stageLabel(form.stage)}, complete a qualificação (botão "Qualificação" no card): `
+            + missing.map((m) => `${m.group.title} — ${m.items.join(", ")}`).join("; "),
+        }));
+        return;
+      }
+    }
     onSubmit(updatedLead);
     toast({ title: "Lead atualizado!", description: `${updatedLead.clientName} foi atualizado.` });
     onOpenChange(false);
@@ -186,6 +199,7 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
                   {lead?.stage === "perdido" && <SelectItem value="perdido">Perdido</SelectItem>}
                 </SelectContent>
               </Select>
+              {errors.stage && <p role="alert" className="text-xs text-destructive">{errors.stage}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Vendedor</Label>

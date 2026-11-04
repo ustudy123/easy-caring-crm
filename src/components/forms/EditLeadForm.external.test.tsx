@@ -55,3 +55,22 @@ describe("EditLeadForm — external team card fields", () => {
     })));
   });
 });
+
+describe("EditLeadForm — funil etapa a etapa", () => {
+  it("blocks moving forward without the qualification and explains what is missing", async () => {
+    const onSubmit = vi.fn();
+    render(<EditLeadForm lead={{ ...lead, stage: "abordagem" }} open onOpenChange={() => {}} onSubmit={onSubmit} onDelete={() => {}} />);
+    await pick("Etapa", "Fechamento");
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Para ir para Fechamento, complete a qualificação/);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("moving back is always allowed", async () => {
+    const onSubmit = vi.fn();
+    render(<EditLeadForm lead={{ ...lead, stage: "contorno_objecoes" }} open onOpenChange={() => {}} onSubmit={onSubmit} onDelete={() => {}} />);
+    await pick("Etapa", "Sondagem");
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ stage: "sondagem" })));
+  });
+});

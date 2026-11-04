@@ -2,6 +2,7 @@ import { toast } from "sonner";
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
  import { Lead, FollowUp, Seller } from "@/types/crm";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { AlertTimes, AlertTimeSetting, mapAlertTimeSetting, resolveAlertTimes } from "@/lib/alertTimes";
 
  export interface Notification {
@@ -78,6 +79,7 @@ function mapLeadFromDb(row: any): Lead {
      nextAction: row.next_action || undefined,
      nextActionAt: row.next_action_at || undefined,
      nextActionFollowUpId: row.next_action_follow_up_id || undefined,
+     qualification: row.qualification && typeof row.qualification === "object" ? row.qualification : undefined,
   };
 }
 
@@ -90,6 +92,7 @@ function leadCardFieldsToDb(lead: Lead) {
     last_contact_at: lead.lastContactAt || null,
     next_action: lead.nextAction || null,
     next_action_at: lead.nextActionAt || null,
+    qualification: (lead.qualification ?? {}) as Json,
   };
 }
 

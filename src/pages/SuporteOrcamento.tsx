@@ -14,6 +14,9 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
 import { supabase } from "@/integrations/supabase/client";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { searchCrmClients } from "@/lib/crmClientSearch";
+import { useExternalStores } from "@/hooks/useExternalStores";
+import { isExternalLead } from "@/lib/externalTeam";
+import { missingForStage, stageLabel } from "@/lib/qualification";
 import { useRole } from "@/contexts/RoleContext";
 import { useBackgroundAlert } from "@/hooks/useBackgroundAlert";
 import { useSearchParams } from "react-router-dom";
@@ -71,7 +74,8 @@ interface SupportRequest {
 
 export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMode }) {
   const cfg = MODE_CFG[mode];
-  const { sellers } = useCrm();
+  const { sellers, leads } = useCrm();
+  const externalStores = useExternalStores();
   const { role, isAdmin, isGerente, isSuporte, sellerId, storeId } = useRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const [requests, setRequests] = useState<SupportRequest[]>([]);
@@ -556,11 +560,22 @@ export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMo
 
       // Veio do Kanban: no modo orçamento, move o card para "Orçamento e Preço".
       // No modo pedido, o card está em Fechamento e não deve ser movido.
+      // Equipe externa: o card só vai para Orçamento com a qualificação das etapas
+      // anteriores (funil etapa a etapa); a solicitação segue de qualquer forma.
+      let keptStage: string | null = null;
       if (pendingLeadId && mode === "orcamento") {
-        await supabase.from("leads").update({ stage: "precificacao_especial" }).eq("id", pendingLeadId);
+        const origin = leads.find((l) => l.id === pendingLeadId);
+        if (origin && isExternalLead(origin, sellers, externalStores) && missingForStage(origin, "precificacao_especial").length > 0) {
+          keptStage = stageLabel(origin.stage);
+        } else {
+          await supabase.from("leads").update({ stage: "precificacao_especial" }).eq("id", pendingLeadId);
+        }
       }
 
       toast.success("Solicitação enviada com sucesso!");
+      if (keptStage) {
+        toast.info(`O card continua em ${keptStage}: complete a qualificação no Kanban para ele ir para Orçamento e Preço.`);
+      }
       setShowForm(false);
       resetForm();
       fetchRequests();
