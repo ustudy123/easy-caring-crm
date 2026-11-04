@@ -288,7 +288,7 @@ const ROLE_LABELS: Record<string, string> = {
          .order("created_at", { ascending: false })
          .limit(100),
        supabase.from("stores").select("id, name").order("name"),
-       supabase.from("sellers").select("id, name").order("name")
+       supabase.from("sellers").select("id, name, is_active, status").order("name")
      ]);
 
      // Statistics calculation

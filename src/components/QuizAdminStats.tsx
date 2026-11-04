@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRole } from "@/contexts/RoleContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { computeQuizLevel } from "@/lib/quizLevel";
-import { startOfWeek, startOfMonth } from "date-fns";
+import { reportPeriodRange, monthOptions, yearOptions, monthKeyOf, type ReportPeriod } from "@/lib/reportPeriod";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Paintbrush, Trophy, Target, ListChecks, AlertTriangle, Loader2, TrendingUp, BookOpen } from "lucide-react";
 
@@ -35,9 +36,10 @@ interface SellerStat {
   lastPlayed: string | null;
 }
 
-const PERIODS = [
+const PERIODS: { key: ReportPeriod; label: string }[] = [
   { key: "week", label: "Semana" },
   { key: "month", label: "Mês" },
+  { key: "year", label: "Ano" },
   { key: "all", label: "Tudo" },
 ];
 
@@ -47,13 +49,6 @@ const LEVEL_BADGE: Record<string, string> = {
   avancado: "bg-violet-100 text-violet-700",
   especialista: "bg-amber-100 text-amber-700",
 };
-
-function sinceISO(period: string): string | null {
-  const now = new Date();
-  if (period === "week") return startOfWeek(now, { weekStartsOn: 1 }).toISOString();
-  if (period === "month") return startOfMonth(now).toISOString();
-  return null;
-}
 
 function fmtDate(d: string | null): string {
   if (!d) return "—";
@@ -72,7 +67,12 @@ function barColor(acc: number): string {
 }
 
 export function QuizAdminStats() {
-  const [period, setPeriod] = useState("week");
+  const [period, setPeriod] = useState<ReportPeriod>("week");
+  // Mês/ano escolhidos em "Mês"/"Ano": permite consultar meses passados (desde o
+  // início do uso), não só o atual. As opções vão do primeiro registro até hoje.
+  const [monthKey, setMonthKey] = useState(() => monthKeyOf(new Date()));
+  const [year, setYear] = useState(() => new Date().getFullYear());
+  const [firstAttemptAt, setFirstAttemptAt] = useState<Date | null>(null);
   const { isAdmin, isGerente, storeId } = useRole();
   // Gerente vê só a equipe da própria loja; admin vê todos.
   const restrictToStore = isGerente && !isAdmin && !!storeId;
@@ -91,13 +91,14 @@ export function QuizAdminStats() {
     (async () => {
       setLoading(true);
       try {
-        const since = sinceISO(period);
+        const { since, until } = reportPeriodRange(period, { monthKey, year });
         let q = supabase.from("quiz_attempts").select("user_id, score, total_questions, correct_answers, completed_at, is_penalty, skipped_inactive, subject_breakdown");
-        if (since) q = q.gte("completed_at", since);
+        if (since) q = q.gte("completed_at", since.toISOString());
+        if (until) q = q.lt("completed_at", until.toISOString());
         // O NÍVEL é acumulado (all-time) e NÃO muda com o filtro de período; por isso
         // uma busca separada, sem filtro de data. As métricas do período (pontos,
         // precisão, rodadas, participação) seguem vindo da query filtrada acima.
-        const lifetimeQ = supabase.from("quiz_attempts").select("user_id, total_questions, correct_answers, is_penalty, skipped_inactive");
+        const lifetimeQ = supabase.from("quiz_attempts").select("user_id, total_questions, correct_answers, is_penalty, skipped_inactive, completed_at");
         const [sellersRes, attemptsRes, lifetimeRes] = await Promise.all([
           supabase.from("sellers").select("name, user_id, is_active, store_id"),
           q,
@@ -106,13 +107,16 @@ export function QuizAdminStats() {
         if (cancel) return;
         // Respondidas/acertos de TODO o histórico por usuário → base do nível.
         const lifeByUser = new Map<string, { answered: number; correct: number }>();
+        let firstAt: string | null = null;
         for (const a of ((lifetimeRes.data as any[]) || [])) {
+          if (a.completed_at && (!firstAt || a.completed_at < firstAt)) firstAt = a.completed_at;
           if (!a.user_id || a.is_penalty || a.skipped_inactive) continue;
           const cur = lifeByUser.get(a.user_id) || { answered: 0, correct: 0 };
           cur.answered += a.total_questions || 0;
           cur.correct += a.correct_answers || 0;
           lifeByUser.set(a.user_id, cur);
         }
+        setFirstAttemptAt(firstAt ? new Date(firstAt) : null);
 
         const sellers = (sellersRes.data || [])
           .filter((s: any) => s.user_id && s.is_active !== false)
@@ -191,7 +195,7 @@ export function QuizAdminStats() {
       }
     })();
     return () => { cancel = true; };
-  }, [period, restrictToStore, storeId]);
+  }, [period, monthKey, year, restrictToStore, storeId]);
 
   // Lista filtrada por nível / pontos mínimos / precisão mínima.
   const filteredRows = rows.filter((s) => {
@@ -211,20 +215,46 @@ export function QuizAdminStats() {
             <Paintbrush className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-brand-500">HUB Taeco Tintas</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-brand-500">Show das Tintas</p>
             <h3 className="text-lg font-black text-foreground">Desempenho da equipe</h3>
           </div>
         </div>
-        <div className="flex gap-1 rounded-full bg-muted p-1">
-          {PERIODS.map((p) => (
-            <button
-              key={p.key}
-              onClick={() => setPeriod(p.key)}
-              className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${period === p.key ? "bg-brand-500 text-white" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex gap-1 rounded-full bg-muted p-1">
+            {PERIODS.map((p) => (
+              <button
+                key={p.key}
+                onClick={() => setPeriod(p.key)}
+                className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${period === p.key ? "bg-brand-500 text-white" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          {period === "month" && (
+            <Select value={monthKey} onValueChange={setMonthKey}>
+              <SelectTrigger className="h-8 w-[170px] rounded-full text-xs" aria-label="Escolher mês">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions(firstAttemptAt).map((m) => (
+                  <SelectItem key={m.key} value={m.key} className="text-xs">{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {period === "year" && (
+            <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
+              <SelectTrigger className="h-8 w-[100px] rounded-full text-xs" aria-label="Escolher ano">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions(firstAttemptAt).map((y) => (
+                  <SelectItem key={y} value={String(y)} className="text-xs">{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 

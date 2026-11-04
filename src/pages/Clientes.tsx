@@ -72,7 +72,7 @@ export default function Clientes() {
      const [clientsRes, leadsRes, sellersRes] = await Promise.all([
        supabase.from("clients").select("*").order("created_at", { ascending: false }),
        supabase.from("leads").select("client_phone, client_name"),
-       supabase.from("sellers").select("id, name").order("name"),
+       supabase.from("sellers").select("id, name, is_active, status").order("name"),
      ]);
      if (clientsRes.data) setClients((clientsRes.data as any[]).filter((c) => !c.hidden_at).map(mapClientFromDb));
      setSellers((sellersRes.data as any[]) || []);

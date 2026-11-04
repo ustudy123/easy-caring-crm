@@ -90,6 +90,8 @@ export interface Seller {
   code?: string | null;
   leadsCount: number;
   conversions: number;
+  /** false quando o operador foi inativado (is_active = false ou status "inactive"). */
+  isActive?: boolean;
 }
 
 export const KANBAN_STAGES: { key: KanbanStage; label: string; color: string }[] = [

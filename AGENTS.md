@@ -6,3 +6,4 @@
 - ERP client searches use a bounded request budget and propagate transport/provider failures separately from successful empty results; this avoids reporting an unavailable ERP as a missing client.
 - ERP name search caches only a query template that returned clients, and the quote form falls back to CRM clients and leads when the ERP finds nothing or fails; this keeps one empty-but-accepted template from hiding clients and lets sellers proceed while the ERP is down.
 - Dialog and AlertDialog bases cap their height to the dynamic viewport (dvh, with a vh fallback) and scroll internally, and the app shell uses dvh; this keeps long modals and page bottoms reachable on mobile browsers whose toolbars shrink the visible area.
+- Seller filters (SellerCombobox) hide operators inactivated in Admin (is_active false or status "inactive") while keeping an already-selected name visible; every seller list passed to it must carry isActive or the raw is_active/status columns.

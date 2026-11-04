@@ -1252,7 +1252,7 @@ export default function Kanban() {
                 showCode
                 sellers={sellers
                   .filter((s) => s.id !== transferringLead?.assignedTo)
-                  .map((s) => ({ id: s.id, name: s.name, store_id: s.store_id, code: s.code }))}
+                  .map((s) => ({ id: s.id, name: s.name, store_id: s.store_id, code: s.code, isActive: s.isActive }))}
               />
             </div>
             

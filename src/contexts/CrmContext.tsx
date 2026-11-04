@@ -95,6 +95,7 @@ function mapFollowUpFromDb(row: any): FollowUp {
      code: row.code ?? null,
      leadsCount: Number(row.leads_count || 0),
      conversions: Number(row.conversions || 0),
+     isActive: row.is_active !== false && row.status !== "inactive",
    };
  }
 
