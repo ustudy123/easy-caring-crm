@@ -26,6 +26,8 @@ import { DashboardPanels, type DashboardPanel } from "@/components/DashboardPane
 import { getUrgencyLevel } from "@/lib/leadUrgency";
 import { NextActionReport, useNextActionGaps } from "@/components/NextActionReport";
 import { VisitRoutineReport, useVisitRoutineSummary } from "@/components/VisitRoutineReport";
+import { SalesGoalsReport, useSalesGoalsSummary } from "@/components/SalesGoalsReport";
+import { brlShort } from "@/lib/salesGoals";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
@@ -193,6 +195,7 @@ export default function CrmDashboard() {
 
   const nextActionGaps = useNextActionGaps();
   const visitSummary = useVisitRoutineSummary();
+  const salesSummary = useSalesGoalsSummary();
 
   const panels: DashboardPanel[] = [
     {
@@ -243,6 +246,24 @@ export default function CrmDashboard() {
         </span>
       ),
       content: () => <VisitRoutineReport />,
+    }] : []),
+    ...(salesSummary.visible ? [{
+      key: "metas-orcamentos",
+      title: "Metas e orçamentos",
+      description: "Equipe externa: orçado e vendido no mês contra a meta, meta do dia, conversão e funil completo.",
+      icon: Target,
+      alert: false,
+      summary: (
+        <span className="flex flex-wrap gap-1.5">
+          <Badge className="bg-brand-50 text-brand-600 hover:bg-brand-50 rounded-full">
+            Mês: {brlShort(salesSummary.sold)}{salesSummary.salesGoal > 0 ? ` de ${brlShort(salesSummary.salesGoal)}` : ""} vendidos
+          </Badge>
+          {salesSummary.conversion !== null && (
+            <Badge className="bg-muted text-foreground hover:bg-muted rounded-full">Conversão {salesSummary.conversion.toLocaleString("pt-BR")}%</Badge>
+          )}
+        </span>
+      ),
+      content: () => <SalesGoalsReport />,
     }] : []),
     {
       key: "atraso-resposta",

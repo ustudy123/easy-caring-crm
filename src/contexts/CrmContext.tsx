@@ -48,7 +48,7 @@ interface CrmContextType {
 
 const CrmContext = createContext<CrmContextType | null>(null);
 
-function mapLeadFromDb(row: any): Lead {
+export function mapLeadFromDb(row: any): Lead {
   return {
     id: row.id,
     clientName: row.client_name,

@@ -64,6 +64,7 @@ interface SupportRequest {
   seller_id?: string;
   store_id?: string | null;
   assigned_to?: string | null;
+  lead_id?: string | null;
   response_notes?: string;
   response_pdf_url?: string;
   response_pdf_name?: string;
@@ -179,6 +180,14 @@ export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMo
         throw new Error("Você não tem permissão para responder esta solicitação (nenhuma linha atualizada).");
       }
       toast.success("Resposta salva!");
+      // Equipe externa: o PDF da resposta a um pedido de orçamento entra como
+      // orçamento do vendedor (lido pela IA); ele só informa a previsão de fechamento.
+      if (responseFile && respUrl && mode === "orcamento" && selectedRequest.request_type === "orcamento" && selectedRequest.seller_id) {
+        const store = sellers.find((s) => s.id === selectedRequest.seller_id)?.store_id;
+        if (store && externalStores.has(store)) {
+          registerSupportQuote(selectedRequest, respUrl, respName).catch((e) => console.error("registro do orçamento", e));
+        }
+      }
       setResponseFile(null);
       setSelectedRequest({
         ...selectedRequest,
@@ -194,6 +203,29 @@ export default function SuporteOrcamento({ mode = "orcamento" }: { mode?: PageMo
     } finally {
       setSavingResponse(false);
     }
+  };
+
+  const registerSupportQuote = async (req: SupportRequest, path: string, fileName: string | null) => {
+    const { data: existing } = await supabase.from("sales_documents").select("id").eq("support_request_id", req.id).maybeSingle();
+    let documentId = existing?.id;
+    if (documentId) {
+      // Resposta regravada: lê o novo PDF (a previsão e o card continuam).
+      const { error } = await supabase.from("sales_documents").update({
+        storage_bucket: "pricing_attachments", storage_path: path, file_name: fileName,
+        document_number: null, total_value: null, issue_date: null, client_document: null,
+        ai_status: "pending", ai_extracted: null, ai_error: null,
+      }).eq("id", documentId);
+      if (error) throw error;
+    } else {
+      const { data, error } = await supabase.from("sales_documents").insert({
+        kind: "quote", seller_id: req.seller_id!, lead_id: req.lead_id ?? null, support_request_id: req.id,
+        storage_bucket: "pricing_attachments", storage_path: path, file_name: fileName, client_name: req.client_name || null,
+      }).select("id").single();
+      if (error) throw error;
+      documentId = data.id;
+    }
+    await supabase.functions.invoke("sales-document-extract", { body: { documentId } });
+    toast.info("Orçamento registrado na tela Orçamentos e Notas do vendedor. Falta ele informar a previsão de fechamento.");
   };
 
   const saveRequestEdit = async () => {

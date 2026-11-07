@@ -665,6 +665,64 @@ export type Database = {
         }
         Relationships: []
       }
+      month_business_days: {
+        Row: {
+          business_days: number
+          month: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          business_days: number
+          month: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          business_days?: number
+          month?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+
+        ]
+      }
+      monthly_goals: {
+        Row: {
+          month: string
+          quote_goal: number | null
+          sales_goal: number | null
+          seller_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          month: string
+          quote_goal?: number | null
+          sales_goal?: number | null
+          seller_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          month?: string
+          quote_goal?: number | null
+          sales_goal?: number | null
+          seller_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_goals_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -1124,6 +1182,106 @@ export type Database = {
             columns: ["to_seller_id"]
             isOneToOne: false
             referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_documents: {
+        Row: {
+          ai_error: string | null
+          ai_extracted: Json | null
+          ai_model: string | null
+          ai_status: string
+          client_document: string | null
+          client_name: string | null
+          created_at: string
+          created_by: string | null
+          document_number: string | null
+          expected_close_date: string | null
+          file_name: string | null
+          id: string
+          installments: Json
+          issue_date: string | null
+          kind: string
+          lead_id: string | null
+          notes: string | null
+          seller_id: string
+          storage_bucket: string
+          storage_path: string
+          support_request_id: string | null
+          total_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          ai_error?: string | null
+          ai_extracted?: Json | null
+          ai_model?: string | null
+          ai_status?: string
+          client_document?: string | null
+          client_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_number?: string | null
+          expected_close_date?: string | null
+          file_name?: string | null
+          id?: string
+          installments?: Json
+          issue_date?: string | null
+          kind: string
+          lead_id?: string | null
+          notes?: string | null
+          seller_id: string
+          storage_bucket?: string
+          storage_path: string
+          support_request_id?: string | null
+          total_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          ai_error?: string | null
+          ai_extracted?: Json | null
+          ai_model?: string | null
+          ai_status?: string
+          client_document?: string | null
+          client_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_number?: string | null
+          expected_close_date?: string | null
+          file_name?: string | null
+          id?: string
+          installments?: Json
+          issue_date?: string | null
+          kind?: string
+          lead_id?: string | null
+          notes?: string | null
+          seller_id?: string
+          storage_bucket?: string
+          storage_path?: string
+          support_request_id?: string | null
+          total_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_documents_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_documents_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_documents_support_request_id_fkey"
+            columns: ["support_request_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_support_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -1850,6 +2008,8 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: number
       }
+      can_manage_sales_document_path: { Args: { _name: string }; Returns: boolean }
+      can_manage_sales_documents: { Args: { _seller_id: string }; Returns: boolean }
       can_view_seller: { Args: { _seller_id: string }; Returns: boolean }
       check_whatsapp_silence: { Args: never; Returns: number }
       claim_whatsapp_client: {
@@ -1861,6 +2021,10 @@ export type Database = {
         }[]
       }
       get_admin_display_name: { Args: never; Returns: string }
+      get_closed_sales: {
+        Args: { _from: string; _to: string }
+        Returns: Database["public"]["Tables"]["leads"]["Row"][]
+      }
       get_new_clients: {
         Args: { _from: string; _to: string }
         Returns: {

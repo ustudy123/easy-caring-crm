@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { DEFAULT_VISIT_GOALS, mapSellerGoals, validateVisitGoals, type VisitGoals } from "@/lib/visitRoutine";
 import { GoogleCalendarCard, useGoogleReturn } from "@/components/GoogleCalendarConnect";
 import { useGoogleCalendarConnections } from "@/hooks/useGoogleCalendar";
+import { MonthlyGoalsBoard } from "@/components/MonthlyGoalsBoard";
 
 export interface GoalSellerRow { id: string; name: string; store_id: string | null; storeName: string }
 
@@ -121,9 +122,11 @@ export function VisitGoalsTab() {
   useEffect(() => { load(); }, [load]);
 
   return (
+    <div className="space-y-4">
+    {!loading && <MonthlyGoalsBoard sellers={sellers} />}
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2"><Target className="h-4 w-4 text-brand-500" /> Metas da equipe externa</CardTitle>
+        <CardTitle className="text-base flex items-center gap-2"><Target className="h-4 w-4 text-brand-500" /> Visitas e clientes novos</CardTitle>
         <p className="text-xs text-muted-foreground">
           Visitas por semana (segunda a domingo) e clientes novos por trimestre, por vendedor. Visita realizada é a que o
           vendedor confirma na Agenda; cliente novo é a primeira venda do cliente em todo o histórico.
@@ -149,5 +152,6 @@ export function VisitGoalsTab() {
         )}
       </CardContent>
     </Card>
+    </div>
   );
 }
