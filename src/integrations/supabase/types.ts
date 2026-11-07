@@ -364,6 +364,62 @@ export type Database = {
           },
         ]
       }
+      google_calendar_connections: {
+        Row: {
+          access_token: string | null
+          access_token_expires_at: string | null
+          calendar_id: string | null
+          connected_at: string
+          connected_by: string | null
+          google_email: string | null
+          last_error: string | null
+          last_synced_at: string | null
+          refresh_token: string
+          seller_id: string
+          status: string
+          sync_lock_until: string | null
+          sync_token: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          calendar_id?: string | null
+          connected_at?: string
+          connected_by?: string | null
+          google_email?: string | null
+          last_error?: string | null
+          last_synced_at?: string | null
+          refresh_token: string
+          seller_id: string
+          status?: string
+          sync_lock_until?: string | null
+          sync_token?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          calendar_id?: string | null
+          connected_at?: string
+          connected_by?: string | null
+          google_email?: string | null
+          last_error?: string | null
+          last_synced_at?: string | null
+          refresh_token?: string
+          seller_id?: string
+          status?: string
+          sync_lock_until?: string | null
+          sync_token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_calendar_connections_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: true
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interactions: {
         Row: {
           client_id: string
@@ -1072,6 +1128,41 @@ export type Database = {
           },
         ]
       }
+      seller_goals: {
+        Row: {
+          quarterly_new_clients: number | null
+          seller_id: string
+          updated_at: string
+          updated_by: string | null
+          weekly_visits_done: number
+          weekly_visits_planned: number
+        }
+        Insert: {
+          quarterly_new_clients?: number | null
+          seller_id: string
+          updated_at?: string
+          updated_by?: string | null
+          weekly_visits_done?: number
+          weekly_visits_planned?: number
+        }
+        Update: {
+          quarterly_new_clients?: number | null
+          seller_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          weekly_visits_done?: number
+          weekly_visits_planned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_goals_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: true
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sellers: {
         Row: {
           avatar: string | null
@@ -1759,6 +1850,7 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: number
       }
+      can_view_seller: { Args: { _seller_id: string }; Returns: boolean }
       check_whatsapp_silence: { Args: never; Returns: number }
       claim_whatsapp_client: {
         Args: { _fallback_name?: string; _phone: string }
@@ -1769,6 +1861,17 @@ export type Database = {
         }[]
       }
       get_admin_display_name: { Args: never; Returns: string }
+      get_new_clients: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          client_name: string
+          client_phone: string
+          closed_at: string
+          lead_id: string
+          seller_id: string
+          value: number
+        }[]
+      }
       get_next_seller_for_distribution: {
         Args: { _store_id: string }
         Returns: {
@@ -1843,6 +1946,10 @@ export type Database = {
       }
       get_user_seller_id: { Args: { _user_id: string }; Returns: string }
       get_user_store_id: { Args: { _user_id: string }; Returns: string }
+      get_visit_progress: {
+        Args: { _from: string; _to: string }
+        Returns: { done: number; planned: number; seller_id: string }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

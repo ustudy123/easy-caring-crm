@@ -3,9 +3,10 @@ import { ProjectsReport } from "@/components/ProjectsReport";
 import { WebhookLogsTab } from "@/components/WebhookLogsTab";
 import { WhatsAppInstancesTab } from "@/components/WhatsAppInstancesTab";
 import { AlertTimesTab } from "@/components/AlertTimesTab";
+import { VisitGoalsTab } from "@/components/VisitGoalsTab";
 import { AppLayout } from "@/components/AppLayout";
 import { useRole } from "@/contexts/RoleContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import { SellerCombobox } from "@/components/SellerCombobox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3, Phone, Info, KeyRound, BellRing } from "lucide-react";
+  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3, Phone, Info, KeyRound, BellRing, Target } from "lucide-react";
  function CitelIntegrationTab() {
   const [syncing, setSyncing] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -846,11 +847,13 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function AdminPanel() {
   const { isAdmin } = useRole();
+  // Volta da tela do Google (conexão feita em Metas): abre de novo a aba Metas.
+  const [searchParams] = useSearchParams();
 
   if (!isAdmin) return <Navigate to="/" replace />;
   return (
     <AppLayout title="Painel Administrativo">
-      <Tabs defaultValue="stores" className="space-y-4">
+      <Tabs defaultValue={searchParams.get("google") ? "goals" : "stores"} className="space-y-4">
         <TabsList>
           <TabsTrigger value="stores" className="gap-1.5"><Store className="h-3.5 w-3.5" /> Lojas</TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Usuários & Papéis</TabsTrigger>
@@ -858,6 +861,7 @@ export default function AdminPanel() {
           <TabsTrigger value="citel" className="gap-1.5"><Database className="h-3.5 w-3.5" /> API Citel</TabsTrigger>
           <TabsTrigger value="whatsapp" className="gap-1.5"><Phone className="h-3.5 w-3.5" /> Números WhatsApp</TabsTrigger>
           <TabsTrigger value="alerts" className="gap-1.5"><BellRing className="h-3.5 w-3.5" /> Alertas</TabsTrigger>
+          <TabsTrigger value="goals" className="gap-1.5"><Target className="h-3.5 w-3.5" /> Metas</TabsTrigger>
           <TabsTrigger value="logs" className="gap-1.5"><Terminal className="h-3.5 w-3.5" /> Webhook Logs</TabsTrigger>
         </TabsList>
 
@@ -867,6 +871,7 @@ export default function AdminPanel() {
         <TabsContent value="citel"><CitelIntegrationTab /></TabsContent>
         <TabsContent value="whatsapp"><WhatsAppInstancesTab /></TabsContent>
         <TabsContent value="alerts"><AlertTimesTab /></TabsContent>
+        <TabsContent value="goals"><VisitGoalsTab /></TabsContent>
         <TabsContent value="logs"><WebhookLogsTab /></TabsContent>
       </Tabs>
     </AppLayout>

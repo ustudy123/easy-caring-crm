@@ -5,7 +5,7 @@ import { useSellers } from "@/hooks/useSellers";
 import { KANBAN_STAGES } from "@/types/crm";
 import {
    TrendingUp, Users, Clock, Target,
-   Phone, CalendarDays, AlertTriangle, Timer, UserCheck, LayoutGrid, PieChart, Paintbrush, Trophy, CalendarClock,
+   Phone, CalendarDays, AlertTriangle, Timer, UserCheck, LayoutGrid, PieChart, Paintbrush, Trophy, CalendarClock, MapPin,
   } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
@@ -25,6 +25,7 @@ import { useRole } from "@/contexts/RoleContext";
 import { DashboardPanels, type DashboardPanel } from "@/components/DashboardPanels";
 import { getUrgencyLevel } from "@/lib/leadUrgency";
 import { NextActionReport, useNextActionGaps } from "@/components/NextActionReport";
+import { VisitRoutineReport, useVisitRoutineSummary } from "@/components/VisitRoutineReport";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
@@ -191,6 +192,7 @@ export default function CrmDashboard() {
   }, [leads, alertTimesFor, isAdmin, isGerente, storeId]);
 
   const nextActionGaps = useNextActionGaps();
+  const visitSummary = useVisitRoutineSummary();
 
   const panels: DashboardPanel[] = [
     {
@@ -221,6 +223,26 @@ export default function CrmDashboard() {
         </span>
       ),
       content: () => <NextActionReport />,
+    }] : []),
+    ...(visitSummary.visible ? [{
+      key: "rotina-visitas",
+      title: "Rotina de visitas",
+      description: "Equipe externa: visitas planejadas e realizadas na semana e clientes novos no trimestre, contra a meta.",
+      icon: MapPin,
+      alert: false,
+      summary: (
+        <span className="flex flex-wrap gap-1.5">
+          <Badge className="bg-violet-100 text-violet-700 hover:bg-violet-100 rounded-full">
+            Semana: {visitSummary.done}/{visitSummary.doneGoal} realizadas
+          </Badge>
+          {visitSummary.sellers > 1 && visitSummary.behind > 0 && (
+            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 rounded-full">
+              {visitSummary.behind} abaixo da meta
+            </Badge>
+          )}
+        </span>
+      ),
+      content: () => <VisitRoutineReport />,
     }] : []),
     {
       key: "atraso-resposta",

@@ -10,10 +10,15 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { Phone, MessageCircle, Mail, MapPin, CheckCircle2, Clock, Plus, CalendarDays, Pencil, ListChecks, AlertTriangle, FileText } from "lucide-react";
+import { Phone, MessageCircle, Mail, MapPin, CheckCircle2, Clock, Plus, CalendarDays, CalendarPlus, Pencil, ListChecks, AlertTriangle, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { NewFollowUpForm } from "@/components/forms/NewFollowUpForm";
 import { EditFollowUpForm } from "@/components/forms/EditFollowUpForm";
+import { VisitWeekStrip } from "@/components/VisitWeekStrip";
+import { useExternalStores } from "@/hooks/useExternalStores";
+import { googleCalendarTemplateUrl } from "@/lib/visitRoutine";
+import { GoogleCalendarCard, useGoogleReturn } from "@/components/GoogleCalendarConnect";
+import { isGoogleLinked, useGoogleCalendarConnections } from "@/hooks/useGoogleCalendar";
 
 const typeConfig: Record<FollowUp["type"], { icon: typeof Phone; label: string; gradient: string; bg: string }> = {
   call: { icon: Phone, label: "Ligação", gradient: "from-[hsl(217,78%,52%)] to-[hsl(224,76%,48%)]", bg: "bg-[hsl(217,78%,52%)]/10 text-[hsl(217,78%,52%)]" },
@@ -29,7 +34,10 @@ const fadeIn = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transi
 
 export default function Agenda() {
   const { followUps, setFollowUps, addFollowUp, updateFollowUp, deleteFollowUp, sellers } = useCrm();
-  const { isAdmin, isGerente, storeId } = useRole();
+  const { isAdmin, isGerente, storeId, sellerId } = useRole();
+  const externalStores = useExternalStores();
+  const { connections: googleConnections, reload: reloadGoogle } = useGoogleCalendarConnections();
+  useGoogleReturn(reloadGoogle);
   const restrictToStore = isGerente && !isAdmin && !!storeId;
   const canFilterBySeller = isAdmin || isGerente; // quem enxerga a agenda de vários vendedores
   const [sellerFilter, setSellerFilter] = useState("all");
@@ -45,6 +53,15 @@ export default function Agenda() {
       setCalendarOpen(false);
     }
   }, []);
+
+  // Equipe externa: usa o Google Agenda (link para adicionar) e tem meta semanal de visitas.
+  const isExternalSeller = (id?: string) => {
+    const store = id ? sellers.find((s) => s.id === id)?.store_id : undefined;
+    return !!store && externalStores.has(store);
+  };
+  // Faixa de visitas: o próprio vendedor externo, ou o vendedor externo escolhido no filtro.
+  const stripSellerId = sellerFilter !== "all" ? sellerFilter : (!canFilterBySeller ? sellerId : null);
+  const stripSeller = stripSellerId && isExternalSeller(stripSellerId) ? sellers.find((s) => s.id === stripSellerId) : undefined;
 
   const toggleComplete = (id: string) => {
     const fu = followUps.find(f => f.id === id);
@@ -101,6 +118,12 @@ export default function Agenda() {
   return (
     <AppLayout title="Agenda & Follow-ups">
       <div className="space-y-5">
+        {stripSeller && (
+          <div className="grid gap-3 lg:grid-cols-2">
+            <VisitWeekStrip sellerId={stripSeller.id} sellerName={canFilterBySeller ? stripSeller.name : undefined} />
+            <GoogleCalendarCard sellerId={stripSeller.id} connection={googleConnections.get(stripSeller.id)} onChanged={reloadGoogle} />
+          </div>
+        )}
         {/* KPI Cards */}
         <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {kpis.map((kpi) => (
@@ -206,6 +229,9 @@ export default function Agenda() {
                 const config = typeConfig[f.type];
                 const Icon = config.icon;
                 const isOverdue = new Date(f.scheduledAt) < new Date() && !f.completed;
+                // Link manual só para quem ainda não sincroniza com o Google.
+                const showGoogle = !f.completed && isExternalSeller(f.assignedTo) && !isGoogleLinked(googleConnections.get(f.assignedTo));
+                const googleUrl = showGoogle ? googleCalendarTemplateUrl(f, config.label) : undefined;
 
                 return (
                   <motion.div key={f.id} variants={item}>
@@ -247,6 +273,11 @@ export default function Agenda() {
                               <span className="text-[10px] font-semibold text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
                                 {new Date(f.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} {new Date(f.scheduledAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                               </span>
+                              {showGoogle && (
+                                <a href={googleUrl} target="_blank" rel="noopener noreferrer" aria-label="Adicionar ao Google Agenda" className="p-1.5 rounded-lg hover:bg-muted/80 transition-colors">
+                                  <CalendarPlus className="h-3 w-3 text-muted-foreground" />
+                                </a>
+                              )}
                               <button onClick={() => setEditingFollowUp(f)} className="p-1.5 rounded-lg hover:bg-muted/80 transition-colors">
                                 <Pencil className="h-3 w-3 text-muted-foreground" />
                               </button>
@@ -263,6 +294,18 @@ export default function Agenda() {
                               {new Date(f.scheduledAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
+                          {showGoogle && (
+                            <a
+                              href={googleUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Adicionar ao Google Agenda"
+                              aria-label="Adicionar ao Google Agenda"
+                              className="p-2 rounded-[14px] hover:bg-muted/80 transition-all"
+                            >
+                              <CalendarPlus className="h-3.5 w-3.5 text-muted-foreground" />
+                            </a>
+                          )}
                           <button
                             onClick={() => setEditingFollowUp(f)}
                             className="opacity-0 group-hover:opacity-100 transition-all p-2 rounded-[14px] hover:bg-muted/80"
