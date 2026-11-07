@@ -5,7 +5,7 @@ import { useSellers } from "@/hooks/useSellers";
 import { KANBAN_STAGES } from "@/types/crm";
 import {
    TrendingUp, Users, Clock, Target,
-   Phone, CalendarDays,
+   Phone, CalendarDays, AlertTriangle, Timer, UserCheck, LayoutGrid, PieChart, Paintbrush, Trophy, CalendarClock, MapPin,
   } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
@@ -22,6 +22,12 @@ import { QuizGoalsReport } from "@/components/QuizGoalsReport";
 import { ResponseTimeReport } from "@/components/ResponseTimeReport";
 import { ClientOriginReport } from "@/components/ClientOriginReport";
 import { useRole } from "@/contexts/RoleContext";
+import { DashboardPanels, type DashboardPanel } from "@/components/DashboardPanels";
+import { getUrgencyLevel } from "@/lib/leadUrgency";
+import { NextActionReport, useNextActionGaps } from "@/components/NextActionReport";
+import { VisitRoutineReport, useVisitRoutineSummary } from "@/components/VisitRoutineReport";
+import { SalesGoalsReport, useSalesGoalsSummary } from "@/components/SalesGoalsReport";
+import { brlShort } from "@/lib/salesGoals";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
@@ -96,8 +102,8 @@ const ChartSkeleton = forwardRef<HTMLDivElement, { height?: number }>(({ height 
 ChartSkeleton.displayName = "ChartSkeleton";
 
 export default function CrmDashboard() {
-  const { leads, followUps } = useCrm();
-  const { isAdmin, isGerente } = useRole();
+  const { leads, followUps, alertTimesFor } = useCrm();
+  const { isAdmin, isGerente, storeId } = useRole();
   const avgResponseMin = useAvgResponseTime();
   const [period, setPeriod] = useState<PeriodKey>("all");
   const [chartsReady, setChartsReady] = useState(false);
@@ -172,6 +178,136 @@ export default function CrmDashboard() {
       color: FUNNEL_COLORS[i],
     };
   });
+
+  // Resumo do cartão "Clientes sem atendimento" (mesma regra do relatório:
+  // gerente vê só a própria loja; tempos de alerta de cada vendedor/loja).
+  const idleCounts = useMemo(() => {
+    const restrictToStore = isGerente && !isAdmin && !!storeId;
+    const counts = { critical: 0, warning: 0, attention: 0 };
+    leads
+      .filter((l) => !restrictToStore || l.storeId === storeId)
+      .forEach((l) => {
+        const level = getUrgencyLevel(l, alertTimesFor(l));
+        if (level !== "ok") counts[level]++;
+      });
+    return counts;
+  }, [leads, alertTimesFor, isAdmin, isGerente, storeId]);
+
+  const nextActionGaps = useNextActionGaps();
+  const visitSummary = useVisitRoutineSummary();
+  const salesSummary = useSalesGoalsSummary();
+
+  const panels: DashboardPanel[] = [
+    {
+      key: "sem-atendimento",
+      title: "Clientes sem atendimento",
+      description: "Quem está esperando resposta, por gravidade, vendedor e loja.",
+      icon: AlertTriangle,
+      alert: idleCounts.critical > 0,
+      summary: (
+        <span className="flex flex-wrap gap-1.5">
+          <Badge className="bg-red-100 text-red-700 hover:bg-red-100 rounded-full">{idleCounts.critical} graves</Badge>
+          <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 rounded-full">{idleCounts.warning} atenção</Badge>
+          <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 rounded-full">{idleCounts.attention} iniciais</Badge>
+        </span>
+      ),
+      content: () => <IdleClientsReport />,
+    },
+    ...(nextActionGaps.hasExternalTeam ? [{
+      key: "sem-proxima-acao",
+      title: "Oportunidades sem próxima ação",
+      description: "Equipe externa: oportunidades abertas sem próxima ação ou com a data vencida.",
+      icon: CalendarClock,
+      alert: nextActionGaps.missing + nextActionGaps.overdue > 0,
+      summary: (
+        <span className="flex flex-wrap gap-1.5">
+          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 rounded-full">{nextActionGaps.missing} sem próxima ação</Badge>
+          <Badge className="bg-red-100 text-red-700 hover:bg-red-100 rounded-full">{nextActionGaps.overdue} atrasadas</Badge>
+        </span>
+      ),
+      content: () => <NextActionReport />,
+    }] : []),
+    ...(visitSummary.visible ? [{
+      key: "rotina-visitas",
+      title: "Rotina de visitas",
+      description: "Equipe externa: visitas planejadas e realizadas na semana e clientes novos no trimestre, contra a meta.",
+      icon: MapPin,
+      alert: false,
+      summary: (
+        <span className="flex flex-wrap gap-1.5">
+          <Badge className="bg-violet-100 text-violet-700 hover:bg-violet-100 rounded-full">
+            Semana: {visitSummary.done}/{visitSummary.doneGoal} realizadas
+          </Badge>
+          {visitSummary.sellers > 1 && visitSummary.behind > 0 && (
+            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 rounded-full">
+              {visitSummary.behind} abaixo da meta
+            </Badge>
+          )}
+        </span>
+      ),
+      content: () => <VisitRoutineReport />,
+    }] : []),
+    ...(salesSummary.visible ? [{
+      key: "metas-orcamentos",
+      title: "Metas e orçamentos",
+      description: "Equipe externa: orçado e vendido no mês contra a meta, meta do dia, conversão e funil completo.",
+      icon: Target,
+      alert: false,
+      summary: (
+        <span className="flex flex-wrap gap-1.5">
+          <Badge className="bg-brand-50 text-brand-600 hover:bg-brand-50 rounded-full">
+            Mês: {brlShort(salesSummary.sold)}{salesSummary.salesGoal > 0 ? ` de ${brlShort(salesSummary.salesGoal)}` : ""} vendidos
+          </Badge>
+          {salesSummary.conversion !== null && (
+            <Badge className="bg-muted text-foreground hover:bg-muted rounded-full">Conversão {salesSummary.conversion.toLocaleString("pt-BR")}%</Badge>
+          )}
+        </span>
+      ),
+      content: () => <SalesGoalsReport />,
+    }] : []),
+    {
+      key: "atraso-resposta",
+      title: "Atraso de resposta por vendedor",
+      description: "Clientes aguardando, tempo médio de resposta e pior espera por vendedor.",
+      icon: Timer,
+      content: () => <ResponseTimeReport />,
+    },
+    {
+      key: "desempenho-vendedores",
+      title: "Desempenho dos vendedores",
+      description: "Leads, ganhos, perdidos, valor ganho e SLA de resposta por vendedor.",
+      icon: UserCheck,
+      content: () => <SellerPerformance />,
+    },
+    ...((isAdmin || isGerente) ? [{
+      key: "consolidado",
+      title: "Painel consolidado",
+      description: "Funil por etapa, orçamentos por status e desempenho por loja.",
+      icon: LayoutGrid,
+      content: () => <AdminConsolidatedDashboard embedded />,
+    }] : []),
+    {
+      key: "origem",
+      title: "Faturamento por origem",
+      description: "Faturamento das vendas fechadas no período, por origem do cliente.",
+      icon: PieChart,
+      content: () => <ClientOriginReport />,
+    },
+    {
+      key: "show-das-tintas",
+      title: "Show das Tintas: desempenho da equipe",
+      description: "Participação, precisão e ranking por semana, mês ou ano.",
+      icon: Paintbrush,
+      content: () => <QuizAdminStats />,
+    },
+    {
+      key: "metas-show-das-tintas",
+      title: "Show das Tintas: metas do mês",
+      description: "Perguntas respondidas por vendedor em relação à meta mensal.",
+      icon: Trophy,
+      content: () => <QuizGoalsReport />,
+    },
+  ];
 
   const greetingHour = new Date().getHours();
   const greeting = greetingHour < 12 ? "Bom dia" : greetingHour < 18 ? "Boa tarde" : "Boa noite";
@@ -275,34 +411,12 @@ export default function CrmDashboard() {
           </Card>
         </motion.div>
 
-        <motion.div variants={item} initial="hidden" animate="show">
-          <IdleClientsReport />
-        </motion.div>
-
-        <motion.div variants={item} initial="hidden" animate="show">
-          <ResponseTimeReport />
-        </motion.div>
-
-        <motion.div variants={item} initial="hidden" animate="show">
-          <SellerPerformance />
-        </motion.div>
-
-        {(isAdmin || isGerente) && (
-          <motion.div variants={item} initial="hidden" animate="show">
-            <AdminConsolidatedDashboard embedded />
-          </motion.div>
-        )}
-
-        <motion.div variants={item} initial="hidden" animate="show">
-          <ClientOriginReport />
-        </motion.div>
-
-        <motion.div variants={item} initial="hidden" animate="show">
-          <QuizAdminStats />
-        </motion.div>
-
-        <motion.div variants={item} initial="hidden" animate="show">
-          <QuizGoalsReport />
+        <motion.div variants={item} className="space-y-3">
+          <div>
+            <h3 className="text-[15px] font-medium text-foreground">Relatórios</h3>
+            <p className="text-xs text-muted-foreground">Clique em um relatório para abrir com filtros e exportação.</p>
+          </div>
+          <DashboardPanels panels={panels} />
         </motion.div>
       </motion.div>
     </AppLayout>

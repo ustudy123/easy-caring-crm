@@ -12,6 +12,10 @@ import { useRole } from "@/contexts/RoleContext";
 import { isValidPhone, isValidEmail, normalizePhoneBR, onlyDigitsToValue, formatBRL } from "@/lib/masks";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { useExternalStores } from "@/hooks/useExternalStores";
+import { isExternalLead } from "@/lib/externalTeam";
+import { LeadCardFields, validateLeadCardFields, type LeadCardFieldsValue } from "./LeadCardFields";
+import { missingForStage, stageLabel } from "@/lib/qualification";
 
 interface EditLeadFormProps {
   lead: Lead | null;
@@ -31,6 +35,10 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
      clientType: "", companyWorkSite: "", interestProducts: "", storeName: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [cardFields, setCardFields] = useState<LeadCardFieldsValue>({});
+  const externalStores = useExternalStores();
+  // Campos do card só para a equipe externa (vendedor responsável numa loja externa).
+  const isExternal = !!lead && isExternalLead({ assignedTo: form.assignedTo, storeId: lead.storeId }, sellers, externalStores);
 
   useEffect(() => {
     if (lead) {
@@ -49,6 +57,10 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
          interestProducts: lead.interestProducts || "",
          storeName: lead.storeName || "",
       });
+      setCardFields({
+        city: lead.city, segment: lead.segment, lastContactAt: lead.lastContactAt,
+        nextAction: lead.nextAction, nextActionAt: lead.nextActionAt,
+      });
       setErrors({});
     }
   }, [lead]);
@@ -64,6 +76,7 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
     if (!form.clientPhone.trim()) e.clientPhone = "Telefone é obrigatório";
     else if (!isValidPhone(form.clientPhone)) e.clientPhone = "Telefone inválido";
     if (form.clientEmail && !isValidEmail(form.clientEmail)) e.clientEmail = "E-mail inválido";
+    if (isExternal) Object.assign(e, validateLeadCardFields(cardFields));
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -87,7 +100,20 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
        companyWorkSite: form.companyWorkSite.trim(),
        interestProducts: form.interestProducts.trim(),
        storeName: form.storeName.trim(),
+       ...(isExternal ? cardFields : {}),
     };
+    // Equipe externa: o funil anda etapa a etapa (mesma regra do Kanban).
+    if (isExternal && form.stage !== lead.stage) {
+      const missing = missingForStage({ ...updatedLead, stage: lead.stage }, form.stage);
+      if (missing.length > 0) {
+        setErrors((p) => ({
+          ...p,
+          stage: `Para ir para ${stageLabel(form.stage)}, complete a qualificação (botão "Qualificação" no card): `
+            + missing.map((m) => `${m.group.title} — ${m.items.join(", ")}`).join("; "),
+        }));
+        return;
+      }
+    }
     onSubmit(updatedLead);
     toast({ title: "Lead atualizado!", description: `${updatedLead.clientName} foi atualizado.` });
     onOpenChange(false);
@@ -173,6 +199,7 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
                   {lead?.stage === "perdido" && <SelectItem value="perdido">Perdido</SelectItem>}
                 </SelectContent>
               </Select>
+              {errors.stage && <p role="alert" className="text-xs text-destructive">{errors.stage}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Vendedor</Label>
@@ -199,6 +226,16 @@ export function EditLeadForm({ lead, open, onOpenChange, onSubmit, onDelete }: E
               )}
               {isVendedor && <p className="text-[11px] text-muted-foreground">Só um gerente/admin pode alterar o vendedor.</p>}
             </div>
+            {isExternal && (
+              <LeadCardFields
+                value={cardFields}
+                onChange={(patch) => {
+                  setCardFields((p) => ({ ...p, ...patch }));
+                  setErrors((p) => ({ ...p, nextAction: "", nextActionAt: "" }));
+                }}
+                errors={errors}
+              />
+            )}
             <div className="col-span-2 space-y-1.5">
               <Label>Palavras-chave (separadas por vírgula)</Label>
               <Input value={form.tags} onChange={(e) => update("tags", e.target.value)} maxLength={200} />

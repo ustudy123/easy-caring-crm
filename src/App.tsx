@@ -22,6 +22,7 @@ import Configuracoes from "./pages/Configuracoes";
 import Conversas from "./pages/Conversas";
 import SuporteOrcamento from "./pages/SuporteOrcamento";
 import RelatorioVendasCRM from "./pages/RelatorioVendasCRM";
+import SalesDocuments from "./pages/SalesDocuments";
 import RelatorioEncerramentos from "./pages/RelatorioEncerramentos";
 import Feriados from "./pages/Feriados";
 import Login from "./pages/Login";
@@ -86,6 +87,7 @@ const App = () => (
                         <Route path="/envio-pedido" element={<SuporteOrcamento mode="pedido" />} />
                         <Route path="/admin" element={<AdminPanel />} />
                         <Route path="/relatorio-vendas" element={<RelatorioVendasCRM />} />
+                        <Route path="/orcamentos-notas" element={<SalesDocuments />} />
                         <Route path="/relatorio-encerramentos" element={<RelatorioEncerramentos />} />
                         <Route path="/feriados" element={<AdminOnlyRoute><Feriados /></AdminOnlyRoute>} />
                         <Route path="*" element={<NotFound />} />

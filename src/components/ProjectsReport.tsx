@@ -46,7 +46,7 @@ export function ProjectsReport() {
         (supabase as any).from("client_projects")
           .select("id, name, stage, client_name, client_phone, seller_id, completed_at, created_at")
           .order("created_at", { ascending: false }),
-        supabase.from("sellers").select("id, name, store_id").order("name"),
+        supabase.from("sellers").select("id, name, store_id, is_active, status").order("name"),
       ]);
       setRows((projRes.data ?? []) as ProjectRow[]);
       setSellers((sellRes.data ?? []) as { id: string; name: string; store_id?: string | null }[]);

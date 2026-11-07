@@ -11,6 +11,7 @@ function mapSeller(s: any): Seller {
     store_id: s.store_id || undefined,
     leadsCount: s.leads_count,
     conversions: s.conversions,
+    isActive: s.is_active !== false && s.status !== "inactive",
   };
 }
 

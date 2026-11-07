@@ -15,11 +15,12 @@ import {
   Repeat,
   ClipboardList,
   CalendarOff,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
@@ -37,6 +38,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useCrm } from "@/contexts/CrmContext";
 import { useRole } from "@/contexts/RoleContext";
+import { useExternalStores } from "@/hooks/useExternalStores";
 import taecoLogo from "@/assets/taeco-logo.png";
 
 type NavItem = {
@@ -45,6 +47,8 @@ type NavItem = {
   icon: React.ComponentType<any>;
   badgeKey: string | null;
   roles?: string[];
+  /** Vendedor só vê se for da equipe externa (gestão e suporte veem sempre). */
+  externalTeamOnly?: boolean;
 };
 
 const allMainNav: NavItem[] = [
@@ -120,6 +124,14 @@ const allToolsNav: NavItem[] = [
     roles: ["vendedor"],
   },
   {
+    title: "Orçamentos e Notas",
+    url: "/orcamentos-notas",
+    icon: Receipt,
+    badgeKey: null,
+    roles: ["admin", "gerente", "suporte", "vendedor"],
+    externalTeamOnly: true,
+  },
+  {
     title: "Vendas CRM x ERP",
     url: "/relatorio-vendas",
     icon: TrendingUp,
@@ -175,22 +187,23 @@ export function AppSidebar({ className }: { className?: string }) {
     notifications,
   } = useCrm();
   const { user, signOut } = useAuth();
-  const { roles } = useRole();
+  const { roles, storeId } = useRole();
+  const externalStores = useExternalStores();
+  const isExternalSeller = !!storeId && externalStores.has(storeId);
 
   // Um usuário pode ter vários papéis. O item aparece se QUALQUER papel dele
   // estiver na lista permitida — antes usava só o papel principal, então um
   // vendedor+suporte via só o menu do papel mais alto.
-  const canSee = (allowed?: string[]) =>
-    !allowed || roles.some((r) => allowed.includes(r));
+  const canSee = useCallback((item: NavItem) => {
+    const allowed = item.roles;
+    if (allowed && !roles.some((r) => allowed.includes(r))) return false;
+    // Item da equipe externa: quem só é vendedor precisa ser de loja externa.
+    if (item.externalTeamOnly && !roles.some((r) => r !== "vendedor" && allowed?.includes(r))) return isExternalSeller;
+    return true;
+  }, [roles, isExternalSeller]);
 
-  const mainNav = useMemo(
-    () => dedupeByUrl(allMainNav.filter((item) => canSee(item.roles))),
-    [roles],
-  );
-  const toolsNav = useMemo(
-    () => dedupeByUrl(allToolsNav.filter((item) => canSee(item.roles))),
-    [roles],
-  );
+  const mainNav = useMemo(() => dedupeByUrl(allMainNav.filter(canSee)), [canSee]);
+  const toolsNav = useMemo(() => dedupeByUrl(allToolsNav.filter(canSee)), [canSee]);
 
   const STORAGE_KEY = "crm-sidebar-dismissed";
   const [dismissed, setDismissed] = useState<Record<string, number>>(() => {

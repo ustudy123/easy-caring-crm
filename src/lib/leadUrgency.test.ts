@@ -65,37 +65,20 @@ describe("getUrgencyLevel", () => {
     expect(getUrgencyLevel(leadIdleHours(9999, "pos_venda"))).toBe("ok");
   });
 
-  it("returns 'ok' below the attention threshold (abordagem < 2h)", () => {
-    expect(getUrgencyLevel(leadIdleHours(1, "abordagem"))).toBe("ok");
+  it("uses 30m / 1h / 1h30 when nothing is configured", () => {
+    expect(getUrgencyLevel(leadIdleHours(0.4))).toBe("ok");
+    expect(getUrgencyLevel(leadIdleHours(0.5))).toBe("attention");
+    expect(getUrgencyLevel(leadIdleHours(1))).toBe("warning");
+    expect(getUrgencyLevel(leadIdleHours(1.5))).toBe("critical");
+    expect(getUrgencyLevel(leadIdleHours(100, "sondagem"))).toBe("critical");
   });
 
-  it("returns 'attention' at the attention threshold (abordagem 2h)", () => {
-    expect(getUrgencyLevel(leadIdleHours(2, "abordagem"))).toBe("attention");
-  });
-
-  it("returns 'warning' at the warning threshold (abordagem 6h)", () => {
-    expect(getUrgencyLevel(leadIdleHours(6, "abordagem"))).toBe("warning");
-  });
-
-  it("returns 'critical' at the critical threshold (abordagem 24h)", () => {
-    expect(getUrgencyLevel(leadIdleHours(24, "abordagem"))).toBe("critical");
-    expect(getUrgencyLevel(leadIdleHours(100, "abordagem"))).toBe("critical");
-  });
-
-  it("uses per-stage thresholds (sondagem only attention at 12h)", () => {
-    expect(getUrgencyLevel(leadIdleHours(6, "sondagem"))).toBe("ok");
-    expect(getUrgencyLevel(leadIdleHours(12, "sondagem"))).toBe("attention");
-    expect(getUrgencyLevel(leadIdleHours(24, "sondagem"))).toBe("warning");
-    expect(getUrgencyLevel(leadIdleHours(48, "sondagem"))).toBe("critical");
-  });
-
-  it.each<[KanbanStage, number, "ok" | "attention" | "warning" | "critical"]>([
-    ["recomendacao_tecnica", 24, "attention"],
-    ["demonstracao_valor", 48, "warning"],
-    ["contorno_objecoes", 96, "critical"],
-    ["cross_sell", 72, "critical"],
-  ])("computes urgency for %s after %ih -> %s", (stage, h, expected) => {
-    expect(getUrgencyLevel(leadIdleHours(h, stage))).toBe(expected);
+  it("uses the configured times (e.g. longer ones for the external team)", () => {
+    const external = { sellerMinutes: 120, managerMinutes: 240, adminMinutes: 480 };
+    expect(getUrgencyLevel(leadIdleHours(1.5), external)).toBe("ok");
+    expect(getUrgencyLevel(leadIdleHours(2), external)).toBe("attention");
+    expect(getUrgencyLevel(leadIdleHours(4), external)).toBe("warning");
+    expect(getUrgencyLevel(leadIdleHours(8), external)).toBe("critical");
   });
 });
 
@@ -128,22 +111,19 @@ describe("getUrgencyConfig", () => {
     expect(c.pulse).toBe(false);
   });
 
-  it("returns critical config with pulse and destructive ring", () => {
-    const c = getUrgencyConfig("critical");
-    expect(c.label).toBe("Crítico");
-    expect(c.pulse).toBe(true);
-    expect(c.borderClass).toMatch(/destructive/);
+  it("labels the default levels with 30m / 1h / 1h30m", () => {
+    expect(getUrgencyConfig("attention").label).toBe("Inicial: 30m");
+    expect(getUrgencyConfig("warning").label).toBe("Atenção: +1h");
+    const critical = getUrgencyConfig("critical");
+    expect(critical.label).toBe("Grave: +1h30m");
+    expect(critical.pulse).toBe(true);
+    expect(critical.borderClass).toMatch(/red/);
   });
 
-  it("returns warning config with pulse", () => {
-    const c = getUrgencyConfig("warning");
-    expect(c.label).toBe("Atenção");
-    expect(c.pulse).toBe(true);
-  });
-
-  it("returns attention config without pulse", () => {
-    const c = getUrgencyConfig("attention");
-    expect(c.label).toBe("Sem ação");
-    expect(c.pulse).toBe(false);
+  it("labels follow the configured times", () => {
+    const t = { sellerMinutes: 45, managerMinutes: 120, adminMinutes: 210 };
+    expect(getUrgencyConfig("attention", t).label).toBe("Inicial: 45m");
+    expect(getUrgencyConfig("warning", t).label).toBe("Atenção: +2h");
+    expect(getUrgencyConfig("critical", t).label).toBe("Grave: +3h30m");
   });
 });

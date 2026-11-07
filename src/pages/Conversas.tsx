@@ -27,6 +27,7 @@ import { SellerCombobox } from "@/components/SellerCombobox";
  import { Textarea } from "@/components/ui/textarea";
  import { Label } from "@/components/ui/label";
  import { InstanceBadge } from "@/components/InstanceBadge";
+ import { formatAlertMinutes } from "@/lib/alertTimes";
  import { useInstances } from "@/hooks/useInstances";
 const ChatMessageBody = memo(({ body, chatSearch, isCurrentOccurrence }: { body: string | null; chatSearch: string; isCurrentOccurrence: boolean }) => {
   const content = useMemo(() => {
@@ -197,7 +198,7 @@ const mockContactNames: Record<string, string> = {
     // Suporte "puro" (sem também ser vendedor/admin/gerente) enxerga só as abas
     // Minhas e Interna — as filas Loja/Geral são para os vendedores captarem leads.
     const isSuporteOnly = isSuporte && !isVendedor && !isAdmin && !isGerente;
-    const { decrementUnreadWhatsApp, leads, setLeads, updateLead } = useCrm();
+    const { decrementUnreadWhatsApp, leads, setLeads, updateLead, alertTimesFor } = useCrm();
     const { instances: allInstances, byId: instancesById } = useInstances();
     const [instanceFilter, setInstanceFilter] = useState<string>("all");
     const [stageFilter, setStageFilter] = useState<string>("all");
@@ -300,7 +301,7 @@ const mockContactNames: Record<string, string> = {
         const [msgsRes, clientsRes, sellersRes, storesRes] = await Promise.all([
            fetchAllRows((f, t) => supabase.from("whatsapp_messages").select("*").order("timestamp", { ascending: true }).range(f, t)),
            fetchAllRows((f, t) => supabase.from("clients").select("*, alert_status").order("created_at", { ascending: true }).range(f, t)),
-           supabase.from("sellers").select("id, name, code, store_id, is_active, user_id").order("name"),
+           supabase.from("sellers").select("id, name, code, store_id, is_active, status, user_id").order("name"),
            supabase.from("stores").select("id, name")
         ]);
  
@@ -804,14 +805,16 @@ const mockContactNames: Record<string, string> = {
 
   // Monitor conversations for stale messages to trigger alert popup
   useEffect(() => {
-    const STALE_ALERT_THRESHOLD = 30 * 60 * 1000; // 30 minutes
+    // Tempo do vendedor configurado para a loja/vendedor (Admin → Alertas; padrão 30 min).
+    const staleLimitMs = (c: { assigned_seller_id?: string | null; store_id?: string | null }) =>
+      alertTimesFor({ assignedTo: c.assigned_seller_id || "", storeId: c.store_id || undefined }).sellerMinutes * 60 * 1000;
     const checkStale = () => {
       const now = new Date().getTime();
       const myConversations = conversations.filter(c => c.assigned_seller_id === sellerId);
       const stale = myConversations.find(c => {
         if (!c.last_message_from_client_at || hasDismissedStaleAlert.current.has(c.phone)) return false;
         const waitTime = now - new Date(c.last_message_from_client_at).getTime();
-        return waitTime > STALE_ALERT_THRESHOLD;
+        return waitTime > staleLimitMs(c);
       });
       if (stale && (!staleAlertConversation || staleAlertConversation.phone !== stale.phone)) {
         setStaleAlertConversation(stale);
@@ -820,7 +823,7 @@ const mockContactNames: Record<string, string> = {
     const interval = setInterval(checkStale, 30000);
     checkStale();
     return () => clearInterval(interval);
-  }, [conversations, sellerId, staleAlertConversation]);
+  }, [conversations, sellerId, staleAlertConversation, alertTimesFor]);
 
   const dismissStaleAlert = () => {
     if (staleAlertConversation) {
@@ -840,6 +843,11 @@ const mockContactNames: Record<string, string> = {
   };
 
   const selectedConversation = useMemo(() => conversations.find((c) => c.phone === selectedPhone), [conversations, selectedPhone]);
+  // Tempos de alerta da conversa aberta, para os avisos mostrarem o tempo configurado.
+  const selectedAlertTimes = alertTimesFor({
+    assignedTo: selectedConversation?.assigned_seller_id || "",
+    storeId: selectedConversation?.store_id || undefined,
+  });
 
   const isSelectedStale = useMemo(() => {
     if (!selectedConversation?.last_message_from_client_at) return false;
@@ -1759,7 +1767,7 @@ const mockContactNames: Record<string, string> = {
                {selectedConversation.alert_status === 'critical' && (
                  <div className="bg-destructive text-white text-[11px] py-1 px-4 flex items-center justify-between">
                    <span className="flex items-center gap-1.5 font-bold">
-                     <ShieldAlert className="h-3 w-3" /> ALERTA CRÍTICO: Cliente sem resposta há mais de 1h30! Administrador notificado.
+                     <ShieldAlert className="h-3 w-3" /> ALERTA CRÍTICO: Cliente sem resposta há mais de {formatAlertMinutes(selectedAlertTimes.adminMinutes)}! Administrador notificado.
                    </span>
                    <span className="opacity-80">SLA Estourado</span>
                  </div>
@@ -1767,14 +1775,14 @@ const mockContactNames: Record<string, string> = {
                {selectedConversation.alert_status === 'red' && (
                  <div className="bg-red-500 text-white text-[11px] py-1 px-4 flex items-center justify-between">
                    <span className="flex items-center gap-1.5 font-medium">
-                     <AlertCircle className="h-3 w-3" /> ATENÇÃO: Cliente aguardando há mais de 1 hora!
+                     <AlertCircle className="h-3 w-3" /> ATENÇÃO: Cliente aguardando há mais de {formatAlertMinutes(selectedAlertTimes.managerMinutes)}!
                    </span>
                    <span className="opacity-80">Gerente Notificado</span>
                  </div>
                )}
                {selectedConversation.alert_status === 'yellow' && (
                  <div className="bg-yellow-400 text-black text-[11px] py-1 px-4 flex items-center gap-1.5 font-medium">
-                   <Clock className="h-3 w-3" /> Responda logo: Cliente aguardando há mais de 30 minutos.
+                   <Clock className="h-3 w-3" /> Responda logo: Cliente aguardando há mais de {formatAlertMinutes(selectedAlertTimes.sellerMinutes)}.
                  </div>
                )}
 

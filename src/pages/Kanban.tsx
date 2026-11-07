@@ -26,6 +26,11 @@ import { getUrgencyLevel, getUrgencyConfig, formatIdleTime } from "@/lib/leadUrg
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SellerCombobox } from "@/components/SellerCombobox";
+import { LeadCardSummary } from "@/components/LeadCardSummary";
+import { useExternalStores } from "@/hooks/useExternalStores";
+import { isExternalLead } from "@/lib/externalTeam";
+import { LeadQualificationDialog } from "@/components/LeadQualificationDialog";
+import { missingForStage, stageLabel } from "@/lib/qualification";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, 
@@ -116,7 +121,21 @@ const stageHeaderGradient: Record<KanbanStage, string> = {
 
 export default function Kanban() {
   const navigate = useNavigate();
-   const { leads, setLeads, addLead, updateLead, deleteLead, loading, sellers, addFollowUp } = useCrm();
+   const { leads, setLeads, addLead, updateLead, deleteLead, loading, sellers, addFollowUp, alertTimesFor } = useCrm();
+  const externalStores = useExternalStores();
+  // Qualificação da equipe externa: aberta pelo card ou quando o avanço de etapa é
+  // bloqueado. `proceed` conclui a mudança de etapa depois de salvar.
+  const [qualifying, setQualifying] = useState<{ lead: Lead; target?: KanbanStage; proceed?: (l: Lead) => void } | null>(null);
+  // Funil etapa a etapa (equipe externa): avançar exige a qualificação das etapas
+  // anteriores; voltar, perder e reagendar são livres. Retorna se já pôde seguir.
+  const guardStage = (lead: Lead, target: KanbanStage, proceed: (l: Lead) => void): boolean => {
+    if (!isExternalLead(lead, sellers, externalStores) || missingForStage(lead, target).length === 0) {
+      proceed(lead);
+      return true;
+    }
+    setQualifying({ lead, target, proceed });
+    return false;
+  };
    const { toast } = useToast();
    const { storeId: userStoreId, isGerente, isAdmin } = useRole();
    // Tique de 1 min: faz o board recalcular sozinho, para que leads reagendados
@@ -401,6 +420,13 @@ export default function Kanban() {
 
     // --- Venda concluída → pós-venda + contagem de compra do cliente ---
     if (reason === VENDA_CONCLUIDA) {
+      // Equipe externa: só encerra como venda quem passou pelo funil inteiro.
+      if (isExternalLead(losingLead, sellers, externalStores) && missingForStage(losingLead, "pos_venda").length > 0) {
+        toast({ title: "Qualificação incompleta", description: "Complete as etapas do funil antes de encerrar como venda concluída.", variant: "destructive" });
+        setQualifying({ lead: losingLead, target: "pos_venda" });
+        setLosingLead(null); setLostReason(""); setLostNote(""); setSaleType("");
+        return;
+      }
       if (!saleType) {
         toast({ title: "Marque o tipo de compra", description: "Informe se o cliente é de compra única ou recorrente.", variant: "destructive" });
         return;
@@ -502,11 +528,13 @@ export default function Kanban() {
     const idx = stageKeys.indexOf(lead.stage);
     if (idx < stageKeys.length - 1) {
       const nextStage = stageKeys[idx + 1];
-      if (nextStage === 'fechamento') {
-        gateFechamento(lead, () => updateLead({ ...lead, stage: nextStage }));
-        return;
-      }
-      updateLead({ ...lead, stage: nextStage });
+      guardStage(lead, nextStage, (l) => {
+        if (nextStage === 'fechamento') {
+          gateFechamento(l, () => updateLead({ ...l, stage: nextStage }));
+          return;
+        }
+        updateLead({ ...l, stage: nextStage });
+      });
     }
   };
 
@@ -596,7 +624,7 @@ export default function Kanban() {
      }
 
      if (filterUrgency !== "all") {
-       const u = getUrgencyLevel(l);
+       const u = getUrgencyLevel(l, alertTimesFor(l));
        if (filterUrgency === "critical" && u !== "critical") return false;
        if (filterUrgency === "warning" && u !== "warning") return false;
        if (filterUrgency === "ok" && u !== "ok") return false;
@@ -656,17 +684,12 @@ export default function Kanban() {
   const onDragEnd = async (result: DropResult) => {
     if (!result.destination) return;
     const newStage = result.destination.droppableId as KanbanStage;
+    const dragged = leads.find((l) => l.id === result.draggableId);
+    if (!dragged || dragged.stage === newStage) return;
 
     // "Fechamento" é uma etapa de processo — mover o card para lá NÃO encerra a venda.
     // O encerramento é uma ação explícita (botão "Encerrar atendimento") nas etapas certas.
-
-    setLeads((prev) =>
-      prev.map((l) => (l.id === result.draggableId ? { ...l, stage: newStage } : l))
-    );
-    supabase.from("leads").update({ stage: newStage }).eq("id", result.draggableId).then(({ error }) => {
-      if (error) console.error("Error updating lead stage:", error);
-    });
-
+    guardStage(dragged, newStage, (l) => updateLead({ ...l, stage: newStage }));
   };
 
   return (
@@ -803,7 +826,7 @@ export default function Kanban() {
               const totalValue = stageLeads.reduce((s, l) => s + l.value, 0);
 
               const alertCount = stageLeads.filter(l => {
-                const u = getUrgencyLevel(l);
+                const u = getUrgencyLevel(l, alertTimesFor(l));
                 return u === "critical" || u === "warning";
               }).length;
 
@@ -862,8 +885,9 @@ export default function Kanban() {
                                 {...provided.dragHandleProps}
                               >
                                 {(() => {
-                                  const urgency = getUrgencyLevel(lead);
-                                  const config = getUrgencyConfig(urgency);
+                                  const times = alertTimesFor(lead);
+                                  const urgency = getUrgencyLevel(lead, times);
+                                  const config = getUrgencyConfig(urgency, times);
                                   const idleTime = formatIdleTime(lead);
                                   return (
                                     <SwipeableCard
@@ -1097,6 +1121,11 @@ export default function Kanban() {
                                         )}
 
                                          <div className="flex flex-col gap-2 mt-2.5">
+                                           {/* Card do cliente da equipe externa: último contato e próxima ação */}
+                                           {isExternalLead(lead, sellers, externalStores) && (
+                                             <LeadCardSummary lead={lead} onOpenQualification={() => setQualifying({ lead })} />
+                                           )}
+
                                            {/* Follow-up reminder */}
                                            {lead.nextFollowUp && (
                                              <div className="rounded-lg bg-warning/8 border border-warning/15 px-2.5 py-1.5 text-[10px] font-semibold text-warning flex items-center gap-1.5">
@@ -1173,7 +1202,7 @@ export default function Kanban() {
                        .map((lead) => {
                          const stage = KANBAN_STAGES.find((s) => s.key === lead.stage);
                          const seller = sellers.find((s) => s.id === lead.assignedTo);
-                         const urgency = getUrgencyLevel(lead);
+                         const urgency = getUrgencyLevel(lead, alertTimesFor(lead));
                          const dotClass = urgency === "critical" ? "bg-red-500" : urgency === "warning" ? "bg-yellow-500" : "bg-emerald-500";
                          return (
                            <tr
@@ -1225,6 +1254,22 @@ export default function Kanban() {
       </div>
       <NewLeadForm open={showNewLead} onOpenChange={setShowNewLead} onSubmit={addLead} />
       <EditLeadForm lead={editingLead} open={!!editingLead} onOpenChange={(open) => !open && setEditingLead(null)} onSubmit={updateLead} onDelete={deleteLead} />
+      <LeadQualificationDialog
+        lead={qualifying?.lead ?? null}
+        targetStage={qualifying?.target}
+        canMove={!!qualifying?.proceed}
+        open={!!qualifying}
+        onOpenChange={(open) => !open && setQualifying(null)}
+        onSave={(updated, moveTo) => {
+          if (moveTo && qualifying?.proceed) qualifying.proceed(updated);
+          else updateLead(updated);
+          toast({
+            title: "Qualificação salva",
+            description: moveTo ? `${updated.clientName} foi para ${stageLabel(moveTo)}.` : updated.clientName,
+          });
+          setQualifying(null);
+        }}
+      />
       <ConfirmDeleteDialog
         open={!!pendingDeleteId}
         onOpenChange={(open) => !open && setPendingDeleteId(null)}
@@ -1252,7 +1297,7 @@ export default function Kanban() {
                 showCode
                 sellers={sellers
                   .filter((s) => s.id !== transferringLead?.assignedTo)
-                  .map((s) => ({ id: s.id, name: s.name, store_id: s.store_id, code: s.code }))}
+                  .map((s) => ({ id: s.id, name: s.name, store_id: s.store_id, code: s.code, isActive: s.isActive }))}
               />
             </div>
             
