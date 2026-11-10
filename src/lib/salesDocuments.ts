@@ -10,7 +10,8 @@ export const KIND_LABEL: Record<SalesDocumentKind, string> = { quote: "Orçament
 export interface SalesDocument {
   id: string;
   kind: SalesDocumentKind;
-  sellerId: string;
+  /** null: importado em lote e ainda sem vendedor */
+  sellerId: string | null;
   leadId: string | null;
   supportRequestId: string | null;
   storageBucket: string;
@@ -28,7 +29,25 @@ export interface SalesDocument {
   aiExtracted: ExtractedDocument | null;
   aiError: string | null;
   createdAt: string;
+  /** só conta nas metas depois que o gestor (ou admin) confirma */
+  reviewStatus: "pending" | "confirmed";
+  suggestedSellerId: string | null;
+  sellerMatch: SellerMatch | null;
+  extractedSellerName: string | null;
+  possibleDuplicateOf: string | null;
+  fileHash: string | null;
 }
+
+export type SellerMatch = "representante" | "historico" | "carteira" | "card" | "nenhum";
+
+/** Por que o CRM sugeriu esse vendedor (DE-PARA documento → vendedor). */
+export const MATCH_LABEL: Record<SellerMatch, string> = {
+  representante: "pelo vendedor escrito no PDF",
+  historico: "pelo histórico do cliente",
+  carteira: "pela carteira de clientes (CNPJ)",
+  card: "pelo card do cliente",
+  nenhum: "sem pista: escolha o vendedor",
+};
 
 export function mapSalesDocument(row: Tables<"sales_documents">): SalesDocument {
   return {
@@ -52,11 +71,18 @@ export function mapSalesDocument(row: Tables<"sales_documents">): SalesDocument 
     aiExtracted: (row.ai_extracted as unknown as ExtractedDocument | null) ?? null,
     aiError: row.ai_error,
     createdAt: row.created_at,
+    reviewStatus: row.review_status === "confirmed" ? "confirmed" : "pending",
+    suggestedSellerId: row.suggested_seller_id,
+    sellerMatch: (row.seller_match as SellerMatch | null) ?? null,
+    extractedSellerName: row.extracted_seller_name,
+    possibleDuplicateOf: row.possible_duplicate_of,
+    fileHash: row.file_hash,
   };
 }
 
-/** Documento conta no painel quando já tem valor e data de emissão. */
-export const isComplete = (d: Pick<SalesDocument, "totalValue" | "issueDate">) => d.totalValue !== null && !!d.issueDate;
+/** Documento conta no painel quando o gestor confirmou e ele tem valor e data de emissão. */
+export const isComplete = (d: Pick<SalesDocument, "totalValue" | "issueDate" | "reviewStatus">) =>
+  d.reviewStatus === "confirmed" && d.totalValue !== null && !!d.issueDate;
 
 /** Valor salvo diferente do que a IA leu: o painel sinaliza para conferência. */
 export function wasEditedByHand(d: Pick<SalesDocument, "totalValue" | "aiExtracted">): boolean {
@@ -127,7 +153,21 @@ export function draftToRow(kind: SalesDocumentKind, d: SalesDocumentDraft) {
   };
 }
 
-/** Nome do arquivo no bucket: uma pasta por vendedor. */
-export function storagePathFor(sellerId: string, id: string): string {
-  return `${sellerId}/${id}.pdf`;
+/** Nome do arquivo no bucket: uma pasta por vendedor; importação em lote vai para "importacao/". */
+export function storagePathFor(sellerId: string | null, id: string): string {
+  return `${sellerId ?? "importacao"}/${id}.pdf`;
+}
+
+/** SHA-256 do arquivo, para avisar quando o mesmo PDF já foi enviado. */
+export async function fileSha256(file: Blob): Promise<string> {
+  const buf = typeof file.arrayBuffer === "function"
+    ? await file.arrayBuffer()
+    : await new Promise<ArrayBuffer>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(file);
+    });
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", buf));
+  return Array.from(hash, (b) => b.toString(16).padStart(2, "0")).join("");
 }

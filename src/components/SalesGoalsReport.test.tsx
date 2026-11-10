@@ -32,7 +32,7 @@ const doc = (o: Record<string, unknown>) => ({
   id: Math.random().toString(36), kind: "quote", seller_id: "ana", lead_id: null, support_request_id: null, storage_bucket: "sales-documents",
   storage_path: "x", file_name: "x.pdf", document_number: null, client_name: "Cliente", client_document: null, total_value: 0,
   issue_date: "2026-11-03", expected_close_date: null, installments: [], notes: null, ai_status: "done", ai_extracted: null, ai_error: null,
-  created_at: "2026-11-03T12:00:00Z", ...o,
+  created_at: "2026-11-03T12:00:00Z", review_status: "confirmed", ...o,
 });
 
 beforeEach(() => {

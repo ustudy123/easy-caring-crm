@@ -104,3 +104,22 @@ export function useClosedSales(range: MonthRange, enabled = true) {
   }, [from, to, enabled]);
   return sales;
 }
+
+/** Documentos aguardando confirmação do gestor (qualquer mês). */
+export function usePendingDocuments(enabled = true) {
+  const [documents, setDocuments] = useState<SalesDocument[]>([]);
+  const [loading, setLoading] = useState(enabled);
+  const reload = useCallback(async () => {
+    if (!enabled) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("sales_documents")
+      .select("*")
+      .eq("review_status", "pending")
+      .order("created_at", { ascending: false });
+    setDocuments((data ?? []).map(mapSalesDocument));
+    setLoading(false);
+  }, [enabled]);
+  useEffect(() => { reload(); }, [reload]);
+  return { documents, loading, reload };
+}

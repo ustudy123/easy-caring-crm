@@ -148,6 +148,30 @@ export type Database = {
           },
         ]
       }
+      client_seller_map: {
+        Row: {
+          client_key: string
+          client_label: string | null
+          seller_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          client_key: string
+          client_label?: string | null
+          seller_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          client_key?: string
+          client_label?: string | null
+          seller_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
@@ -1194,10 +1218,14 @@ export type Database = {
           ai_status: string
           client_document: string | null
           client_name: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           created_by: string | null
           document_number: string | null
           expected_close_date: string | null
+          extracted_seller_name: string | null
+          file_hash: string | null
           file_name: string | null
           id: string
           installments: Json
@@ -1205,9 +1233,13 @@ export type Database = {
           kind: string
           lead_id: string | null
           notes: string | null
-          seller_id: string
+          possible_duplicate_of: string | null
+          review_status: string
+          seller_id: string | null
+          seller_match: string | null
           storage_bucket: string
           storage_path: string
+          suggested_seller_id: string | null
           support_request_id: string | null
           total_value: number | null
           updated_at: string
@@ -1219,10 +1251,14 @@ export type Database = {
           ai_status?: string
           client_document?: string | null
           client_name?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           created_by?: string | null
           document_number?: string | null
           expected_close_date?: string | null
+          extracted_seller_name?: string | null
+          file_hash?: string | null
           file_name?: string | null
           id?: string
           installments?: Json
@@ -1230,9 +1266,13 @@ export type Database = {
           kind: string
           lead_id?: string | null
           notes?: string | null
-          seller_id: string
+          possible_duplicate_of?: string | null
+          review_status?: string
+          seller_id?: string | null
+          seller_match?: string | null
           storage_bucket?: string
           storage_path: string
+          suggested_seller_id?: string | null
           support_request_id?: string | null
           total_value?: number | null
           updated_at?: string
@@ -1244,10 +1284,14 @@ export type Database = {
           ai_status?: string
           client_document?: string | null
           client_name?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           created_by?: string | null
           document_number?: string | null
           expected_close_date?: string | null
+          extracted_seller_name?: string | null
+          file_hash?: string | null
           file_name?: string | null
           id?: string
           installments?: Json
@@ -1255,9 +1299,13 @@ export type Database = {
           kind?: string
           lead_id?: string | null
           notes?: string | null
-          seller_id?: string
+          possible_duplicate_of?: string | null
+          review_status?: string
+          seller_id?: string | null
+          seller_match?: string | null
           storage_bucket?: string
           storage_path?: string
+          suggested_seller_id?: string | null
           support_request_id?: string | null
           total_value?: number | null
           updated_at?: string
@@ -2008,6 +2056,7 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: number
       }
+      can_confirm_sales_document: { Args: { _seller_id: string }; Returns: boolean }
       can_manage_sales_document_path: { Args: { _name: string }; Returns: boolean }
       can_manage_sales_documents: { Args: { _seller_id: string }; Returns: boolean }
       can_view_seller: { Args: { _seller_id: string }; Returns: boolean }
@@ -2121,6 +2170,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_external_team_manager: { Args: never; Returns: boolean }
       is_valid_br_phone: { Args: { p: string }; Returns: boolean }
       list_support_sellers: {
         Args: never
@@ -2139,6 +2189,7 @@ export type Database = {
       mark_seller_assigned: { Args: { _seller_id: string }; Returns: undefined }
       mark_whatsapp_read: { Args: { p_phone: string }; Returns: number }
       notify_quiz_reminder: { Args: never; Returns: undefined }
+      suggest_sales_document_seller: { Args: { _doc_id: string }; Returns: string }
       transfer_attendance: {
         Args: {
           p_client_id?: string

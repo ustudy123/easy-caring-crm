@@ -103,7 +103,7 @@ describe("formulário do documento", () => {
   });
 
   it("sinaliza valor diferente do lido pela IA e tipo trocado", () => {
-    const ai = { document_type: "invoice" as const, document_number: null, client_name: null, client_document: null, issue_date: null, total_value: 1000, installments: [] };
+    const ai = { document_type: "invoice" as const, document_number: null, client_name: null, client_document: null, issue_date: null, total_value: 1000, installments: [], seller_name: null };
     expect(wasEditedByHand({ totalValue: 1000, aiExtracted: ai })).toBe(false);
     expect(wasEditedByHand({ totalValue: 1500, aiExtracted: ai })).toBe(true);
     expect(wasEditedByHand({ totalValue: 1500, aiExtracted: null })).toBe(false);

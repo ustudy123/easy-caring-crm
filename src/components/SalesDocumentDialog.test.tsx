@@ -74,7 +74,8 @@ describe("SalesDocumentDialog", () => {
       table: "sales_documents", op: "update", filters: [`id=${doc.id}`],
       values: { client_name: "SERCON", document_number: "4521", total_value: 1_000_000, issue_date: "2026-11-03", expected_close_date: "2026-11-20", lead_id: null },
     });
-    expect(toast.success).toHaveBeenCalledWith("Orçamento salvo.");
+    expect(toast.success).toHaveBeenCalledWith("Orçamento salvo. Ele passa a contar nas metas quando o gestor confirmar.");
+    expect((state.calls[0].values as { file_hash: string }).file_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("deletes the uploaded file and record when cancelled", async () => {
@@ -88,6 +89,17 @@ describe("SalesDocumentDialog", () => {
     expect(state.storage!.at(-1)).toEqual({ op: "remove", bucket: "sales-documents", path: `ana/${doc.id}.pdf` });
   });
 
+  it("refuses a PDF that was already sent", async () => {
+    renderDialog();
+    fireEvent.change(screen.getByLabelText("Arquivo PDF"), { target: { files: [pdf()] } });
+    await waitFor(() => expect(screen.getByLabelText("Cliente")).toHaveValue("SERCON"));
+    cleanup();
+    renderDialog();
+    fireEvent.change(screen.getByLabelText("Arquivo PDF"), { target: { files: [pdf()] } });
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Este PDF já foi enviado antes."));
+    expect(state.storage!.filter((x) => x.op === "upload")).toHaveLength(1);
+  });
+
   it("refuses a non-PDF file", async () => {
     renderDialog();
     fireEvent.change(screen.getByLabelText("Arquivo PDF"), { target: { files: [new File(["x"], "foto.png", { type: "image/png" })] } });
@@ -98,7 +110,8 @@ describe("SalesDocumentDialog", () => {
   const existing = (o: Partial<SalesDocument> = {}): SalesDocument => ({
     id: "d1", kind: "quote", sellerId: "ana", leadId: "lead1", supportRequestId: null, storageBucket: "sales-documents", storagePath: "ana/d1.pdf",
     fileName: "o.pdf", documentNumber: "4521", clientName: "SERCON", clientDocument: null, totalValue: 250_000, issueDate: "2026-11-03",
-    expectedCloseDate: "2026-11-30", installments: [], notes: null, aiStatus: "done", aiExtracted: null, aiError: null, createdAt: "2026-11-03T12:00:00Z", ...o,
+    expectedCloseDate: "2026-11-30", installments: [], notes: null, aiStatus: "done", aiExtracted: null, aiError: null, createdAt: "2026-11-03T12:00:00Z",
+    reviewStatus: "pending", suggestedSellerId: null, sellerMatch: null, extractedSellerName: null, possibleDuplicateOf: null, fileHash: null, ...o,
   });
 
   it("fills the card value from the quote when the linked card has none", async () => {

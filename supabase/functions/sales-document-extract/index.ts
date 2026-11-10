@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
 
     // Lido com o token de quem chama: a RLS garante que a pessoa pode mexer nele.
     const { data: doc, error: docErr } = await caller.from("sales_documents")
-      .select("id, kind, storage_bucket, storage_path, file_name, document_number, client_name, client_document, total_value, issue_date, installments")
+      .select("id, kind, storage_bucket, storage_path, file_name, document_number, client_name, client_document, total_value, issue_date, installments, extracted_seller_name")
       .eq("id", documentId)
       .maybeSingle();
     if (docErr) return json({ error: docErr.message }, 500);
@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
     }
 
     const patch = fillMissingFields(doc, result.data);
+    if (!doc.extracted_seller_name && result.data.seller_name) patch.extracted_seller_name = result.data.seller_name;
     const { error: saveErr } = await admin.from("sales_documents").update({
       ...patch,
       ai_status: "done",
@@ -88,7 +89,12 @@ Deno.serve(async (req) => {
     }).eq("id", doc.id);
     if (saveErr) return json({ error: saveErr.message }, 500);
 
-    return json({ ok: true, fields: result.data, model: result.model });
+    // DE-PARA: sugere o vendedor (representante no PDF, CNPJ, histórico, carteira)
+    // e marca possível duplicata. O gestor confirma na fila "A confirmar".
+    const { data: match, error: matchErr } = await admin.rpc("suggest_sales_document_seller", { _doc_id: doc.id });
+    if (matchErr) console.error("sales-document-extract: sugestão do vendedor", matchErr);
+
+    return json({ ok: true, fields: result.data, model: result.model, sellerMatch: match ?? null });
   } catch (e) {
     console.error("sales-document-extract", e);
     return json({ error: (e as Error).message || "Erro inesperado" }, 500);

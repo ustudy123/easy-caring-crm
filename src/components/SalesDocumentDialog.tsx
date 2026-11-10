@@ -13,7 +13,7 @@ import { SellerCombobox } from "@/components/SellerCombobox";
 import { useCrm } from "@/contexts/CrmContext";
 import { useRole } from "@/contexts/RoleContext";
 import {
-  KIND_LABEL, kindMismatch, mapSalesDocument, storagePathFor, validateDraft, draftToRow,
+  KIND_LABEL, fileSha256, kindMismatch, mapSalesDocument, storagePathFor, validateDraft, draftToRow,
   type DraftErrors, type SalesDocument, type SalesDocumentDraft, type SalesDocumentKind,
 } from "@/lib/salesDocuments";
 import { formatMoneyInput, parseMoneyInput } from "@/lib/salesGoals";
@@ -122,14 +122,17 @@ export function SalesDocumentDialog({
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) { toast.error("Envie o arquivo em PDF."); return; }
     if (file.size > MAX_BYTES) { toast.error("O PDF passa de 10 MB."); return; }
     if (!sellerId) { toast.error("Escolha o vendedor."); return; }
+    setBusy("upload");
+    const hash = await fileSha256(file);
+    const { data: same } = await supabase.from("sales_documents").select("id").eq("file_hash", hash).limit(1);
+    if (same?.length) { setBusy(null); toast.error("Este PDF já foi enviado antes."); return; }
     const id = crypto.randomUUID();
     const path = storagePathFor(sellerId, id);
-    setBusy("upload");
     const { error: upErr } = await supabase.storage.from("sales-documents").upload(path, file, { contentType: "application/pdf" });
     if (upErr) { setBusy(null); toast.error(`Não foi possível enviar o PDF: ${upErr.message}`); return; }
     const lead = leadId !== NO_LEAD ? leads.find((l) => l.id === leadId) : undefined;
     const { error: insErr } = await supabase.from("sales_documents").insert({
-      id, kind, seller_id: sellerId, lead_id: lead?.id ?? null, storage_path: path, file_name: file.name,
+      id, kind, seller_id: sellerId, lead_id: lead?.id ?? null, storage_path: path, file_name: file.name, file_hash: hash,
     });
     if (insErr) {
       await supabase.storage.from("sales-documents").remove([path]);
@@ -187,7 +190,9 @@ export function SalesDocumentDialog({
     }
     createdHere.current = false;
     setBusy(null);
-    toast.success(`${KIND_LABEL[kind]} salvo.`);
+    toast.success(doc.reviewStatus === "confirmed"
+      ? `${KIND_LABEL[kind]} salvo.`
+      : `${KIND_LABEL[kind]} salvo. Ele passa a contar nas metas quando o gestor confirmar.`);
     onSaved();
     onOpenChange(false);
   };

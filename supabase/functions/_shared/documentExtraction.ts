@@ -18,19 +18,23 @@ export interface ExtractedDocument {
   issue_date: string | null;
   total_value: number | null;
   installments: Installment[];
+  /** vendedor/representante escrito no documento (ex.: "SAR: ALEXANDRE DANTAS") */
+  seller_name: string | null;
 }
 
 const KIND_LABEL: Record<DocumentKind, string> = { quote: "orçamento (proposta comercial)", invoice: "nota fiscal (DANFE)" };
 
 export const EXTRACTION_PROMPT = [
   "Você lê documentos comerciais brasileiros da Taeco Tintas e devolve os dados em JSON.",
-  "A Taeco Tintas é quem emite o documento: NUNCA a informe como cliente.",
-  "O cliente é o destinatário da nota fiscal ou o cliente do orçamento.",
+  "A Taeco Tintas vende e representa a Jotun: o documento pode ser emitido pela Taeco ou pela Jotun Brasil (propostas comerciais de representação).",
+  "NUNCA informe Taeco nem Jotun (nem o CNPJ delas) como cliente.",
+  "O cliente é o destinatário da nota fiscal ou o cliente do orçamento. Na proposta Jotun ele está em \"Empresa - CNPJ de Faturamento\" (nome - CNPJ).",
   "document_type: \"invoice\" para nota fiscal/DANFE, \"quote\" para orçamento ou proposta, \"other\" para qualquer outro documento.",
-  "document_number: número da nota (sem a série) ou do orçamento, só o número.",
+  "document_number: número da nota (sem a série) ou do orçamento/proposta (na proposta Jotun, o campo \"Referência\"). Se for 0 ou vazio, use null.",
   "client_name: razão social ou nome do cliente. client_document: CNPJ ou CPF do cliente como aparece.",
   "issue_date: data de emissão no formato AAAA-MM-DD.",
-  "total_value: na nota, o VALOR TOTAL DA NOTA; no orçamento, o total geral com impostos e frete. Número com ponto decimal, sem R$.",
+  "total_value: na nota, o VALOR TOTAL DA NOTA; no orçamento, o total geral com impostos e frete (na proposta Jotun, \"Valor Total com IPI + Difal-ST + ICMS-ST\"). Número com ponto decimal, sem R$.",
+  "seller_name: nome do vendedor ou representante responsável escrito no documento (na proposta Jotun, o nome ao lado de \"SAR:\" no topo, ex.: ALEXANDRE DANTAS; não use \"Taeco - Rio\"). null se não houver.",
   "installments: parcelas/duplicatas da fatura (número, valor e vencimento AAAA-MM-DD). Lista vazia se não houver.",
   "Use null para o que não estiver no documento. Não invente valores.",
 ].join("\n");
@@ -38,7 +42,7 @@ export const EXTRACTION_PROMPT = [
 export const EXTRACTION_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["document_type", "document_number", "client_name", "client_document", "issue_date", "total_value", "installments"],
+  required: ["document_type", "document_number", "client_name", "client_document", "issue_date", "total_value", "installments", "seller_name"],
   properties: {
     document_type: { type: "string", enum: ["quote", "invoice", "other"] },
     document_number: { type: ["string", "null"] },
@@ -46,6 +50,7 @@ export const EXTRACTION_SCHEMA = {
     client_document: { type: ["string", "null"] },
     issue_date: { type: ["string", "null"], description: "AAAA-MM-DD" },
     total_value: { type: ["number", "null"] },
+    seller_name: { type: ["string", "null"] },
     installments: {
       type: "array",
       items: {
@@ -99,11 +104,18 @@ const clean = (v: unknown, max = 200): string | null => {
   return s ? s.slice(0, max) : null;
 };
 
+/** Taeco e Jotun são quem vende/emite, nunca o cliente (raiz do CNPJ da Jotun Brasil). */
+const SUPPLIER_NAME = /taeco|jotun/i;
+const SUPPLIER_DOCS = ["02907585"];
+
 /** Valida e normaliza o JSON da IA; nunca confia no formato. */
 export function normalizeExtraction(raw: unknown): ExtractedDocument {
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const type = o.document_type === "quote" || o.document_type === "invoice" ? o.document_type : "other";
   const clientName = clean(o.client_name);
+  const clientDocument = clean(o.client_document, 30);
+  const number = clean(o.document_number, 60);
+  const sellerName = clean(o.seller_name, 120);
   const installments = (Array.isArray(o.installments) ? o.installments : [])
     .map((it) => {
       const r = (it && typeof it === "object" ? it : {}) as Record<string, unknown>;
@@ -115,12 +127,13 @@ export function normalizeExtraction(raw: unknown): ExtractedDocument {
     .slice(0, 60);
   return {
     document_type: type,
-    document_number: clean(o.document_number, 60),
-    client_name: clientName && /taeco/i.test(clientName) ? null : clientName,
-    client_document: clean(o.client_document, 30),
+    document_number: number && /^0+$/.test(number) ? null : number,
+    client_name: clientName && SUPPLIER_NAME.test(clientName) ? null : clientName,
+    client_document: clientDocument && SUPPLIER_DOCS.some((d) => clientDocument.replace(/\D/g, "").startsWith(d)) ? null : clientDocument,
     issue_date: toIsoDate(o.issue_date),
     total_value: toAmount(o.total_value),
     installments,
+    seller_name: sellerName && !SUPPLIER_NAME.test(sellerName) ? sellerName : null,
   };
 }
 

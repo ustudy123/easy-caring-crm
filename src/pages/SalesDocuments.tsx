@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Download, Eye, FileText, Pencil, Receipt, Trash2, Upload } from "lucide-react";
+import { Download, Eye, FileStack, FileText, Pencil, Receipt, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -7,10 +7,12 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { SellerCombobox } from "@/components/SellerCombobox";
 import { SalesGoalsReport } from "@/components/SalesGoalsReport";
 import { SalesDocumentDialog } from "@/components/SalesDocumentDialog";
+import { BulkImportDialog } from "@/components/BulkImportDialog";
+import { SalesReviewQueue } from "@/components/SalesReviewQueue";
 import { ProtectedView, useCanExport } from "@/components/ProtectedView";
 import { supabase } from "@/integrations/supabase/client";
 import { useRole } from "@/contexts/RoleContext";
-import { useSalesDocuments, useSalesTeamSellers } from "@/hooks/useSalesGoals";
+import { usePendingDocuments, useSalesDocuments, useSalesTeamSellers } from "@/hooks/useSalesGoals";
 import { exportToCsv } from "@/lib/exportCsv";
 import { cn } from "@/lib/utils";
 import { brl, monthLabel, monthRange, monthStart, monthTitle } from "@/lib/salesGoals";
@@ -29,11 +31,17 @@ export default function SalesDocuments() {
   const canExport = useCanExport();
   const showGoals = isAdmin || isGerente || isVendedor;
   const canFilter = isAdmin || isGerente || isSuporte;
+  // Importa em lote e acompanha a fila: admin, gerente e suporte. Confirma: admin e gerente.
+  const canImport = isAdmin || isGerente || isSuporte;
+  const canConfirm = isAdmin || isGerente;
 
   const [month, setMonth] = useState(() => monthStart());
   const range = useMemo(() => monthRange(month), [month]);
-  const { documents, loading, error, reload } = useSalesDocuments(range, sellers.length > 0);
-  const [tab, setTab] = useState<SalesDocumentKind>("quote");
+  const { documents, loading, error, reload: reloadMonth } = useSalesDocuments(range, sellers.length > 0);
+  const { documents: pending, reload: reloadPending } = usePendingDocuments(canImport);
+  const reload = () => { reloadMonth(); reloadPending(); };
+  const [tab, setTab] = useState<SalesDocumentKind | "review">("quote");
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [sellerFilter, setSellerFilter] = useState("all");
   const [onlyMissingClose, setOnlyMissingClose] = useState(false);
   const [dialog, setDialog] = useState<{ kind: SalesDocumentKind; doc?: SalesDocument } | null>(null);
@@ -47,7 +55,7 @@ export default function SalesDocuments() {
   const visible = scoped
     .filter((d) => d.kind === tab)
     .filter((d) => tab !== "quote" || !onlyMissingClose || !d.expectedCloseDate);
-  const sellerName = (id: string) => sellers.find((s) => s.id === id)?.name ?? "";
+  const sellerName = (id: string | null) => (id && sellers.find((s) => s.id === id)?.name) || "sem vendedor";
   const goalSellers = sellerFilter === "all" ? sellers : sellers.filter((s) => s.id === sellerFilter);
 
   const openPdf = async (d: SalesDocument) => {
@@ -96,14 +104,14 @@ export default function SalesDocuments() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex gap-1 rounded-full bg-muted p-1">
-                  {(["quote", "invoice"] as const).map((k) => (
+                  {(["quote", "invoice", ...(canImport ? ["review" as const] : [])] as const).map((k) => (
                     <button
                       key={k}
                       onClick={() => { setTab(k); setOnlyMissingClose(false); }}
                       className={cn("px-3 py-1 text-xs font-semibold rounded-full transition-colors",
                         tab === k ? "bg-brand-500 text-white" : "text-muted-foreground hover:text-foreground")}
                     >
-                      {k === "quote" ? "Orçamentos" : "Notas fiscais"} ({scoped.filter((d) => d.kind === k).length})
+                      {k === "quote" ? "Orçamentos" : k === "invoice" ? "Notas fiscais" : "A confirmar"} ({k === "review" ? pending.length : scoped.filter((d) => d.kind === k).length})
                     </button>
                   ))}
                 </div>
@@ -125,6 +133,11 @@ export default function SalesDocuments() {
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setDialog({ kind: "invoice" })}>
                   <Receipt className="h-3.5 w-3.5" /> Enviar nota fiscal
                 </Button>
+                {canImport && (
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setBulkOpen(true)}>
+                    <FileStack className="h-3.5 w-3.5" /> Importar em lote
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -143,16 +156,27 @@ export default function SalesDocuments() {
             <ProtectedView className="rounded-2xl border border-border/60 bg-card overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
                 <p className="text-sm font-bold flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-brand-500" /> {tab === "quote" ? "Orçamentos" : "Notas fiscais"} de {monthLabel(month)}
+                  <FileText className="h-4 w-4 text-brand-500" />
+                  {tab === "review" ? "Aguardando confirmação (todos os meses)" : `${tab === "quote" ? "Orçamentos" : "Notas fiscais"} de ${monthLabel(month)}`}
                 </p>
-                {canExport && (
+                {canExport && tab !== "review" && (
                   <button onClick={handleExport} disabled={visible.length === 0}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 px-3 py-1.5 text-xs font-semibold hover:bg-muted disabled:opacity-40">
                     <Download className="h-3.5 w-3.5" /> Exportar
                   </button>
                 )}
               </div>
-              {loading ? (
+              {tab === "review" ? (
+                <SalesReviewQueue
+                  documents={pending}
+                  sellers={sellers}
+                  canConfirm={canConfirm}
+                  onChanged={reload}
+                  onEdit={(d) => setDialog({ kind: d.kind, doc: d })}
+                  onOpenPdf={openPdf}
+                  onDelete={setDeleting}
+                />
+              ) : loading ? (
                 <p className="text-sm text-muted-foreground p-6 text-center">Carregando…</p>
               ) : visible.length === 0 ? (
                 <p className="text-sm text-muted-foreground p-6 text-center">Nenhum documento neste mês.</p>
@@ -178,6 +202,7 @@ export default function SalesDocuments() {
                               {d.installments.length ? `${d.installments.length} parcela${d.installments.length > 1 ? "s" : ""}` : "À vista"}
                             </span>
                           )}
+                          {d.reviewStatus === "pending" && <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">Aguardando confirmação</span>}
                           {!d.issueDate && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">Falta conferir</span>}
                           {wasEditedByHand(d) && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Valor editado</span>}
                           {d.supportRequestId && <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Do suporte</span>}
@@ -197,6 +222,7 @@ export default function SalesDocuments() {
         )}
       </div>
 
+      <BulkImportDialog open={bulkOpen} onOpenChange={setBulkOpen} onDone={() => { reload(); setTab("review"); }} />
       {dialog && (
         <SalesDocumentDialog
           open={!!dialog}

@@ -32,11 +32,20 @@ describe("normalizeExtraction", () => {
       installments: [{ number: 1, value: 2150.25, due_date: "2026-12-04" }, { number: 2, value: "x" }, "lixo"],
     })).toEqual({
       document_type: "invoice", document_number: "001.234", client_name: null, client_document: "12.345.678/0001-90",
-      issue_date: "2026-11-04", total_value: 4300.5, installments: [{ number: 1, value: 2150.25, due_date: "2026-12-04" }],
+      issue_date: "2026-11-04", total_value: 4300.5, installments: [{ number: 1, value: 2150.25, due_date: "2026-12-04" }], seller_name: null,
     });
     expect(normalizeExtraction("nada")).toEqual({
-      document_type: "other", document_number: null, client_name: null, client_document: null, issue_date: null, total_value: null, installments: [],
+      document_type: "other", document_number: null, client_name: null, client_document: null, issue_date: null, total_value: null, installments: [], seller_name: null,
     });
+  });
+
+  it("lê a proposta Jotun: referência 0 vira sem número, Jotun nunca é cliente e o SAR é o vendedor", () => {
+    expect(normalizeExtraction({
+      document_type: "quote", document_number: "0", client_name: "ENAVAL ENGENHARIA NAVAL E OFFSHORE LTDA", client_document: "02.445.332/0001-05",
+      issue_date: "20/10/2026", total_value: 8596.62, installments: [], seller_name: "ALEXANDRE DANTAS",
+    })).toMatchObject({ document_number: null, client_name: "ENAVAL ENGENHARIA NAVAL E OFFSHORE LTDA", issue_date: "2026-10-20", total_value: 8596.62, seller_name: "ALEXANDRE DANTAS" });
+    expect(normalizeExtraction({ client_name: "Jotun Brasil Imp., Exp. e Ind. de Tintas Ltda", client_document: "02.907.585/0004-04", seller_name: "Taeco - Rio" }))
+      .toMatchObject({ client_name: null, client_document: null, seller_name: null });
   });
 
   it("não sobrescreve o que a pessoa já preencheu", () => {
@@ -51,7 +60,7 @@ describe("normalizeExtraction", () => {
 describe("extractDocument", () => {
   const ok = (content: unknown) => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }] }));
   const err = (status: number, message: string) => new Response(JSON.stringify({ error: { message } }), { status });
-  const answer = { document_type: "quote", document_number: "123", client_name: "SERCON", client_document: null, issue_date: "2026-10-28", total_value: 1000000, installments: [] };
+  const answer = { document_type: "quote", document_number: "123", client_name: "SERCON", client_document: null, issue_date: "2026-10-28", total_value: 1000000, installments: [], seller_name: "ALEXANDRE DANTAS" };
   const args = { apiKey: "sk-test", models: ["gpt-4o", "gpt-4o-mini"], kind: "quote" as const, base64: "JVBERi0=", fileName: "orc.pdf" };
 
   it("manda o PDF como arquivo e pede a saída estruturada", async () => {
