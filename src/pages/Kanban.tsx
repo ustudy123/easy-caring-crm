@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SellerCombobox } from "@/components/SellerCombobox";
 import { LeadCardSummary } from "@/components/LeadCardSummary";
 import { KanbanLeadCard } from "@/components/KanbanLeadCard";
+import { STAGE_COLORS, formatStageTotal } from "@/lib/stageColors";
 import { useExternalStores } from "@/hooks/useExternalStores";
 import { isExternalLead } from "@/lib/externalTeam";
 import { LeadQualificationDialog } from "@/components/LeadQualificationDialog";
@@ -63,32 +64,6 @@ const PRICING_STATUS_LABEL: Record<string, Record<string, string>> = {
     em_analise: "Negociação especial em análise",
     concluido:  "Negociação especial concluída",
   },
-};
-
-const stageBgMap: Record<KanbanStage, string> = {
-  abordagem: "bg-kanban-approach/8 text-kanban-approach",
-  sondagem: "bg-kanban-probing/8 text-kanban-probing",
-  recomendacao_tecnica: "bg-kanban-recommendation/8 text-kanban-recommendation",
-  demonstracao_valor: "bg-kanban-demonstration/8 text-kanban-demonstration",
-  contorno_objecoes: "bg-kanban-objections/8 text-kanban-objections",
-  cross_sell: "bg-kanban-crosssell/8 text-kanban-crosssell",
-  precificacao_especial: "bg-kanban-pricing/8 text-kanban-pricing",
-  fechamento: "bg-kanban-closing/8 text-kanban-closing",
-  pos_venda: "bg-kanban-postsale/8 text-kanban-postsale",
-  perdido: "bg-red-500/8 text-red-500",
-};
-
-const stageDotMap: Record<KanbanStage, string> = {
-  abordagem: "bg-kanban-approach",
-  sondagem: "bg-kanban-probing",
-  recomendacao_tecnica: "bg-kanban-recommendation",
-  demonstracao_valor: "bg-kanban-demonstration",
-  contorno_objecoes: "bg-kanban-objections",
-  cross_sell: "bg-kanban-crosssell",
-  precificacao_especial: "bg-kanban-pricing",
-  fechamento: "bg-kanban-closing",
-  pos_venda: "bg-kanban-postsale",
-  perdido: "bg-red-500",
 };
 
 type CardDensity = "compact" | "detailed";
@@ -806,8 +781,9 @@ export default function Kanban() {
                 const el = document.getElementById(`stage-${stage.key}`);
                 el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
               }}
-              className="shrink-0 px-3 py-1.5 rounded-full bg-card border border-border/40 text-[10px] font-bold text-muted-foreground active:bg-primary active:text-primary-foreground transition-colors"
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-semibold transition-opacity active:opacity-70 ${STAGE_COLORS[stage.key].chip}`}
             >
+              <span className={`h-1.5 w-1.5 rounded-full ${STAGE_COLORS[stage.key].solid}`} />
               {stage.label}
             </button>
           ))}
@@ -849,23 +825,24 @@ export default function Kanban() {
                       z-20: os cards e o selo de urgência usam z-10, e com o mesmo
                       z-index quem vem depois no DOM (os cards) ficaria por cima. */}
                   <div className="sticky top-0 z-20 bg-card rounded-t-xl">
-                    <div className="rounded-t-xl border border-border bg-card px-3.5 py-3">
+                    <div className={`relative overflow-hidden rounded-t-xl border border-border px-3.5 pt-3.5 pb-3 ${STAGE_COLORS[stage.key].soft}`}>
+                      <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] ${STAGE_COLORS[stage.key].solid}`} />
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className={`h-2 w-2 shrink-0 rounded-full ${stageDotMap[stage.key]}`} />
-                          <span className="text-[13px] font-semibold text-foreground truncate">{stage.label}</span>
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${STAGE_COLORS[stage.key].solid}`} />
+                          <span className={`text-[13px] font-semibold truncate ${STAGE_COLORS[stage.key].text}`}>{stage.label}</span>
                           <span className="text-[12px] font-medium text-muted-foreground tabular-nums" title="Leads na etapa">{stageLeads.length}</span>
                         </div>
                         {alertCount > 0 && (
                           <span
-                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-1.5 py-0.5 text-[11px] font-semibold text-red-700 tabular-nums"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-1.5 py-0.5 text-[11px] font-semibold text-red-700 tabular-nums ring-1 ring-red-200"
                             title={`${alertCount} em alerta de atendimento`}
                           >
                             <span className="h-1.5 w-1.5 rounded-full bg-red-600" />{alertCount}
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-[12px] font-semibold tabular-nums text-foreground/70">R$ {totalValue.toLocaleString("pt-BR")}</p>
+                      <p className="mt-1 text-[12px] font-semibold tabular-nums text-foreground/70">{formatStageTotal(totalValue)}</p>
                     </div>
                   </div>
 
@@ -953,7 +930,7 @@ export default function Kanban() {
                         ))}
                         {stageLeads.length === 0 && (
                           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground/40">
-                            <div className={`h-10 w-10 rounded-full ${stageBgMap[stage.key]} flex items-center justify-center mb-2 opacity-40`}>
+                            <div className={`h-10 w-10 rounded-full ${STAGE_COLORS[stage.key].chip} border flex items-center justify-center mb-2 opacity-60`}>
                               <Plus className="h-4 w-4" />
                             </div>
                             <p className="text-[11px]">Sem leads</p>
