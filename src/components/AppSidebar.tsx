@@ -16,6 +16,7 @@ import {
   ClipboardList,
   CalendarOff,
   Receipt,
+  MessageSquareText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -122,6 +123,13 @@ const allToolsNav: NavItem[] = [
     icon: ClipboardList,
     badgeKey: null,
     roles: ["vendedor"],
+  },
+  {
+    title: "Feedback",
+    url: "/feedback",
+    icon: MessageSquareText,
+    badgeKey: null,
+    roles: ["admin", "gerente", "vendedor", "suporte"],
   },
   {
     title: "Orçamentos e Notas",

@@ -12,6 +12,10 @@ import { isValidEmail } from "@/lib/masks";
 import { CLIENT_TYPES, type KanbanStage, type Lead } from "@/types/crm";
 import { LeadCardFields } from "@/components/forms/LeadCardFields";
 import { fromLocalInput, toLocalDateInput } from "@/lib/externalTeam";
+import { AudioRecorder } from "@/components/media/AudioRecorder";
+import { StoredAudio, audioExtension } from "@/components/media/StoredAudio";
+import { postSaleAudioPath } from "@/lib/feedback";
+import { supabase } from "@/integrations/supabase/client";
 import {
   APPLICATION_METHODS, APPLICATION_PLACES, BRANDS, LOW_RATING, LOW_RATING_MIN_CHARS, MONTHLY_VOLUMES, OBJECTION_GROUPS,
   OTHER_BRAND, OTHER_OBJECTION, OTHER_PAINT, OTHER_PLACE, OTHER_PROBLEM, PAINT_TYPES, PURCHASE_DECISIONS,
@@ -128,6 +132,9 @@ export function LeadQualificationDialog({
     setOpenItems(pending ? [pending.key] : []);
   }, [lead, targetStage]);
 
+  const [audioBusy, setAudioBusy] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+
   if (!draft) return null;
   const x: LeadQualification = draft.qualification ?? {};
   const setQ = (patch: Partial<LeadQualification>) => setDraft((d) => d && ({ ...d, qualification: { ...(d.qualification ?? {}), ...patch } }));
@@ -136,7 +143,20 @@ export function LeadQualificationDialog({
   const emailError = draft.clientEmail && !isValidEmail(draft.clientEmail) ? "E-mail inválido" : null;
   const notesError = postSaleNotesError(x);
   const lowRating = [x.deliveryRating, x.productRating].some((r) => !!r && r <= LOW_RATING);
-  const canSave = !emailError && !notesError;
+  const canSave = !emailError && !notesError && !audioBusy;
+
+  // Áudio do pós-venda (alternativa ao texto na nota baixa): sobe na pasta do vendedor do card.
+  const onPostSaleAudio = async (blob: Blob | null) => {
+    setAudioError(null);
+    if (!blob) { setQ({ postSaleAudioPath: undefined }); return; }
+    if (!draft.assignedTo) { setAudioError("O card precisa ter vendedor para guardar o áudio."); return; }
+    setAudioBusy(true);
+    const path = postSaleAudioPath(draft.assignedTo, draft.id, audioExtension(blob.type));
+    const { error } = await supabase.storage.from("seller-files").upload(path, blob, { contentType: blob.type || "audio/webm" });
+    setAudioBusy(false);
+    if (error) { setAudioError(`Não foi possível guardar o áudio: ${error.message}`); return; }
+    setQ({ postSaleAudioPath: path });
+  };
 
   const save = (moveTo?: KanbanStage) => {
     if (!canSave) return;
@@ -278,8 +298,18 @@ export function LeadQualificationDialog({
           <Question label={lowRating ? `Explique o ocorrido (obrigatório com nota ${LOW_RATING} ou menos)` : "Observação"}>
             <Textarea aria-label="Observação do pós-venda" rows={3} value={x.postSaleNotes ?? ""} onChange={(e) => setQ({ postSaleNotes: e.target.value })} />
             <p className={cn("text-[11px]", notesError ? "text-destructive" : "text-muted-foreground")}>
-              {(x.postSaleNotes ?? "").trim().length}/{LOW_RATING_MIN_CHARS} caracteres{notesError ? ` · ${notesError}` : ""}
+              {x.postSaleAudioPath ? "Áudio gravado" : `${(x.postSaleNotes ?? "").trim().length}/${LOW_RATING_MIN_CHARS} caracteres`}{notesError ? ` · ${notesError}` : ""}
             </p>
+            {x.postSaleAudioPath ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <StoredAudio path={x.postSaleAudioPath} label="Áudio do pós-venda" />
+                <Button type="button" size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setQ({ postSaleAudioPath: undefined })}>Remover áudio</Button>
+              </div>
+            ) : (
+              <AudioRecorder label="Ou grave um áudio" onChange={onPostSaleAudio} disabled={audioBusy} />
+            )}
+            {audioBusy && <p className="text-xs text-muted-foreground">Guardando o áudio…</p>}
+            {audioError && <p role="alert" className="text-xs text-destructive">{audioError}</p>}
           </Question>
         )}
       </div>

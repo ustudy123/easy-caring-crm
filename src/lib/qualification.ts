@@ -38,6 +38,8 @@ export interface LeadQualification {
   deliveryRating?: number;
   productRating?: number;
   postSaleNotes?: string;
+  /** áudio explicando a nota baixa (Storage seller-files, pasta posvenda/), alternativa ao texto */
+  postSaleAudioPath?: string;
 }
 
 export const OTHER_PAINT = "Outras especificações ou sistemas de pintura";
@@ -212,7 +214,7 @@ export const QUALIFICATION_GROUPS: QualificationGroup[] = [
         !x.postSaleVisitAt && "Data da visita ao cliente",
         !x.deliveryRating && "Avaliação da entrega",
         !x.productRating && "Avaliação do sistema de pintura/produtos",
-        postSaleNotesError(x) && "Explicação da nota (mínimo de 20 caracteres)",
+        postSaleNotesError(x) && "Explicação da nota (mínimo de 20 caracteres ou um áudio)",
       ].filter(Boolean) as string[];
     },
   },
@@ -223,8 +225,8 @@ const stageIndex = (s: KanbanStage) => KANBAN_STAGES.findIndex((k) => k.key === 
 /** Nota 3 ou menos exige explicação com ao menos 20 caracteres. */
 export function postSaleNotesError(x: LeadQualification): string | null {
   const low = [x.deliveryRating, x.productRating].some((r) => !!r && r <= LOW_RATING);
-  if (low && (x.postSaleNotes ?? "").trim().length < LOW_RATING_MIN_CHARS) {
-    return `Com nota ${LOW_RATING} ou menos, explique o ocorrido (mínimo de ${LOW_RATING_MIN_CHARS} caracteres).`;
+  if (low && !x.postSaleAudioPath && (x.postSaleNotes ?? "").trim().length < LOW_RATING_MIN_CHARS) {
+    return `Com nota ${LOW_RATING} ou menos, explique o ocorrido (mínimo de ${LOW_RATING_MIN_CHARS} caracteres) ou grave um áudio.`;
   }
   return null;
 }

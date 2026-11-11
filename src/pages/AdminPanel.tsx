@@ -6,7 +6,7 @@ import { AlertTimesTab } from "@/components/AlertTimesTab";
 import { VisitGoalsTab } from "@/components/VisitGoalsTab";
 import { AppLayout } from "@/components/AppLayout";
 import { useRole } from "@/contexts/RoleContext";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,7 @@ import { SellerCombobox } from "@/components/SellerCombobox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3, Phone, Info, KeyRound, BellRing, Target } from "lucide-react";
+  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3, Phone, Info, KeyRound, BellRing, Target, MessageSquareText } from "lucide-react";
  function CitelIntegrationTab() {
   const [syncing, setSyncing] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -1085,6 +1085,7 @@ function StoresTab() {
 }
 
 function UsersTab() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [stores, setStores] = useState<StoreRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1356,6 +1357,11 @@ function UsersTab() {
                     <Button variant="outline" size="sm" onClick={() => openEdit(u)}>
                       Atribuir
                     </Button>
+                    {u.seller_id && (
+                      <Button variant="ghost" size="icon" onClick={() => navigate(`/feedback?vendedor=${u.seller_id}`)} title="Feedbacks do operador">
+                        <MessageSquareText className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" onClick={() => setResetPwUser(u)} title="Redefinir senha">
                       <KeyRound className="h-4 w-4 text-muted-foreground" />
                     </Button>

@@ -1334,6 +1334,56 @@ export type Database = {
           },
         ]
       }
+      seller_feedbacks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          file_name: string | null
+          id: string
+          period_label: string
+          responded_at: string | null
+          response_audio_path: string | null
+          response_text: string | null
+          seller_id: string
+          storage_path: string
+          viewed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          id?: string
+          period_label: string
+          responded_at?: string | null
+          response_audio_path?: string | null
+          response_text?: string | null
+          seller_id: string
+          storage_path: string
+          viewed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          id?: string
+          period_label?: string
+          responded_at?: string | null
+          response_audio_path?: string | null
+          response_text?: string | null
+          seller_id?: string
+          storage_path?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_feedbacks_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seller_goals: {
         Row: {
           quarterly_new_clients: number | null
@@ -2057,6 +2107,7 @@ export type Database = {
         Returns: number
       }
       can_confirm_sales_document: { Args: { _seller_id: string }; Returns: boolean }
+      can_manage_feedback: { Args: { _seller_id: string }; Returns: boolean }
       can_manage_sales_document_path: { Args: { _name: string }; Returns: boolean }
       can_manage_sales_documents: { Args: { _seller_id: string }; Returns: boolean }
       can_view_seller: { Args: { _seller_id: string }; Returns: boolean }
