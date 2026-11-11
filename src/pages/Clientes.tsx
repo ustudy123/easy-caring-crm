@@ -17,6 +17,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { ClientTimeline } from "@/components/ClientTimeline";
+import { ClientInsightsPanel } from "@/components/ClientInsightsPanel";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { exportToCsv } from "@/lib/exportCsv";
 import { useRole } from "@/contexts/RoleContext";
 import { SellerCombobox } from "@/components/SellerCombobox";
@@ -450,7 +452,7 @@ export default function Clientes() {
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedClient} onOpenChange={(open) => !open && setSelectedClient(null)}>
-        <DialogContent className="max-w-lg border-border/40 bg-card/95 backdrop-blur-xl">
+        <DialogContent className="max-w-2xl border-border/40 bg-card/95 backdrop-blur-xl">
           {selectedClient && (
             <>
               <DialogHeader>
@@ -505,7 +507,15 @@ export default function Clientes() {
                     ))}
                   </div>
                 )}
-                <ClientTimeline clientId={selectedClient.id} />
+                <ClientInsightsPanel client={selectedClient} />
+                <Collapsible>
+                  <CollapsibleTrigger className="text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center gap-1">
+                    <ChevronRight className="h-3.5 w-3.5" /> Atividades registradas
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-2">
+                    <ClientTimeline clientId={selectedClient.id} />
+                  </CollapsibleContent>
+                </Collapsible>
                 <div className="flex justify-between pt-3 border-t border-border/40">
                   <Button
                     variant="destructive"

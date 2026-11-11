@@ -2070,6 +2070,14 @@ export type Database = {
         }[]
       }
       get_admin_display_name: { Args: never; Returns: string }
+      get_client_invoices: {
+        Args: { _client_id: string }
+        Returns: Database["public"]["Tables"]["sales_documents"]["Row"][]
+      }
+      get_client_leads: {
+        Args: { _client_id: string }
+        Returns: Database["public"]["Tables"]["leads"]["Row"][]
+      }
       get_closed_sales: {
         Args: { _from: string; _to: string }
         Returns: Database["public"]["Tables"]["leads"]["Row"][]
