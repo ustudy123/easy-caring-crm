@@ -21,7 +21,7 @@ describe("LeadCardSummary", () => {
 
   it("shows the scheduled next action and the last contact", () => {
     render(<LeadCardSummary lead={{ ...base, lastContactAt: "2026-11-03T15:00:00Z", nextAction: "visita", nextActionAt: "2026-11-06T17:00:00Z" }} />);
-    expect(screen.getByText(/Último contato: 03\/11/)).toBeInTheDocument();
+    expect(screen.getByText(/Contato em 03\/11/)).toBeInTheDocument();
     expect(screen.getByText(/^Visita presencial · 06\/11/)).toBeInTheDocument();
   });
 

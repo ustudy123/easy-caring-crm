@@ -44,7 +44,7 @@ export function LeadCardSummary({ lead, onOpenQualification }: { lead: Lead; onO
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-muted-foreground min-w-0">
           <MessageSquareText className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">{lead.lastContactAt ? `Último contato: ${fmtDate(lead.lastContactAt)}` : "Sem contato"}</span>
+          <span className="truncate" title="Último contato pelo WhatsApp do CRM">{lead.lastContactAt ? `Contato em ${fmtDate(lead.lastContactAt)}` : "Sem contato"}</span>
         </span>
         {onOpenQualification && (
           <button

@@ -42,6 +42,7 @@ export function createSupabaseMock(state: SupabaseMockState) {
       neq: (c: string, v: unknown) => { filters.push((r) => r[c] !== v); described.push(`${c}!=${String(v)}`); return builder; },
       in: (c: string, vs: unknown[]) => { filters.push((r) => vs.includes(r[c])); described.push(`${c} in ${vs.join(",")}`); return builder; },
       or: () => builder,
+      not: () => builder,
       order: () => builder,
       limit: () => builder,
       maybeSingle: () => { single = true; return builder; },

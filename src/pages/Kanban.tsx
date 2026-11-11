@@ -4,16 +4,13 @@ import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
  import { useCrm } from "@/contexts/CrmContext";
  import { useToast } from "@/hooks/use-toast";
-import { KANBAN_STAGES, Lead, KanbanStage, CLIENT_TYPE_EQUIPE_INTERNA, LOST_REASONS, VENDA_CONCLUIDA, REAGENDAR } from "@/types/crm";
+import { KANBAN_STAGES, Lead, KanbanStage, CLIENT_TYPE_EQUIPE_INTERNA, LOST_REASONS, VENDA_CONCLUIDA, REAGENDAR, LEAD_SOURCES } from "@/types/crm";
 import { onlyDigitsToValue, formatBRL } from "@/lib/masks";
 import { ProjectsDialog } from "@/components/ProjectsDialog";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
- import { 
-    Phone, Mail, Tag, DollarSign, Plus, Search, Filter, Pencil, Clock, 
-    AlertTriangle, X, FileText, GripVertical, CheckCircle2, Briefcase, 
-    MapPin, Package, Forward, Zap, Loader2, ChevronLeft, ChevronRight, UserCircle, XCircle, Download, LayoutGrid, List, MessageCircle, FolderKanban, CalendarClock
-  } from "lucide-react";
- import { getDisplayClientName, isGenericName } from "@/lib/clientUtils";
+import {
+  Plus, Search, Filter, Pencil, X, FileText, Forward, Loader2, XCircle, Download, LayoutGrid, List, MessageCircle, CalendarClock, Rows2, Rows3,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +24,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SellerCombobox } from "@/components/SellerCombobox";
 import { LeadCardSummary } from "@/components/LeadCardSummary";
+import { KanbanLeadCard } from "@/components/KanbanLeadCard";
 import { useExternalStores } from "@/hooks/useExternalStores";
 import { isExternalLead } from "@/lib/externalTeam";
 import { LeadQualificationDialog } from "@/components/LeadQualificationDialog";
@@ -42,19 +40,6 @@ import { InstanceBadge } from "@/components/InstanceBadge";
 import { useInstances, useClientInstanceMap } from "@/hooks/useInstances";
 import { exportToCsv } from "@/lib/exportCsv";
 import { transferAttendance } from "@/lib/transferAttendance";
-
-const stageColorMap: Record<KanbanStage, string> = {
-  abordagem: "border-l-kanban-approach",
-  sondagem: "border-l-kanban-probing",
-  recomendacao_tecnica: "border-l-kanban-recommendation",
-  demonstracao_valor: "border-l-kanban-demonstration",
-  contorno_objecoes: "border-l-kanban-objections",
-  cross_sell: "border-l-kanban-crosssell",
-  precificacao_especial: "border-l-kanban-pricing",
-  fechamento: "border-l-kanban-closing",
-  pos_venda: "border-l-kanban-postsale",
-  perdido: "border-l-red-500",
-};
 
 // Cores distintas por status: âmbar = esperando, azul = sendo trabalhado,
 // verde = pronto. O laranja da marca era próximo demais do âmbar e os dois
@@ -106,18 +91,11 @@ const stageDotMap: Record<KanbanStage, string> = {
   perdido: "bg-red-500",
 };
 
-const stageHeaderGradient: Record<KanbanStage, string> = {
-  abordagem: "from-kanban-approach/15 to-kanban-approach/5",
-  sondagem: "from-kanban-probing/15 to-kanban-probing/5",
-  recomendacao_tecnica: "from-kanban-recommendation/15 to-kanban-recommendation/5",
-  demonstracao_valor: "from-kanban-demonstration/15 to-kanban-demonstration/5",
-  contorno_objecoes: "from-kanban-objections/15 to-kanban-objections/5",
-  cross_sell: "from-kanban-crosssell/15 to-kanban-crosssell/5",
-  precificacao_especial: "from-kanban-pricing/15 to-kanban-pricing/5",
-  fechamento: "from-kanban-closing/15 to-kanban-closing/5",
-  pos_venda: "from-kanban-postsale/15 to-kanban-postsale/5",
-  perdido: "from-red-500/15 to-red-500/5",
-};
+type CardDensity = "compact" | "detailed";
+const CARD_DENSITY_KEY = "kanban.cardDensity";
+function readCardDensity(): CardDensity {
+  try { return localStorage.getItem(CARD_DENSITY_KEY) === "detailed" ? "detailed" : "compact"; } catch { return "compact"; }
+}
 
 export default function Kanban() {
   const navigate = useNavigate();
@@ -226,6 +204,12 @@ export default function Kanban() {
 
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  // Compacto/Detalhado: preferência de cada pessoa neste navegador.
+  const [cardDensity, setCardDensity] = useState<CardDensity>(readCardDensity);
+  const changeCardDensity = (d: CardDensity) => {
+    setCardDensity(d);
+    try { localStorage.setItem(CARD_DENSITY_KEY, d); } catch { /* sem armazenamento: vale só nesta sessão */ }
+  };
   const [showNewLead, setShowNewLead] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [transferringLead, setTransferringLead] = useState<Lead | null>(null);
@@ -766,7 +750,7 @@ export default function Kanban() {
                 )}
               </PopoverContent>
             </Popover>
-            <div className="inline-flex rounded-xl border border-border/60 bg-card p-0.5 shrink-0">
+            <div className="inline-flex rounded-xl border border-border bg-card p-0.5 shrink-0">
               <button
                 onClick={() => setViewMode("kanban")}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${viewMode === "kanban" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
@@ -780,6 +764,28 @@ export default function Kanban() {
                 <List className="h-3.5 w-3.5" /> Lista
               </button>
             </div>
+            {viewMode === "kanban" && (
+              <div className="inline-flex rounded-xl border border-border bg-card p-0.5 shrink-0" role="group" aria-label="Densidade dos cards">
+                <button
+                  type="button"
+                  aria-pressed={cardDensity === "compact"}
+                  onClick={() => changeCardDensity("compact")}
+                  title="Cards enxutos: nome, empresa, valor, responsável e urgência"
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${cardDensity === "compact" ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <Rows3 className="h-3.5 w-3.5" /> Compacto
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={cardDensity === "detailed"}
+                  onClick={() => changeCardDensity("detailed")}
+                  title="Cards com telefone, e-mail, tipo, loja, produtos e origem"
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${cardDensity === "detailed" ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <Rows2 className="h-3.5 w-3.5" /> Detalhado
+                </button>
+              </div>
+            )}
             <Button size="sm" variant="outline" className="rounded-xl border-kanban-objections/40 text-kanban-objections hover:bg-kanban-objections/10"
               onClick={() => navigate("/suporte-orcamento")}>
               <FileText className="h-3.5 w-3.5 mr-1" /> Suporte Orçamento
@@ -842,26 +848,25 @@ export default function Kanban() {
                       os cards apareceriam através deles ao passar por baixo.
                       z-20: os cards e o selo de urgência usam z-10, e com o mesmo
                       z-index quem vem depois no DOM (os cards) ficaria por cima. */}
-                  <div className="sticky top-0 z-20 bg-card rounded-t-[12px]">
-                  {/* Column header */}
-                  <div className={`flex items-center justify-between rounded-t-[12px] p-3 sm:p-3.5 bg-gradient-to-b ${stageHeaderGradient[stage.key]} border-x border-t border-b border-border/40 border-b-kanban-${stage.key === 'abordagem' ? 'approach' : stage.key === 'sondagem' ? 'probing' : stage.key === 'recomendacao_tecnica' ? 'recommendation' : stage.key === 'demonstracao_valor' ? 'demonstration' : stage.key === 'contorno_objecoes' ? 'objections' : stage.key === 'cross_sell' ? 'crosssell' : stage.key === 'fechamento' ? 'closing' : 'postsale'}/20`}>
-                    <div className="flex items-center gap-2.5">
-                      <div className={`h-2.5 w-2.5 rounded-full ${stageDotMap[stage.key]} ring-2 ring-background shadow-sm`} />
-                      <span className="text-[12px] sm:text-[13px] font-medium uppercase tracking-[0.05em] text-[11px] text-muted-foreground">{stage.label}</span>
+                  <div className="sticky top-0 z-20 bg-card rounded-t-xl">
+                    <div className="rounded-t-xl border border-border bg-card px-3.5 py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${stageDotMap[stage.key]}`} />
+                          <span className="text-[13px] font-semibold text-foreground truncate">{stage.label}</span>
+                          <span className="text-[12px] font-medium text-muted-foreground tabular-nums" title="Leads na etapa">{stageLeads.length}</span>
+                        </div>
+                        {alertCount > 0 && (
+                          <span
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-1.5 py-0.5 text-[11px] font-semibold text-red-700 tabular-nums"
+                            title={`${alertCount} em alerta de atendimento`}
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-red-600" />{alertCount}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-[12px] font-semibold tabular-nums text-foreground/70">R$ {totalValue.toLocaleString("pt-BR")}</p>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                       {alertCount > 0 && (
-                         <Badge variant="destructive" className="text-[11px] font-black px-2 py-0.5 h-6 animate-urgency-pulse rounded-full shadow-lg ring-2 ring-background">
-                           <AlertTriangle className="h-3 w-3 mr-1" />{alertCount}
-                         </Badge>
-                       )}
-                      <Badge variant="secondary" className="text-[11px] font-bold tabular-nums bg-foreground/8 rounded-full px-2 py-0.5 h-auto border-0">{stageLeads.length}</Badge>
-                    </div>
-                  </div>
-                  {/* Value summary */}
-                  <div className="text-[10px] font-semibold text-muted-foreground px-3.5 py-1.5 bg-muted/40 border-x border-border/40">
-                    R$ {totalValue.toLocaleString("pt-BR")}
-                  </div>
                   </div>
 
                   {/* Droppable area */}
@@ -870,7 +875,7 @@ export default function Kanban() {
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`min-h-[420px] flex-1 space-y-2.5 rounded-b-[12px] p-2.5 transition-all duration-200 border border-t-0 border-border/40 ${
+                        className={`min-h-[420px] flex-1 space-y-2.5 rounded-b-xl p-2.5 transition-all duration-200 border border-t-0 border-border ${
                           snapshot.isDraggingOver
                             ? "bg-primary/[0.04] border-primary/20"
                             : "bg-[#F4F4F7]"
@@ -895,260 +900,50 @@ export default function Kanban() {
                                       onDelete={() => setPendingDeleteId(lead.id)}
                                       onMoveNext={stage.key !== "pos_venda" ? () => moveToNextStage(lead) : undefined}
                                     >
-                                       <div onClick={() => setEditingLead(lead)} className={`
-                                         rounded-[10px] border-l-[3px] p-3.5 
-                                         ${urgency === "ok" ? "bg-card" : ""} 
-                                         text-card-foreground
-                                         border border-border/30 border-l-0
-                                         shadow-sm
-                                         transition-all duration-200
-                                         hover:shadow-md hover:-translate-y-0.5 hover:border-primary/20 hover:bg-primary/5
-                                         !cursor-pointer active:cursor-grabbing
-                                         group
-                                         ${stageColorMap[stage.key]} 
-                                         ${config.borderClass} 
-                                         ${config.pulse ? "animate-urgency-pulse" : ""} 
-                                         ${snapshot.isDragging ? "shadow-xl ring-2 ring-primary/20 rotate-[1.5deg] scale-[1.02]" : ""}
-                                       `}>
-                                         {urgency !== "ok" && (
-                                           <div className={`hidden sm:block absolute -top-2 -right-1 z-10 ${config.badgeClass} text-[10px] px-2 py-0.5 rounded-full font-black shadow-lg tracking-tighter`}>
-                                             {config.label}
-                                           </div>
-                                         )}
-                                          {/* Header: nome em linha própria (largura total) e ações embaixo à direita */}
-                                          <div className="flex flex-col gap-1.5">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                              {(() => {
-                                                const displayName = getDisplayClientName({ 
-                                                  name: lead.clientName, 
-                                                  phone: lead.clientPhone, 
-                                                  source: lead.source, 
-                                                  notes: lead.notes 
-                                                });
-                                                const isGeneric = isGenericName(lead.clientName);
-                                                return (
-                                                  <>
-                                                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isGeneric ? 'bg-muted text-muted-foreground' : stageBgMap[stage.key]} text-[10px] font-extrabold`}>
-                                                      {isGeneric ? <UserCircle className="h-4 w-4" /> : lead.clientName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                                                    </div>
-                                                    <p className={`text-[13px] font-bold leading-tight truncate uppercase ${isGeneric ? 'text-foreground/70 italic' : 'text-foreground'}`}>
-                                                      {displayName}
-                                                    </p>
-                                                  </>
-                                                );
-                                              })()}
-                                            </div>
-                                            <div className="flex items-center justify-end flex-wrap gap-1">
-                                              {!lead.assignedTo && userSeller && (
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  className="h-7 text-[10px] font-bold px-3 rounded-lg border-primary/40 text-primary hover:bg-primary/5"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleAcceptLead(lead.id);
-                                                  }}
-                                                >
-                                                  Assumir Lead
-                                                </Button>
-                                              )}
-                                              {urgency !== "ok" && (
-                                                <div className="flex flex-col items-end">
-                                                   <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-black ${config.badgeClass}`}>
-                                                    <Clock className="h-3 w-3" /> {idleTime}
-                                                  </span>
-                                                </div>
-                                              )}
-                                              <button
-                                                onClick={(e) => { e.stopPropagation(); navigate(`/conversas?phone=${lead.clientPhone.replace(/\D/g, "")}`); }}
-                                                className="p-1 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-600"
-                                                title="Abrir conversa no WhatsApp"
-                                              >
-                                                <MessageCircle className="h-3.5 w-3.5" />
-                                              </button>
-                                                <div className="flex md:hidden md:group-hover:flex items-center gap-0.5">
-                                                  {lead.stage !== 'fechamento' && lead.stage !== 'pos_venda' && (
-                                                    <button
-                                                      onClick={(e) => { e.stopPropagation(); handleRequestPricing(lead); }}
-                                                      className="p-1 rounded-lg hover:bg-yellow-100 text-yellow-600"
-                                                      title="Precificação especial ou orçamento"
-                                                    >
-                                                      <Zap className="h-3 w-3" />
-                                                    </button>
-                                                  )}
-                                                  {lead.stage === 'fechamento' && (
-                                                    <button
-                                                      onClick={(e) => { e.stopPropagation(); handleSendOrder(lead); }}
-                                                      className="p-1 rounded-lg hover:bg-emerald-100 text-emerald-600"
-                                                      title="Enviar pedido"
-                                                    >
-                                                      <Package className="h-3 w-3" />
-                                                    </button>
-                                                  )}
-                                                  <button
-                                                    onClick={(e) => { e.stopPropagation(); setTransferringLead(lead); }}
-                                                    className="p-1 rounded-lg hover:bg-blue-100 text-brand-500"
-                                                    title="Transferir"
-                                                  >
-                                                    <Forward className="h-3 w-3" />
-                                                  </button>
-                                                  <button
-                                                    onClick={(e) => { e.stopPropagation(); setProjectsLead(lead); }}
-                                                    className="p-1 rounded-lg hover:bg-purple-100 text-purple-600"
-                                                    title="Projetos"
-                                                  >
-                                                    <FolderKanban className="h-3 w-3" />
-                                                  </button>
-                                                  <button
-                                                    onClick={(e) => { e.stopPropagation(); setLosingLead(lead); }}
-                                                    className="p-1 rounded-lg hover:bg-red-100 text-red-500"
-                                                    title="Encerrar atendimento"
-                                                  >
-                                                    <XCircle className="h-3 w-3" />
-                                                  </button>
-                                                  <button
-                                                    onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
-                                                    className="p-1 rounded-lg hover:bg-muted"
-                                                  >
-                                                    <Pencil className="h-3 w-3 text-muted-foreground" />
-                                                  </button>
-                                                </div>
-                                            </div>
-                                          </div>
-
-                                         {/* Detailed Info */}
-                                         <div className="mt-2.5 space-y-1.5 border-t border-border/10 pt-2.5">
-                                           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                                             <Phone className="h-3 w-3 shrink-0 text-primary/60" />
-                                             <span className="font-medium">{lead.clientPhone}</span>
-                                           </div>
-                                           
-                                           {lead.clientEmail && (
-                                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                                               <Mail className="h-3 w-3 shrink-0 text-primary/60" />
-                                               <span className="truncate">{lead.clientEmail}</span>
-                                             </div>
-                                           )}
-
-                                           {lead.clientType && (
-                                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                                               <Briefcase className="h-3 w-3 shrink-0 text-primary/60" />
-                                               <span className="font-semibold text-foreground/80">{lead.clientType}</span>
-                                             </div>
-                                           )}
-
-                                           {lead.companyWorkSite && (
-                                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground italic">
-                                               <Briefcase className="h-3 w-3 shrink-0 text-primary/60" />
-                                               <span>Obra: {lead.companyWorkSite}</span>
-                                             </div>
-                                           )}
-
-                                           {lead.storeName && (
-                                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                                               <MapPin className="h-3 w-3 shrink-0 text-primary/60" />
-                                               <span>{lead.storeName}</span>
-                                             </div>
-                                           )}
-
-                                           {(() => {
-                                             const responsible = sellers.find((s) => s.id === lead.assignedTo)?.name;
-                                             if (!responsible) return null;
-                                             return (
-                                               <div className="flex items-center gap-2 text-[11px] text-muted-foreground" title="Vendedor responsável">
-                                                 <UserCircle className="h-3 w-3 shrink-0 text-primary/60" />
-                                                 <span className="font-semibold text-foreground/80">{responsible}</span>
-                                               </div>
-                                             );
-                                           })()}
-
-                                           {lead.interestProducts && (
-                                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                                               <Package className="h-3 w-3 shrink-0 text-primary/60" />
-                                               <span className="text-primary font-medium">{lead.interestProducts}</span>
-                                             </div>
-                                           )}
-                                         </div>
-                                        {/* Status do orçamento/negociação especial (se houver) */}
-                                        {(() => {
+                                      <KanbanLeadCard
+                                        lead={lead}
+                                        urgency={urgency}
+                                        urgencyLabel={config.label}
+                                        idleTime={idleTime}
+                                        responsibleName={sellers.find((s) => s.id === lead.assignedTo)?.name}
+                                        channel={(() => {
+                                          const inst = instancesById[clientInstanceByPhone[lead.clientPhone]];
+                                          return (
+                                            <InstanceBadge
+                                              instance={inst}
+                                              size="xs"
+                                              prefix="via"
+                                              title={inst ? `Número de WhatsApp em que o cliente escreveu: ${inst.name}. O vendedor responsável aparece acima.` : undefined}
+                                            />
+                                          );
+                                        })()}
+                                        pricing={(() => {
                                           const p = pricingStatusByLead[lead.id];
                                           if (!p) return null;
                                           const cls = PRICING_STATUS_CLS[p.status];
                                           // Mesma regra do SuporteOrcamento (ORC vs PREC): só "orcamento" é
                                           // orçamento; qualquer outro valor (inclusive null/variações) é
-                                          // negociação especial. Evita o badge cair em "Orçamento" por engano.
+                                          // negociação especial.
                                           const labels = p.type === "orcamento" ? PRICING_STATUS_LABEL.orcamento : PRICING_STATUS_LABEL.precificacao_especial;
                                           const label = labels[p.status];
-                                          if (!cls || !label) return null;
-                                          return (
-                                            <div className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
-                                              <FileText className="h-3 w-3" />
-                                              {label}
-                                            </div>
-                                          );
+                                          return cls && label ? { label, className: cls } : null;
                                         })()}
-                                        {/* Value + Source */}
-                                        <div className="mt-2.5 flex items-center justify-between">
-                                          <div className="flex items-center gap-1 text-xs font-bold text-foreground">
-                                            <DollarSign className="h-3 w-3 text-success" />
-                                            R$ {lead.value.toLocaleString("pt-BR")}
-                                          </div>
-                                          <div className="flex items-center gap-1.5">
-                                            {(() => {
-                                              const inst = instancesById[clientInstanceByPhone[lead.clientPhone]];
-                                              return (
-                                                <InstanceBadge
-                                                  instance={inst}
-                                                  size="xs"
-                                                  prefix="via"
-                                                  title={inst ? `Número de WhatsApp em que o cliente escreveu: ${inst.name}. O vendedor responsável aparece acima.` : undefined}
-                                                />
-                                              );
-                                            })()}
-                                            <span className="text-[10px] font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">{lead.source}</span>
-                                          </div>
-                                        </div>
-
-                                        {/* Tags */}
-                                        {lead.tags.length > 0 && (
-                                          <div className="mt-2 flex flex-wrap gap-1">
-                                            {lead.tags.map((tag) => (
-                                              <span key={tag} className="inline-flex items-center gap-0.5 rounded-full bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary border border-primary/10">
-                                                <Tag className="h-2.5 w-2.5" />{tag}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        )}
-
-                                         <div className="flex flex-col gap-2 mt-2.5">
-                                           {/* Card do cliente da equipe externa: último contato e próxima ação */}
-                                           {isExternalLead(lead, sellers, externalStores) && (
-                                             <LeadCardSummary lead={lead} onOpenQualification={() => setQualifying({ lead })} />
-                                           )}
-
-                                           {/* Follow-up reminder */}
-                                           {lead.nextFollowUp && (
-                                             <div className="rounded-lg bg-warning/8 border border-warning/15 px-2.5 py-1.5 text-[10px] font-semibold text-warning flex items-center gap-1.5">
-                                               <Clock className="h-3 w-3" />
-                                               Follow-up: {new Date(lead.nextFollowUp).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                                             </div>
-                                           )}
-
-                                           {/* Urgency Action */}
-                                           {urgency === "critical" && (
-                                             <Button 
-                                               size="sm" 
-                                               className="w-full h-8 text-[11px] font-black bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-lg shadow-red-600/20 border-0 flex items-center justify-center gap-2 animate-bounce-subtle mt-1"
-                                               onClick={(e) => {
-                                                 e.stopPropagation();
-                                                 setEditingLead(lead);
-                                               }}
-                                             >
-                                               <Zap className="h-3 w-3" /> Agir agora
-                                             </Button>
-                                           )}
-                                         </div>
-                                      </div>
+                                        externalSummary={isExternalLead(lead, sellers, externalStores)
+                                          ? <LeadCardSummary lead={lead} onOpenQualification={() => setQualifying({ lead })} />
+                                          : undefined}
+                                        detailed={cardDensity === "detailed"}
+                                        sourceLabel={LEAD_SOURCES.find((src) => src.value === lead.source)?.label ?? lead.source}
+                                        isDragging={snapshot.isDragging}
+                                        onOpen={() => setEditingLead(lead)}
+                                        onWhatsApp={() => navigate(`/conversas?phone=${lead.clientPhone.replace(/\D/g, "")}`)}
+                                        onAccept={!lead.assignedTo && userSeller ? () => handleAcceptLead(lead.id) : undefined}
+                                        onRequestPricing={lead.stage !== "fechamento" && lead.stage !== "pos_venda" ? () => handleRequestPricing(lead) : undefined}
+                                        onSendOrder={lead.stage === "fechamento" ? () => handleSendOrder(lead) : undefined}
+                                        onTransfer={() => setTransferringLead(lead)}
+                                        onProjects={() => setProjectsLead(lead)}
+                                        onLose={() => setLosingLead(lead)}
+                                        onEdit={() => setEditingLead(lead)}
+                                      />
                                     </SwipeableCard>
                                   );
                                 })()}

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import {
-  Clock, FileText, FolderKanban, Forward, MessageCircle, MoreHorizontal, Package, Pencil, Tag, XCircle, Zap,
+  Briefcase, Clock, FileText, FolderKanban, Forward, Mail, MapPin, MessageCircle, MoreHorizontal, Package, Pencil, Phone, Tag, Target, XCircle, Zap,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -47,6 +47,10 @@ export interface KanbanLeadCardProps {
   pricing?: { label: string; className: string } | null;
   /** Resumo da equipe externa (próxima ação, último contato, qualificação). */
   externalSummary?: ReactNode;
+  /** Modo "Detalhado": mostra também telefone, e-mail, tipo, loja, produtos e origem. */
+  detailed?: boolean;
+  /** Rótulo da origem do lead (ex.: "WhatsApp", "Indicação"). */
+  sourceLabel?: string;
   isDragging?: boolean;
   onOpen: () => void;
   onWhatsApp: () => void;
@@ -57,6 +61,15 @@ export interface KanbanLeadCardProps {
   onProjects: () => void;
   onLose: () => void;
   onEdit: () => void;
+}
+
+function DetailRow({ icon: Icon, children }: { icon: typeof Phone; children: ReactNode }) {
+  return (
+    <li className="flex items-center gap-1.5 min-w-0">
+      <Icon className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+      <span className="truncate">{children}</span>
+    </li>
+  );
 }
 
 function IconAction({ title, onClick, className, children }: { title: string; onClick: () => void; className?: string; children: ReactNode }) {
@@ -81,7 +94,7 @@ function IconAction({ title, onClick, className, children }: { title: string; on
  * para o vermelho continuar chamando atenção onde importa.
  */
 export function KanbanLeadCard({
-  lead, urgency, urgencyLabel, idleTime, responsibleName, channel, pricing, externalSummary, isDragging,
+  lead, urgency, urgencyLabel, idleTime, responsibleName, channel, pricing, externalSummary, detailed, sourceLabel, isDragging,
   onOpen, onWhatsApp, onAccept, onRequestPricing, onSendOrder, onTransfer, onProjects, onLose, onEdit,
 }: KanbanLeadCardProps) {
   const style = URGENCY_STYLE[urgency];
@@ -94,7 +107,7 @@ export function KanbanLeadCard({
     lead.segment,
     lead.city,
   ].filter(Boolean).join(" · ");
-  const visibleTags = lead.tags.slice(0, 2);
+  const visibleTags = detailed ? lead.tags : lead.tags.slice(0, 2);
   const hiddenTags = lead.tags.length - visibleTags.length;
 
   return (
@@ -131,6 +144,17 @@ export function KanbanLeadCard({
             </span>
           )}
         </div>
+
+        {detailed && (
+          <ul className="space-y-1 text-[11px] text-muted-foreground" aria-label="Detalhes do lead">
+            {!generic && <DetailRow icon={Phone}><span className="tabular-nums">{formatPhone(lead.clientPhone)}</span></DetailRow>}
+            {lead.clientEmail && <DetailRow icon={Mail}>{lead.clientEmail}</DetailRow>}
+            {lead.clientType && <DetailRow icon={Briefcase}>{lead.clientType}</DetailRow>}
+            {lead.storeName && <DetailRow icon={MapPin}>{lead.storeName}</DetailRow>}
+            {lead.interestProducts && <DetailRow icon={Target}><span className="text-foreground/80">{lead.interestProducts}</span></DetailRow>}
+            {sourceLabel && <DetailRow icon={Tag}>Origem: {sourceLabel}</DetailRow>}
+          </ul>
+        )}
 
         {/* Valor + responsável */}
         {(lead.value > 0 || responsibleName) && (
