@@ -13,15 +13,15 @@ afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe("LeadCardSummary", () => {
   it("highlights an open opportunity without next action", () => {
-    render(<LeadCardSummary lead={{ ...base, segment: "Offshore", city: "Macaé" }} />);
-    expect(screen.getByText("Offshore · Macaé")).toBeInTheDocument();
-    expect(screen.getByText("Sem contato registrado")).toBeInTheDocument();
+    render(<LeadCardSummary lead={base} onOpenQualification={() => {}} />);
+    expect(screen.getByRole("button", { name: "Qualificação 0/6" })).toBeInTheDocument();
+    expect(screen.getByText("Sem contato")).toBeInTheDocument();
     expect(screen.getByText("Sem próxima ação")).toBeInTheDocument();
   });
 
   it("shows the scheduled next action and the last contact", () => {
     render(<LeadCardSummary lead={{ ...base, lastContactAt: "2026-11-03T15:00:00Z", nextAction: "visita", nextActionAt: "2026-11-06T17:00:00Z" }} />);
-    expect(screen.getByText(/Último contato: 03\/11/)).toBeInTheDocument();
+    expect(screen.getByText(/Contato em 03\/11/)).toBeInTheDocument();
     expect(screen.getByText(/^Visita presencial · 06\/11/)).toBeInTheDocument();
   });
 
