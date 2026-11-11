@@ -8,6 +8,7 @@ import { Trophy, Star, RotateCcw, PaintBucket, Sparkles, ChevronLeft, ChevronRig
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { QuizLeaderboard } from "@/components/QuizLeaderboard";
+import { QuizEvolution } from "@/components/QuizEvolution";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -516,6 +517,8 @@ export default function Quiz() {
                   })}
                 </div>
               )}
+
+              {user?.id && <QuizEvolution userId={user.id} />}
 
               <QuizLeaderboard currentUserId={user?.id} />
 

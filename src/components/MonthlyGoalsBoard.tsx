@@ -37,11 +37,15 @@ export function MonthlyGoalsBoard({ sellers }: { sellers: GoalSellerRow[] }) {
   const [days, setDays] = useState("");
   const [saving, setSaving] = useState(false);
   const [copying, setCopying] = useState(false);
+  // Os campos só aparecem depois de preenchidos com o que está salvo, para o
+  // valor carregado nunca sobrescrever o que a pessoa já começou a digitar.
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading) { setReady(false); return; }
     setDraft(toDraft(sellers, goals));
     setDays(businessDays ? String(businessDays) : "");
+    setReady(true);
   }, [loading, sellers, goals, businessDays]);
 
   const daysNumber = days.trim() === "" ? null : Number(days);
@@ -125,7 +129,7 @@ export function MonthlyGoalsBoard({ sellers }: { sellers: GoalSellerRow[] }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {loading ? (
+        {loading || !ready ? (
           <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p>
         ) : (
           <>

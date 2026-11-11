@@ -4,6 +4,7 @@ import { WebhookLogsTab } from "@/components/WebhookLogsTab";
 import { WhatsAppInstancesTab } from "@/components/WhatsAppInstancesTab";
 import { AlertTimesTab } from "@/components/AlertTimesTab";
 import { VisitGoalsTab } from "@/components/VisitGoalsTab";
+import { AvatarUpload } from "@/components/AvatarUpload";
 import { AppLayout } from "@/components/AppLayout";
 import { useRole } from "@/contexts/RoleContext";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
@@ -1397,6 +1398,10 @@ function UsersTab() {
                 <div>
                   <Label>Nome de exibição</Label>
                   <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nome do vendedor/gerente" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Foto do operador <span className="text-[11px] font-normal text-muted-foreground">(aparece no ranking do Show das Tintas)</span></Label>
+                  <AvatarUpload userId={editing.user_id} displayName={editName} asAdmin />
                 </div>
                 <div>
                   <Label>Funções * <span className="text-[11px] font-normal text-muted-foreground">(pode marcar mais de uma)</span></Label>

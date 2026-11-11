@@ -2090,6 +2090,7 @@ export type Database = {
         }[]
       }
       admin_revoke_user_role: { Args: { _user_id: string }; Returns: undefined }
+      admin_set_user_avatar: { Args: { _url: string; _user_id: string }; Returns: undefined }
       assign_client_by_seller_code: {
         Args: { _code: string; _phone: string }
         Returns: {
@@ -2176,7 +2177,7 @@ export type Database = {
         }
       }
       get_quiz_leaderboard: {
-        Args: { limit_count?: number; p_since?: string }
+        Args: { limit_count?: number; p_since?: string; p_until?: string }
         Returns: {
           attempts: number
           avatar_url: string

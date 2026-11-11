@@ -37,7 +37,7 @@ describe("MonthlyGoalsBoard", () => {
     render(<MonthlyGoalsBoard sellers={sellers} />);
     expect(await screen.findByText(/Pelo calendário: 19 \(segunda a sexta, menos 2 feriados: 02\/11, 20\/11\)/)).toBeInTheDocument();
     expect(screen.getByText("Novembro de 2026")).toBeInTheDocument();
-    expect(screen.getAllByLabelText("Meta de orçamentos (R$)")[0]).toHaveValue("500.000,00");
+    await waitFor(() => expect(screen.getAllByLabelText("Meta de orçamentos (R$)")[0]).toHaveValue("500.000,00"));
     expect(screen.getAllByLabelText("Meta de vendas (R$)")[0]).toHaveValue("100.000,00");
     expect(screen.getByText(/R\$\s26\.315,79 em orçamentos/)).toBeInTheDocument();
   });
