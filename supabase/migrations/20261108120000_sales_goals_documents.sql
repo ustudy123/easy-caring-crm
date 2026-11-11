@@ -22,7 +22,7 @@ CREATE POLICY "Admin manages business days" ON public.month_business_days
 DROP TRIGGER IF EXISTS month_business_days_updated_at ON public.month_business_days;
 CREATE TRIGGER month_business_days_updated_at
   BEFORE UPDATE ON public.month_business_days
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 -- ── Metas do mês por vendedor (R$) ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.monthly_goals (
@@ -48,7 +48,7 @@ CREATE POLICY "Admin manages monthly goals" ON public.monthly_goals
 DROP TRIGGER IF EXISTS monthly_goals_updated_at ON public.monthly_goals;
 CREATE TRIGGER monthly_goals_updated_at
   BEFORE UPDATE ON public.monthly_goals
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 -- ── Orçamentos e notas fiscais ────────────────────────────────────────────────
 -- Quem cuida dos documentos de um vendedor: ele mesmo, o gerente da loja, o
@@ -111,7 +111,7 @@ CREATE POLICY "Manage visible sales documents" ON public.sales_documents
 DROP TRIGGER IF EXISTS sales_documents_updated_at ON public.sales_documents;
 CREATE TRIGGER sales_documents_updated_at
   BEFORE UPDATE ON public.sales_documents
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 -- ── Arquivos: bucket privado, uma pasta por vendedor ({seller_id}/arquivo.pdf) ─
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

@@ -55,7 +55,7 @@ CREATE POLICY "Admin manages seller goals" ON public.seller_goals
 DROP TRIGGER IF EXISTS seller_goals_updated_at ON public.seller_goals;
 CREATE TRIGGER seller_goals_updated_at
   BEFORE UPDATE ON public.seller_goals
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 -- Visitas do período por vendedor: planejadas = visitas agendadas no período,
 -- realizadas = as que o vendedor confirmou (concluídas). Conta pela data agendada.
