@@ -5,6 +5,7 @@ import { useCrm } from "@/contexts/CrmContext";
 import { useRole } from "@/contexts/RoleContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUrgencyLevel, formatIdleTime } from "@/lib/leadUrgency";
+import { formatAlertMinutes } from "@/lib/alertTimes";
 import { Lead } from "@/types/crm";
 import {
   AlertDialog,
@@ -18,7 +19,7 @@ import {
 import { AlertTriangle, Clock, User } from "lucide-react";
 
 export function UrgencyAlertPopup() {
-  const { leads, sellers } = useCrm();
+  const { leads, sellers, alertTimesFor } = useCrm();
   const { role, sellerId, isAdmin, isGerente, isVendedor } = useRole();
   const { user } = useAuth();
   const storageKey = user ? `urgency_dismissed_${user.id}` : null;
@@ -50,19 +51,19 @@ export function UrgencyAlertPopup() {
       if (lead.urgencyAcknowledgedAt) return false; // já deram "Estou ciente"
       if (lead.stage === "fechamento" || lead.stage === "pos_venda") return false;
 
-      const urgency = getUrgencyLevel(lead);
-      
-      // Vendedor: 30m (attention)
+      const urgency = getUrgencyLevel(lead, alertTimesFor(lead));
+
+      // Vendedor: tempo do vendedor (padrão 30m, configurável em Admin → Alertas)
       if (isVendedor && lead.assignedTo === sellerId && urgency === "attention") {
         return true;
       }
       
-      // Gerente: 1h (warning)
+      // Gerente: tempo do gerente (padrão 1h)
       if (isGerente && urgency === "warning") {
         return true;
       }
       
-      // Admin: 1.5h (critical)
+      // Admin: tempo da gestão (padrão 1h30)
       if (isAdmin && urgency === "critical") {
         return true;
       }
@@ -75,7 +76,7 @@ export function UrgencyAlertPopup() {
     } else if (!leadWithAlert && activeAlert) {
       setActiveAlert(null);
     }
-  }, [leads, role, sellerId, isAdmin, isGerente, isVendedor, dismissedLeads, activeAlert]);
+  }, [leads, role, sellerId, isAdmin, isGerente, isVendedor, dismissedLeads, activeAlert, alertTimesFor]);
 
   const handleDismiss = () => {
     if (activeAlert) {
@@ -100,12 +101,13 @@ export function UrgencyAlertPopup() {
   if (!activeAlert) return null;
 
   const idleTime = formatIdleTime(activeAlert);
-  const urgency = getUrgencyLevel(activeAlert);
+  const times = alertTimesFor(activeAlert);
+  const urgency = getUrgencyLevel(activeAlert, times);
   const responsavel = sellers.find((s) => s.id === activeAlert.assignedTo)?.name || null;
 
-  let levelLabel = "30 minutos";
-  if (urgency === "warning") levelLabel = "1 hora";
-  if (urgency === "critical") levelLabel = "1 hora e 30 minutos";
+  const levelLabel = formatAlertMinutes(
+    urgency === "critical" ? times.adminMinutes : urgency === "warning" ? times.managerMinutes : times.sellerMinutes,
+  );
 
   return (
     <AlertDialog open={!!activeAlert} onOpenChange={(open) => !open && handleDismiss()}>

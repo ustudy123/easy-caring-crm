@@ -2,9 +2,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ProjectsReport } from "@/components/ProjectsReport";
 import { WebhookLogsTab } from "@/components/WebhookLogsTab";
 import { WhatsAppInstancesTab } from "@/components/WhatsAppInstancesTab";
+import { AlertTimesTab } from "@/components/AlertTimesTab";
+import { VisitGoalsTab } from "@/components/VisitGoalsTab";
+import { AvatarUpload } from "@/components/AvatarUpload";
 import { AppLayout } from "@/components/AppLayout";
 import { useRole } from "@/contexts/RoleContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +19,7 @@ import { SellerCombobox } from "@/components/SellerCombobox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3, Phone, Info, KeyRound } from "lucide-react";
+  import { Plus, Store, Users, Loader2, Trash2, ShieldOff, Pencil, Terminal, RefreshCw, Eye, FileText, UserCheck, UserX, AlertCircle, History, Bell, Filter, Search, Download, Database, ChevronDown, ChevronRight, LayoutGrid, BarChart3, Phone, Info, KeyRound, BellRing, Target, MessageSquareText } from "lucide-react";
  function CitelIntegrationTab() {
   const [syncing, setSyncing] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -288,7 +291,7 @@ const ROLE_LABELS: Record<string, string> = {
          .order("created_at", { ascending: false })
          .limit(100),
        supabase.from("stores").select("id, name").order("name"),
-       supabase.from("sellers").select("id, name").order("name")
+       supabase.from("sellers").select("id, name, is_active, status").order("name")
      ]);
 
      // Statistics calculation
@@ -575,7 +578,7 @@ const ROLE_LABELS: Record<string, string> = {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-600">Alertas Graves (+1h30)</p>
+                <p className="text-sm font-medium text-red-600">Alertas Graves</p>
                 <h3 className="text-2xl font-medium text-red-700">{stats.criticalAlerts}</h3>
               </div>
               <AlertCircle className="h-8 w-8 text-red-200" />
@@ -845,17 +848,21 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function AdminPanel() {
   const { isAdmin } = useRole();
+  // Volta da tela do Google (conexão feita em Metas): abre de novo a aba Metas.
+  const [searchParams] = useSearchParams();
 
   if (!isAdmin) return <Navigate to="/" replace />;
   return (
     <AppLayout title="Painel Administrativo">
-      <Tabs defaultValue="stores" className="space-y-4">
+      <Tabs defaultValue={searchParams.get("google") ? "goals" : "stores"} className="space-y-4">
         <TabsList>
           <TabsTrigger value="stores" className="gap-1.5"><Store className="h-3.5 w-3.5" /> Lojas</TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Usuários & Papéis</TabsTrigger>
           <TabsTrigger value="reports" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Relatórios</TabsTrigger>
           <TabsTrigger value="citel" className="gap-1.5"><Database className="h-3.5 w-3.5" /> API Citel</TabsTrigger>
           <TabsTrigger value="whatsapp" className="gap-1.5"><Phone className="h-3.5 w-3.5" /> Números WhatsApp</TabsTrigger>
+          <TabsTrigger value="alerts" className="gap-1.5"><BellRing className="h-3.5 w-3.5" /> Alertas</TabsTrigger>
+          <TabsTrigger value="goals" className="gap-1.5"><Target className="h-3.5 w-3.5" /> Metas</TabsTrigger>
           <TabsTrigger value="logs" className="gap-1.5"><Terminal className="h-3.5 w-3.5" /> Webhook Logs</TabsTrigger>
         </TabsList>
 
@@ -864,6 +871,8 @@ export default function AdminPanel() {
         <TabsContent value="reports"><ReportsTab /></TabsContent>
         <TabsContent value="citel"><CitelIntegrationTab /></TabsContent>
         <TabsContent value="whatsapp"><WhatsAppInstancesTab /></TabsContent>
+        <TabsContent value="alerts"><AlertTimesTab /></TabsContent>
+        <TabsContent value="goals"><VisitGoalsTab /></TabsContent>
         <TabsContent value="logs"><WebhookLogsTab /></TabsContent>
       </Tabs>
     </AppLayout>
@@ -1077,6 +1086,7 @@ function StoresTab() {
 }
 
 function UsersTab() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [stores, setStores] = useState<StoreRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1348,6 +1358,11 @@ function UsersTab() {
                     <Button variant="outline" size="sm" onClick={() => openEdit(u)}>
                       Atribuir
                     </Button>
+                    {u.seller_id && (
+                      <Button variant="ghost" size="icon" onClick={() => navigate(`/feedback?vendedor=${u.seller_id}`)} title="Feedbacks do operador">
+                        <MessageSquareText className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" onClick={() => setResetPwUser(u)} title="Redefinir senha">
                       <KeyRound className="h-4 w-4 text-muted-foreground" />
                     </Button>
@@ -1383,6 +1398,10 @@ function UsersTab() {
                 <div>
                   <Label>Nome de exibição</Label>
                   <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nome do vendedor/gerente" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Foto do operador <span className="text-[11px] font-normal text-muted-foreground">(aparece no ranking do Show das Tintas)</span></Label>
+                  <AvatarUpload userId={editing.user_id} displayName={editName} asAdmin />
                 </div>
                 <div>
                   <Label>Funções * <span className="text-[11px] font-normal text-muted-foreground">(pode marcar mais de uma)</span></Label>

@@ -5,6 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Trophy, Medal, Crown, Loader2, RefreshCw, List } from "lucide-react";
 import { startOfDay, startOfWeek, startOfMonth, startOfYear } from "date-fns";
+import { monthOptions, reportPeriodRange } from "@/lib/reportPeriod";
 
 interface LeaderboardRow {
   user_id: string;
@@ -14,7 +15,7 @@ interface LeaderboardRow {
   attempts: number;
 }
 
-type Period = "today" | "week" | "month" | "year" | "all";
+type Period = "today" | "week" | "month" | "year" | "all" | "pick";
 
 const PERIODS: { key: Period; label: string }[] = [
   { key: "today", label: "Hoje" },
@@ -98,11 +99,27 @@ export function QuizLeaderboard({ currentUserId, limit = 100 }: { currentUserId?
   const [period, setPeriod] = useState<Period>("week");
   const [showFull, setShowFull] = useState(false);
 
+  // Mês escolhido (o vendedor vê como foi o ranking num mês passado).
+  const [pickedMonth, setPickedMonth] = useState<string>("");
+  const [firstAttempt, setFirstAttempt] = useState<Date | null>(null);
+  useEffect(() => {
+    supabase.from("quiz_attempts").select("completed_at").order("completed_at").limit(1)
+      .then(({ data }) => { if (data?.[0]) setFirstAttempt(new Date(data[0].completed_at)); });
+  }, []);
+  const months = monthOptions(firstAttempt);
+
   const fetchLeaderboard = useCallback(async () => {
-    const { data, error } = await supabase.rpc("get_quiz_leaderboard", { limit_count: limit, p_since: sinceForPeriod(period) });
+    const range = period === "pick" && pickedMonth
+      ? reportPeriodRange("month", { monthKey: pickedMonth })
+      : { since: sinceForPeriod(period) ? new Date(sinceForPeriod(period)!) : null, until: null };
+    const { data, error } = await supabase.rpc("get_quiz_leaderboard", {
+      limit_count: limit,
+      p_since: range.since ? range.since.toISOString() : undefined,
+      p_until: range.until ? range.until.toISOString() : undefined,
+    });
     if (!error && data) setRows(data as LeaderboardRow[]);
     setLoading(false);
-  }, [limit, period]);
+  }, [limit, period, pickedMonth]);
 
   useEffect(() => {
     setLoading(true);
@@ -139,6 +156,15 @@ export function QuizLeaderboard({ currentUserId, limit = 100 }: { currentUserId?
             {p.label}
           </button>
         ))}
+        <select
+          aria-label="Escolher mês do ranking"
+          value={period === "pick" ? pickedMonth : ""}
+          onChange={(e) => { setPickedMonth(e.target.value); setPeriod(e.target.value ? "pick" : "week"); }}
+          className={`px-3 py-1 rounded-full text-xs font-bold border-0 ${period === "pick" ? "bg-amber-400 text-[#3a2800]" : "bg-white/10 text-white/60"}`}
+        >
+          <option value="" className="text-black">Escolher mês</option>
+          {months.map((m) => <option key={m.key} value={m.key} className="text-black">{m.label}</option>)}
+        </select>
       </div>
 
       {loading ? (

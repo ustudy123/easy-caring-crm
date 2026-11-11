@@ -17,7 +17,16 @@ export interface SellerOption {
   name: string;
   store_id?: string;
   code?: string | null;
+  /** Mapeado (Seller.isActive) ou cru do banco (is_active/status): inativos saem da lista. */
+  isActive?: boolean;
+  is_active?: boolean | null;
+  status?: string | null;
 }
+
+// Operador inativado (pelo Admin) não aparece como opção de filtro/seleção; o
+// nome dele continua sendo exibido se já estiver selecionado.
+const isActiveOption = (s: SellerOption) =>
+  s.isActive !== false && s.is_active !== false && s.status !== "inactive";
 
 interface SellerGroup {
   label: string;
@@ -58,6 +67,10 @@ export function SellerCombobox({
       : placeholder);
 
   const pick = (v: string) => { onChange(v); setOpen(false); };
+  const visibleGroups = groups
+    ?.map((g) => ({ ...g, items: g.items.filter(isActiveOption) }))
+    .filter((g) => g.items.length > 0);
+  const visibleSellers = (sellers ?? []).filter(isActiveOption);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -87,8 +100,8 @@ export function SellerCombobox({
                 ))}
               </CommandGroup>
             )}
-            {groups
-              ? groups.map((g) => (
+            {visibleGroups
+              ? visibleGroups.map((g) => (
                   <CommandGroup key={g.label} heading={g.label}>
                     {g.items.map((s) => (
                       // value inclui a loja para a busca também casar pelo nome da loja
@@ -99,7 +112,7 @@ export function SellerCombobox({
                     ))}
                   </CommandGroup>
                 ))
-              : (sellers ?? []).map((s) => (
+              : visibleSellers.map((s) => (
                   <CommandItem key={s.id} value={`${s.name} ${showCode && s.code ? s.code : ""}`} onSelect={() => pick(s.id)} className="text-xs">
                     <Check className={cn("mr-2 h-3.5 w-3.5", value === s.id ? "opacity-100" : "opacity-0")} />
                     <span className="flex items-center gap-2">

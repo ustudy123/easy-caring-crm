@@ -4,6 +4,28 @@
    "Access-Control-Allow-Origin": "*",
    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
  };
+
+// Tempos de alerta configurados pelo gestor (tabela alert_time_settings). Mesma
+// regra de src/lib/alertTimes.ts: exceção do vendedor > loja > padrão > 30/60/90.
+type AlertTimes = { seller: number; manager: number; admin: number };
+const DEFAULT_TIMES: AlertTimes = { seller: 30, manager: 60, admin: 90 };
+
+function resolveTimes(settings: any[], sellerId: string | null, storeId: string | null): AlertTimes {
+  const toTimes = (r: any): AlertTimes => ({ seller: r.seller_minutes, manager: r.manager_minutes, admin: r.admin_minutes });
+  const bySeller = sellerId ? settings.find((r) => r.seller_id === sellerId) : null;
+  if (bySeller) return toTimes(bySeller);
+  const byStore = storeId ? settings.find((r) => r.store_id === storeId && !r.seller_id) : null;
+  if (byStore) return toTimes(byStore);
+  const global = settings.find((r) => !r.store_id && !r.seller_id);
+  return global ? toTimes(global) : DEFAULT_TIMES;
+}
+
+function fmtMinutes(min: number): string {
+  const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  if (min < 60) return plural(min, "minuto");
+  const h = Math.floor(min / 60), m = min % 60;
+  return m === 0 ? plural(h, "hora") : `${plural(h, "hora")} e ${plural(m, "minuto")}`;
+}
  
 Deno.serve(async (req) => {
    if (req.method === "OPTIONS") {
@@ -33,6 +55,12 @@ Deno.serve(async (req) => {
 
       if (error) throw error;
 
+      const [{ data: alertSettings }, { data: sellerRows }] = await Promise.all([
+        supabase.from("alert_time_settings").select("store_id, seller_id, seller_minutes, manager_minutes, admin_minutes"),
+        supabase.from("sellers").select("id, store_id"),
+      ]);
+      const sellerStore = new Map((sellerRows || []).map((s: any) => [s.id, s.store_id]));
+
       const now = new Date();
       const processed = [];
 
@@ -49,25 +77,31 @@ Deno.serve(async (req) => {
           let notificationType = null;
           let notificationRole = null;
           let notificationMessage = "";
+          // Loja do vendedor responsável; sem vendedor, a loja do cliente.
+          const times = resolveTimes(
+            alertSettings || [],
+            client.assigned_seller_id,
+            (client.assigned_seller_id && sellerStore.get(client.assigned_seller_id)) || client.store_id,
+          );
 
-           if (diffMins >= 90) {
+           if (diffMins >= times.admin) {
              newStatus = 'critical';
              notificationType = 'sla_critical';
              notificationRole = 'admin';
-             notificationMessage = `🚨 ALERTA CRÍTICO: Cliente ${client.name} (${client.phone}) sem resposta há mais de 1h30. Ação imediata necessária!`;
-           } else if (diffMins >= 60) {
+             notificationMessage = `🚨 ALERTA CRÍTICO: Cliente ${client.name} (${client.phone}) sem resposta há mais de ${fmtMinutes(times.admin)}. Ação imediata necessária!`;
+           } else if (diffMins >= times.manager) {
             if (newStatus !== 'red' && newStatus !== 'critical') {
               newStatus = 'red';
               notificationType = 'sla_red';
               notificationRole = 'gerente';
-              notificationMessage = `🔴 ALERTA VERMELHO: Cliente ${client.name} (${client.phone}) aguardando há mais de 1h.`;
+              notificationMessage = `🔴 ALERTA VERMELHO: Cliente ${client.name} (${client.phone}) aguardando há mais de ${fmtMinutes(times.manager)}.`;
             }
-          } else if (diffMins >= 30) { // 30 mins - Alerta Amarelo (Vendedor)
+          } else if (diffMins >= times.seller) { // Alerta Amarelo (Vendedor)
             if (newStatus === 'none') {
               newStatus = 'yellow';
               notificationType = 'sla_yellow';
               notificationRole = 'vendedor';
-              notificationMessage = `🟡 ALERTA AMARELO: O cliente ${client.name} está aguardando há 30 minutos.`;
+              notificationMessage = `🟡 ALERTA AMARELO: O cliente ${client.name} está aguardando há ${fmtMinutes(times.seller)}.`;
             }
           }
 

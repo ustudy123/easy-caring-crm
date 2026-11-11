@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Sparkles, ChevronRight, Paintbrush } from "lucide-react";
+import { LayoutDashboard, Sparkles, ChevronRight, Paintbrush, MessageSquareText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppLayout } from "@/components/AppLayout";
+import { useUnreadFeedbacks } from "@/pages/Feedback";
 
 interface Module {
   id: string;
@@ -25,7 +26,10 @@ const iconMap: Record<string, any> = {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isSuporte, isVendedor, isGerente, isAdmin } = useRole();
+  const { isSuporte, isVendedor, isGerente, isAdmin, sellerId } = useRole();
+  // Bloco de Feedback: para quem é operador (tem cadastro de vendedor) ou gestor.
+  const showFeedback = !!sellerId || isAdmin || isGerente;
+  const pendingFeedbacks = useUnreadFeedbacks(sellerId);
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -95,7 +99,7 @@ export default function Dashboard() {
             <Paintbrush className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-4xl font-black text-foreground tracking-tight">
-            HUB Taeco <span className="text-brand-500">Tintas</span>
+            Show das <span className="text-brand-500">Tintas</span>
           </h1>
         </div>
         <p className="text-muted-foreground text-lg max-w-md mx-auto">
@@ -151,6 +155,38 @@ export default function Dashboard() {
               </motion.div>
             );
           })
+        )}
+        {!loading && showFeedback && (
+          <motion.div variants={item}>
+            <Card
+              className="group cursor-pointer overflow-hidden border-2 border-black/5 hover:border-brand-500/30 transition-all duration-300 rounded-3xl bg-white shadow-xl hover:shadow-2xl hover:shadow-brand-500/10 active:scale-[0.98]"
+              onClick={() => navigate("/feedback")}
+            >
+              <CardContent className="p-8 relative">
+                <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-3xl opacity-10 transition-colors group-hover:opacity-20 bg-brand-500" />
+                <div className="flex flex-col h-full relative z-10">
+                  <div className="flex items-start justify-between">
+                    <div className="p-4 rounded-2xl w-fit mb-6 transition-colors bg-brand-50 text-brand-500 group-hover:bg-brand-500 group-hover:text-white">
+                      <MessageSquareText className="h-8 w-8" />
+                    </div>
+                    {pendingFeedbacks > 0 && (
+                      <span className="rounded-full bg-brand-500 px-2.5 py-1 text-xs font-bold text-white">
+                        {pendingFeedbacks} aguardando sua resposta
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-2xl font-bold text-foreground mb-3 group-hover:text-brand-500 transition-colors">Feedback</h2>
+                  <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
+                    {sellerId ? "Leia o feedback do semestre e envie sua resposta por texto ou áudio." : "Envie o feedback do semestre aos operadores e veja as respostas."}
+                  </p>
+                  <div className="flex items-center text-sm font-bold mt-auto group-hover:gap-2 transition-all">
+                    <span>Acessar</span>
+                    <ChevronRight className="h-4 w-4 text-brand-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
       </motion.div>
 

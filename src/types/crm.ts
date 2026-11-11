@@ -1,3 +1,5 @@
+import type { LeadQualification } from "@/lib/qualification";
+
 export type KanbanStage = 'abordagem' | 'sondagem' | 'recomendacao_tecnica' | 'demonstracao_valor' | 'contorno_objecoes' | 'cross_sell' | 'precificacao_especial' | 'fechamento' | 'pos_venda' | 'perdido';
 
 export interface Lead {
@@ -24,7 +26,28 @@ export interface Lead {
    archived?: boolean;
    snoozedUntil?: string;
    urgencyAcknowledgedAt?: string;
+  // Campos do card do cliente da equipe externa (Qualificação — Etapa 1).
+  city?: string;
+  segment?: LeadSegment;
+  /** Última mensagem enviada ao cliente (automático) ou data informada à mão. */
+  lastContactAt?: string;
+  nextAction?: NextAction;
+  nextActionAt?: string;
+  /** Compromisso da Agenda criado pela próxima ação (gerado no banco). */
+  nextActionFollowUpId?: string;
+  /** Respostas da qualificação por etapa (equipe externa), ver lib/qualification. */
+  qualification?: LeadQualification;
 }
+
+export const LEAD_SEGMENTS = ["Naval", "Onshore", "Offshore"] as const;
+export type LeadSegment = (typeof LEAD_SEGMENTS)[number];
+
+export const NEXT_ACTIONS = [
+  { value: "ligacao", label: "Ligação" },
+  { value: "visita", label: "Visita presencial" },
+  { value: "orcamentacao", label: "Orçamentação" },
+] as const;
+export type NextAction = (typeof NEXT_ACTIONS)[number]["value"];
 
 export interface Client {
   id: string;
@@ -65,7 +88,7 @@ export interface FollowUp {
   description: string;
   completed: boolean;
   assignedTo: string;
-  type: 'call' | 'whatsapp' | 'visit' | 'email';
+  type: 'call' | 'whatsapp' | 'visit' | 'email' | 'quote';
   storeId?: string;
 }
 
@@ -90,6 +113,8 @@ export interface Seller {
   code?: string | null;
   leadsCount: number;
   conversions: number;
+  /** false quando o operador foi inativado (is_active = false ou status "inactive"). */
+  isActive?: boolean;
 }
 
 export const KANBAN_STAGES: { key: KanbanStage; label: string; color: string }[] = [

@@ -4,6 +4,7 @@ import { EditLeadForm } from "./EditLeadForm";
 import { KANBAN_STAGES, type Lead } from "@/types/crm";
 
 vi.mock("@/hooks/useSellers", () => ({ useSellers: () => [] }));
+vi.mock("@/hooks/useExternalStores", () => ({ useExternalStores: () => new Set<string>() }));
 vi.mock("@/contexts/RoleContext", () => ({ useRole: () => ({ isVendedor: true, sellerId: "", sellerName: "" }) }));
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: vi.fn() }) }));
 
