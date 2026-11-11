@@ -13,9 +13,9 @@ afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe("LeadCardSummary", () => {
   it("highlights an open opportunity without next action", () => {
-    render(<LeadCardSummary lead={{ ...base, segment: "Offshore", city: "Macaé" }} />);
-    expect(screen.getByText("Offshore · Macaé")).toBeInTheDocument();
-    expect(screen.getByText("Sem contato registrado")).toBeInTheDocument();
+    render(<LeadCardSummary lead={base} onOpenQualification={() => {}} />);
+    expect(screen.getByRole("button", { name: "Qualificação 0/6" })).toBeInTheDocument();
+    expect(screen.getByText("Sem contato")).toBeInTheDocument();
     expect(screen.getByText("Sem próxima ação")).toBeInTheDocument();
   });
 
