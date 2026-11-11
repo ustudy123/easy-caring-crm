@@ -170,7 +170,15 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "client_seller_map_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clients: {
         Row: {
@@ -444,6 +452,79 @@ export type Database = {
           },
         ]
       }
+      google_calendar_event_links: {
+        Row: {
+          calendar_id: string
+          etag: string | null
+          follow_up_id: string
+          google_event_id: string
+          seller_id: string
+          synced_at: string
+        }
+        Insert: {
+          calendar_id: string
+          etag?: string | null
+          follow_up_id: string
+          google_event_id: string
+          seller_id: string
+          synced_at?: string
+        }
+        Update: {
+          calendar_id?: string
+          etag?: string | null
+          follow_up_id?: string
+          google_event_id?: string
+          seller_id?: string
+          synced_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_calendar_event_links_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_calendar_outbox: {
+        Row: {
+          attempts: number
+          created_at: string
+          follow_up_id: string
+          id: number
+          last_error: string | null
+          op: string
+          seller_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          follow_up_id: string
+          id?: number
+          last_error?: string | null
+          op: string
+          seller_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          follow_up_id?: string
+          id?: number
+          last_error?: string | null
+          op?: string
+          seller_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_calendar_outbox_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interactions: {
         Row: {
           client_id: string
@@ -549,6 +630,7 @@ export type Database = {
         Row: {
           archived: boolean
           assigned_to: string | null
+          city: string | null
           client_email: string | null
           client_name: string
           client_phone: string
@@ -559,9 +641,15 @@ export type Database = {
           hidden_at: string | null
           id: string
           interest_products: string | null
+          last_contact_at: string | null
           lost_reason: string | null
+          next_action: string | null
+          next_action_at: string | null
+          next_action_follow_up_id: string | null
           next_follow_up: string | null
           notes: string
+          qualification: Json
+          segment: string | null
           snoozed_until: string | null
           source: string
           stage: Database["public"]["Enums"]["kanban_stage"]
@@ -571,17 +659,11 @@ export type Database = {
           updated_at: string
           urgency_acknowledged_at: string | null
           value: number
-          city: string | null
-          last_contact_at: string | null
-          next_action: string | null
-          next_action_at: string | null
-          next_action_follow_up_id: string | null
-          segment: string | null
-          qualification: Json
         }
         Insert: {
           archived?: boolean
           assigned_to?: string | null
+          city?: string | null
           client_email?: string | null
           client_name: string
           client_phone: string
@@ -592,9 +674,15 @@ export type Database = {
           hidden_at?: string | null
           id?: string
           interest_products?: string | null
+          last_contact_at?: string | null
           lost_reason?: string | null
+          next_action?: string | null
+          next_action_at?: string | null
+          next_action_follow_up_id?: string | null
           next_follow_up?: string | null
           notes?: string
+          qualification?: Json
+          segment?: string | null
           snoozed_until?: string | null
           source?: string
           stage?: Database["public"]["Enums"]["kanban_stage"]
@@ -604,17 +692,11 @@ export type Database = {
           updated_at?: string
           urgency_acknowledged_at?: string | null
           value?: number
-          city?: string | null
-          last_contact_at?: string | null
-          next_action?: string | null
-          next_action_at?: string | null
-          next_action_follow_up_id?: string | null
-          segment?: string | null
-          qualification?: Json
         }
         Update: {
           archived?: boolean
           assigned_to?: string | null
+          city?: string | null
           client_email?: string | null
           client_name?: string
           client_phone?: string
@@ -625,9 +707,15 @@ export type Database = {
           hidden_at?: string | null
           id?: string
           interest_products?: string | null
+          last_contact_at?: string | null
           lost_reason?: string | null
+          next_action?: string | null
+          next_action_at?: string | null
+          next_action_follow_up_id?: string | null
           next_follow_up?: string | null
           notes?: string
+          qualification?: Json
+          segment?: string | null
           snoozed_until?: string | null
           source?: string
           stage?: Database["public"]["Enums"]["kanban_stage"]
@@ -637,13 +725,6 @@ export type Database = {
           updated_at?: string
           urgency_acknowledged_at?: string | null
           value?: number
-          city?: string | null
-          last_contact_at?: string | null
-          next_action?: string | null
-          next_action_at?: string | null
-          next_action_follow_up_id?: string | null
-          segment?: string | null
-          qualification?: Json
         }
         Relationships: [
           {
@@ -651,6 +732,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_next_action_follow_up_id_fkey"
+            columns: ["next_action_follow_up_id"]
+            isOneToOne: false
+            referencedRelation: "follow_ups"
             referencedColumns: ["id"]
           },
           {
@@ -708,9 +796,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: [
-
-        ]
+        Relationships: []
       }
       monthly_goals: {
         Row: {
@@ -1319,8 +1405,22 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sales_documents_possible_duplicate_of_fkey"
+            columns: ["possible_duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "sales_documents"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sales_documents_seller_id_fkey"
             columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_documents_suggested_seller_id_fkey"
+            columns: ["suggested_seller_id"]
             isOneToOne: false
             referencedRelation: "sellers"
             referencedColumns: ["id"]
@@ -2090,7 +2190,10 @@ export type Database = {
         }[]
       }
       admin_revoke_user_role: { Args: { _user_id: string }; Returns: undefined }
-      admin_set_user_avatar: { Args: { _url: string; _user_id: string }; Returns: undefined }
+      admin_set_user_avatar: {
+        Args: { _url: string; _user_id: string }
+        Returns: undefined
+      }
       assign_client_by_seller_code: {
         Args: { _code: string; _phone: string }
         Returns: {
@@ -2107,10 +2210,19 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: number
       }
-      can_confirm_sales_document: { Args: { _seller_id: string }; Returns: boolean }
+      can_confirm_sales_document: {
+        Args: { _seller_id: string }
+        Returns: boolean
+      }
       can_manage_feedback: { Args: { _seller_id: string }; Returns: boolean }
-      can_manage_sales_document_path: { Args: { _name: string }; Returns: boolean }
-      can_manage_sales_documents: { Args: { _seller_id: string }; Returns: boolean }
+      can_manage_sales_document_path: {
+        Args: { _name: string }
+        Returns: boolean
+      }
+      can_manage_sales_documents: {
+        Args: { _seller_id: string }
+        Returns: boolean
+      }
       can_view_seller: { Args: { _seller_id: string }; Returns: boolean }
       check_whatsapp_silence: { Args: never; Returns: number }
       claim_whatsapp_client: {
@@ -2121,18 +2233,133 @@ export type Database = {
           store_id: string
         }[]
       }
+      digits_only: { Args: { _s: string }; Returns: string }
       get_admin_display_name: { Args: never; Returns: string }
       get_client_invoices: {
         Args: { _client_id: string }
-        Returns: Database["public"]["Tables"]["sales_documents"]["Row"][]
+        Returns: {
+          ai_error: string | null
+          ai_extracted: Json | null
+          ai_model: string | null
+          ai_status: string
+          client_document: string | null
+          client_name: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string | null
+          document_number: string | null
+          expected_close_date: string | null
+          extracted_seller_name: string | null
+          file_hash: string | null
+          file_name: string | null
+          id: string
+          installments: Json
+          issue_date: string | null
+          kind: string
+          lead_id: string | null
+          notes: string | null
+          possible_duplicate_of: string | null
+          review_status: string
+          seller_id: string | null
+          seller_match: string | null
+          storage_bucket: string
+          storage_path: string
+          suggested_seller_id: string | null
+          support_request_id: string | null
+          total_value: number | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "sales_documents"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_client_leads: {
         Args: { _client_id: string }
-        Returns: Database["public"]["Tables"]["leads"]["Row"][]
+        Returns: {
+          archived: boolean
+          assigned_to: string | null
+          city: string | null
+          client_email: string | null
+          client_name: string
+          client_phone: string
+          client_type: string | null
+          closed_at: string | null
+          company_work_site: string | null
+          created_at: string
+          hidden_at: string | null
+          id: string
+          interest_products: string | null
+          last_contact_at: string | null
+          lost_reason: string | null
+          next_action: string | null
+          next_action_at: string | null
+          next_action_follow_up_id: string | null
+          next_follow_up: string | null
+          notes: string
+          qualification: Json
+          segment: string | null
+          snoozed_until: string | null
+          source: string
+          stage: Database["public"]["Enums"]["kanban_stage"]
+          store_id: string | null
+          store_name: string | null
+          tags: string[]
+          updated_at: string
+          urgency_acknowledged_at: string | null
+          value: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "leads"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_closed_sales: {
         Args: { _from: string; _to: string }
-        Returns: Database["public"]["Tables"]["leads"]["Row"][]
+        Returns: {
+          archived: boolean
+          assigned_to: string | null
+          city: string | null
+          client_email: string | null
+          client_name: string
+          client_phone: string
+          client_type: string | null
+          closed_at: string | null
+          company_work_site: string | null
+          created_at: string
+          hidden_at: string | null
+          id: string
+          interest_products: string | null
+          last_contact_at: string | null
+          lost_reason: string | null
+          next_action: string | null
+          next_action_at: string | null
+          next_action_follow_up_id: string | null
+          next_follow_up: string | null
+          notes: string
+          qualification: Json
+          segment: string | null
+          snoozed_until: string | null
+          source: string
+          stage: Database["public"]["Enums"]["kanban_stage"]
+          store_id: string | null
+          store_name: string | null
+          tags: string[]
+          updated_at: string
+          urgency_acknowledged_at: string | null
+          value: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "leads"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_new_clients: {
         Args: { _from: string; _to: string }
@@ -2221,7 +2448,63 @@ export type Database = {
       get_user_store_id: { Args: { _user_id: string }; Returns: string }
       get_visit_progress: {
         Args: { _from: string; _to: string }
-        Returns: { done: number; planned: number; seller_id: string }[]
+        Returns: {
+          done: number
+          planned: number
+          seller_id: string
+        }[]
+      }
+      google_calendar_apply_event: {
+        Args: {
+          _calendar_id: string
+          _cancelled: boolean
+          _client_name: string
+          _completed: boolean
+          _crm_follow_up_id?: string
+          _description: string
+          _etag: string
+          _event_id: string
+          _scheduled_at: string
+          _seller_id: string
+          _type: string
+        }
+        Returns: string
+      }
+      google_calendar_claim: {
+        Args: {
+          _lock_seconds?: number
+          _min_interval_seconds?: number
+          _seller_id?: string
+        }
+        Returns: {
+          access_token: string | null
+          access_token_expires_at: string | null
+          calendar_id: string | null
+          connected_at: string
+          connected_by: string | null
+          google_email: string | null
+          last_error: string | null
+          last_synced_at: string | null
+          refresh_token: string
+          seller_id: string
+          status: string
+          sync_lock_until: string | null
+          sync_token: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "google_calendar_connections"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      google_calendar_enqueue: {
+        Args: { _follow_up_id: string; _op: string; _seller_id: string }
+        Returns: undefined
+      }
+      google_calendar_enqueue_backfill: {
+        Args: { _seller_id: string }
+        Returns: number
       }
       has_role: {
         Args: {
@@ -2248,8 +2531,16 @@ export type Database = {
       }
       mark_seller_assigned: { Args: { _seller_id: string }; Returns: undefined }
       mark_whatsapp_read: { Args: { p_phone: string }; Returns: number }
+      norm_text: { Args: { _s: string }; Returns: string }
       notify_quiz_reminder: { Args: never; Returns: undefined }
-      suggest_sales_document_seller: { Args: { _doc_id: string }; Returns: string }
+      seller_file_access: {
+        Args: { _name: string; _write: boolean }
+        Returns: boolean
+      }
+      suggest_sales_document_seller: {
+        Args: { _doc_id: string }
+        Returns: string
+      }
       transfer_attendance: {
         Args: {
           p_client_id?: string
