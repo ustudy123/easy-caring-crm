@@ -16,7 +16,7 @@ function Stat({ label, value, hint, tone }: { label: string; value: string; hint
 }
 
 /**
- * Evolução do vendedor no Show das Tintas (Fase 10): escolhe o mês e vê
+ * Evolução do vendedor no quiz do HUB Taeco Tintas (Fase 10): escolhe o mês e vê
  * partidas, perguntas, % de acerto (com a variação do mês anterior), pontos,
  * faltas e a posição no ranking daquele mês, além das barras dos últimos meses.
  */

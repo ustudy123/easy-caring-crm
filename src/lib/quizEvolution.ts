@@ -1,7 +1,7 @@
 import { addMonths, format, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-/** Tentativa do Show das Tintas (o que a evolução precisa). */
+/** Tentativa do quiz (o que a evolução precisa). */
 export interface QuizAttemptLite {
   completed_at: string;
   total_questions: number;

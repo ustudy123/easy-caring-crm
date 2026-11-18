@@ -1400,7 +1400,7 @@ function UsersTab() {
                   <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nome do vendedor/gerente" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Foto do operador <span className="text-[11px] font-normal text-muted-foreground">(aparece no ranking do Show das Tintas)</span></Label>
+                  <Label>Foto do operador <span className="text-[11px] font-normal text-muted-foreground">(aparece no ranking do quiz)</span></Label>
                   <AvatarUpload userId={editing.user_id} displayName={editName} asAdmin />
                 </div>
                 <div>
