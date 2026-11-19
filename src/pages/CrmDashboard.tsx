@@ -295,14 +295,14 @@ export default function CrmDashboard() {
     },
     {
       key: "show-das-tintas",
-      title: "HUB Taeco Tintas: desempenho da equipe",
+      title: "Show das Tintas: desempenho da equipe",
       description: "Participação, precisão e ranking por semana, mês ou ano.",
       icon: Paintbrush,
       content: () => <QuizAdminStats />,
     },
     {
       key: "metas-show-das-tintas",
-      title: "HUB Taeco Tintas: metas do mês",
+      title: "Show das Tintas: metas do mês",
       description: "Perguntas respondidas por vendedor em relação à meta mensal.",
       icon: Trophy,
       content: () => <QuizGoalsReport />,
