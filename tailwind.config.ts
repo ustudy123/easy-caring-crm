@@ -30,6 +30,22 @@ export default {
           600: "#C95611",
           800: "#7A340A",
         },
+        quiz: {
+          50: "#E9F8F5",
+          100: "#C7EFE9",
+          400: "#2CBFAE",
+          500: "#14A08F",
+          600: "#0E8375",
+          800: "#0A5A51",
+        },
+        feedback: {
+          50: "#F0EEFC",
+          100: "#DDD7F9",
+          400: "#8F7DEE",
+          500: "#6D57DD",
+          600: "#5641BE",
+          800: "#382B7D",
+        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -117,6 +133,9 @@ export default {
         "card-hover": "0 2px 12px rgba(0,0,0,0.06)",
         modal: "0 8px 32px rgba(0,0,0,0.12)",
         dropdown: "0 4px 16px rgba(0,0,0,0.08)",
+        "module-crm": "0 2px 4px rgba(15,23,42,0.05),0 28px 56px -16px rgba(243,112,33,0.35)",
+        "module-quiz": "0 2px 4px rgba(15,23,42,0.05),0 28px 56px -16px rgba(20,160,143,0.35)",
+        "module-feedback": "0 2px 4px rgba(15,23,42,0.05),0 28px 56px -16px rgba(109,87,221,0.35)",
       },
       keyframes: {
         "accordion-down": {
